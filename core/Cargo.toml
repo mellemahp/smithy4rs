@@ -1,0 +1,18 @@
+[package]
+name = "smithy4rs-core"
+description = "Core functionality for smithy4rs."
+repository.workspace = true
+publish = true
+readme.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license-file.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+num-bigint.workspace = true
+bigdecimal.workspace = true
+bytebuffer.workspace = true
+indexmap = "2.8.0"
