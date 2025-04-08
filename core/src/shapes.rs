@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShapeId {
@@ -47,29 +48,29 @@ impl ShapeId {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ShapeType {
-    BLOB,
-    BOOLEAN,
-    STRING,
-    TIMESTAMP,
-    BYTE,
-    SHORT,
-    INTEGER,
-    LONG,
-    FLOAT,
-    DOUBLE,
-    BIG_INTEGER,
-    BIG_DECIMAL,
-    DOCUMENT,
-    ENUM,
-    INT_ENUM,
-    LIST,
-    MAP,
-    STRUCTURE,
-    UNION,
-    MEMBER,
-    SERVICE,
-    RESOURCE,
-    OPERATION
+    Blob,
+    Boolean,
+    String,
+    Timestamp,
+    Byte,
+    Short,
+    Integer,
+    Long,
+    Float,
+    Double,
+    BigInteger,
+    BigDecimal,
+    Document,
+    Enum,
+    IntEnum,
+    List,
+    Map,
+    Structure,
+    Union,
+    Member,
+    Service,
+    Resource,
+    Operation
 }
 
 #[cfg(test)]

@@ -2,10 +2,12 @@
 resolver = "2"
 members = [
     "core",
+    "core-derive",
     "json-codec"
 ]
 default-members = [
     "core",
+    "core-derive",
     "json-codec"
 ]
 
@@ -31,7 +33,11 @@ keywords = ["smithy", "api"]
 categories = ["api-bindings"]
 
 [workspace.dependencies]
+smithy4rs-core-derive = { version = "0.0.1", path = "core-derive" }
+smithy4rs-core= { version = "0.0.1", path = "core" }
 jiter = "0.9.0"
+json = "0.12.4"
 num-bigint = "0.4"
 bigdecimal = "0.4.8"
 bytebuffer = "2.3.0"
+

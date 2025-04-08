@@ -1,10 +1,8 @@
-
-mod prelude;
-mod schema;
-mod shapes;
 mod errors;
-mod documents;
-mod serde;
+pub mod documents;
+pub mod serde;
+pub mod schema;
+pub mod shapes;
 
 // Re-export
 pub use bigdecimal::BigDecimal;

@@ -1,6 +1,6 @@
 [package]
-name = "smithy4rs-json-codec"
-description = "Core JSON serde functionality for smithy4rs."
+name = "smithy4rs-core-derive"
+description = "Derive macros smithy4rs."
 repository.workspace = true
 publish = true
 readme.workspace = true
@@ -11,9 +11,11 @@ license-file.workspace = true
 edition.workspace = true
 version.workspace = true
 
+[lib]
+proc-macro = true
+
 [dependencies]
-smithy4rs-core.workspace = true
-# Used to serialize
-json.workspace = true
-# used to deserialize
-jiter.workspace = true
+
+syn = {version = "1.0", features = ["full"]}
+quote = "1.0"
+proc-macro2 = "1.0.94"
