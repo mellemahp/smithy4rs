@@ -7,6 +7,11 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 use crate::shapes::{ShapeId, ShapeType};
 
+// TODO: Add macro for LazyLock Schema's (auto-generate members).
+// Maybe something like
+// static MY_SCHEMA: LazyLock<&Schema> = schema!("com.id#Shape", member!("memberID", schema, traits!()), traits!())
+// Also.. Could we lazily evaluate schemas by default without lazylock?
+
 // TODO: Support traits
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schema<'s> {

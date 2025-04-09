@@ -24,8 +24,8 @@ pub trait SerializableStruct: Serializable {
 // coercion into multiple outputs? (string, byte, etc)
 pub trait Serializer:  {
     fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: &T);
-    fn write_map<T, M: MapSerializer>(&mut self, schema: &Schema, map_state:T, size: usize, consumer: fn(T, M));
-    fn write_list<T, L: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: fn(T, L));
+    fn write_map<T, M: MapSerializer>(&mut self, schema: &Schema, map_state:T, size: usize, consumer: MapConsumer<T, M>);
+    fn write_list<T, L: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, L>);
     fn write_boolean(&mut self, schema: &Schema, value: bool);
     fn write_byte(&mut self, schema: &Schema, value: u8);
     fn write_short(&mut self, schema: &Schema, value: i16);
@@ -45,6 +45,9 @@ pub trait Serializer:  {
     // TODO: Is flush really needed?
     fn flush(&self);
 }
+
+pub type MapConsumer<T, M: MapSerializer> = fn(T, M);
+pub type ListConsumer<T, L: Serializer> = fn(T, L);
 
 pub trait MapSerializer {
     fn write_entry<T, S: Serializer>(key_schema: &Schema, key: &str, state: T, value_serializer: fn(T, S));
@@ -183,7 +186,7 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
 // TODO: Implement sensitive redaction
 #[derive(Default)]
 pub struct FmtSerializer {
-    string: String
+    pub string: String
 }
 
 impl FmtSerializer {
@@ -295,59 +298,5 @@ impl <'a> Interceptor<FmtSerializer> for StructWriter {
         }
         sink.string.push_str(schema.member_name.as_ref().expect("missing member name"));
         sink.string.push('=');
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use std::sync::LazyLock;
-    use super::*;
-    use crate::schema::prelude;
-    use crate::shapes::ShapeId;
-
-    static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
-        Schema::structure_builder(ShapeId::from("com.example#Shape"))
-            .put_member("a", &*prelude::STRING)
-            .put_member("b", &*prelude::STRING)
-            .build()
-    });
-    static MEMBER_A: LazyLock<&Schema> = LazyLock::new(|| {
-         SCHEMA.expect_member("a")
-    });
-    static MEMBER_B: LazyLock<&Schema> = LazyLock::new(|| {
-        SCHEMA.expect_member("b")
-    });
-
-    //#[derive(SerializableStruct)]
-    //#[schema(SCHEMA)]
-    struct SerializeMe {
-        pub member_a: String,
-        pub member_b: String
-    }
-
-    impl SerializableStruct for SerializeMe {
-        fn schema() -> &'static Schema<'static> {
-            &*SCHEMA
-        }
-
-        fn serialize_members<S: Serializer>(&self, serializer: &mut S) {
-            serializer.write_string(&*MEMBER_A, &self.member_a);
-            serializer.write_string(&*MEMBER_B, &self.member_b);
-        }
-    }
-
-    impl Serializable for SerializeMe {
-        fn serialize<S: Serializer>(&self, serializer: &mut S) {
-            serializer.write_struct(&*SCHEMA, self)
-        }
-    }
-
-    #[test]
-    fn test_serde() {
-        let mut output = FmtSerializer::new();
-        let structure = SerializeMe { member_a: "Hello".to_string(), member_b: "World".to_string() };
-        structure.serialize(&mut output);
-        println!("OUTPUT: {}", output.string);
     }
 }
