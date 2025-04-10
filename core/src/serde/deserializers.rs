@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::error::Error;
 use std::time::Instant;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
@@ -28,27 +29,29 @@ pub trait ShapeBuilder<T: Serializable>: Sized {
 }
 
 pub trait Deserializer {
+    type Error: Error;
+
     fn read_struct<T, C: StructMemberConsumer<T, Self>>(&mut self, schema: &Schema, state: &mut  T, consumer: C);
     fn read_list<T>(&mut self, schema: &Schema, state: T, consumer: ListMemberConsumer<T, Self>);
     fn read_string_map<T>(schema: &Schema, state: T, consumer: MapMemberConsumer<String, T, Self>);
-    fn read_boolean(&mut self, schema: &Schema) -> bool;
-    fn read_blob(&mut self, schema: &Schema) -> ByteBuffer;
+    fn read_boolean(&mut self, schema: &Schema) -> Result<bool, Self::Error>;
+    fn read_blob(&mut self, schema: &Schema) -> Result<ByteBuffer, Self::Error>;
     // TODO: datastream?
     // TODO: event stream?
-    fn read_byte(&mut self, schema: &Schema) -> u8;
-    fn read_short(&mut self, schema: &Schema) -> i16;
-    fn read_integer(&mut self, schema: &Schema) -> i32;
-    fn read_long(&mut self, schema: &Schema) -> i64;
-    fn read_float(&mut self, schema: &Schema) -> f32;
-    fn read_double(&mut self, schema: &Schema) -> f64;
-    fn read_big_integer(&mut self, schema: &Schema) -> BigInt;
-    fn read_big_decimal(&mut self, schema: &Schema) -> BigDecimal;
-    fn read_string(&mut self, schema: &Schema) -> &str;
-    fn read_timestamp(&mut self, schema: &Schema) -> Instant;
-    fn read_document(&mut self, schema: &Schema) -> Document;
+    fn read_byte(&mut self, schema: &Schema) -> Result<u8, Self::Error>;
+    fn read_short(&mut self, schema: &Schema) -> Result<i16, Self::Error>;
+    fn read_integer(&mut self, schema: &Schema) -> Result<i32, Self::Error>;
+    fn read_long(&mut self, schema: &Schema) -> Result<i64, Self::Error>;
+    fn read_float(&mut self, schema: &Schema) -> Result<f32, Self::Error>;
+    fn read_double(&mut self, schema: &Schema) -> Result<f64, Self::Error>;
+    fn read_big_integer(&mut self, schema: &Schema) -> Result<BigInt, Self::Error>;
+    fn read_big_decimal(&mut self, schema: &Schema) -> Result<BigDecimal, Self::Error>;
+    fn read_string(&mut self, schema: &Schema) -> Result<&str, Self::Error>;
+    fn read_timestamp(&mut self, schema: &Schema) -> Result<Instant, Self::Error>;
+    fn read_document(&mut self, schema: &Schema) -> Result<Document, Self::Error>;
     fn is_null() -> bool;
     //  Read (skip) the null value. Only makes sense after is_null().
-    fn read_null<T>();
+    fn read_null<T>() -> Result<(), Self::Error>;
 }
 
 // TODO: Should this use `FnMut`?

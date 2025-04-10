@@ -1,5 +1,6 @@
 mod serialization;
 mod deserialization;
+mod errors;
 
 pub use serialization::*;
 pub use deserialization::*;

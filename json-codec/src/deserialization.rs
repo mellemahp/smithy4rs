@@ -1,9 +1,11 @@
+use std::str::FromStr;
 use std::time::Instant;
-use jiter::Jiter;
+use jiter::{Jiter, NumberAny, NumberInt, Peek};
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
 use smithy4rs_core::documents::Document;
 use smithy4rs_core::schema::Schema;
 use smithy4rs_core::serde::{Deserializer, ListMemberConsumer, MapMemberConsumer, StructMemberConsumer};
+use crate::errors::JsonSerdeError;
 
 pub struct JsonDeserializer<'de> {
     jiter: Jiter<'de>,
@@ -19,9 +21,22 @@ impl <'de> JsonDeserializer<'de> {
     pub fn finish(&mut self) {
         self.jiter.finish().unwrap();
     }
+
+    fn known_int(&mut self) -> Result<i64, JsonSerdeError> {
+        let peek = self.jiter.peek()?;
+        match self.jiter.known_number(peek)? {
+            NumberAny::Int(numInt) => match numInt {
+                NumberInt::Int(i) => Ok(i),
+                NumberInt::BigInt(_) => Err(JsonSerdeError::DeserializationError("Unexpected Big int value".to_string()))
+            },
+            NumberAny::Float(_) => Err(JsonSerdeError::DeserializationError("Unexpected float value".to_string())),
+        }
+    }
 }
 
 impl Deserializer for JsonDeserializer<'_> {
+    type Error = JsonSerdeError;
+
     fn read_struct<T, C: StructMemberConsumer<T, Self>>(&mut self, schema: &Schema, state: &mut T, consumer: C) {
         // Parse first key.
         if let Ok(Some(first_key)) = self.jiter.known_object() {
@@ -46,55 +61,55 @@ impl Deserializer for JsonDeserializer<'_> {
         todo!()
     }
 
-    fn read_boolean(&mut self, schema: &Schema) -> bool {
+    fn read_boolean(&mut self, schema: &Schema) -> Result<bool, Self::Error> {
         todo!()
     }
 
-    fn read_blob(&mut self, schema: &Schema) -> ByteBuffer {
+    fn read_blob(&mut self, schema: &Schema) -> Result<ByteBuffer, Self::Error> {
         todo!()
     }
 
-    fn read_byte(&mut self, schema: &Schema) -> u8 {
+    fn read_byte(&mut self, schema: &Schema) -> Result<u8, Self::Error> {
+        Ok(self.known_int()? as u8)
+    }
+
+    fn read_short(&mut self, schema: &Schema) -> Result<i16, Self::Error> {
         todo!()
     }
 
-    fn read_short(&mut self, schema: &Schema) -> i16 {
+    fn read_integer(&mut self, schema: &Schema) -> Result<i32, Self::Error> {
         todo!()
     }
 
-    fn read_integer(&mut self, schema: &Schema) -> i32 {
+    fn read_long(&mut self, schema: &Schema) -> Result<i64, Self::Error> {
         todo!()
     }
 
-    fn read_long(&mut self, schema: &Schema) -> i64 {
+    fn read_float(&mut self, schema: &Schema) -> Result<f32, Self::Error> {
         todo!()
     }
 
-    fn read_float(&mut self, schema: &Schema) -> f32 {
+    fn read_double(&mut self, schema: &Schema) -> Result<f64, Self::Error> {
         todo!()
     }
 
-    fn read_double(&mut self, schema: &Schema) -> f64 {
+    fn read_big_integer(&mut self, schema: &Schema) -> Result<BigInt, Self::Error> {
         todo!()
     }
 
-    fn read_big_integer(&mut self, schema: &Schema) -> BigInt {
+    fn read_big_decimal(&mut self, schema: &Schema) -> Result<BigDecimal, Self::Error> {
         todo!()
     }
 
-    fn read_big_decimal(&mut self, schema: &Schema) -> BigDecimal {
+    fn read_string(&mut self, _: &Schema) -> Result<&str, Self::Error> {
+        Ok(self.jiter.known_str()?)
+    }
+
+    fn read_timestamp(&mut self, schema: &Schema) -> Result<Instant, Self::Error> {
         todo!()
     }
 
-    fn read_string(&mut self, schema: &Schema) -> &str {
-        self.jiter.known_str().expect("Expected known str")
-    }
-
-    fn read_timestamp(&mut self, schema: &Schema) -> Instant {
-        todo!()
-    }
-
-    fn read_document(&mut self, schema: &Schema) -> Document {
+    fn read_document(&mut self, schema: &Schema) -> Result<Document, Self::Error> {
         todo!()
     }
 
@@ -102,7 +117,7 @@ impl Deserializer for JsonDeserializer<'_> {
         todo!()
     }
 
-    fn read_null<T>() {
+    fn read_null<T>() -> Result<(), Self::Error> {
         todo!()
     }
 }

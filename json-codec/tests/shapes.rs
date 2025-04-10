@@ -122,8 +122,8 @@ struct NestedMemberConsumer;
 impl <D: Deserializer> StructMemberConsumer<NestedBuilder, D> for NestedMemberConsumer {
     fn accept(&self, state: &mut NestedBuilder, member_schema: &Schema, member_deserializer: &mut D) {
         match member_schema.member_index{
-            // Should these raise result?
-            Some(0) => state.member_c(member_deserializer.read_string(&*MEMBER_C).to_string()).ignore(),
+            // TODO: Should these raise result?
+            Some(0) => state.member_c(member_deserializer.read_string(&*MEMBER_C).unwrap().to_string()).ignore(),
             // TODO: Throw real error?
             _ => panic!("Expected member index")
         }
@@ -181,8 +181,8 @@ impl <D: Deserializer> StructMemberConsumer<SerializeMeBuilder, D> for MemberCon
         println!("FOR MEMBER: {}", member_schema.id.id);
         match member_schema.member_index{
             // Should these raise result?
-            Some(0) => state.member_a(member_deserializer.read_string(&*MEMBER_A).to_string()).ignore(),
-            Some(1) => state.member_b(member_deserializer.read_string(&*MEMBER_B).to_string()).ignore(),
+            Some(0) => state.member_a(member_deserializer.read_string(&*MEMBER_A).unwrap().to_string()).ignore(),
+            Some(1) => state.member_b(member_deserializer.read_string(&*MEMBER_B).unwrap().to_string()).ignore(),
             Some(2) => {
                 let mut builder = Nested::builder();
                 builder.deserialize(member_deserializer);
