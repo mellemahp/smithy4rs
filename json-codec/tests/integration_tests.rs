@@ -1,8 +1,10 @@
 mod shapes;
 
-use smithy4rs_core::serde::{Serializable, ShapeBuilder};
+use smithy4rs_core::serde::se::Serializable;
+use smithy4rs_core::serde::de::{ShapeBuilder, Deserializable};
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
-use crate::shapes::{Nested, SerializeMe, SerializeMeBuilder};
+use crate::shapes::{Nested, SerializeMe};
+
 
 #[test]
 fn serializes_to_json() {
@@ -12,7 +14,7 @@ fn serializes_to_json() {
         member_b: "World".to_string(),
         nested: Nested { member_c: "Yeah".to_string() },
     };
-    structure.serialize(&mut output);
+    structure.serialize(&mut output).expect("serialization failed");
     println!("OUTPUT: {}", output.string);
 }
 
@@ -26,9 +28,10 @@ fn deserializes_from_json() {
         }
     }"#;
     let mut deserializer = JsonDeserializer::new(data);
-    let mut builder = SerializeMe::builder();
-    builder.deserialize(&mut deserializer);
-    let output = builder.build();
+    let output = SerializeMe::builder()
+        .deserialize(&mut deserializer)
+        .expect("Should be able to deserialize")
+        .build();
     assert_eq!(output.member_a, "Hello");
     assert_eq!(output.member_b, "World");
     assert_eq!(output.nested.member_c, "Yeah");

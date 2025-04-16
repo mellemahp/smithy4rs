@@ -1,10 +1,9 @@
-use std::str::FromStr;
 use std::time::Instant;
-use jiter::{Jiter, NumberAny, NumberInt, Peek};
+use jiter::{Jiter, NumberAny, NumberInt};
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
 use smithy4rs_core::documents::Document;
 use smithy4rs_core::schema::Schema;
-use smithy4rs_core::serde::{Deserializer, ListMemberConsumer, MapMemberConsumer, StructMemberConsumer};
+use smithy4rs_core::serde::de::{Deserializer, ListConsumer, StringMapConsumer, StructConsumer};
 use crate::errors::JsonSerdeError;
 
 pub struct JsonDeserializer<'de> {
@@ -14,22 +13,27 @@ pub struct JsonDeserializer<'de> {
 impl <'de> JsonDeserializer<'de> {
     pub fn new(json_data: &'de str) -> Self {
         // TODO: support options?
-        JsonDeserializer { jiter: Jiter::new(json_data.as_bytes()) }
-    }
-
-    // TODO: should there be an interface method for this?
-    pub fn finish(&mut self) {
-        self.jiter.finish().unwrap();
+        JsonDeserializer {
+            jiter: Jiter::new(json_data.as_bytes())
+        }
     }
 
     fn known_int(&mut self) -> Result<i64, JsonSerdeError> {
         let peek = self.jiter.peek()?;
         match self.jiter.known_number(peek)? {
-            NumberAny::Int(numInt) => match numInt {
+            NumberAny::Int(num_int) => match num_int {
                 NumberInt::Int(i) => Ok(i),
                 NumberInt::BigInt(_) => Err(JsonSerdeError::DeserializationError("Unexpected Big int value".to_string()))
             },
             NumberAny::Float(_) => Err(JsonSerdeError::DeserializationError("Unexpected float value".to_string())),
+        }
+    }
+
+    fn known_float(&mut self) -> Result<f64, JsonSerdeError> {
+        let peek = self.jiter.peek()?;
+        match self.jiter.known_number(peek)? {
+            NumberAny::Int(_) => Err(JsonSerdeError::DeserializationError("Unexpected int value".to_string())),
+            NumberAny::Float(f) => Ok(f),
         }
     }
 }
@@ -37,27 +41,28 @@ impl <'de> JsonDeserializer<'de> {
 impl Deserializer for JsonDeserializer<'_> {
     type Error = JsonSerdeError;
 
-    fn read_struct<T, C: StructMemberConsumer<T, Self>>(&mut self, schema: &Schema, state: &mut T, consumer: C) {
+    fn read_struct<T>(&mut self, schema: &Schema, state: &mut T, consumer: StructConsumer<T, Self>) -> Result<(), Self::Error> {
         // Parse first key.
         if let Ok(Some(first_key)) = self.jiter.known_object() {
-            println!("FIRST KEY: {}", first_key);
             let member_schema = schema.get_member(first_key).expect("missing member");
-            consumer.accept(state, member_schema, self);
+            consumer(state, member_schema, self)?;
         }
+
         // Continue parsing remaining keys
-        // TODO: Is there a nicer way to express?
         while let Ok(Some(next_key)) = self.jiter.next_key() {
-            println!("OTHER: {}", next_key);
             let member_schema = schema.get_member(next_key).expect("missing member");
-            consumer.accept(state, member_schema, self);
+            consumer(state, member_schema, self)?;
         }
+
+        // Return empty if no failures
+        Ok(())
     }
 
-    fn read_list<T>(&mut self, schema: &Schema, state: T, consumer: ListMemberConsumer<T, Self>) {
+    fn read_list<T>(&mut self, schema: &Schema, state: T, consumer: ListConsumer<T, Self>) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn read_string_map<T>(schema: &Schema, state: T, consumer: MapMemberConsumer<String, T, Self>) {
+    fn read_string_map<T>(schema: &Schema, state: T, consumer: StringMapConsumer<T, Self>) -> Result<(), Self::Error> {
         todo!()
     }
 
@@ -73,28 +78,36 @@ impl Deserializer for JsonDeserializer<'_> {
         Ok(self.known_int()? as u8)
     }
 
-    fn read_short(&mut self, schema: &Schema) -> Result<i16, Self::Error> {
-        todo!()
+    fn read_short(&mut self, _: &Schema) -> Result<i16, Self::Error> {
+        Ok(self.known_int()? as i16)
     }
 
-    fn read_integer(&mut self, schema: &Schema) -> Result<i32, Self::Error> {
-        todo!()
+    fn read_integer(&mut self, _: &Schema) -> Result<i32, Self::Error> {
+        Ok(self.known_int()? as i32)
+
     }
 
     fn read_long(&mut self, schema: &Schema) -> Result<i64, Self::Error> {
-        todo!()
+        Ok(self.known_int()?)
     }
 
     fn read_float(&mut self, schema: &Schema) -> Result<f32, Self::Error> {
-        todo!()
+        Ok(self.known_float()? as f32)
     }
 
     fn read_double(&mut self, schema: &Schema) -> Result<f64, Self::Error> {
-        todo!()
+        Ok(self.known_float()?)
     }
 
     fn read_big_integer(&mut self, schema: &Schema) -> Result<BigInt, Self::Error> {
-        todo!()
+        let peek = self.jiter.peek()?;
+        match self.jiter.known_number(peek)? {
+            NumberAny::Int(number_any) => match number_any {
+                NumberInt::Int(_) => Err(JsonSerdeError::DeserializationError("Unexpected int value".to_string())),
+                NumberInt::BigInt(i) => Ok(i)
+            }
+            NumberAny::Float(_) => Err(JsonSerdeError::DeserializationError("Unexpected float value".to_string())),
+        }
     }
 
     fn read_big_decimal(&mut self, schema: &Schema) -> Result<BigDecimal, Self::Error> {
@@ -113,11 +126,16 @@ impl Deserializer for JsonDeserializer<'_> {
         todo!()
     }
 
-    fn is_null() -> bool {
+    fn is_null(&self) -> bool {
         todo!()
     }
 
-    fn read_null<T>() -> Result<(), Self::Error> {
+    fn read_null<T>(&mut self) -> Result<(), Self::Error> {
         todo!()
+    }
+
+    fn finish(&mut self) -> Result<(), Self::Error> {
+        self.jiter.finish()?;
+        Ok(())
     }
 }

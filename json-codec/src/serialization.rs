@@ -3,8 +3,10 @@
 use std::time::Instant;
 use json::JsonValue;
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
+use smithy4rs_core::documents::Document;
 use smithy4rs_core::schema::Schema;
-use smithy4rs_core::serde::{MapSerializer, SerializableStruct, Serializer};
+use smithy4rs_core::serde::se::{ListConsumer, MapConsumer, SerializableStruct, Serializer};
+use crate::errors::JsonSerdeError;
 use crate::get_member_name;
 
 pub struct JsonSerializer {
@@ -17,79 +19,96 @@ impl JsonSerializer {
     }
 }
 
+// TODO: Handle JSON Name trait
 impl Serializer for JsonSerializer {
-    fn write_struct<T: SerializableStruct>(&mut self, _: &Schema, structure: &T) {
+    type Error = JsonSerdeError;
+
+    fn write_struct<T: SerializableStruct>(&mut self, _: &Schema, structure: T) -> Result<(), Self::Error> {
         let mut data = JsonValue::new_object();
-        structure.serialize_members(&mut StructSerializer::new(&mut data));
-        self.string.push_str(data.dump().as_str())
+        structure.serialize_members(&mut StructSerializer::new(&mut data))?;
+        self.string.push_str(data.dump().as_str());
+        Ok(())
     }
 
-    fn write_map<T, M: MapSerializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: fn(T, M)) {
+    fn write_map<T, S: Serializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: MapConsumer<T, S>) -> Result<(), Self::Error> {
+        todo!();
+        Ok(())
+    }
+
+    fn write_list<T, S: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, S>) -> Result<(), Self::Error> {
+        todo!();
+        Ok(())
+    }
+
+
+    fn write_boolean(&mut self, _: &Schema, value: bool) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_byte(&mut self, _: &Schema, value: u8) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_short(&mut self, _: &Schema, value: i16) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_integer(&mut self, _: &Schema, value: i32) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_long(&mut self, _: &Schema, value: i64) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_float(&mut self, _: &Schema, value: f32) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_double(&mut self, _: &Schema, value: f64) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
+    }
+
+    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_list<T, L: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: fn(T, L)) {
+    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_boolean(&mut self, schema: &Schema, value: bool) {
-        self.string.push_str(json::stringify(value).as_str())
+    fn write_string(&mut self, _: &Schema, value: String) -> Result<(), Self::Error> {
+        self.string.push_str(json::stringify(value).as_str());
+        Ok(())
     }
 
-    fn write_byte(&mut self, _: &Schema, value: u8) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_short(&mut self, _: &Schema, value: i16) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_integer(&mut self, _: &Schema, value: i32) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_long(&mut self, _: &Schema, value: i64) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_float(&mut self, _: &Schema, value: f32) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_double(&mut self, _: &Schema, value: f64) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) {
+    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) {
+    fn write_timestamp(&mut self, schema: &Schema, value: Instant) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_string(&mut self, _: &Schema, value: &str) {
-        self.string.push_str(json::stringify(value).as_str())
-    }
-
-    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) {
+    fn write_document(&mut self, schema: &Schema, value: Document) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_timestamp(&mut self, schema: &Schema, value: Instant) {
-        todo!()
+    fn write_null(&mut self, _: &Schema) -> Result<(), Self::Error> {
+        self.string.push_str(JsonValue::Null.dump().as_str());
+        Ok(())
     }
 
-    fn write_document(&mut self, schema: &Schema, value: smithy4rs_core::documents::Document) {
-        todo!()
-    }
-
-    fn write_null(&mut self, _: &Schema) {
-        self.string.push_str(JsonValue::Null.dump().as_str())
-    }
-
-    fn flush(&self) {
+    fn flush(&self) -> Result<(), Self::Error> {
         // Do nothing
+        Ok(())
     }
 }
 
@@ -104,78 +123,90 @@ impl <'a> StructSerializer<'a> {
 }
 
 impl Serializer for StructSerializer<'_> {
-    fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: &T) {
+    type Error = JsonSerdeError;
+
+    fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error> {
         let mut data = JsonValue::new_object();
-        structure.serialize_members(&mut StructSerializer::new(&mut data));
+        structure.serialize_members(&mut StructSerializer::new(&mut data))?;
         self.parent[get_member_name(schema)] = data;
+        Ok(())
     }
 
-    fn write_map<T, M: MapSerializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: fn(T, M)) {
+    fn write_map<T, S: Serializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: MapConsumer<T, S>) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_list<T, L: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: fn(T, L)) {
+    fn write_list<T, S: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, S>) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_boolean(&mut self, schema: &Schema, value: bool) {
+    fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_byte(&mut self, schema: &Schema, value: u8) {
+    fn write_byte(&mut self, schema: &Schema, value: u8) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_short(&mut self, schema: &Schema, value: i16) {
+    fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_integer(&mut self, schema: &Schema, value: i32) {
+    fn write_integer(&mut self, schema: &Schema, value: i32) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_long(&mut self, schema: &Schema, value: i64) {
+    fn write_long(&mut self, schema: &Schema, value: i64) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_float(&mut self, schema: &Schema, value: f32) {
+    fn write_float(&mut self, schema: &Schema, value: f32) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_double(&mut self, schema: &Schema, value: f64) {
+    fn write_double(&mut self, schema: &Schema, value: f64) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) {
+    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) {
+    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_string(&mut self, schema: &Schema, value: &str) {
+    fn write_string(&mut self, schema: &Schema, value: String) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
+        Ok(())
     }
 
-    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) {
+    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_timestamp(&mut self, schema: &Schema, value: Instant) {
+    fn write_timestamp(&mut self, schema: &Schema, value: Instant) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_document(&mut self, schema: &Schema, value: smithy4rs_core::documents::Document) {
+    fn write_document(&mut self, schema: &Schema, value: Document) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_null(&mut self, schema: &Schema) {
+    fn write_null(&mut self, schema: &Schema) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = JsonValue::Null;
+        Ok(())
     }
 
-    fn flush(&self) {
-        // Do nothing on flush
+    fn flush(&self) -> Result<(), Self::Error> {
+        /* Do nothing on flush */
+        Ok(())
     }
 }
 
