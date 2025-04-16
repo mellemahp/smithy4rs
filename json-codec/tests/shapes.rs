@@ -94,7 +94,7 @@ pub struct NestedBuilder {
 }
 
 impl NestedBuilder {
-    pub(super) const fn new() -> Self {
+    pub const fn new() -> Self {
         NestedBuilder { member_c: None }
     }
 
@@ -134,7 +134,7 @@ pub struct SerializeMeBuilder {
     pub nested: Option<Nested>
 }
 impl SerializeMeBuilder {
-    pub(super) const fn new() -> SerializeMeBuilder {
+    pub const fn new() -> SerializeMeBuilder {
         SerializeMeBuilder{ member_a: None, member_b: None, nested: None }
     }
 

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 use std::time::Instant;
 use json::JsonValue;
@@ -30,14 +31,12 @@ impl Serializer for JsonSerializer {
         Ok(())
     }
 
-    fn write_map<T, S: Serializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: MapConsumer<T, S>) -> Result<(), Self::Error> {
-        todo!();
-        Ok(())
+    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
+        todo!()
     }
 
-    fn write_list<T, S: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, S>) -> Result<(), Self::Error> {
-        todo!();
-        Ok(())
+    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+        todo!()
     }
 
 
@@ -132,13 +131,14 @@ impl Serializer for StructSerializer<'_> {
         Ok(())
     }
 
-    fn write_map<T, S: Serializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: MapConsumer<T, S>) -> Result<(), Self::Error> {
+    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_list<T, S: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, S>) -> Result<(), Self::Error> {
+    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
         todo!()
     }
+
 
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
@@ -209,4 +209,3 @@ impl Serializer for StructSerializer<'_> {
         Ok(())
     }
 }
-

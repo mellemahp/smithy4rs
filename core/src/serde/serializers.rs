@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 use std::error::Error;
 use std::ffi::IntoStringError;
@@ -24,12 +25,11 @@ pub trait SerializableStruct: Serializable + Sized {
 
     fn serialize_members<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error>;
 
+    #[allow(unused_variables)]
     fn get_member_value<T>(&self, member_schema: &Schema) -> T {
         todo!();
     }
 }
-
-
 
 // TODO: datastream?
 // TODO: event stream?
@@ -37,8 +37,9 @@ pub trait Serializer: Sized {
     type Error: Error;
 
     fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error>;
-    fn write_map<T, S: Serializer>(&mut self, schema: &Schema, map_state:T, size: usize, consumer: MapConsumer<T, S>) -> Result<(), Self::Error>;
-    fn write_list<T, S: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, S>) -> Result<(), Self::Error>;
+    // TODO: Should this be write string map?
+    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state:T, consumer: C) -> Result<(), Self::Error>;
+    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error>;
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error>;
     fn write_byte(&mut self, schema: &Schema, value: u8) -> Result<(), Self::Error>;
     fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error>;
@@ -59,9 +60,17 @@ pub trait Serializer: Sized {
     }
 }
 
-pub type ListConsumer<T, S: Serializer> = fn(state: T, serializer: &mut S) -> Result<(), S::Error>;
-pub type MapConsumer<T, S: Serializer> = fn(key_schema: &Schema, key: &str, state: T, value_serializer: MapValueSerializer<T, S>) -> Result<(), S::Error>;
-pub type MapValueSerializer<T, S: Serializer> = fn(state: T, serializer:  &mut S) -> Result<(), S::Error>;
+
+// TODO: Should <T> be required to be iterable? Then the actual thing would be dependent on the item.
+pub trait ListConsumer<T> {
+    fn accept<S: Serializer>(self, state: T, serializer: &mut S) -> Result<(), S::Error>;
+}
+
+pub trait MapConsumer<T> {
+    fn accept<S: Serializer>(key_schema: &Schema, key: &str, state: T, value_serializer: MapValueSerializer<T, S>) -> Result<(), S::Error>;
+}
+
+pub type MapValueSerializer<T, S> = fn(state: T, serializer:  &mut S) -> Result<(), <S as Serializer>::Error>;
 
 #[allow(unused_variables)]
 pub trait Interceptor<S: Serializer> {
@@ -97,16 +106,16 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
         Ok(())
     }
 
-    fn write_map<T, M: Serializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: MapConsumer<T, M>) -> Result<(), Self::Error> {
+    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
-        self.delegate.write_map(schema, map_state, size, consumer)?;
+        self.delegate.write_map(schema,  size, map_state, consumer)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_list<T, L: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, L>) -> Result<(), Self::Error> {
+    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
-        self.delegate.write_list(schema, list_state, size, consumer)?;
+        self.delegate.write_list(schema, size, list_state, consumer)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
@@ -240,18 +249,26 @@ impl Serializer for FmtSerializer {
     fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error> {
         let name = schema.member_target.map(|t| &t.id.name ).unwrap_or(&schema.id.name);
         self.string.push_str(name);
-        self.string.push_str("[");
+        self.string.push('[');
         structure.serialize_members(&mut InterceptingSerializer::new(self, StructWriter::new()))?;
-        self.string.push_str("]");
+        self.string.push(']');
         Ok(())
     }
 
-    fn write_map<T, M: Serializer>(&mut self, schema: &Schema, map_state: T, size: usize, consumer: MapConsumer<T, M>) -> Result<(), Self::Error> {
+    #[allow(unused_variables)]
+    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_list<T, L: Serializer>(&mut self, schema: &Schema, list_state: T, size: usize, consumer: ListConsumer<T, L>) -> Result<(), Self::Error> {
-        todo!()
+    #[allow(unused_variables)]
+    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+        if size == 0 {
+            return Ok(())
+        }
+        self.string.push('[');
+        consumer.accept(list_state, &mut InterceptingSerializer::new(self, CommaWriter::new()))?;
+        self.string.push(']');
+        Ok(())
     }
 
     fn write_boolean(&mut self, _: &Schema, value: bool) -> Result<(), Self::Error> {
@@ -347,6 +364,25 @@ impl <'a> Interceptor<FmtSerializer> for StructWriter {
         }
         sink.string.push_str(schema.member_name.as_ref().expect("missing member name"));
         sink.string.push('=');
+        Ok(())
+    }
+}
+
+struct CommaWriter {
+    is_first: bool
+}
+impl CommaWriter {
+    const fn new() -> Self {
+        CommaWriter { is_first: true }
+    }
+}
+impl <'a> Interceptor<FmtSerializer> for CommaWriter {
+    fn before(&mut self, _: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), IntoStringError> {
+        if !self.is_first {
+            sink.string.push_str(", ");
+        } else {
+            self.is_first = false;
+        }
         Ok(())
     }
 }

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 pub mod prelude;
 pub mod traits;
@@ -178,11 +179,11 @@ impl <'b> SchemaBuilder<'b> {
     pub fn put_member<'t>(mut self, name: &str, target: &'t Schema) -> Self
     // Target reference will outlive this builder
     where 't: 'b {
-        match target.shape_type {
+        match self.shape_type {
             ShapeType::List => {
                 if name != "member" {
                     // TODO: Real error
-                    panic!("Lists can only have members named `member`")
+                    panic!("Lists can only have members named `member`. Found `{}`", name)
                 }
             }
             ShapeType::Map => {

@@ -32,6 +32,7 @@ pub trait ShapeBuilder<T: Serializable>: Deserializable {
         /* ignore result returned by builder */
     }
 
+    #[allow(unused_variables)]
     fn set_member<V>(&mut self, member_schema: &Schema, value: V) {
         todo!()
     }
@@ -67,8 +68,8 @@ pub trait Deserializer: Sized {
     fn finish(&mut self) -> Result<(), Self::Error>;
 }
 
-pub type StructConsumer<T, D: Deserializer> = fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
-pub type ListConsumer<T, D: Deserializer> = fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
-pub type StringMapConsumer<T, D: Deserializer> = fn(state: &mut T, schema: &Schema, key: &str, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
+pub type StructConsumer<T, D> = fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
+pub type ListConsumer<T, D> = fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
+pub type StringMapConsumer<T, D> = fn(state: &mut T, schema: &Schema, key: &str, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
 
 // INTERCEPTING DESERIALIZER?

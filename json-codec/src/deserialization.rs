@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use std::time::Instant;
 use jiter::{Jiter, NumberAny, NumberInt};
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
