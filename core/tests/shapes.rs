@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
 use std::sync::LazyLock;
+use smithy4rs_core::lazy_member_schema;
 use smithy4rs_core::schema::{prelude, Schema};
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
 use smithy4rs_core::serde::se::{Serializable, SerializableStruct, Serializer};
-use smithy4rs_core::serde::serializers::ListConsumer;
+use smithy4rs_core::serde::serializers::ListItemConsumer;
 use smithy4rs_core::shapes::ShapeId;
 
 pub(crate) static LIST_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
@@ -20,15 +21,9 @@ pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
         .put_member("list", &*LIST_SCHEMA)
         .build()
 });
-pub(crate) static MEMBER_A: LazyLock<&Schema> = LazyLock::new(|| {
-    SCHEMA.expect_member("a")
-});
-pub(crate) static MEMBER_B: LazyLock<&Schema> = LazyLock::new(|| {
-    SCHEMA.expect_member("b")
-});
-pub(crate) static MEMBER_LIST: LazyLock<&Schema> = LazyLock::new(|| {
-    SCHEMA.expect_member("list")
-});
+pub(crate) lazy_member_schema!(MEMBER_A, SCHEMA, "a");
+pub(crate) lazy_member_schema!(MEMBER_B, SCHEMA, "b");
+pub(crate) lazy_member_schema!(MEMBER_LIST, SCHEMA, "list");
 
 //#[derive(SerializableStruct)]
 //#[schema(SCHEMA)]
@@ -56,14 +51,10 @@ impl SerializableStruct for SerializeMe {
     }
 }
 
-// TODO:
 struct ListMemberSerializer {}
-impl ListConsumer<Vec<String>> for ListMemberSerializer {
-    fn accept<S: Serializer>(self, state: Vec<String>, serializer: &mut S) -> Result<(), S::Error> {
-        for item in state.into_iter() {
-            serializer.write_string(&*prelude::STRING, item)?;
-        }
-        Ok(())
+impl ListItemConsumer<Vec<String>> for ListMemberSerializer {
+    fn consume<S: Serializer>(item: String, serializer: &mut S) -> Result<(), S::Error> {
+        serializer.write_string(&*prelude::STRING, item)
     }
 }
 
@@ -76,28 +67,40 @@ impl Serializable for SerializeMe {
 pub struct SerializeMeBuilder {
     pub member_a: Option<String>,
     pub member_b: Option<String>,
-    pub list_member: Vec<String>
+    pub list_member: Option<Vec<String>>
 }
 
 // TODO: Add builder derive macro?
 impl SerializeMeBuilder {
     pub const fn new() -> SerializeMeBuilder {
-        SerializeMeBuilder{ member_a: None, member_b: None, list_member: Vec::new() }
+        SerializeMeBuilder{ member_a: None, member_b: None, list_member: None }
     }
 
-    pub fn member_a(&mut self, member_a: &str) -> &mut SerializeMeBuilder {
+    pub fn member_a(mut self, member_a: &str) -> SerializeMeBuilder {
+        self.set_member_a(member_a);
+        self
+    }
+
+    fn set_member_a(&mut self, member_a: &str) {
         self.member_a = Some(member_a.to_string());
+    }
+
+    pub fn member_b(mut self, member_b: &str) -> SerializeMeBuilder {
+        self.set_member_b(member_b);
         self
     }
 
-    pub fn member_b(&mut self, member_b: &str) -> &mut SerializeMeBuilder {
+    fn set_member_b(&mut self, member_b: &str) {
         self.member_b = Some(member_b.to_string());
+    }
+
+    pub fn list_member(mut self, list_member: Vec<String>) -> SerializeMeBuilder {
+        self.set_list_member(list_member);
         self
     }
 
-    pub fn add_list_item(&mut self, item: &str) -> &mut SerializeMeBuilder {
-        self.list_member.push(item.to_string());
-        self
+    fn set_list_member(&mut self, list_member: Vec<String>) {
+        self.list_member = Some(list_member);
     }
 }
 
@@ -108,8 +111,8 @@ impl Deserializable for SerializeMeBuilder {
 
     fn deserialize_member<D: Deserializer>(&mut self, member_schema: &Schema, member_deserializer: &mut D) -> Result<(), D::Error> {
         match member_schema.member_index{
-            Some(0) => self.member_a(member_deserializer.read_string(&*MEMBER_A)?),
-            Some(1) => self.member_b(member_deserializer.read_string(&*MEMBER_B)?),
+            Some(0) => self.set_member_a(member_deserializer.read_string(&*MEMBER_A)?),
+            Some(1) => self.set_member_b(member_deserializer.read_string(&*MEMBER_B)?),
             _ => panic!("EEK!")
         };
         Ok(())
@@ -121,7 +124,7 @@ impl ShapeBuilder<SerializeMe> for SerializeMeBuilder {
         SerializeMe {
             member_a: self.member_a.expect("Could not find member_a"),
             member_b: self.member_b.expect("Could not find member_b"),
-            list_member: self.list_member,
+            list_member: self.list_member.expect("Could not find list_member"),
         }
     }
 }

@@ -28,10 +28,6 @@ pub trait ShapeBuilder<T: Serializable>: Deserializable {
 
     fn build(self) -> T;
 
-    fn ignore(&mut self) {
-        /* ignore result returned by builder */
-    }
-
     #[allow(unused_variables)]
     fn set_member<V>(&mut self, member_schema: &Schema, value: V) {
         todo!()
@@ -60,7 +56,8 @@ pub trait Deserializer: Sized {
     fn read_timestamp(&mut self, schema: &Schema) -> Result<Instant, Self::Error>;
     fn read_document(&mut self, schema: &Schema) -> Result<Document, Self::Error>;
     // Peek at next value to determine if it is null without consuming
-    fn is_null(&self) -> bool;
+    fn is_null(&mut self) -> bool;
+
     //  Read (skip) the null value. Only makes sense after is_null().
     fn read_null<T>(&mut self) -> Result<(), Self::Error>;
 

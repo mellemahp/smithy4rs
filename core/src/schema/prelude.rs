@@ -4,7 +4,8 @@ use std::sync::LazyLock;
 use crate::schema::Schema;
 use crate::shapes::{ShapeId, ShapeType};
 
-pub static BLOB: LazyLock<Schema> = LazyLock::new(|| Schema::create_blob(ShapeId::from("smithy.api#Blob")));
+// TODO make these all actually CONST
+pub const BLOB: Schema = Schema::create_blob(ShapeId::from_str("smithy.api#Blob"));
 pub static BOOLEAN: LazyLock<Schema> = LazyLock::new(|| Schema::create_boolean(ShapeId::from("smithy.api#Boolean")));
 pub static STRING: LazyLock<Schema> = LazyLock::new(|| Schema::create_string(ShapeId::from("smithy.api#String")));
 pub static TIMESTAMP: LazyLock<Schema> = LazyLock::new(|| Schema::create_timestamp(ShapeId::from("smithy.api#Timestamp")));
@@ -30,7 +31,7 @@ pub static DOCUMENT: LazyLock<Schema> = LazyLock::new(|| Schema::create_document
 
 pub fn get_schema_for_type(shape_type: ShapeType) -> &'static Schema<'static> {
     match shape_type {
-        ShapeType::Blob => &*BLOB,
+        ShapeType::Blob => &BLOB,
         ShapeType::Byte => &*BYTE,
         ShapeType::Boolean => &*BOOLEAN,
         ShapeType::String | ShapeType::Enum => &*STRING,

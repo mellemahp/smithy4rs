@@ -1,4 +1,5 @@
 use std::sync::LazyLock;
+use smithy4rs_core::{lazy_member_schema};
 use smithy4rs_core::schema::{prelude, Schema};
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
 use smithy4rs_core::serde::se::{Serializable, SerializableStruct, Serializer};
@@ -9,9 +10,7 @@ static NESTED: LazyLock<Schema> = LazyLock::new(|| {
         .put_member("c", &*prelude::STRING)
         .build()
 });
-static MEMBER_C: LazyLock<&Schema> = LazyLock::new(|| {
-    NESTED.expect_member("c")
-});
+lazy_member_schema!(MEMBER_C, NESTED, "c");
 
 static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::structure_builder(ShapeId::from("com.example#Shape"))
@@ -20,15 +19,9 @@ static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
         .put_member("nested", &*NESTED)
         .build()
 });
-static MEMBER_A: LazyLock<&Schema> = LazyLock::new(|| {
-    SCHEMA.expect_member("a")
-});
-static MEMBER_B: LazyLock<&Schema> = LazyLock::new(|| {
-    SCHEMA.expect_member("b")
-});
-static MEMBER_NESTED: LazyLock<&Schema> = LazyLock::new(|| {
-    SCHEMA.expect_member("nested")
-});
+lazy_member_schema!(MEMBER_A, SCHEMA, "a");
+lazy_member_schema!(MEMBER_B, SCHEMA, "b");
+lazy_member_schema!(MEMBER_NESTED, SCHEMA, "nested");
 
 //#[derive(SerializableStruct)]
 //#[schema(SCHEMA)]
@@ -39,6 +32,7 @@ pub(crate) struct SerializeMe {
 }
 
 impl SerializeMe {
+    #[allow(dead_code)]
     pub const fn builder() -> SerializeMeBuilder {
         SerializeMeBuilder::new()
     }
@@ -63,7 +57,8 @@ impl SerializableStruct for SerializeMe {
     }
 }
 
-pub(crate) struct Nested {
+#[derive(Clone)]
+pub struct Nested {
     pub member_c: String,
 }
 impl Nested {
@@ -98,9 +93,13 @@ impl NestedBuilder {
         NestedBuilder { member_c: None }
     }
 
-    pub fn member_c(&mut self, member_c: &str) -> &mut NestedBuilder {
-        self.member_c = Some(member_c.to_string());
+    pub fn member_c(mut self, member_c: &str) -> NestedBuilder {
+        self.set_member_c(member_c);
         self
+    }
+
+    fn set_member_c(&mut self, member_c: &str) {
+        self.member_c = Some(member_c.to_string());
     }
 }
 
@@ -112,7 +111,7 @@ impl Deserializable for NestedBuilder {
     fn deserialize_member<D: Deserializer>(&mut self, member_schema: &Schema, member_deserializer: &mut D) -> Result<(), D::Error> {
         match member_schema.member_index {
             // TODO: Should these raise result?
-            Some(0) => self.member_c(member_deserializer.read_string(&*MEMBER_C)?),
+            Some(0) => self.set_member_c(member_deserializer.read_string(&*MEMBER_C)?),
             // TODO: Throw real error?
             _ => panic!("Expected member index")
         };
@@ -128,6 +127,7 @@ impl ShapeBuilder<Nested> for NestedBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct SerializeMeBuilder {
     pub member_a: Option<String>,
     pub member_b: Option<String>,
@@ -138,19 +138,31 @@ impl SerializeMeBuilder {
         SerializeMeBuilder{ member_a: None, member_b: None, nested: None }
     }
 
-    pub fn member_a(&mut self, member_a: &str) -> &mut SerializeMeBuilder {
+    pub fn member_a(mut self, member_a: &str) -> SerializeMeBuilder {
+        self.set_member_a(member_a);
+        self
+    }
+
+    fn set_member_a(&mut self, member_a: &str) {
         self.member_a = Some(member_a.to_string());
+    }
+
+    pub fn member_b(mut self, member_b: &str) -> SerializeMeBuilder {
+        self.set_member_b(member_b);
         self
     }
 
-    pub fn member_b(&mut self, member_b: &str) -> &mut SerializeMeBuilder {
+    fn set_member_b(&mut self, member_b: &str) {
         self.member_b = Some(member_b.to_string());
+    }
+
+    pub fn nested(mut self, nested: Nested) -> SerializeMeBuilder {
+        self.set_nested(nested);
         self
     }
 
-    pub fn nested(&mut self, nested: Nested) -> &mut SerializeMeBuilder {
+    fn set_nested(&mut self, nested: Nested) {
         self.nested = Some(nested);
-        self
     }
 }
 
@@ -159,13 +171,12 @@ impl Deserializable for SerializeMeBuilder {
         &*SCHEMA
     }
 
-
     fn deserialize_member<D: Deserializer>(&mut self, member_schema: &Schema, member_deserializer: &mut D) -> Result<(), D::Error> {
         match member_schema.member_index {
             // Should these raise result?
-            Some(0) => self.member_a(member_deserializer.read_string(&*MEMBER_A)?),
-            Some(1) => self.member_b(member_deserializer.read_string(&*MEMBER_B)?),
-            Some(2) => self.nested(Nested::builder().deserialize(member_deserializer)?.build()),
+            Some(0) => self.set_member_a(member_deserializer.read_string(&*MEMBER_A)?),
+            Some(1) => self.set_member_b(member_deserializer.read_string(&*MEMBER_B)?),
+            Some(2) => self.set_nested(Nested::builder().deserialize(member_deserializer)?.build()),
             Some(_) => panic!("Unexpected member: {}", member_schema.id.name),
             // TODO: Throw real error?
             _ => panic!("Expected member index, but none found for member {}", member_schema.id.name)

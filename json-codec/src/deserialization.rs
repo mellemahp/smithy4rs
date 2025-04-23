@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 
 use std::time::Instant;
-use jiter::{Jiter, NumberAny, NumberInt};
+use jiter::{Jiter, NumberAny, NumberInt, Peek};
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
 use smithy4rs_core::documents::Document;
 use smithy4rs_core::schema::Schema;
@@ -69,7 +69,8 @@ impl Deserializer for JsonDeserializer<'_> {
     }
 
     fn read_boolean(&mut self, schema: &Schema) -> Result<bool, Self::Error> {
-        todo!()
+        let peek = self.jiter.peek()?;
+        Ok(self.jiter.known_bool(peek)?)
     }
 
     fn read_blob(&mut self, schema: &Schema) -> Result<ByteBuffer, Self::Error> {
@@ -128,12 +129,16 @@ impl Deserializer for JsonDeserializer<'_> {
         todo!()
     }
 
-    fn is_null(&self) -> bool {
-        todo!()
+    fn is_null(&mut self) -> bool {
+        let Ok(peek) = self.jiter.peek() else {
+            return false;
+        };
+        peek == Peek::Null
     }
 
     fn read_null<T>(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        self.jiter.known_null()?;
+        Ok(())
     }
 
     fn finish(&mut self) -> Result<(), Self::Error> {

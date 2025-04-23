@@ -9,11 +9,11 @@ use crate::shapes::{Nested, SerializeMe};
 #[test]
 fn serializes_to_json() {
     let mut output = JsonSerializer::new();
-    let structure = SerializeMe {
-        member_a: "Hello".to_string(),
-        member_b: "World".to_string(),
-        nested: Nested { member_c: "Yeah".to_string() },
-    };
+    let structure = SerializeMe::builder()
+        .member_a("Hello")
+        .member_b("World")
+        .nested(Nested::builder().member_c("Yeah").build())
+        .build();
     structure.serialize(&mut output).expect("serialization failed");
     println!("OUTPUT: {}", output.string);
 }

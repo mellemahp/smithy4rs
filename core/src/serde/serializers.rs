@@ -39,7 +39,7 @@ pub trait Serializer: Sized {
     fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error>;
     // TODO: Should this be write string map?
     fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state:T, consumer: C) -> Result<(), Self::Error>;
-    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error>;
+    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error>;
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error>;
     fn write_byte(&mut self, schema: &Schema, value: u8) -> Result<(), Self::Error>;
     fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error>;
@@ -60,10 +60,8 @@ pub trait Serializer: Sized {
     }
 }
 
-
-// TODO: Should <T> be required to be iterable? Then the actual thing would be dependent on the item.
-pub trait ListConsumer<T> {
-    fn accept<S: Serializer>(self, state: T, serializer: &mut S) -> Result<(), S::Error>;
+pub trait ListItemConsumer<T: IntoIterator> {
+    fn consume<S: Serializer>(item: T::Item, serializer: &mut S) -> Result<(), S::Error>;
 }
 
 pub trait MapConsumer<T> {
@@ -85,7 +83,7 @@ pub trait Interceptor<S: Serializer> {
     }
 }
 
-struct InterceptingSerializer<'a, S: Serializer, I: Interceptor<S>> {
+pub struct InterceptingSerializer<'a, S: Serializer, I: Interceptor<S>> {
     delegate: &'a mut S,
     decorator: I
 }
@@ -113,7 +111,7 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
         Ok(())
     }
 
-    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_list(schema, size, list_state, consumer)?;
         self.decorator.after(schema, &mut self.delegate)?;
@@ -261,12 +259,15 @@ impl Serializer for FmtSerializer {
     }
 
     #[allow(unused_variables)]
-    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
         if size == 0 {
             return Ok(())
         }
         self.string.push('[');
-        consumer.accept(list_state, &mut InterceptingSerializer::new(self, CommaWriter::new()))?;
+        let mut inner_serializer = InterceptingSerializer::new(self, CommaWriter::new());
+        for item in list_state {
+            C::consume(item, &mut inner_serializer)?;
+        }
         self.string.push(']');
         Ok(())
     }

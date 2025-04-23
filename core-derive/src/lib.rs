@@ -2,14 +2,13 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use quote::quote;
+use quote::{quote};
 use syn::Attribute;
 
 #[proc_macro_derive(SerializableStruct, attributes(schema))]
 pub fn serializable_struct_derive(input: TokenStream) -> TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
-    println!("{:?}", input);
     let ast = syn::parse(input).unwrap();
     // Build the trait implementation
     impl_serializable_struct_derive(&ast)
@@ -18,8 +17,18 @@ pub fn serializable_struct_derive(input: TokenStream) -> TokenStream {
 fn impl_serializable_struct_derive(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let schema_ident = parse_schema(&ast.attrs);
-    // First, generate
-    let output = quote! {
+    // First, generate the basic implementation of the structure serializer.
+    // TODO: How to handle enums and unions?
+    let mut output = quote! {
+        impl Serializable for #name {
+            fn serialize<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error> {
+                SerializableStruct::serialize(self, serializer)
+            }
+        }
+    };
+
+    // Now implement the member-specific serialization
+    output.extend(quote! {
         impl SerializableStruct for #name {
             fn schema() -> &'static Schema {
                 &*#schema_ident
@@ -29,15 +38,8 @@ fn impl_serializable_struct_derive(ast: &syn::DeriveInput) -> TokenStream {
                 serializer.write_string(&*MEMBER_A, &self.member_a);
             }
         }
-    };
+    });
     output.into()
-    // let gener = quote! {
-    //     impl SerializableStruct for #name {
-    //         fn hello_macro() {
-    //             println!("Hello, Macro! My name is {}!", stringify!(#name));
-    //         }
-    //     }
-    // };
 }
 
 fn parse_schema(attrs: &[Attribute]) -> Ident  {

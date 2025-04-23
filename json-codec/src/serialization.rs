@@ -6,7 +6,7 @@ use json::JsonValue;
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
 use smithy4rs_core::documents::Document;
 use smithy4rs_core::schema::Schema;
-use smithy4rs_core::serde::se::{ListConsumer, MapConsumer, SerializableStruct, Serializer};
+use smithy4rs_core::serde::se::{InterceptingSerializer, Interceptor, ListItemConsumer, MapConsumer, SerializableStruct, Serializer};
 use crate::errors::JsonSerdeError;
 use crate::get_member_name;
 
@@ -35,10 +35,17 @@ impl Serializer for JsonSerializer {
         todo!()
     }
 
-    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
-        todo!()
+    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+        if size == 0 {
+            return Ok(());
+        }
+        self.string.push('[');
+        for item in list_state {
+            C::consume(item, &mut InterceptingSerializer::new(self, JsonListItemSerializer::new()))?
+        }
+        self.string.push(']');
+        Ok(())
     }
-
 
     fn write_boolean(&mut self, _: &Schema, value: bool) -> Result<(), Self::Error> {
         self.string.push_str(json::stringify(value).as_str());
@@ -135,10 +142,14 @@ impl Serializer for StructSerializer<'_> {
         todo!()
     }
 
-    fn write_list<T, C: ListConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
-        todo!()
+    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+        let mut data = JsonValue::new_array();
+        let mut list_item_serializer = JsonListItemSerializer::new();
+        for item in list_state {
+            C::consume(item, &mut list_item_serializer)?
+        }
+        self.parent[get_member_name(schema)] = data;
     }
-
 
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
         self.parent[get_member_name(schema)] = json::from(value);
@@ -209,3 +220,84 @@ impl Serializer for StructSerializer<'_> {
         Ok(())
     }
 }
+
+struct JsonListItemSerializer {
+    data: JsonValue::Array,
+}
+impl JsonListItemSerializer {
+    const fn new(data: JsonValue) -> Self {
+        JsonListItemSerializer { data }
+    }
+}
+impl Serializer for JsonListItemSerializer {
+    type Error = JsonSerdeError;
+
+    fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_byte(&mut self, schema: &Schema, value: u8) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_integer(&mut self, schema: &Schema, value: i32) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_long(&mut self, schema: &Schema, value: i64) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_float(&mut self, schema: &Schema, value: f32) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_double(&mut self, schema: &Schema, value: f64) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_string(&mut self, schema: &Schema, value: String) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_timestamp(&mut self, schema: &Schema, value: Instant) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_document(&mut self, schema: &Schema, value: Document) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn write_null(&mut self, schema: &Schema) -> Result<(), Self::Error> {
+        todo!()
+    }
+}
+

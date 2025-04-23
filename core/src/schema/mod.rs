@@ -16,10 +16,10 @@ use crate::shapes::{ShapeId, ShapeType};
 // TODO: Support traits
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schema<'s> {
-    pub id: ShapeId,
+    pub id: ShapeId<'s>,
     pub shape_type: ShapeType,
     // pub traits: Option<String>,
-    pub members: IndexMap<String, Schema<'s>>,
+    pub members: Option<IndexMap<String, Schema<'s>>>,
     pub member_target: Option<&'s Schema<'s>>,
     pub member_name: Option<String>,
     pub member_index: Option<usize>
@@ -30,12 +30,11 @@ pub struct Schema<'s> {
 // FACTORY METHODS
 // TODO: What should be inlined?
 impl Schema<'_> {
-    fn root_schema(shape_type: ShapeType, id: ShapeId) -> Self {
-        // Workaround for map init in const
+    const fn root_schema(shape_type: ShapeType, id: ShapeId<'static>) -> Self {
         Schema {
             id,
             shape_type,
-            members: IndexMap::default(),
+            members: None,
             member_target: None,
             member_name: None,
             member_index: None,
@@ -90,7 +89,7 @@ impl Schema<'_> {
         todo!()
     }
 
-    pub fn create_blob(id: ShapeId) -> Self {
+    pub const fn create_blob(id: ShapeId<'static>) -> Self {
         Self::root_schema(ShapeType::Blob, id)
     }
 
@@ -118,11 +117,12 @@ impl Schema<'_> {
 // GETTERS
 impl<'s> Schema<'s> {
     pub fn get_member(&self, id: &str) -> Option<&'s Schema> {
-        self.members.get(id)
+        // TODO: probably a better way
+        self.members.as_ref().map(|m| m.get(id))?
     }
 
     pub fn expect_member(&self, id: &str) -> &'s Schema {
-        self.members.get(id).unwrap()
+        self.members.as_ref().map(|m| m.get(id)).unwrap().unwrap()
     }
 
     pub fn is_member(&self) -> bool {
@@ -151,7 +151,7 @@ impl Schema<'_> {
 
 
 pub struct SchemaBuilder<'s> {
-    id: ShapeId,
+    id: ShapeId<'s>,
     shape_type: ShapeType,
     // pub traits: Option<String>,
     members: Vec<MemberSchemaBuilder<'s>>,
@@ -217,7 +217,7 @@ impl <'b> SchemaBuilder<'b> {
         Schema {
             id: self.id.clone(),
             shape_type: self.shape_type.clone(),
-            members: member_map.clone(),
+            members: Some(member_map.clone()),
             member_target: None,
             member_name: None,
             member_index: None,
@@ -229,7 +229,7 @@ impl <'b> SchemaBuilder<'b> {
 
 struct MemberSchemaBuilder<'s>{
     pub (super) name: String,
-    id: ShapeId,
+    id: ShapeId<'s>,
     member_target: &'s Schema<'s>,
     member_index: Option<usize>
 }
