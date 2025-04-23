@@ -1,49 +1,41 @@
 #![allow(dead_code)]
 
-use konst::string::split_once;
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ShapeId<'id> {
-    pub id: &'id str,
-    pub namespace: &'id str,
-    pub name: &'id str,
-    pub member: Option<&'id str>
+pub struct ShapeId {
+    pub id: String,
+    pub namespace: String,
+    pub name: String,
+    pub member: Option<String>
 }
 
-impl ShapeId<'_> {
-    pub const fn from_str(id: &'static str) -> Self {
-        let split = split_once(id,"#").expect("Invalid Shape Id");
+impl From<&str> for ShapeId {
+    fn from(value: &str) -> Self {
+        let split = value.split_once("#").expect("Invalid Shape Id");
         let (namespace, mut name) = split;
         let mut member = None;
-        if let Some((name, split_member)) = split_once(name,"$") {
-            member = Some(split_member);
+        if let Some((name, split_member)) = name.split_once("$") {
+            member = Some(split_member.to_string());
         }
         ShapeId {
-            id,
-            namespace,
-            name,
+            id: value.to_string(),
+            namespace: namespace.to_string(),
+            name: name.to_string(),
             member
         }
     }
 }
 
-impl From<&str> for ShapeId<'_> {
-    fn from(value: &str) -> Self {
-        ShapeId::from_str(value)
-    }
-}
-
-impl ShapeId<'_> {
-    pub fn from_parts<'a>(namespace: &'a str, name: &'a str, member: Option<&'a str>) -> ShapeId<'a> {
+impl ShapeId {
+    pub fn from_parts<'a>(namespace: &'a str, name: &'a str, member: Option<&'a str>) -> ShapeId {
         let mut id = namespace.to_string() + "#" + name;
         if let Some(m) = member {
             id = id + "$" + m;
         }
         ShapeId {
-            id: id.as_str(),
-            namespace,
-            name,
-            member
+            id,
+            namespace: namespace.to_string(),
+            name: name.to_string(),
+            member: member.map(ToString::to_string)
         }
     }
 

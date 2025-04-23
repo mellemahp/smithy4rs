@@ -16,7 +16,7 @@ use crate::shapes::{ShapeId, ShapeType};
 // TODO: Support traits
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schema<'s> {
-    pub id: ShapeId<'s>,
+    pub id: ShapeId,
     pub shape_type: ShapeType,
     // pub traits: Option<String>,
     pub members: Option<IndexMap<String, Schema<'s>>>,
@@ -30,7 +30,7 @@ pub struct Schema<'s> {
 // FACTORY METHODS
 // TODO: What should be inlined?
 impl Schema<'_> {
-    const fn root_schema(shape_type: ShapeType, id: ShapeId<'static>) -> Self {
+    fn root_schema(shape_type: ShapeType, id: ShapeId) -> Self {
         Schema {
             id,
             shape_type,
@@ -89,7 +89,7 @@ impl Schema<'_> {
         todo!()
     }
 
-    pub const fn create_blob(id: ShapeId<'static>) -> Self {
+    pub fn create_blob(id: ShapeId) -> Self {
         Self::root_schema(ShapeType::Blob, id)
     }
 
@@ -151,7 +151,7 @@ impl Schema<'_> {
 
 
 pub struct SchemaBuilder<'s> {
-    id: ShapeId<'s>,
+    id: ShapeId,
     shape_type: ShapeType,
     // pub traits: Option<String>,
     members: Vec<MemberSchemaBuilder<'s>>,
@@ -229,7 +229,7 @@ impl <'b> SchemaBuilder<'b> {
 
 struct MemberSchemaBuilder<'s>{
     pub (super) name: String,
-    id: ShapeId<'s>,
+    id: ShapeId,
     member_target: &'s Schema<'s>,
     member_index: Option<usize>
 }

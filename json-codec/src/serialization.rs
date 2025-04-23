@@ -222,7 +222,7 @@ impl Serializer for StructSerializer<'_> {
 }
 
 struct JsonListItemSerializer {
-    data: JsonValue::Array,
+    data: JsonValue,
 }
 impl JsonListItemSerializer {
     const fn new(data: JsonValue) -> Self {
