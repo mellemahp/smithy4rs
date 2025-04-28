@@ -5,6 +5,8 @@ pub mod serde;
 pub mod schema;
 pub mod shapes;
 mod macros;
+mod traits;
+pub mod prelude;
 
 // Re-export
 pub use bigdecimal::BigDecimal;

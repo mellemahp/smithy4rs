@@ -17,3 +17,5 @@ bigdecimal.workspace = true
 bytebuffer.workspace = true
 indexmap = "2.8.0"
 smithy4rs-core-derive.workspace = true
+thiserror.workspace = true
+anymap = "0.12.1"

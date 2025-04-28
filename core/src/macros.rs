@@ -1,3 +1,4 @@
+use crate::shapes::ShapeId;
 
 #[macro_export]
 macro_rules! lazy_member_schema {
@@ -5,4 +6,12 @@ macro_rules! lazy_member_schema {
         static $member_schema_name: LazyLock<&Schema> = LazyLock::new(|| $parent_schema.expect_member($identifier));
     };
 }
+
+#[macro_export]
+macro_rules! lazy_shape_id {
+    ($id_name:ident, $identifier:literal) => {
+        static $id_name: LazyLock<ShapeId> = LazyLock::new(|| { ShapeId::from($identifier) });
+    };
+}
+
 

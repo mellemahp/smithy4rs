@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use std::sync::LazyLock;
-use smithy4rs_core::lazy_member_schema;
-use smithy4rs_core::schema::{prelude, Schema};
+use smithy4rs_core::{lazy_member_schema, prelude};
+use smithy4rs_core::schema::Schema;
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
 use smithy4rs_core::serde::se::{Serializable, SerializableStruct, Serializer};
 use smithy4rs_core::serde::serializers::ListItemConsumer;

@@ -1,28 +1,20 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-pub mod prelude;
-pub mod traits;
-
 use std::collections::HashSet;
 use indexmap::IndexMap;
 use crate::shapes::{ShapeId, ShapeType};
-
-// TODO: Add macro for LazyLock Schema's (auto-generate members).
-// Maybe something like
-// static MY_SCHEMA: LazyLock<&Schema> = schema!("com.id#Shape", member!("memberID", schema, traits!()), traits!())
-// Also.. Could we lazily evaluate schemas by default without lazylock?
 
 // TODO: Support traits
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schema<'s> {
     pub id: ShapeId,
     pub shape_type: ShapeType,
-    // pub traits: Option<String>,
     pub members: Option<IndexMap<String, Schema<'s>>>,
     pub member_target: Option<&'s Schema<'s>>,
     pub member_name: Option<String>,
-    pub member_index: Option<usize>
+    pub member_index: Option<usize>,
+    // pub traits: Option<String>,
 }
 
 // TODO: Support traits

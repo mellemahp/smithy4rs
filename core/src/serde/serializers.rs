@@ -2,13 +2,14 @@
 #![allow(unused_variables)]
 
 use std::error::Error;
-use std::ffi::IntoStringError;
+use std::fmt::Debug;
 use std::time::{Instant};
+use thiserror::Error;
 use crate::schema::Schema;
 use crate::BigDecimal;
 use crate::BigInt;
 use crate::ByteBuffer;
-use crate::documents::Document;
+use crate::documents::{Document, DocumentError};
 
 pub trait Serializable {
     /// Serialize the state of the shape into the given serializer.
@@ -17,11 +18,7 @@ pub trait Serializable {
 }
 
 pub trait SerializableStruct: Serializable + Sized {
-    fn schema() -> &'static Schema<'static>;
-
-    fn serialize<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_struct(Self::schema(), self)
-    }
+    fn schema(&self) -> &Schema;
 
     fn serialize_members<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error>;
 
@@ -34,14 +31,14 @@ pub trait SerializableStruct: Serializable + Sized {
 // TODO: datastream?
 // TODO: event stream?
 pub trait Serializer: Sized {
-    type Error: Error;
+    type Error: Error + Default + From<DocumentError>;
 
     fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error>;
     // TODO: Should this be write string map?
     fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state:T, consumer: C) -> Result<(), Self::Error>;
     fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error>;
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error>;
-    fn write_byte(&mut self, schema: &Schema, value: u8) -> Result<(), Self::Error>;
+    fn write_byte(&mut self, schema: &Schema, value: i8) -> Result<(), Self::Error>;
     fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error>;
     fn write_integer(&mut self, schema: &Schema, value: i32) -> Result<(), Self::Error>;
     fn write_long(&mut self,schema: &Schema, value: i64) -> Result<(), Self::Error>;
@@ -55,6 +52,7 @@ pub trait Serializer: Sized {
     fn write_document(&mut self, schema: &Schema, value: Document) -> Result<(), Self::Error>;
     fn write_null(&mut self, schema: &Schema) -> Result<(), Self::Error>;
 
+    // TODO: Is this necessary?
     fn flush(&self) -> Result<(), Self::Error> {
         todo!();
     }
@@ -65,7 +63,7 @@ pub trait ListItemConsumer<T: IntoIterator> {
 }
 
 pub trait MapConsumer<T> {
-    fn accept<S: Serializer>(key_schema: &Schema, key: &str, state: T, value_serializer: MapValueSerializer<T, S>) -> Result<(), S::Error>;
+    fn consume<S: Serializer>(key_schema: &Schema, key: &str, state: T, value_serializer: MapValueSerializer<T, S>) -> Result<(), S::Error>;
 }
 
 pub type MapValueSerializer<T, S> = fn(state: T, serializer:  &mut S) -> Result<(), <S as Serializer>::Error>;
@@ -125,7 +123,7 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
         Ok(())
     }
 
-    fn write_byte(&mut self, schema: &Schema, value: u8) -> Result<(), Self::Error> {
+    fn write_byte(&mut self, schema: &Schema, value: i8) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_byte(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
@@ -240,9 +238,18 @@ impl FmtSerializer {
     }
 }
 
+#[derive(Error, Debug, Default)]
+pub enum FmtError {
+    #[error("Failed to serialize string")]
+    #[default]
+    Generic,
+    #[error("data store disconnected")]
+    DocumentConversion(#[from] DocumentError),
+}
+
 // TODO: Could this be made infallible?
 impl Serializer for FmtSerializer {
-    type Error = IntoStringError;
+    type Error = FmtError;
 
     fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error> {
         let name = schema.member_target.map(|t| &t.id.name ).unwrap_or(&schema.id.name);
@@ -277,7 +284,7 @@ impl Serializer for FmtSerializer {
         Ok(())
     }
 
-    fn write_byte(&mut self, _: &Schema, value: u8) -> Result<(), Self::Error> {
+    fn write_byte(&mut self, _: &Schema, value: i8) -> Result<(), Self::Error> {
         self.string.push_str(value.to_string().as_str());
         Ok(())
     }
@@ -357,7 +364,7 @@ impl StructWriter {
     }
 }
 impl <'a> Interceptor<FmtSerializer> for StructWriter {
-    fn before(&mut self, schema: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), IntoStringError> {
+    fn before(&mut self, schema: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), FmtError> {
         if !self.is_first {
             sink.string.push_str(", ");
         } else {
@@ -378,7 +385,7 @@ impl CommaWriter {
     }
 }
 impl <'a> Interceptor<FmtSerializer> for CommaWriter {
-    fn before(&mut self, _: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), IntoStringError> {
+    fn before(&mut self, _: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), FmtError> {
         if !self.is_first {
             sink.string.push_str(", ");
         } else {
