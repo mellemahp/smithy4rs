@@ -4,9 +4,10 @@
 use std::collections::HashSet;
 use indexmap::IndexMap;
 use crate::shapes::{ShapeId, ShapeType};
+use crate::traits::{SmithyTrait, TraitMap, EMPTY_TRAIT_LIST};
 
 // TODO: Support traits
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Schema<'s> {
     pub id: ShapeId,
     pub shape_type: ShapeType,
@@ -14,6 +15,7 @@ pub struct Schema<'s> {
     pub member_target: Option<&'s Schema<'s>>,
     pub member_name: Option<String>,
     pub member_index: Option<usize>,
+    pub trait_map: TraitMap<'s>,
     // pub traits: Option<String>,
 }
 
@@ -21,88 +23,91 @@ pub struct Schema<'s> {
 
 // FACTORY METHODS
 // TODO: What should be inlined?
-impl Schema<'_> {
-    fn root_schema(shape_type: ShapeType, id: ShapeId) -> Self {
+impl <'s> Schema<'s> {
+    // TODO: Can these generics be simplified at all?
+    // TODO: Could arrays somehow be used instead of vecs?
+    fn root_schema<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(shape_type: ShapeType, id: I, traits: Vec<T>) -> Self {
         Schema {
-            id,
+            id: id.into(),
             shape_type,
             members: None,
             member_target: None,
             member_name: None,
             member_index: None,
+            trait_map: TraitMap::of(traits),
         }
     }
 
-    pub fn create_boolean(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Boolean, id)
+    pub fn create_boolean<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Boolean, id, traits)
     }
 
-    pub fn create_byte(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Byte, id)
+    pub fn create_byte<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Byte, id, traits)
     }
 
-    pub fn create_short(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Short, id)
+    pub fn create_short<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Short, id, traits)
     }
 
-    pub fn create_integer(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Integer, id)
+    pub fn create_integer<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Integer, id, traits)
     }
 
-    pub fn create_int_enum(id: ShapeId, values: HashSet<i32>) -> Self {
+    pub fn create_int_enum<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, values: HashSet<i32>, traits: Vec<T>) -> Self {
         todo!()
     }
 
-    pub fn create_long(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Long, id)
+    pub fn create_long<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Long, id, traits)
     }
 
-    pub fn create_float(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Float, id)
+    pub fn create_float<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Float, id, traits)
     }
 
-    pub fn create_double(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Double, id)
+    pub fn create_double<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Double, id, traits)
     }
 
-    pub fn create_big_integer(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::BigInteger, id)
+    pub fn create_big_integer<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::BigInteger, id, traits)
     }
 
-    pub fn create_big_decimal(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::BigDecimal, id)
+    pub fn create_big_decimal<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::BigDecimal, id, traits)
     }
 
-    pub fn create_string(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::String, id)
+    pub fn create_string<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::String, id, traits)
     }
 
-    pub fn create_enum(id: ShapeId, values: HashSet<String>) -> Self {
+    pub fn create_enum<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, values: HashSet<String>, traits: Vec<T>) -> Self {
         todo!()
     }
 
-    pub fn create_blob(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Blob, id)
+    pub fn create_blob<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Blob, id, traits)
     }
 
-    pub fn create_document(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Document, id)
+    pub fn create_document<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Document, id, traits)
     }
 
-    pub fn create_timestamp(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Timestamp, id)
+    pub fn create_timestamp<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Timestamp, id, traits)
     }
 
-    pub fn create_operation(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Operation, id)
+    pub fn create_operation<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Operation, id, traits)
     }
 
-    pub fn create_resource(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Resource, id)
+    pub fn create_resource<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Resource, id, traits)
     }
 
-    pub fn create_service(id: ShapeId) -> Self {
-        Self::root_schema(ShapeType::Service, id)
+    pub fn create_service<I: Into<ShapeId>, T: Into<SmithyTrait<'s>>>(id: I, traits: Vec<T>) -> Self {
+        Self::root_schema(ShapeType::Service, id, traits)
     }
 }
 
@@ -148,7 +153,8 @@ pub struct SchemaBuilder<'s> {
     // pub traits: Option<String>,
     members: Vec<MemberSchemaBuilder<'s>>,
     member_target: Option<&'s Schema<'s>>,
-    member_index: Option<usize>
+    member_index: Option<usize>,
+    traits: TraitMap<'s>
 }
 
 impl SchemaBuilder<'_> {
@@ -163,12 +169,13 @@ impl SchemaBuilder<'_> {
             shape_type,
             member_target: None,
             member_index: None,
+            traits: TraitMap::new(),
         }
     }
 }
 
 impl <'b> SchemaBuilder<'b> {
-    pub fn put_member<'t>(mut self, name: &str, target: &'t Schema) -> Self
+    pub fn put_member<'t, T: Into<SmithyTrait<'t>>>(mut self, name: &str, target: &'t Schema, traits: Vec<T>) -> Self
     // Target reference will outlive this builder
     where 't: 'b {
         match self.shape_type {
@@ -185,7 +192,12 @@ impl <'b> SchemaBuilder<'b> {
             }
             _ => { /* fall through otherwise */ }
         }
-        self.members.push(MemberSchemaBuilder::new(name.into(), self.id.with_member(name), target));
+        self.members.push(MemberSchemaBuilder::new(name.into(), self.id.with_member(name), target, traits));
+        self
+    }
+
+    pub fn with_trait<T: Into<SmithyTrait<'b>>>(mut self, smithy_trait: T) -> Self {
+        self.traits.insert(smithy_trait);
         self
     }
 
@@ -206,6 +218,7 @@ impl <'b> SchemaBuilder<'b> {
             member_map.insert(member_builder.name.clone(), member_builder.build());
         }
 
+        // TODO: Could the clones be removed somehow?
         Schema {
             id: self.id.clone(),
             shape_type: self.shape_type.clone(),
@@ -213,29 +226,33 @@ impl <'b> SchemaBuilder<'b> {
             member_target: None,
             member_name: None,
             member_index: None,
+            trait_map: self.traits.clone(),
         }
     }
 }
-
-
 
 struct MemberSchemaBuilder<'s>{
     pub (super) name: String,
     id: ShapeId,
     member_target: &'s Schema<'s>,
-    member_index: Option<usize>
+    member_index: Option<usize>,
+    trait_map: TraitMap<'s>,
 }
-
+// TODO: Flatten target traits into the member schema
 impl <'b> MemberSchemaBuilder<'b> {
-    pub(super) const fn new<'t>(name: String, id: ShapeId, target: &'t Schema<'_>) -> Self
+    pub(super) fn new<'t, T: Into<SmithyTrait<'t>>>(name: String, id: ShapeId, target: &'t Schema<'_>, traits: Vec<T>) -> Self
     // Schema reference outlives this builder
     where 't: 'b
     {
+        // Flatten all target traits into member
+        let mut trait_map = TraitMap::of(traits);
+        trait_map.insert_all(&target.trait_map);
         MemberSchemaBuilder {
             name,
             id,
             member_target: target,
             member_index: None,
+            trait_map,
         }
     }
 
@@ -243,19 +260,22 @@ impl <'b> MemberSchemaBuilder<'b> {
         self.member_index = Some(index);
     }
 
+
     pub (super) fn build(&self) -> Schema<'b> {
         // Schema outlives builder
         if self.member_index.is_none() {
             // TODO: real error
             panic!("Expected member index!");
         }
+        // TODO: Could the clones be removed somehow?
         Schema {
             id: self.id.clone(),
             shape_type: ShapeType::Member,
-            members: Default::default(),
+            members: None,
             member_target: Some(self.member_target),
             member_name: Some(self.name.clone()),
             member_index: self.member_index,
+            trait_map: self.trait_map.clone(),
         }
     }
 }
