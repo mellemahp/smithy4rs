@@ -25,7 +25,7 @@ pub enum DocumentError {
 /// A Smithy document type, representing untyped data from the Smithy data model.
 ///
 /// *Note*: Document implementations are protocol specific
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 pub enum DocumentValue<'doc> {
     Null,
     Number(NumberValue),
@@ -114,7 +114,7 @@ impl <'doc> SerializableStruct for Document<'doc> {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 pub struct Document<'doc> {
     pub schema: &'doc Schema<'doc>,
     pub(crate) value: DocumentValue<'doc>,

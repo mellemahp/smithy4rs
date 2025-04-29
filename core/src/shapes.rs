@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+// TODO: Could this be made more efficient?
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShapeId {
     pub id: String,

@@ -3,21 +3,20 @@
 use std::sync::LazyLock;
 use crate::schema::Schema;
 use crate::shapes::ShapeType;
-use crate::traits::EMPTY_TRAIT_LIST;
 
-pub static BLOB: LazyLock<Schema> = LazyLock::new(|| Schema::create_blob("smithy.api#Blob", EMPTY_TRAIT_LIST));
-pub static BOOLEAN: LazyLock<Schema> = LazyLock::new(|| Schema::create_boolean("smithy.api#Boolean", EMPTY_TRAIT_LIST));
-pub static STRING: LazyLock<Schema> = LazyLock::new(|| Schema::create_string("smithy.api#String", EMPTY_TRAIT_LIST));
-pub static TIMESTAMP: LazyLock<Schema> = LazyLock::new(|| Schema::create_timestamp("smithy.api#Timestamp", EMPTY_TRAIT_LIST));
-pub static BYTE: LazyLock<Schema> = LazyLock::new(|| Schema::create_byte("smithy.api#Byte", EMPTY_TRAIT_LIST));
-pub static SHORT: LazyLock<Schema> = LazyLock::new(|| Schema::create_short("smithy.api#Short", EMPTY_TRAIT_LIST));
-pub static  INTEGER: LazyLock<Schema> = LazyLock::new(|| Schema::create_integer("smithy.api#Integer", EMPTY_TRAIT_LIST));
-pub static LONG: LazyLock<Schema> = LazyLock::new(|| Schema::create_long("smithy.api#Long", EMPTY_TRAIT_LIST));
-pub static FLOAT: LazyLock<Schema> = LazyLock::new(|| Schema::create_float("smithy.api#Float", EMPTY_TRAIT_LIST));
-pub static DOUBLE: LazyLock<Schema> = LazyLock::new(|| Schema::create_double("smithy.api#Double", EMPTY_TRAIT_LIST));
-pub static BIG_INTEGER: LazyLock<Schema> = LazyLock::new(|| Schema::create_big_integer("smithy.api#BigInteger", EMPTY_TRAIT_LIST));
-pub static BIG_DECIMAL: LazyLock<Schema> = LazyLock::new(|| Schema::create_big_decimal("smithy.api#BigDecimal", EMPTY_TRAIT_LIST));
-pub static DOCUMENT: LazyLock<Schema> = LazyLock::new(|| Schema::create_document("smithy.api#Document", EMPTY_TRAIT_LIST));
+pub static BLOB: LazyLock<Schema> = LazyLock::new(|| Schema::create_blob("smithy.api#Blob", None));
+pub static BOOLEAN: LazyLock<Schema> = LazyLock::new(|| Schema::create_boolean("smithy.api#Boolean", None));
+pub static STRING: LazyLock<Schema> = LazyLock::new(|| Schema::create_string("smithy.api#String", None));
+pub static TIMESTAMP: LazyLock<Schema> = LazyLock::new(|| Schema::create_timestamp("smithy.api#Timestamp", None));
+pub static BYTE: LazyLock<Schema> = LazyLock::new(|| Schema::create_byte("smithy.api#Byte", None));
+pub static SHORT: LazyLock<Schema> = LazyLock::new(|| Schema::create_short("smithy.api#Short", None));
+pub static  INTEGER: LazyLock<Schema> = LazyLock::new(|| Schema::create_integer("smithy.api#Integer", None));
+pub static LONG: LazyLock<Schema> = LazyLock::new(|| Schema::create_long("smithy.api#Long", None));
+pub static FLOAT: LazyLock<Schema> = LazyLock::new(|| Schema::create_float("smithy.api#Float", None));
+pub static DOUBLE: LazyLock<Schema> = LazyLock::new(|| Schema::create_double("smithy.api#Double", None));
+pub static BIG_INTEGER: LazyLock<Schema> = LazyLock::new(|| Schema::create_big_integer("smithy.api#BigInteger", None));
+pub static BIG_DECIMAL: LazyLock<Schema> = LazyLock::new(|| Schema::create_big_decimal("smithy.api#BigDecimal", None));
+pub static DOCUMENT: LazyLock<Schema> = LazyLock::new(|| Schema::create_document("smithy.api#Document", None));
 
 // TODO:
 // - Primitive types
@@ -31,17 +30,17 @@ pub static DOCUMENT: LazyLock<Schema> = LazyLock::new(|| Schema::create_document
 pub fn get_schema_for_type(shape_type: ShapeType) -> &'static Schema<'static> {
     match shape_type {
         ShapeType::Blob => &BLOB,
-        ShapeType::Byte => &*BYTE,
-        ShapeType::Boolean => &*BOOLEAN,
-        ShapeType::String | ShapeType::Enum => &*STRING,
-        ShapeType::Timestamp => &*TIMESTAMP,
-        ShapeType::Short => &*SHORT,
-        ShapeType::Integer | ShapeType::IntEnum => &*INTEGER,
-        ShapeType::Long => &*LONG,
-        ShapeType::Float => &*FLOAT,
-        ShapeType::Double => &*DOUBLE,
-        ShapeType::BigInteger => &*BIG_INTEGER,
-        ShapeType::BigDecimal => &*BIG_DECIMAL,
-        _ => &*DOCUMENT
+        ShapeType::Byte => &BYTE,
+        ShapeType::Boolean => &BOOLEAN,
+        ShapeType::String | ShapeType::Enum => &STRING,
+        ShapeType::Timestamp => &TIMESTAMP,
+        ShapeType::Short => &SHORT,
+        ShapeType::Integer | ShapeType::IntEnum => &INTEGER,
+        ShapeType::Long => &LONG,
+        ShapeType::Float => &FLOAT,
+        ShapeType::Double => &DOUBLE,
+        ShapeType::BigInteger => &BIG_INTEGER,
+        ShapeType::BigDecimal => &BIG_DECIMAL,
+        _ => &DOCUMENT
     }
 }
