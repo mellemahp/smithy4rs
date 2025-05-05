@@ -41,4 +41,5 @@ num-bigint = "0.4"
 bigdecimal = "0.4.8"
 bytebuffer = "2.3.0"
 thiserror = "2.0.12"
+indexmap = "2.8.0"
 

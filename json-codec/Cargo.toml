@@ -13,6 +13,9 @@ version.workspace = true
 
 [dependencies]
 smithy4rs-core.workspace = true
+# TODO: Eventually the smithy-core could re-export this
+indexmap.workspace = true
+
 # Used to serialize
 json.workspace = true
 # used to deserialize

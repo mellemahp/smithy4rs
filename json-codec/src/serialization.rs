@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::any::Any;
 use std::fmt::Display;
 use crate::errors::JsonSerdeError;
 use crate::get_member_name;
@@ -41,6 +42,7 @@ impl JsonSerializer<'_> {
             JsonSerializer::Nested(parent) => Self::push_impl(schema, parent, value),
         }
     }
+
     fn push_impl(schema: &Schema, into: &mut JsonValue, value: JsonValue) -> Result<(), JsonSerdeError> {
         match into {
             JsonValue::Object(parent) => parent[get_member_name(schema)] = value,
@@ -86,11 +88,33 @@ impl Serializer for JsonSerializer<'_> {
         map_state: impl Iterator<Item = (K, V)> + ExactSizeIterator,
         consumer: C,
     ) -> Result<(), Self::Error> {
-        todo!()
+        let mut data = JsonValue::new_object();
+        let mut inner_serializer = JsonSerializer::of(&mut data);
+        for (key, value) in map_state {
+            inner_serializer.write_map_entry(schema, key, value, &consumer)?;
+        }
+        self.push_value(schema, data)
     }
 
+    // TODO: This seems pretty clunky. improve
     fn write_map_entry<K, V, C: MapEntryConsumer<K, V>>(&mut self, schema: &Schema, key: K, value: V, consumer: &C) -> Result<(), Self::Error> {
-        todo!()
+        let JsonSerializer::Nested(parent) = self else {
+            return Err(JsonSerdeError::SerializationError("Unexpected root map".to_string()));
+        };
+        let mut key_serializer = JsonSerializer::new();
+        let mut value_serializer = JsonSerializer::new();
+        C::write_key(key, &mut key_serializer)?;
+        C::write_value(value, &mut value_serializer)?;
+        if let (JsonSerializer::Root(Some(key)), JsonSerializer::Root(Some(root))) = (key_serializer, value_serializer) {
+            match key {
+                JsonValue::String(s) => parent[s] = root,
+                JsonValue::Number(n) => { todo!()}
+                _ => return Err(JsonSerdeError::SerializationError(format!("Unexpected map key type {:?}", key)))
+            }
+            Ok(())
+        } else {
+            Err(JsonSerdeError::SerializationError("Map serialization failed".to_string()))
+        }
     }
 
     fn write_list<I, C: ListItemConsumer<I>>(
@@ -147,7 +171,7 @@ impl Serializer for JsonSerializer<'_> {
     }
 
     fn write_string(&mut self, schema: &Schema, value: &String) -> Result<(), Self::Error> {
-        self.push_value(schema, json::from(value.as_str()))
+        self.push_value(schema, JsonValue::String(value.clone()))
     }
 
     fn write_blob(&mut self, schema: &Schema, value: &ByteBuffer) -> Result<(), Self::Error> {
