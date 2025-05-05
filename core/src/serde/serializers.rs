@@ -1,26 +1,27 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::error::Error;
-use std::fmt::Debug;
-use std::time::{Instant};
-use thiserror::Error;
-use crate::schema::Schema;
 use crate::BigDecimal;
 use crate::BigInt;
 use crate::ByteBuffer;
-use crate::documents::{Document, DocumentError};
+use crate::schema::Schema;
+use crate::schema::documents::{Document, DocumentError};
+use crate::schema::traits::SensitiveTrait;
+use std::error::Error;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::time::Instant;
+use thiserror::Error;
 
 pub trait Serializable {
     /// Serialize the state of the shape into the given serializer.
-    /// NOTE: This consumes the shapes.
-    fn serialize<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error>;
+    fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error>;
 }
 
 pub trait SerializableStruct: Serializable + Sized {
     fn schema(&self) -> &Schema;
 
-    fn serialize_members<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error>;
+    fn serialize_members<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error>;
 
     #[allow(unused_variables)]
     fn get_member_value<T>(&self, member_schema: &Schema) -> T {
@@ -33,40 +34,71 @@ pub trait SerializableStruct: Serializable + Sized {
 pub trait Serializer: Sized {
     type Error: Error + Default + From<DocumentError>;
 
-    fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error>;
+    fn write_struct<T: SerializableStruct>(
+        &mut self,
+        schema: &Schema,
+        structure: &T,
+    ) -> Result<(), Self::Error>;
+
     // TODO: Should this be write string map?
-    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state:T, consumer: C) -> Result<(), Self::Error>;
-    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error>;
+    fn write_map<K, V, C: MapEntryConsumer<K, V>>(
+        &mut self,
+        schema: &Schema,
+        map_state: impl Iterator<Item = (K, V)> + ExactSizeIterator,
+        consumer: C,
+    ) -> Result<(), Self::Error>;
+
+    fn write_map_entry<K, V, C: MapEntryConsumer<K, V>>(
+        &mut self,
+        schema: &Schema,
+        key: K,
+        value: V,
+        consumer: &C
+    ) -> Result<(), Self::Error>;
+
+    fn write_list<I, C: ListItemConsumer<I>>(
+        &mut self,
+        schema: &Schema,
+        list_state: impl Iterator<Item = I> + ExactSizeIterator,
+        consumer: C,
+    ) -> Result<(), Self::Error>;
+
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error>;
     fn write_byte(&mut self, schema: &Schema, value: i8) -> Result<(), Self::Error>;
     fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error>;
     fn write_integer(&mut self, schema: &Schema, value: i32) -> Result<(), Self::Error>;
-    fn write_long(&mut self,schema: &Schema, value: i64) -> Result<(), Self::Error>;
+    fn write_long(&mut self, schema: &Schema, value: i64) -> Result<(), Self::Error>;
     fn write_float(&mut self, schema: &Schema, value: f32) -> Result<(), Self::Error>;
     fn write_double(&mut self, schema: &Schema, value: f64) -> Result<(), Self::Error>;
-    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) -> Result<(), Self::Error>;
-    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) -> Result<(), Self::Error>;
-    fn write_string(&mut self, schema: &Schema, value: String) -> Result<(), Self::Error>;
-    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) -> Result<(), Self::Error>;
-    fn write_timestamp(&mut self, schema: &Schema, value: Instant) -> Result<(), Self::Error>;
-    fn write_document(&mut self, schema: &Schema, value: Document) -> Result<(), Self::Error>;
+    fn write_big_integer(&mut self, schema: &Schema, value: &BigInt) -> Result<(), Self::Error>;
+    fn write_big_decimal(&mut self, schema: &Schema, value: &BigDecimal)
+    -> Result<(), Self::Error>;
+    fn write_string(&mut self, schema: &Schema, value: &String) -> Result<(), Self::Error>;
+    fn write_blob(&mut self, schema: &Schema, value: &ByteBuffer) -> Result<(), Self::Error>;
+    fn write_timestamp(&mut self, schema: &Schema, value: &Instant) -> Result<(), Self::Error>;
+    fn write_document(&mut self, schema: &Schema, value: &Document) -> Result<(), Self::Error>;
     fn write_null(&mut self, schema: &Schema) -> Result<(), Self::Error>;
 
     // TODO: Is this necessary?
-    fn flush(&self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> Result<(), Self::Error> {
         todo!();
     }
 }
 
-pub trait ListItemConsumer<T: IntoIterator> {
-    fn consume<S: Serializer>(item: T::Item, serializer: &mut S) -> Result<(), S::Error>;
+/// Allow's the compiler to monomorphize the specific executions of the `accept` consumer
+/// *Impl Note*: Implementers should typically be zero-sized types.
+pub trait ListItemConsumer<I> {
+    fn write_item<S: Serializer>(item: I, serializer: &mut S) -> Result<(), S::Error>;
 }
 
-pub trait MapConsumer<T> {
-    fn consume<S: Serializer>(key_schema: &Schema, key: &str, state: T, value_serializer: MapValueSerializer<T, S>) -> Result<(), S::Error>;
+pub trait MapSerializer<S: Serializer> {
+    fn write_entry<K, V, C: MapEntryConsumer<K, V>>(schema: &Schema, key: K, value: V, consumer: C, serializer: &mut S) -> Result<(), S::Error>;
 }
 
-pub type MapValueSerializer<T, S> = fn(state: T, serializer:  &mut S) -> Result<(), <S as Serializer>::Error>;
+pub trait MapEntryConsumer<K, V> {
+    fn write_key<S: Serializer>(key: K, serializer: &mut S) -> Result<(), S::Error>;
+    fn write_value<S: Serializer>(value: V, serializer: &mut S) -> Result<(), S::Error>;
+}
 
 #[allow(unused_variables)]
 pub trait Interceptor<S: Serializer> {
@@ -83,35 +115,65 @@ pub trait Interceptor<S: Serializer> {
 
 pub struct InterceptingSerializer<'a, S: Serializer, I: Interceptor<S>> {
     delegate: &'a mut S,
-    decorator: I
+    decorator: I,
 }
 
-impl <'a, S: Serializer, I: Interceptor<S>> InterceptingSerializer<'a, S, I> {
+impl<'a, S: Serializer, I: Interceptor<S>> InterceptingSerializer<'a, S, I> {
     pub fn new(delegate: &'a mut S, decorator: I) -> Self {
-        InterceptingSerializer { delegate, decorator }
+        InterceptingSerializer {
+            delegate,
+            decorator,
+        }
     }
 }
 
-impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_, S, I> {
+impl<S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_, S, I> {
     type Error = S::Error;
 
-    fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error> {
+    fn write_struct<T: SerializableStruct>(
+        &mut self,
+        schema: &Schema,
+        structure: &T,
+    ) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_struct(schema, structure)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
+    fn write_map<K, V, C: MapEntryConsumer<K, V>>(
+        &mut self,
+        schema: &Schema,
+        map_state: impl Iterator<Item = (K, V)> + ExactSizeIterator,
+        consumer: C,
+    ) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
-        self.delegate.write_map(schema,  size, map_state, consumer)?;
+        self.delegate.write_map(schema, map_state, consumer)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
+    fn write_map_entry<K, V, C: MapEntryConsumer<K, V>>(
+        &mut self, schema:
+        &Schema,
+        key: K,
+        value: V,
+        consumer: &C
+    ) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
-        self.delegate.write_list(schema, size, list_state, consumer)?;
+        self.delegate.write_map_entry(schema, key, value, consumer)?;
+        self.decorator.after(schema, &mut self.delegate)?;
+        Ok(())
+    }
+
+    fn write_list<It, C: ListItemConsumer<It>>(
+        &mut self,
+        schema: &Schema,
+        list_state: impl Iterator<Item = It> + ExactSizeIterator,
+        consumer: C,
+    ) -> Result<(), Self::Error> {
+        self.decorator.before(schema, &mut self.delegate)?;
+        self.delegate.write_list(schema, list_state, consumer)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
@@ -165,42 +227,46 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
         Ok(())
     }
 
-    fn write_big_integer(&mut self, schema: &Schema, value: BigInt) -> Result<(), Self::Error> {
+    fn write_big_integer(&mut self, schema: &Schema, value: &BigInt) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_big_integer(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_big_decimal(&mut self, schema: &Schema, value: BigDecimal) -> Result<(), Self::Error> {
+    fn write_big_decimal(
+        &mut self,
+        schema: &Schema,
+        value: &BigDecimal,
+    ) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_big_decimal(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_string(&mut self, schema: &Schema, value: String) -> Result<(), Self::Error> {
+    fn write_string(&mut self, schema: &Schema, value: &String) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_string(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_blob(&mut self, schema: &Schema, value: ByteBuffer) -> Result<(), Self::Error> {
+    fn write_blob(&mut self, schema: &Schema, value: &ByteBuffer) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_blob(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_timestamp(&mut self, schema: &Schema, value: Instant) -> Result<(), Self::Error> {
+    fn write_timestamp(&mut self, schema: &Schema, value: &Instant) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_timestamp(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
         Ok(())
     }
 
-    fn write_document(&mut self, schema: &Schema, value: Document) -> Result<(), Self::Error> {
+    fn write_document(&mut self, schema: &Schema, value: &Document) -> Result<(), Self::Error> {
         self.decorator.before(schema, &mut self.delegate)?;
         self.delegate.write_document(schema, value)?;
         self.decorator.after(schema, &mut self.delegate)?;
@@ -214,7 +280,7 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
         Ok(())
     }
 
-    fn flush(&self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> Result<(), Self::Error> {
         self.delegate.flush()
     }
 }
@@ -223,20 +289,25 @@ impl <S: Serializer, I: Interceptor<S>> Serializer for InterceptingSerializer<'_
 // TODO: Implement sensitive redaction
 #[derive(Default)]
 pub struct FmtSerializer {
-    pub string: String
+    pub string: String,
 }
 
 impl FmtSerializer {
     pub const fn new() -> Self {
-        FmtSerializer { string: String::new() }
+        FmtSerializer {
+            string: String::new(),
+        }
     }
 
     pub fn serialize<T: Serializable>(shape: T) -> String {
         let mut serializer = Self::new();
-        shape.serialize(&mut serializer).expect("serialization failed");
+        shape
+            .serialize(&mut serializer)
+            .expect("serialization failed");
         serializer.string
     }
 }
+
 
 #[derive(Error, Debug, Default)]
 pub enum FmtError {
@@ -246,100 +317,187 @@ pub enum FmtError {
     #[error("data store disconnected")]
     DocumentConversion(#[from] DocumentError),
 }
-
+const REDACTED_STRING: &str = "**REDACTED**";
+macro_rules! redact {
+    ($self:ident, $schema:ident, $expr:expr) => {
+        if $schema.contains_trait_type::<SensitiveTrait>() {
+            $self.string.push_str(REDACTED_STRING);
+        } else {
+            $expr
+        }
+    };
+}
 // TODO: Could this be made infallible?
 impl Serializer for FmtSerializer {
     type Error = FmtError;
 
-    fn write_struct<T: SerializableStruct>(&mut self, schema: &Schema, structure: T) -> Result<(), Self::Error> {
-        let name = schema.member_target.map(|t| &t.id.name ).unwrap_or(&schema.id.name);
+    fn write_struct<T: SerializableStruct>(
+        &mut self,
+        schema: &Schema,
+        structure: &T,
+    ) -> Result<(), Self::Error> {
+        let name = schema
+            .member_target
+            .map(|t| &t.id.name)
+            .unwrap_or(&schema.id.name);
         self.string.push_str(name);
         self.string.push('[');
-        structure.serialize_members(&mut InterceptingSerializer::new(self, StructWriter::new()))?;
+        redact!(
+            self,
+            schema,
+            structure
+                .serialize_members(&mut StructWriter::wrap(self))?
+        );
         self.string.push(']');
         Ok(())
     }
 
-    #[allow(unused_variables)]
-    fn write_map<T, C: MapConsumer<T>>(&mut self, schema: &Schema, size: usize, map_state: T, consumer: C) -> Result<(), Self::Error> {
-        todo!()
+    fn write_map<K, V, C: MapEntryConsumer<K, V>>(
+        &mut self,
+        schema: &Schema,
+        map_state: impl Iterator<Item = (K, V)> + ExactSizeIterator,
+        consumer: C,
+    ) -> Result<(), Self::Error> {
+        self.string.push('{');
+        if schema.contains_trait_type::<SensitiveTrait>() {
+            self.string.push_str(REDACTED_STRING);
+        } else {
+            let mut map_serializer = CommaWriter::wrap(self);
+            for (key, value) in map_state {
+                map_serializer.write_map_entry(schema, key, value, &consumer)?
+            }
+        }
+        self.string.push('}');
+        Ok(())
     }
 
-    #[allow(unused_variables)]
-    fn write_list<T: IntoIterator, C: ListItemConsumer<T>>(&mut self, schema: &Schema, size: usize, list_state: T, consumer: C) -> Result<(), Self::Error> {
-        if size == 0 {
-            return Ok(())
-        }
+    fn write_map_entry<K, V, C: MapEntryConsumer<K, V>>(&mut self, schema: &Schema, key: K, value: V, consumer: &C) -> Result<(), Self::Error> {
+        C::write_key(key, self)?;
+        self.string.push(':');
+        C::write_value(value, self)
+    }
+
+    fn write_list<I, C: ListItemConsumer<I>>(
+        &mut self,
+        schema: &Schema,
+        list_state: impl Iterator<Item = I> + ExactSizeIterator,
+        consumer: C,
+    ) -> Result<(), Self::Error> {
         self.string.push('[');
-        let mut inner_serializer = InterceptingSerializer::new(self, CommaWriter::new());
-        for item in list_state {
-            C::consume(item, &mut inner_serializer)?;
+        if schema.contains_trait_type::<SensitiveTrait>() {
+            self.string.push_str(REDACTED_STRING);
+        } else {
+            let mut inner_serializer = CommaWriter::wrap(self);
+            for item in list_state {
+                C::write_item(item, &mut inner_serializer)?;
+            }
         }
         self.string.push(']');
         Ok(())
     }
 
-    fn write_boolean(&mut self, _: &Schema, value: bool) -> Result<(), Self::Error> {
-        self.string.push_str(&value.to_string());
+    fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
+        redact!(self, schema, self.string.push_str(&value.to_string()));
         Ok(())
     }
 
-    fn write_byte(&mut self, _: &Schema, value: i8) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_byte(&mut self, schema: &Schema, value: i8) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_short(&mut self, _: &Schema, value: i16) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_short(&mut self, schema: &Schema, value: i16) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_integer(&mut self, _: &Schema, value: i32) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_integer(&mut self, schema: &Schema, value: i32) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_long(&mut self, _: &Schema, value: i64) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_long(&mut self, schema: &Schema, value: i64) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_float(&mut self, _: &Schema, value: f32) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_float(&mut self, schema: &Schema, value: f32) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_double(&mut self, _: &Schema, value: f64) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_double(&mut self, schema: &Schema, value: f64) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_big_integer(&mut self, _: &Schema, value: BigInt) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_big_integer(&mut self, schema: &Schema, value: &BigInt) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_big_decimal(&mut self, _: &Schema, value: BigDecimal) -> Result<(), Self::Error> {
-        self.string.push_str(value.to_string().as_str());
+    fn write_big_decimal(
+        &mut self,
+        schema: &Schema,
+        value: &BigDecimal,
+    ) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.string.push_str(value.to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_string(&mut self, _: &Schema, value: String) -> Result<(), Self::Error> {
-        self.string.push_str(value.as_str());
+    fn write_string(&mut self, schema: &Schema, value: &String) -> Result<(), Self::Error> {
+        redact!(self, schema, self.string.push_str(value.as_str()));
         Ok(())
     }
 
-    fn write_blob(&mut self, _: &Schema, value: ByteBuffer) -> Result<(), Self::Error> {
+    fn write_blob(&mut self, _: &Schema, value: &ByteBuffer) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_timestamp(&mut self, _: &Schema, value: Instant) -> Result<(), Self::Error> {
+    fn write_timestamp(&mut self, schema: &Schema, value: &Instant) -> Result<(), Self::Error> {
         // TODO: This is incorrect and needs to be fixed. Just to get all branches running
-        self.string.push_str(value.elapsed().as_secs().to_string().as_str());
+        redact!(
+            self,
+            schema,
+            self.string
+                .push_str(value.elapsed().as_secs().to_string().as_str())
+        );
         Ok(())
     }
 
-    fn write_document(&mut self, _: &Schema, value: Document) -> Result<(), Self::Error> {
+    fn write_document(&mut self, _: &Schema, value: &Document) -> Result<(), Self::Error> {
         todo!()
     }
 
@@ -348,43 +506,52 @@ impl Serializer for FmtSerializer {
         Ok(())
     }
 
-    fn flush(&self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> Result<(), Self::Error> {
         // Does nothing for string serializer
         Ok(())
     }
 }
 
 struct StructWriter {
-    is_first: bool
+    is_first: bool,
 }
 
 impl StructWriter {
     const fn new() -> Self {
         StructWriter { is_first: true }
     }
+
+    pub fn wrap(ser: &mut FmtSerializer) -> InterceptingSerializer<FmtSerializer, Self> {
+        InterceptingSerializer::new(ser, Self::new())
+    }
 }
-impl <'a> Interceptor<FmtSerializer> for StructWriter {
+impl<'a> Interceptor<FmtSerializer> for StructWriter {
     fn before(&mut self, schema: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), FmtError> {
         if !self.is_first {
             sink.string.push_str(", ");
         } else {
             self.is_first = false;
         }
-        sink.string.push_str(schema.member_name.as_ref().expect("missing member name"));
+        sink.string
+            .push_str(schema.member_name.as_ref().expect("missing member name"));
         sink.string.push('=');
         Ok(())
     }
 }
 
 struct CommaWriter {
-    is_first: bool
+    is_first: bool,
 }
 impl CommaWriter {
-    const fn new() -> Self {
+    fn new() -> Self {
         CommaWriter { is_first: true }
     }
+
+    pub fn wrap(ser: &mut FmtSerializer) -> InterceptingSerializer<FmtSerializer, Self> {
+        InterceptingSerializer::new(ser, Self::new())
+    }
 }
-impl <'a> Interceptor<FmtSerializer> for CommaWriter {
+impl<'a> Interceptor<FmtSerializer> for CommaWriter {
     fn before(&mut self, _: &Schema<'_>, sink: &mut FmtSerializer) -> Result<(), FmtError> {
         if !self.is_first {
             sink.string.push_str(", ");
@@ -392,5 +559,62 @@ impl <'a> Interceptor<FmtSerializer> for CommaWriter {
             self.is_first = false;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::schema::ShapeId;
+    use crate::schema::prelude;
+    use crate::{lazy_member_schema, traits};
+    use std::sync::Arc;
+    use std::sync::LazyLock;
+
+    static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
+        Schema::structure_builder(ShapeId::from("com.example#Shape"))
+            .put_member("a", &prelude::STRING, traits![])
+            .put_member("b", &prelude::STRING, traits![SensitiveTrait::new()])
+            .build()
+    });
+    lazy_member_schema!(MEMBER_A, SCHEMA, "a");
+    lazy_member_schema!(MEMBER_B, SCHEMA, "b");
+
+    //#[derive(SerializableStruct)]
+    //#[schema(SCHEMA)]
+    pub(crate) struct SerializeMe {
+        pub member_a: String,
+        pub member_b: String,
+    }
+
+    impl Serializable for SerializeMe {
+        fn serialize<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error> {
+            serializer.write_struct(&SCHEMA, &self)
+        }
+    }
+
+    impl SerializableStruct for SerializeMe {
+        fn schema(&self) -> &'static Schema<'static> {
+            &SCHEMA
+        }
+
+        fn serialize_members<S: Serializer>(self, serializer: &mut S) -> Result<(), S::Error> {
+            serializer.write_string(&MEMBER_A, &self.member_a)?;
+            serializer.write_string(&MEMBER_B, &self.member_b)?;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn fmt_serializer_simple() {
+        let mut fmter = FmtSerializer::new();
+        let struct_to_write = SerializeMe {
+            member_a: "a".to_string(),
+            member_b: "b".to_string(),
+        };
+        struct_to_write
+            .serialize(&mut fmter)
+            .expect("serialization failed");
+        assert_eq!(fmter.string, "Shape[a=a, b=**REDACTED**]");
     }
 }

@@ -1,7 +1,8 @@
 use jiter::JiterError;
 use thiserror::Error;
+use smithy4rs_core::schema::documents::DocumentError;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Default)]
 pub enum JsonSerdeError {
     #[error("Failed to serialize member to JSON: {0}")]
     SerializationError(String),
@@ -9,6 +10,11 @@ pub enum JsonSerdeError {
     DeserializationError(String),
     #[error("Failed to convert integer type")]
     IntConversionError(#[from] std::num::TryFromIntError),
+    #[error("Failed serializing")]
+    #[default]
+    Default,
+    #[error("Failed Document conversion")]
+    DocumentConversionError(#[from] DocumentError),
 }
 
 impl From<JiterError> for JsonSerdeError {

@@ -20,3 +20,4 @@ smithy4rs-core-derive.workspace = true
 thiserror.workspace = true
 anymap = "0.12.1"
 downcast-rs = "2.0.1"
+uritemplate = "0.1.2"

@@ -6,22 +6,23 @@ pub struct ShapeId {
     pub id: String,
     pub namespace: String,
     pub name: String,
-    pub member: Option<String>
+    pub member: Option<String>,
 }
 
 impl From<&str> for ShapeId {
     fn from(value: &str) -> Self {
         let split = value.split_once("#").expect("Invalid Shape Id");
-        let (namespace, mut name) = split;
+        let (namespace, mut base_name) = split;
         let mut member = None;
-        if let Some((name, split_member)) = name.split_once("$") {
+        if let Some((name, split_member)) = base_name.split_once("$") {
+            base_name = name;
             member = Some(split_member.to_string());
         }
         ShapeId {
             id: value.to_string(),
             namespace: namespace.to_string(),
-            name: name.to_string(),
-            member
+            name: base_name.to_string(),
+            member,
         }
     }
 }
@@ -36,7 +37,7 @@ impl ShapeId {
             id,
             namespace: namespace.to_string(),
             name: name.to_string(),
-            member: member.map(ToString::to_string)
+            member: member.map(ToString::to_string),
         }
     }
 
@@ -69,7 +70,7 @@ pub enum ShapeType {
     Member,
     Service,
     Resource,
-    Operation
+    Operation,
 }
 
 #[cfg(test)]

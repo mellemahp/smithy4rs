@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-use std::error::Error;
-use std::time::Instant;
+use crate::schema::Schema;
+use crate::schema::documents::Document;
+use crate::serde::serializers::Serializable;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
-use crate::documents::Document;
-use crate::schema::Schema;
-use crate::serde::serializers::Serializable;
+use std::error::Error;
+use std::time::Instant;
 
 pub trait Deserializable: Sized {
     fn schema() -> &'static Schema<'static>;
@@ -17,7 +17,11 @@ pub trait Deserializable: Sized {
         Ok(self)
     }
 
-    fn deserialize_member<D: Deserializer>(&mut self, member_schema: &Schema, member_deserializer: &mut D) -> Result<(), D::Error>;
+    fn deserialize_member<D: Deserializer>(
+        &mut self,
+        member_schema: &Schema,
+        member_deserializer: &mut D,
+    ) -> Result<(), D::Error>;
 
     fn error_correction(&mut self) {
         todo!()
@@ -25,7 +29,6 @@ pub trait Deserializable: Sized {
 }
 
 pub trait ShapeBuilder<T: Serializable>: Deserializable {
-
     fn build(self) -> T;
 
     #[allow(unused_variables)]
@@ -39,9 +42,23 @@ pub trait ShapeBuilder<T: Serializable>: Deserializable {
 pub trait Deserializer: Sized {
     type Error: Error;
 
-    fn read_struct<T>(&mut self, schema: &Schema, state: &mut T, consumer: StructConsumer<T, Self>) -> Result<(), Self::Error>;
-    fn read_list<T>(&mut self, schema: &Schema, state: T, consumer: ListConsumer<T, Self>) -> Result<(), Self::Error>;
-    fn read_string_map<T>(schema: &Schema, state: T, consumer: StringMapConsumer<T, Self>) -> Result<(), Self::Error>;
+    fn read_struct<T>(
+        &mut self,
+        schema: &Schema,
+        state: &mut T,
+        consumer: StructConsumer<T, Self>,
+    ) -> Result<(), Self::Error>;
+    fn read_list<T>(
+        &mut self,
+        schema: &Schema,
+        state: T,
+        consumer: ListConsumer<T, Self>,
+    ) -> Result<(), Self::Error>;
+    fn read_string_map<T>(
+        schema: &Schema,
+        state: T,
+        consumer: StringMapConsumer<T, Self>,
+    ) -> Result<(), Self::Error>;
     fn read_boolean(&mut self, schema: &Schema) -> Result<bool, Self::Error>;
     fn read_blob(&mut self, schema: &Schema) -> Result<ByteBuffer, Self::Error>;
     fn read_byte(&mut self, schema: &Schema) -> Result<u8, Self::Error>;
@@ -65,8 +82,15 @@ pub trait Deserializer: Sized {
     fn finish(&mut self) -> Result<(), Self::Error>;
 }
 
-pub type StructConsumer<T, D> = fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
-pub type ListConsumer<T, D> = fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
-pub type StringMapConsumer<T, D> = fn(state: &mut T, schema: &Schema, key: &str, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
+pub type StructConsumer<T, D> =
+    fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
+pub type ListConsumer<T, D> =
+    fn(state: &mut T, schema: &Schema, decoder: &mut D) -> Result<(), <D as Deserializer>::Error>;
+pub type StringMapConsumer<T, D> = fn(
+    state: &mut T,
+    schema: &Schema,
+    key: &str,
+    decoder: &mut D,
+) -> Result<(), <D as Deserializer>::Error>;
 
 // INTERCEPTING DESERIALIZER?

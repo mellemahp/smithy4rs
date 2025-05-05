@@ -1,10 +1,9 @@
 mod shapes;
 
-use smithy4rs_core::serde::se::Serializable;
-use smithy4rs_core::serde::de::{ShapeBuilder, Deserializable};
-use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 use crate::shapes::{Nested, SerializeMe};
-
+use smithy4rs_core::serde::de::{Deserializable, ShapeBuilder};
+use smithy4rs_core::serde::se::Serializable;
+use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 
 #[test]
 fn serializes_to_json() {
@@ -14,8 +13,13 @@ fn serializes_to_json() {
         .member_b("World")
         .nested(Nested::builder().member_c("Yeah").build())
         .build();
-    structure.serialize(&mut output).expect("serialization failed");
-    println!("OUTPUT: {}", output.string);
+    structure
+        .serialize(&mut output)
+        .expect("serialization failed");
+    if let JsonSerializer::Root(Some(value)) = output {
+        println!("DEBUGGING: {}", json::stringify(value));
+    }
+    //println!("OUTPUT: {}", output.to_string());
 }
 
 #[test]

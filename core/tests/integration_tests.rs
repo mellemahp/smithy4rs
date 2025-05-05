@@ -1,15 +1,27 @@
 mod shapes;
 
-use smithy4rs_core::serde::se::{FmtSerializer, SerializableStruct};
+use std::collections::HashMap;
+use indexmap::IndexMap;
 use crate::shapes::SerializeMe;
 
 #[test]
 fn test_fmt_serializer() {
-    let mut output = FmtSerializer::new();
-    let structure = SerializeMe { member_a: "Hello".to_string(), member_b: "World".to_string(), list_member: vec!("s".to_string(), "e".to_string()) };
-    structure.serialize(&mut output).expect("Serialization failed");
-    assert_eq!(output.string, "Shape[a=Hello, b=World, list=[s, e]]");
+    let mut map = IndexMap::new();
+    map.insert("a".to_string(), "b".to_string());
+    map.insert("c".to_string(), "d".to_string());
+    map.insert("e".to_string(), "f".to_string());
+    let structure = SerializeMe {
+        member_a: "Hello".to_string(),
+        member_b: "World".to_string(),
+        list_member: vec!["s".to_string(), "e".to_string()],
+        map_member: map
+    };
+    assert_eq!(
+        format!("{}", structure),
+        "Shape[a=Hello, b=World, list=[s, e], map={a:b, c:d, e:f}]"
+    );
 }
+
 //
 // struct DummyDeserializer<'de> {
 //     arr: Vec<&'de str>,
@@ -136,4 +148,3 @@ fn test_struct_deserialization() {
     // assert_eq!(output.string, "Shape[a=Hello, b=World]");
     // println!("OUTPUT: {}", output.string);
 }
-
