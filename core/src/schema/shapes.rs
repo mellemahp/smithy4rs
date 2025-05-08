@@ -46,7 +46,7 @@ impl ShapeId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ShapeType {
     Blob,
     Boolean,

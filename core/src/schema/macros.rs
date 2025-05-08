@@ -1,15 +1,15 @@
 #[macro_export]
 macro_rules! traits {
-    () => { None };
+    () => { Vec::new() };
     ($($x:expr),+ $(,)?) => (
-        Some(vec![$(Arc::new($x)),*])
+        vec![$(Ref::new($x)),*]
     );
 }
 
 #[macro_export]
 macro_rules! lazy_member_schema {
     ($member_schema_name:ident, $parent_schema:ident, $identifier:literal) => {
-        static $member_schema_name: LazyLock<&Schema> =
+        static $member_schema_name: LazyLock<Ref<Schema>> =
             LazyLock::new(|| $parent_schema.expect_member($identifier));
     };
 }

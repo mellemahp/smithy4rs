@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::time::Instant;
 use bigdecimal::BigDecimal;
@@ -128,7 +130,7 @@ pub struct Document<'doc> {
     pub schema: &'doc Schema<'doc>,
     pub(crate) value: DocumentValue<'doc>,
     // NOTE: It is expected that protocols set these!
-    pub discriminator: Option<&'doc ShapeId>,
+    pub discriminator: Option<ShapeId>,
 }
 //
 // impl Document<'_> {

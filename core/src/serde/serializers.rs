@@ -125,7 +125,7 @@ impl<T: Serialize> Serialize for Vec<T> {
         let mut list = serializer.write_list(schema, self.len())?;
         let value_schema = schema.get_member("member").expect("Should have member.");
         for element in self {
-            list.serialize_element(value_schema, element)?;
+            list.serialize_element(value_schema.as_ref(), element)?;
         }
         list.end(schema)
     }
@@ -143,7 +143,7 @@ where
         let key_schema = schema.get_member("key").expect("Should have key schema");
         let value_schema = schema.get_member("value").expect("Should have value schema");
         for (k, v) in self {
-            map.serialize_entry(key_schema, value_schema, k, v)?;
+            map.serialize_entry(key_schema.as_ref(), value_schema.as_ref(), k, v)?;
         }
         map.end(schema)
     }

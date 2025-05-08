@@ -1,8 +1,6 @@
 use std::fmt::{Error, Write};
-use std::marker::PhantomData;
 use std::time::Instant;
 use bigdecimal::BigDecimal;
-use bigdecimal::num_traits::real::Real;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use thiserror::Error;
@@ -74,8 +72,8 @@ impl <W: Write> Serializer for FmtSerializer<W> {
     type SerializeStruct<'s> = FmtStructSerializer<'s, W>
     where Self: 's;
 
-    fn write_struct(&mut self, schema: &Schema, size: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
-        self.sink.write_str(schema.id.name.as_str())?;
+    fn write_struct(&mut self, schema: &Schema, _: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
+        self.sink.write_str(schema.id().name.as_str())?;
         self.sink.write_char('[')?;
         Ok(FmtStructSerializer::new(self, schema.contains_trait_type::<SensitiveTrait>()))
     }
@@ -134,7 +132,7 @@ impl <W: Write> Serializer for FmtSerializer<W> {
         redact!(self, schema, self.sink.write_str(value.as_str()))
     }
 
-    fn write_blob(&mut self, _: &Schema, value: &ByteBuffer) -> Result<(), Self::Error> {
+    fn write_blob(&mut self, _: &Schema, _: &ByteBuffer) -> Result<(), Self::Error> {
         todo!()
     }
 
@@ -143,7 +141,7 @@ impl <W: Write> Serializer for FmtSerializer<W> {
         redact!(self,schema,self.sink.write_str(value.elapsed().as_secs().to_string().as_str()))
     }
 
-    fn write_document(&mut self, _: &Schema, value: &Document) -> Result<(), Self::Error> {
+    fn write_document(&mut self, _: &Schema, _: &Document) -> Result<(), Self::Error> {
         todo!()
     }
 
@@ -241,12 +239,18 @@ impl <W: Write> StructSerializer for FmtStructSerializer<'_, W> {
     {
         if self.redacted { return Ok(())}
         comma!(self);
-        self.parent.sink.write_str(&member_schema.member_name.as_ref().expect("EEK!").as_str())?;
+        let Some(member_schema) = member_schema.get_member("value") else {
+            return Err(Error::default());
+        };
+        let Schema::Member(member) = &*member_schema else {
+            return Err(Error::default());
+        };
+        self.parent.sink.write_str(member.name.as_str())?;
         self.parent.sink.write_char('=')?;
-        value.serialize(member_schema, self.parent)
+        value.serialize(member_schema.as_ref(), self.parent)
     }
 
-    fn end(self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         self.parent.sink.write_char(']')
     }
 }
@@ -254,10 +258,9 @@ impl <W: Write> StructSerializer for FmtStructSerializer<'_, W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::prelude;
+    use crate::schema::{prelude, Ref};
     use crate::schema::ShapeId;
     use crate::{lazy_member_schema, traits};
-    use std::sync::Arc;
     use std::sync::LazyLock;
     use crate::schema::traits::SensitiveTrait;
     use crate::serde::shapes::SerializeShape;

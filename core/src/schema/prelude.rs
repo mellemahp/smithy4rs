@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use crate::schema::Schema;
-use crate::schema::ShapeType;
 use crate::traits;
 use std::sync::LazyLock;
 
@@ -34,27 +33,3 @@ pub static DOCUMENT: LazyLock<Schema> =
 
 // TODO:
 // - Primitive types
-
-///  Returns the most appropriate prelude schema reference based on the given type.
-///
-/// Types with no corresponding prelude schema (e.g., LIST, STRUCTURE, UNION) are returned
-/// as document schemas.
-///
-/// *NOTE*: Primitive numbers and boolean types return the nullable value type.
-pub fn get_schema_for_type(shape_type: ShapeType) -> &'static Schema<'static> {
-    match shape_type {
-        ShapeType::Blob => &BLOB,
-        ShapeType::Byte => &BYTE,
-        ShapeType::Boolean => &BOOLEAN,
-        ShapeType::String | ShapeType::Enum => &STRING,
-        ShapeType::Timestamp => &TIMESTAMP,
-        ShapeType::Short => &SHORT,
-        ShapeType::Integer | ShapeType::IntEnum => &INTEGER,
-        ShapeType::Long => &LONG,
-        ShapeType::Float => &FLOAT,
-        ShapeType::Double => &DOUBLE,
-        ShapeType::BigInteger => &BIG_INTEGER,
-        ShapeType::BigDecimal => &BIG_DECIMAL,
-        _ => &DOCUMENT,
-    }
-}

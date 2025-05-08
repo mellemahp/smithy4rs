@@ -3,7 +3,7 @@ use crate::schema::documents::DocumentValue;
 use crate::schema::shapes::ShapeId;
 use downcast_rs::{impl_downcast, DowncastSync};
 use std::collections::HashMap;
-use std::sync::Arc;
+use crate::schema::Ref;
 
 pub trait SmithyTrait: DowncastSync {
     fn id(&self) -> &ShapeId;
@@ -29,11 +29,11 @@ impl SmithyTrait for DynamicTrait {
     }
 }
 
-pub type TraitList = Vec<Arc<dyn SmithyTrait>>;
+pub type TraitList = Vec<Ref<dyn SmithyTrait>>;
 
 #[derive(Clone)]
 pub(crate) struct TraitMap {
-    map: HashMap<ShapeId, Arc<dyn SmithyTrait>>,
+    map: HashMap<ShapeId, Ref<dyn SmithyTrait>>,
 }
 impl TraitMap {
     pub fn new() -> TraitMap {
@@ -42,19 +42,19 @@ impl TraitMap {
         }
     }
 
-    pub fn insert(&mut self, value: impl SmithyTrait) -> Option<Arc<dyn SmithyTrait>> {
-        self.map.insert(value.id().clone(), Arc::new(value))
+    pub fn insert(&mut self, value: impl SmithyTrait) -> Option<Ref<dyn SmithyTrait>> {
+        self.map.insert(value.id().clone(), Ref::new(value))
     }
 
     pub fn contains(&self, id: &ShapeId) -> bool {
         self.map.contains_key(id)
     }
 
-    pub fn get(&self, id: &ShapeId) -> Option<&Arc<dyn SmithyTrait>> {
+    pub fn get(&self, id: &ShapeId) -> Option<&Ref<dyn SmithyTrait>> {
         self.map.get(id)
     }
 
-    pub fn of(traits: Vec<Arc<dyn SmithyTrait>>) -> TraitMap {
+    pub fn of(traits: Vec<Ref<dyn SmithyTrait>>) -> Self {
         let mut map: TraitMap = TraitMap::new();
         for smithy_trait in traits {
             map.map.insert(smithy_trait.id().clone(), smithy_trait);

@@ -10,7 +10,7 @@ use std::error::Error;
 use std::time::Instant;
 
 pub trait Deserializable: Sized {
-    fn schema() -> &'static Schema<'static>;
+    fn schema<'a>() -> &'a Schema<'a>;
 
     fn deserialize<D: Deserializer>(mut self, decoder: &mut D) -> Result<Self, D::Error> {
         decoder.read_struct(Self::schema(), &mut self, Self::deserialize_member)?;
