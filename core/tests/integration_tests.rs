@@ -1,8 +1,7 @@
 mod shapes;
 
-use std::collections::HashMap;
-use indexmap::IndexMap;
 use crate::shapes::SerializeMe;
+use indexmap::IndexMap;
 
 #[test]
 fn test_fmt_serializer() {
@@ -14,7 +13,7 @@ fn test_fmt_serializer() {
         member_a: "Hello".to_string(),
         member_b: "World".to_string(),
         list_member: vec!["s".to_string(), "e".to_string()],
-        map_member: map
+        map_member: map,
     };
     assert_eq!(
         format!("{}", structure),

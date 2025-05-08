@@ -1,7 +1,7 @@
 use smithy4rs_core::schema::{prelude, Schema};
 use smithy4rs_core::schema::shapes::ShapeId;
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
-use smithy4rs_core::serde::se::{Interceptor, MapEntryConsumer, Serializable, SerializableStruct, Serializer};
+use smithy4rs_core::serde::se::{Serialize, Serializer, StructSerializer};
 use smithy4rs_core::{lazy_member_schema, traits};
 use std::sync::LazyLock;
 use indexmap::IndexMap;
@@ -22,7 +22,7 @@ static MAP: LazyLock<Schema> = LazyLock::new(|| {
 lazy_member_schema!(MAP_KEY, MAP, "key");
 lazy_member_schema!(MAP_VALUE, MAP, "value");
 
-static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
+pub static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::structure_builder(ShapeId::from("com.example#Shape"))
         .put_member("a", &prelude::STRING, traits![])
         .put_member("b", &prelude::STRING, traits![])
@@ -51,38 +51,14 @@ impl SerializeMe {
     }
 }
 
-impl Serializable for SerializeMe {
-    fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_struct(&SCHEMA, self)
-    }
-}
-
-impl SerializableStruct for SerializeMe {
-    fn schema(&self) -> &'static Schema<'static> {
-        &SCHEMA
-    }
-
-    fn serialize_members<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&MEMBER_A, &self.member_a)?;
-        serializer.write_string(&MEMBER_B, &self.member_b)?;
-        serializer.write_struct(&MEMBER_NESTED, &self.nested)?;
-        serializer.write_map(
-            &MEMBER_MAP_NESTED,
-            &mut self.map_nested.iter(),
-            MapNestedConsumer
-        )?;
-        Ok(())
-    }
-}
-
-struct MapNestedConsumer;
-impl MapEntryConsumer<&String, &Nested> for MapNestedConsumer {
-    fn write_key<S: Serializer>(key: &String, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&MAP_KEY, key)
-    }
-
-    fn write_value<S: Serializer>(value: &Nested, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_struct(&MAP_VALUE, value)
+impl Serialize for SerializeMe {
+    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+        let mut struct_writer = serializer.write_struct(&SCHEMA, 4)?;
+        struct_writer.serialize_member(&MEMBER_A, &self.member_a)?;
+        struct_writer.serialize_member(&MEMBER_B, &self.member_b)?;
+        struct_writer.serialize_member(&MEMBER_NESTED, &self.nested)?;
+       // struct_writer.serialize_member(&MEMBER_MAP_NESTED, &self.map_nested)?;
+        struct_writer.end(schema)
     }
 }
 
@@ -96,20 +72,11 @@ impl Nested {
     }
 }
 
-impl SerializableStruct for Nested {
-    fn schema(&self) -> &'static Schema<'static> {
-        &NESTED
-    }
-
-    fn serialize_members<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&MEMBER_C, &self.member_c)?;
-        Ok(())
-    }
-}
-
-impl Serializable for Nested {
-    fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_struct(&NESTED, self)
+impl Serialize for Nested {
+    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+        let mut struct_writer = serializer.write_struct(&NESTED, 1)?;
+        struct_writer.serialize_member(&MEMBER_C, &self.member_c)?;
+        struct_writer.end(schema)
     }
 }
 

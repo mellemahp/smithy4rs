@@ -1,133 +1,84 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::any::Any;
 use std::fmt::Display;
 use crate::errors::JsonSerdeError;
 use crate::get_member_name;
 use json::JsonValue;
 use smithy4rs_core::schema::Schema;
 use smithy4rs_core::schema::documents::Document;
-use smithy4rs_core::serde::se::{ListItemConsumer, MapEntryConsumer, SerializableStruct, Serializer};
+use smithy4rs_core::serde::se::{MapSerializer, Serialize, Serializer};
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
 use std::time::Instant;
+use smithy4rs_core::serde::serializers::{ListSerializer, StructSerializer};
 
 // TODO: This implementation should maybe just write to a Sink
 //       to allow writing really large objects without saving the whole state.
 //       It's fina
-pub enum JsonSerializer<'ser> {
-    Root(Option<JsonValue>),
-    Nested(&'ser mut JsonValue),
+// TODO: ADD Settings
+pub struct JsonSerializer {
+    pub value: Option<JsonValue>
 }
 
-impl JsonSerializer<'_> {
-    pub fn new<'a>() -> JsonSerializer<'a> {
-        JsonSerializer::Root(None)
+// TODO: Document discriminators
+impl JsonSerializer {
+    pub fn new() -> JsonSerializer {
+        JsonSerializer { value: None }
     }
 
-    pub fn of(parent: &mut JsonValue) -> JsonSerializer {
-        JsonSerializer::Nested(parent)
+    pub fn of(value: JsonValue) -> JsonSerializer {
+        JsonSerializer { value: Some(value) }
     }
 
     fn push_value(&mut self, schema: &Schema, value: JsonValue) -> Result<(), JsonSerdeError> {
-        match self {
-            // If no root then current object is the root object
-            JsonSerializer::Root(None) => {
-                *self = JsonSerializer::Root(Some(value));
-                Ok(())
-            },
-            // Otherwise, if we are still in root node, just push data to that node.
-            JsonSerializer::Root(Some(root)) => Self::push_impl(schema, root, value),
-            // If we are in a nested node, push to parent node.
-            JsonSerializer::Nested(parent) => Self::push_impl(schema, parent, value),
-        }
-    }
-
-    fn push_impl(schema: &Schema, into: &mut JsonValue, value: JsonValue) -> Result<(), JsonSerdeError> {
-        match into {
-            JsonValue::Object(parent) => parent[get_member_name(schema)] = value,
+        let Some(root) = &mut self.value else {
+            self.value = Some(value);
+            return Ok(());
+        };
+        match root {
+            JsonValue::Object(obj) => obj[get_member_name(schema)] = value,
             JsonValue::Array(arr) => arr.push(value),
-            _ => {
-                return Err(JsonSerdeError::SerializationError(
-                    "Cannot append to Type".to_string(),
-                ));
-            }
+            _ => return Err(JsonSerdeError::SerializationError("Cannot push to non-aggregate type".to_string()))
         }
         Ok(())
     }
 }
 
-impl Display for JsonSerializer<'_> {
+impl Display for JsonSerializer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let value = match &self {
-            // TODO: Remove this clone?
-            JsonSerializer::Root(Some(root)) => json::stringify(root.clone()),
-            _ => "".to_string(),
-        };
-        write!(f, "{}", value)
+        // let value = match &self {
+        //     // TODO: Remove this clone?
+        //     JsonSerializer::Root(Some(root)) => json::stringify(root.clone()),
+        //     _ => "".to_string(),
+        // };
+        // write!(f, "{}", value)
+        todo!()
     }
 }
 
 // TODO: Handle JSON Name trait
-impl Serializer for JsonSerializer<'_> {
+impl Serializer for JsonSerializer {
     type Error = JsonSerdeError;
+    type Ok = ();
+    type SerializeList<'l>  = JsonAggregateTypeSerializer<'l>
+    where Self: 'l;
 
-    fn write_struct<T: SerializableStruct>(
-        &mut self,
-        schema: &Schema,
-        structure: &T,
-    ) -> Result<(), Self::Error> {
-        let mut data = JsonValue::new_object();
-        structure.serialize_members(&mut JsonSerializer::of(&mut data))?;
-        self.push_value(schema, data)
+    type SerializeMap<'m> = JsonAggregateTypeSerializer<'m>
+    where Self: 'm;
+
+    type SerializeStruct<'s>  = JsonAggregateTypeSerializer<'s>
+    where Self: 's;
+
+    fn write_struct<'a>(&'a mut self, schema: &'a Schema<'a>, size: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
+        Ok(JsonAggregateTypeSerializer::new_object(self))
     }
 
-    fn write_map<K, V, C: MapEntryConsumer<K, V>>(
-        &mut self,
-        schema: &Schema,
-        map_state: impl Iterator<Item = (K, V)> + ExactSizeIterator,
-        consumer: C,
-    ) -> Result<(), Self::Error> {
-        let mut data = JsonValue::new_object();
-        let mut inner_serializer = JsonSerializer::of(&mut data);
-        for (key, value) in map_state {
-            inner_serializer.write_map_entry(schema, key, value, &consumer)?;
-        }
-        self.push_value(schema, data)
+    fn write_map<'a>(&'a mut self, schema: &'a Schema<'a>, len: usize) -> Result<Self::SerializeMap<'_>, Self::Error> {
+        Ok(JsonAggregateTypeSerializer::new_object(self))
     }
 
-    // TODO: This seems pretty clunky. improve
-    fn write_map_entry<K, V, C: MapEntryConsumer<K, V>>(&mut self, schema: &Schema, key: K, value: V, consumer: &C) -> Result<(), Self::Error> {
-        let JsonSerializer::Nested(parent) = self else {
-            return Err(JsonSerdeError::SerializationError("Unexpected root map".to_string()));
-        };
-        let mut key_serializer = JsonSerializer::new();
-        let mut value_serializer = JsonSerializer::new();
-        C::write_key(key, &mut key_serializer)?;
-        C::write_value(value, &mut value_serializer)?;
-        if let (JsonSerializer::Root(Some(key)), JsonSerializer::Root(Some(root))) = (key_serializer, value_serializer) {
-            match key {
-                JsonValue::String(s) => parent[s] = root,
-                JsonValue::Number(n) => { todo!()}
-                _ => return Err(JsonSerdeError::SerializationError(format!("Unexpected map key type {:?}", key)))
-            }
-            Ok(())
-        } else {
-            Err(JsonSerdeError::SerializationError("Map serialization failed".to_string()))
-        }
-    }
-
-    fn write_list<I, C: ListItemConsumer<I>>(
-        &mut self,
-        schema: &Schema,
-        list_state: impl Iterator<Item = I> + ExactSizeIterator,
-        consumer: C,
-    ) -> Result<(), Self::Error> {
-        let mut list_data = JsonValue::new_array();
-        for item in list_state {
-            C::write_item(item, &mut JsonSerializer::of(&mut list_data))?
-        }
-        self.push_value(schema, list_data)
+    fn write_list<'a>(&'a mut self, schema: &'a Schema<'a>, len: usize) -> Result<Self::SerializeList<'_>, Self::Error> {
+        Ok(JsonAggregateTypeSerializer::new_arr(self))
     }
 
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
@@ -183,6 +134,15 @@ impl Serializer for JsonSerializer<'_> {
     }
 
     fn write_document(&mut self, schema: &Schema, value: &Document) -> Result<(), Self::Error> {
+        // match &value.schema.shape_type {
+        //     ShapeType::Structure | ShapeType::Union => {
+        //         let mut data = JsonValue::new_object();
+        //         // TODO: make this a setting? Maybe take in a mapper?
+        //         data[Self::TYPE_PREFIX] = JsonValue::String(value.schema.id.id.clone());
+        //         value.serialize_members(&mut JsonSerializer::of(&mut data))?;
+        //         self.push_value(schema, data)
+        //     },
+        //     _ => todo!() //value.serialize_contents(self)
         todo!()
     }
 
@@ -190,7 +150,78 @@ impl Serializer for JsonSerializer<'_> {
         self.push_value(schema, JsonValue::Null)
     }
 
+    fn skip(&mut self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
+        todo!()
+    }
+
     fn flush(&mut self) -> Result<(), Self::Error> {
         todo!()
+    }
+}
+
+pub struct JsonAggregateTypeSerializer<'se> {
+    parent: &'se mut JsonSerializer,
+    inner: JsonSerializer
+}
+impl <'se> JsonAggregateTypeSerializer<'se> {
+    fn new_arr(parent: &'se mut JsonSerializer) -> Self {
+        Self { parent, inner: JsonSerializer::of(JsonValue::new_array()) }
+    }
+
+    fn new_object(parent: &'se mut JsonSerializer) -> Self {
+        Self { parent, inner: JsonSerializer::of(JsonValue::new_object()) }
+    }
+
+    fn flush(mut self, schema: &Schema) -> Result<(), JsonSerdeError> {
+        let Some(root) = self.inner.value else {
+            unreachable!("should never be null");
+        };
+        self.parent.push_value(schema, root)
+    }
+}
+impl ListSerializer for JsonAggregateTypeSerializer<'_> {
+    type Error = JsonSerdeError;
+    type Ok = ();
+
+    fn serialize_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + Serialize
+    {
+        value.serialize(element_schema, &mut self.inner)
+    }
+
+    fn end(mut self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
+        self.flush(schema)
+    }
+}
+impl MapSerializer for JsonAggregateTypeSerializer<'_> {
+    type Ok = ();
+    type Error = JsonSerdeError;
+
+    fn serialize_entry<K, V>(&mut self, key_schema: &Schema, value_schema: &Schema, key: &K, value: &V) -> Result<(), Self::Error>
+    where
+        K: ?Sized + Serialize,
+        V: ?Sized + Serialize
+    {
+        value.serialize(key_schema, &mut self.inner)
+    }
+
+    fn end(self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
+        self.flush(schema)
+    }
+}
+impl StructSerializer for JsonAggregateTypeSerializer<'_> {
+    type Ok = ();
+    type Error = JsonSerdeError;
+
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + Serialize
+    {
+        value.serialize(member_schema, &mut self.inner)
+    }
+
+    fn end(self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
+        self.flush(schema)
     }
 }

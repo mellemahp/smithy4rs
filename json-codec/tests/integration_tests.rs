@@ -1,9 +1,9 @@
 mod shapes;
 
 use indexmap::IndexMap;
-use crate::shapes::{Nested, SerializeMe};
+use crate::shapes::{Nested, SerializeMe, SCHEMA};
 use smithy4rs_core::serde::de::{Deserializable, ShapeBuilder};
-use smithy4rs_core::serde::se::Serializable;
+use smithy4rs_core::serde::se::Serialize;
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 
 #[test]
@@ -18,10 +18,8 @@ fn serializes_to_json() {
         .nested(Nested::builder().member_c("Yeah").build())
         .map_nested(map)
         .build();
-    structure
-        .serialize(&mut output)
-        .expect("serialization failed");
-    if let JsonSerializer::Root(Some(value)) = output {
+    structure.serialize(&SCHEMA, &mut output).expect("serialization failed");
+    if let Some(value) = output.value {
         println!("DEBUGGING: {}", json::stringify(value));
     }
     //println!("OUTPUT: {}", output.to_string());

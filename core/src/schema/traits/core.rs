@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 use crate::schema::documents::DocumentValue;
 use crate::schema::shapes::ShapeId;
-use downcast_rs::{DowncastSync, impl_downcast};
+use downcast_rs::{impl_downcast, DowncastSync};
 use std::collections::HashMap;
 use std::sync::Arc;
 

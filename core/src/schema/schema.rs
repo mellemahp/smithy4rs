@@ -16,6 +16,8 @@ pub struct Schema<'s> {
     pub member_target: Option<&'s Schema<'s>>,
     pub member_name: Option<String>,
     pub member_index: Option<usize>,
+    pub key_schema: Option<&'s Schema<'s>>,
+    pub value_schema: Option<&'s Schema<'s>>,
     trait_map: TraitMap,
     // pub traits: Option<String>,
 }
@@ -44,6 +46,8 @@ impl<'s> Schema<'s> {
             } else {
                 TraitMap::new()
             },
+            value_schema: None,
+            key_schema: None,
         }
     }
 
@@ -132,7 +136,11 @@ impl<'s> Schema<'s> {
 impl<'s> Schema<'s> {
     pub fn get_member(&self, id: &str) -> Option<&'s Schema> {
         // TODO: probably a better way
-        self.members.as_ref().map(|m| m.get(id))?
+        if let Some(target) = self.member_target {
+            target.get_member(id)
+        } else {
+            self.members.as_ref().map(|m| m.get(id))?
+        }
     }
 
     pub fn expect_member(&self, id: &str) -> &'s Schema {
@@ -280,6 +288,8 @@ impl<'b> SchemaBuilder<'b> {
             member_name: None,
             member_index: None,
             trait_map: self.traits.clone(),
+            key_schema: None,
+            value_schema: None,
         }
     }
 }
@@ -338,6 +348,8 @@ impl<'b> MemberSchemaBuilder<'b> {
             member_name: Some(self.name.clone()),
             member_index: self.member_index,
             trait_map: self.trait_map.clone(),
+            key_schema: None,
+            value_schema: None,
         }
     }
 }

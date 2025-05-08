@@ -1,15 +1,14 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use smithy4rs_core::schema::shapes::ShapeId;
-use smithy4rs_core::schema::{Schema, prelude};
+use smithy4rs_core::schema::{prelude, Schema};
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
-use smithy4rs_core::serde::se::{FmtSerializer, Serializable, SerializableStruct, Serializer};
-use smithy4rs_core::serde::serializers::{ListItemConsumer, MapEntryConsumer};
+use smithy4rs_core::serde::se::{Serialize, Serializer, StructSerializer};
 use smithy4rs_core::{lazy_member_schema, traits};
 use std::fmt::Display;
 use std::sync::LazyLock;
-use indexmap::IndexMap;
+use smithy4rs_core::serde::{FmtSerializer, SerializeShape};
 
 pub static LIST_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::list_builder(ShapeId::from("com.example#MyList"))
@@ -52,59 +51,29 @@ impl SerializeMe {
     }
 }
 
-impl SerializableStruct for SerializeMe {
+impl SerializeShape for SerializeMe {
     fn schema(&self) -> &'static Schema<'static> {
         &SCHEMA
     }
-
-    fn serialize_members<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&MEMBER_A, &self.member_a)?;
-        serializer.write_string(&MEMBER_B, &self.member_b)?;
-        serializer.write_list(
-            &MEMBER_LIST,
-            &mut self.list_member.iter(),
-            ListMemberSerializer,
-        )?;
-        serializer.write_map(
-            &MEMBER_MAP,
-            &mut self.map_member.iter(),
-            MapMemberSerializer
-        )?;
-        Ok(())
+}
+impl Serialize for SerializeMe {
+    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+        let mut struct_ser = serializer.write_struct(schema, 5)?;
+        struct_ser.serialize_member(&MEMBER_A, &self.member_a)?;
+        struct_ser.serialize_member(&MEMBER_B, &self.member_b)?;
+        struct_ser.serialize_member(&MEMBER_LIST, &self.list_member)?;
+        struct_ser.serialize_member(&MEMBER_MAP, &self.map_member)?;
+        struct_ser.end(schema)
     }
 }
 
 impl Display for SerializeMe {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut output = FmtSerializer::new();
-        match self.serialize(&mut output) {
-            Ok(_) => write!(f, "{}", output.string),
+        let mut output = FmtSerializer::default();
+        match self.serialize_shape(&mut output) {
+            Ok(_) => write!(f, "{}", output.flush()),
             Err(_e) => Err(std::fmt::Error {}),
         }
-    }
-}
-
-struct ListMemberSerializer;
-impl ListItemConsumer<&String> for ListMemberSerializer {
-    fn write_item<S: Serializer>(item: &String, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&prelude::STRING, item)
-    }
-}
-
-struct MapMemberSerializer;
-impl MapEntryConsumer<&String, &String> for MapMemberSerializer {
-    fn write_key<S: Serializer>(key: &String, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&prelude::STRING, &key)
-    }
-
-    fn write_value<S: Serializer>(value: &String, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_string(&prelude::STRING, &value)
-    }
-}
-
-impl Serializable for SerializeMe {
-    fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
-        serializer.write_struct(&SCHEMA, self)
     }
 }
 

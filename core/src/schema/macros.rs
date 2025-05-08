@@ -1,7 +1,6 @@
 #[macro_export]
 macro_rules! traits {
     () => { None };
-    // Some(vec!(Arc::new(HttpCode::new(10))))
     ($($x:expr),+ $(,)?) => (
         Some(vec![$(Arc::new($x)),*])
     );
