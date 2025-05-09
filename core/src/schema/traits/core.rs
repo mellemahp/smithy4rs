@@ -3,6 +3,7 @@ use crate::schema::documents::DocumentValue;
 use crate::schema::shapes::ShapeId;
 use downcast_rs::{impl_downcast, DowncastSync};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use crate::schema::Ref;
 
 pub trait SmithyTrait: DowncastSync {
@@ -31,7 +32,7 @@ impl SmithyTrait for DynamicTrait {
 
 pub type TraitList = Vec<Ref<dyn SmithyTrait>>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct TraitMap {
     map: HashMap<ShapeId, Ref<dyn SmithyTrait>>,
 }
@@ -64,6 +65,13 @@ impl TraitMap {
 
     pub fn extend(&mut self, trait_map: &TraitMap) {
         self.map.extend(trait_map.map.clone());
+    }
+}
+
+impl Debug for dyn SmithyTrait {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        // TODO
+        f.write_str("dyn SmithyTrait")
     }
 }
 

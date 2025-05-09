@@ -123,7 +123,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error>
     {
         let mut list = serializer.write_list(schema, self.len())?;
-        let value_schema = schema.get_member("member").expect("Should have member.");
+        let value_schema = schema.expect_member("member");
         for element in self {
             list.serialize_element(value_schema.as_ref(), element)?;
         }

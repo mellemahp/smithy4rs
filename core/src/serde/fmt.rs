@@ -75,17 +75,29 @@ impl <W: Write> Serializer for FmtSerializer<W> {
     fn write_struct(&mut self, schema: &Schema, _: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
         self.sink.write_str(schema.id().name.as_str())?;
         self.sink.write_char('[')?;
-        Ok(FmtStructSerializer::new(self, schema.contains_trait_type::<SensitiveTrait>()))
+        let redacted = schema.contains_trait_type::<SensitiveTrait>();
+        if redacted {
+            self.sink.write_str(REDACTED_STRING)?;
+        }
+        Ok(FmtStructSerializer::new(self, redacted))
     }
 
     fn write_map(&mut self, schema: &Schema, _: usize) -> Result<Self::SerializeMap<'_>, Self::Error> {
         self.sink.write_str("{")?;
-        Ok(FmtMapSerializer::new(self, schema.contains_trait_type::<SensitiveTrait>()))
+        let redacted = schema.contains_trait_type::<SensitiveTrait>();
+        if redacted {
+            self.sink.write_str(REDACTED_STRING)?;
+        }
+        Ok(FmtMapSerializer::new(self, redacted))
     }
 
     fn write_list(&mut self, schema: &Schema, _: usize) -> Result<Self::SerializeList<'_>, Self::Error> {
         self.sink.write_str("[")?;
-        Ok(FmtListSerialize::new(self, schema.contains_trait_type::<SensitiveTrait>()))
+        let redacted = schema.contains_trait_type::<SensitiveTrait>();
+        if redacted {
+            self.sink.write_str(REDACTED_STRING)?;
+        }
+        Ok(FmtListSerialize::new(self, redacted))
     }
 
     fn write_boolean(&mut self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
@@ -239,15 +251,12 @@ impl <W: Write> StructSerializer for FmtStructSerializer<'_, W> {
     {
         if self.redacted { return Ok(())}
         comma!(self);
-        let Some(member_schema) = member_schema.get_member("value") else {
-            return Err(Error::default());
+        let Schema::Member(me) = member_schema else {
+            panic!("Expected member schema!");
         };
-        let Schema::Member(member) = &*member_schema else {
-            return Err(Error::default());
-        };
-        self.parent.sink.write_str(member.name.as_str())?;
+        self.parent.sink.write_str(me.name.as_str())?;
         self.parent.sink.write_char('=')?;
-        value.serialize(member_schema.as_ref(), self.parent)
+        value.serialize(member_schema, self.parent)
     }
 
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
@@ -260,21 +269,42 @@ mod tests {
     use super::*;
     use crate::schema::{prelude, Ref};
     use crate::schema::ShapeId;
-    use crate::{lazy_member_schema, traits};
+    use crate::{lazy_member_schema, lazy_schema, traits};
     use std::sync::LazyLock;
+    use indexmap::IndexMap;
     use crate::schema::traits::SensitiveTrait;
     use crate::serde::shapes::SerializeShape;
 
-    static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
-        Schema::structure_builder(ShapeId::from("com.example#Shape"))
+    lazy_schema!(MAP_SCHEMA, Schema::map_builder(ShapeId::from("com.example#Map"))
+        .put_member("key", &prelude::STRING, traits![])
+        .put_member("value", &prelude::STRING, traits![])
+        .build()
+    );
+    lazy_schema!(LIST_SCHEMA, Schema::list_builder(ShapeId::from("com.example#List"))
+        .put_member("member", &prelude::STRING, traits![])
+        .build()
+    );
+    lazy_schema!(SCHEMA, Schema::structure_builder(ShapeId::from("com.example#Shape"))
             .put_member("a", &prelude::STRING, traits![])
             .put_member("b", &prelude::STRING, traits![SensitiveTrait::new()])
             .put_member("c", &prelude::STRING, traits![])
+            .put_member("map", &MAP_SCHEMA, traits![])
+            .put_member("list", &LIST_SCHEMA, traits![])
             .build()
-    });
+    );
     lazy_member_schema!(MEMBER_A, SCHEMA, "a");
     lazy_member_schema!(MEMBER_B, SCHEMA, "b");
     lazy_member_schema!(MEMBER_C, SCHEMA, "c");
+    lazy_member_schema!(MEMBER_LIST, SCHEMA, "list");
+    lazy_member_schema!(MEMBER_MAP, SCHEMA, "map");
+
+    lazy_schema!(REDACTED_AGGREGATES, Schema::structure_builder(ShapeId::from("com.example#Shape"))
+        .put_member("map", &MAP_SCHEMA, traits![SensitiveTrait::new()])
+        .put_member("list", &LIST_SCHEMA, traits![SensitiveTrait::new()])
+        .build()
+    );
+    lazy_member_schema!(MEMBER_LIST_REDACT, REDACTED_AGGREGATES, "list");
+    lazy_member_schema!(MEMBER_MAP_REDACT, REDACTED_AGGREGATES, "map");
 
     //#[derive(SerializableStruct)]
     //#[schema(SCHEMA)]
@@ -284,7 +314,9 @@ mod tests {
         // #[schema(MEMBER_B)]
         pub member_b: String,
         // #[schema(MEMBER_C)]
-        pub member_c: Option<String>
+        pub member_optional: Option<String>,
+        pub member_list: Vec<String>,
+        pub member_map: IndexMap<String, String>,
     }
 
     impl SerializeShape for SerializeMe {
@@ -299,20 +331,77 @@ mod tests {
             let mut ser = serializer.write_struct(schema, 2)?;
             ser.serialize_member(&MEMBER_A, &self.member_a)?;
             ser.serialize_member(&MEMBER_B, &self.member_b)?;
-            ser.serialize_optional_member(&MEMBER_C, &self.member_c)?;
+            ser.serialize_optional_member(&MEMBER_C, &self.member_optional)?;
+            ser.serialize_member(&MEMBER_LIST, &self.member_list)?;
+            ser.serialize_member(&MEMBER_MAP, &self.member_map)?;
+            ser.end(schema)
+        }
+    }
+
+    pub(crate) struct RedactMe {
+        pub member_list: Vec<String>,
+        pub member_map: IndexMap<String, String>,
+    }
+    impl SerializeShape for RedactMe {
+        fn schema(&self) -> &Schema {
+            &REDACTED_AGGREGATES
+        }
+    }
+
+    impl Serialize for RedactMe {
+        fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error>
+        {
+            let mut ser = serializer.write_struct(schema, 2)?;
+            ser.serialize_member(&MEMBER_LIST_REDACT, &self.member_list)?;
+            ser.serialize_member(&MEMBER_MAP_REDACT, &self.member_map)?;
             ser.end(schema)
         }
     }
 
     #[test]
-    fn fmt_serializer_simple() {
+    fn fmt_serializer_all() {
+        let mut fmter = FmtSerializer::default();
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        let list = vec!["a".to_string(), "b".to_string()];
+        let struct_to_write = SerializeMe {
+            member_a: "a".to_string(),
+            member_b: "b".to_string(),
+            member_optional: Some("c".to_string()),
+            member_map: map,
+            member_list: list,
+        };
+        struct_to_write.serialize_shape(&mut fmter).expect("serialization failed");
+        assert_eq!(fmter.flush(), "Shape[a=a, b=**REDACTED**, c=c, list=[a, b], map={a:b}]");
+    }
+
+    #[test]
+    fn fmt_serializer_omits_none() {
         let mut fmter = FmtSerializer::default();
         let struct_to_write = SerializeMe {
             member_a: "a".to_string(),
             member_b: "b".to_string(),
-            member_c: None
+            member_optional: None,
+            member_list: Vec::new(),
+            member_map: IndexMap::new(),
         };
         struct_to_write.serialize_shape(&mut fmter).expect("serialization failed");
-        assert_eq!(fmter.flush(), "Shape[a=a, b=**REDACTED**]");
+        assert_eq!(fmter.flush(), "Shape[a=a, b=**REDACTED**, list=[], map={}]");
     }
+
+    #[test]
+    fn redacts_aggregates() {
+        let mut fmter = FmtSerializer::default();
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        let list = vec!["a".to_string(), "b".to_string()];
+        let struct_to_write = RedactMe {
+            member_list: list,
+            member_map: map,
+        };
+        struct_to_write.serialize_shape(&mut fmter).expect("serialization failed");
+        assert_eq!(fmter.flush(), "Shape[list=[**REDACTED**], map={**REDACTED**}]");
+    }
+
+
 }

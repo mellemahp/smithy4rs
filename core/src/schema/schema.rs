@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 pub type Ref<T> = Arc<T>;
 
+#[derive(Debug)]
 pub enum Schema<'schema> {
     Scalar(ScalarSchema),
     Struct(StructSchema<'schema>),
@@ -19,18 +20,20 @@ pub enum Schema<'schema> {
     Member(MemberSchema<'schema>)
 }
 
+#[derive(Debug)]
 pub struct ScalarSchema {
     id: ShapeId,
     shape_type: ShapeType,
     traits: TraitMap,
 }
-
+#[derive(Debug)]
 pub struct StructSchema<'schema> {
     id: ShapeId,
     shape_type: ShapeType,
     members: IndexMap<String, Ref<Schema<'schema>>>,
     traits: TraitMap,
 }
+#[derive(Debug)]
 pub struct ListSchema<'schema> {
     id: ShapeId,
     member: Ref<Schema<'schema>>,
@@ -41,17 +44,22 @@ impl ListSchema<'_> {
         &*self.member
     }
 }
+
+#[derive(Debug)]
 pub struct MapSchema<'schema> {
     id: ShapeId,
     pub key: Ref<Schema<'schema>>,
     value: Ref<Schema<'schema>>,
     traits: TraitMap
 }
+#[derive(Debug)]
 pub struct EnumSchema<T> {
     id: ShapeId,
     pub values: HashSet<T>,
     traits: TraitMap
 }
+
+#[derive(Debug)]
 pub struct MemberSchema<'schema> {
     id: ShapeId,
     pub target: Ref<&'schema Schema<'schema>>,
@@ -222,7 +230,7 @@ impl Schema<'_> {
                 if member_name == "member" {
                     Some(schema.member.clone())
                 } else {
-                    None
+                    panic!("GAHHHH")
                 }
             },
             Schema::Map(schema) => {
@@ -234,12 +242,12 @@ impl Schema<'_> {
                     None
                 }
             },
-            Schema::Member(_) => None
+            Schema::Member(member) => member.target.get_member(member_name),
         }
     }
 
     pub fn expect_member(&self, member_name: &str) -> Ref<Schema> {
-        self.get_member(member_name).expect("Expected member")
+        self.get_member(member_name).expect(format!("Expected member: {member_name}").as_str())
     }
 
     pub fn contains_trait(&self, id: &ShapeId) -> bool {
