@@ -4,7 +4,7 @@ use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use thiserror::Error;
-use crate::schema::documents::{Document, DocumentError};
+use crate::schema::documents::Document;
 use crate::schema::Schema;
 use crate::schema::traits::SensitiveTrait;
 use crate::serde::se::{ListSerializer, MapSerializer, Serialize, StructSerializer, Serializer};
@@ -23,11 +23,21 @@ const REDACTED_STRING: &str = "**REDACTED**";
 macro_rules! redact {
     ($self:ident, $schema:ident, $expr:expr) => {
         if $schema.contains_trait_type::<SensitiveTrait>() {
-            $self.sink.write_str(REDACTED_STRING)
+            $self.sink.write_str(REDACTED_STRING)?;
+            Ok(())
         } else {
-            $expr
+            $expr?;
+            Ok(())
         }
     };
+}
+
+#[derive(Error, Debug)]
+pub enum FmtError {
+    #[error(transparent)]
+    Fmt(#[from] Error),
+    #[error("Encountered unknown error")]
+    Unknown(#[from] Box<dyn std::error::Error>)
 }
 
 /// Serializer used to format and print a shape.
@@ -53,17 +63,8 @@ impl Default for FmtSerializer<String> {
     }
 }
 
-#[derive(Error, Debug, Default)]
-pub enum FmtError {
-    #[error("Failed to serialize string")]
-    #[default]
-    Generic,
-    #[error("data store disconnected")]
-    DocumentConversion(#[from] DocumentError),
-}
-
 impl <W: Write> Serializer for FmtSerializer<W> {
-    type Error = Error;
+    type Error = FmtError;
     type Ok = ();
     type SerializeList<'l> = FmtListSerialize<'l, W>
     where Self: 'l;
@@ -158,7 +159,7 @@ impl <W: Write> Serializer for FmtSerializer<W> {
     }
 
     fn write_null(&mut self, _: &Schema) -> Result<(), Self::Error> {
-        self.sink.write_str("null")
+        Ok(self.sink.write_str("null")?)
     }
 
     fn skip(&mut self, _: &Schema) -> Result<(), Self::Error> {
@@ -183,7 +184,7 @@ impl <'a, W: Write> FmtListSerialize<'a, W> {
     }
 }
 impl <W: Write> ListSerializer for FmtListSerialize<'_, W> {
-    type Error = Error;
+    type Error = FmtError;
     type Ok = ();
 
     fn serialize_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
@@ -196,7 +197,7 @@ impl <W: Write> ListSerializer for FmtListSerialize<'_, W> {
     }
 
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.parent.sink.write_char(']')
+        Ok(self.parent.sink.write_char(']')?)
     }
 }
 
@@ -212,7 +213,7 @@ impl <'se, W: Write> FmtMapSerializer<'se, W> {
 }
 impl <W: Write> MapSerializer for FmtMapSerializer<'_, W> {
     type Ok = ();
-    type Error = Error;
+    type Error = FmtError;
 
     fn serialize_entry<K, V>(&mut self, key_schema: &Schema, value_schema: &Schema, key: &K, value: &V) -> Result<(), Self::Error>
     where
@@ -227,7 +228,7 @@ impl <W: Write> MapSerializer for FmtMapSerializer<'_, W> {
     }
 
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.parent.sink.write_char('}')
+        Ok(self.parent.sink.write_char('}')?)
     }
 }
 
@@ -243,7 +244,7 @@ impl <'se, W: Write> FmtStructSerializer<'se, W> {
 }
 impl <W: Write> StructSerializer for FmtStructSerializer<'_, W> {
     type Ok = ();
-    type Error = Error;
+    type Error = FmtError;
 
     fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
@@ -260,7 +261,7 @@ impl <W: Write> StructSerializer for FmtStructSerializer<'_, W> {
     }
 
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.parent.sink.write_char(']')
+        Ok(self.parent.sink.write_char(']')?)
     }
 }
 

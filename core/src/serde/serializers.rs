@@ -18,8 +18,8 @@ pub trait Serialize {
 
 // TODO: Docs
 pub trait ListSerializer {
-    /// Must match the `Error` type of our `Serializer`.
-    type Error: Error;
+    /// Must match the `Error` type of our `Serializer and be able to handle unknown errors.
+    type Error: Error + From<Box<dyn Error>>;
 
     /// Must match the `OK` type of our `Serializer`.
     type Ok;
@@ -38,7 +38,7 @@ pub trait MapSerializer {
     type Ok;
 
     /// Must match the `Error` type of our `Serializer`.
-    type Error: Error;
+    type Error: Error + From<Box<dyn Error>>;
 
     fn serialize_entry<K, V>(&mut self, key_schema: &Schema, value_schema: &Schema, key: &K, value: &V) -> Result<(), Self::Error>
     where
@@ -55,7 +55,7 @@ pub trait StructSerializer {
     type Ok;
 
     /// Must match the `Error` type of our `Serializer`.
-    type Error: Error;
+    type Error: Error + From<Box<dyn Error>>;
 
     /// Serialize a member on the struct
     fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
@@ -83,7 +83,7 @@ pub trait StructSerializer {
 // TODO: event stream?
 // TODO: Docs
 pub trait Serializer: Sized {
-    type Error: Error;
+    type Error: Error + From<Box<dyn Error>>;
     type Ok;
 
     type SerializeList<'l>: ListSerializer<Ok=Self::Ok, Error=Self::Error>
