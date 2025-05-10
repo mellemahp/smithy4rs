@@ -149,6 +149,10 @@ impl Document<'_> {
         }
     }
 
+    pub fn of<T: Into<Document<'_>>>(value: T) -> Self {
+        value.into()
+    }
+
     #[allow(unused_variables)]
     pub fn of_shape(shape: impl SerializeShape) -> Result<Self, DocumentError> {
         todo!()
