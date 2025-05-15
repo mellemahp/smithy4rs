@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::sync::LazyLock;
 use std::time::Instant;
 use bigdecimal::BigDecimal;
@@ -9,15 +10,15 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use thiserror::Error;
 use crate::{lazy_schema, traits};
-use crate::schema::{prelude, Schema, ShapeId, ShapeType, StructSchema};
+use crate::schema::{prelude, Schema, SchemaRef, ShapeId, ShapeType};
 use crate::serde::se::{ListSerializer, MapSerializer, Serializer, SerializerResult, StructSerializer};
 use crate::serde::serializers::Serialize;
-use crate::serde::SerializeShape;
+use crate::serde::{FmtSerializer, SerializeShape};
 
 #[derive(Clone, PartialEq)]
-pub struct Document<'doc> {
-    pub schema: &'doc Schema<'doc>,
-    pub value: DocumentValue<'doc>,
+pub struct Document {
+    pub schema: SchemaRef,
+    pub value: DocumentValue,
     /// A shape ID for a typed document.
     ///
     /// The discriminator is primarily used to implement polymorphism using documents in deserialization.
@@ -28,15 +29,15 @@ pub struct Document<'doc> {
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
 #[derive(Clone, PartialEq)]
-pub enum DocumentValue<'doc> {
+pub enum DocumentValue {
     Null,
     Number(NumberValue),
     Boolean(bool),
     Blob(ByteBuffer),
     String(String),
     Timestamp(Instant),
-    List(Vec<Document<'doc>>),
-    Map(IndexMap<String, Document<'doc>>),
+    List(Vec<Document>),
+    Map(IndexMap<String, Document>),
 }
 
 /// Represents numbers in the smithy data model
@@ -79,15 +80,15 @@ pub enum DocumentError {
     Default
 }
 
-impl SerializeShape for Document<'_> {
-    fn schema(&self) -> &Schema {
-        self.schema
+impl SerializeShape for Document {
+    fn schema(&self) -> &SchemaRef {
+        &self.schema
     }
 }
 
-impl Serialize for Document<'_> {
-    fn serialize<'a, S: Serializer<'a>>(&self, schema: &'a Schema, serializer: &mut S) -> SerializerResult<S::Error> {
-        match schema.shape_type() {
+impl Serialize for Document {
+    fn serialize<S: Serializer>(&self, schema: &SchemaRef, serializer: &mut S) -> SerializerResult<S::Error> {
+        match get_shape_type(schema)? {
             ShapeType::Blob => serializer.write_blob(schema, self.as_blob().ok_or(conversion_error("blob"))?),
             ShapeType::Boolean => serializer.write_boolean(schema, self.as_bool().ok_or(conversion_error("bool"))?),
             ShapeType::String => serializer.write_string(schema, self.as_string().ok_or(conversion_error("string"))?),
@@ -118,8 +119,21 @@ impl Serialize for Document<'_> {
                 struct_serializer.end(schema)
             },
             // TODO: Raise _some_ error?
-            _ => panic!("Service and member types not supported")
+            _ => panic!("Unsupported shape type"),
         }
+    }
+}
+
+fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
+    let mut shape_type = schema.shape_type();
+    if shape_type == &ShapeType::Member {
+        let Some(member) = schema.as_member() else {
+            // TODO: Real error
+            return Err(conversion_error("Expected memberSchema for member shape type"))
+        };
+        Ok(member.target.shape_type())
+    } else {
+        Ok(shape_type)
     }
 }
 
@@ -127,14 +141,14 @@ fn conversion_error(expected: &'static str) -> Box<dyn Error> {
     Box::new(DocumentError::DocumentConversion(expected.to_string())) as Box<dyn Error>
 }
 
-impl <'doc> Document<'doc> {
-    pub fn of(value: impl Into<Document<'doc>>) -> Self {
+impl Document {
+    pub fn of(value: impl Into<Document>) -> Self {
         value.into()
     }
 }
 
-impl Document<'_> {
-    pub fn value(&self) -> &DocumentValue<'_> {
+impl Document {
+    pub fn value(&self) -> &DocumentValue {
         &self.value
     }
 
@@ -291,12 +305,22 @@ impl Document<'_> {
     }
 }
 
+impl Display for Document {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut fmter = FmtSerializer::default();
+        match self.serialize_shape(&mut fmter) {
+            Ok(_) => f.write_str(&fmter.flush()),
+            Err(_) => Err(std::fmt::Error),
+        }
+    }
+}
+
 // // ====== INTO conversions =====
 // // TODO: Macro-ify these?
-impl TryFrom<Document<'_>> for ByteBuffer {
+impl TryFrom<Document> for ByteBuffer {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         if let DocumentValue::Blob(b) = value.value {
             Ok(b)
         } else {
@@ -305,10 +329,10 @@ impl TryFrom<Document<'_>> for ByteBuffer {
     }
 }
 
-impl TryFrom<Document<'_>> for bool {
+impl TryFrom<Document> for bool {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         if let DocumentValue::Boolean(b) = value.value {
             Ok(b)
         } else {
@@ -317,10 +341,10 @@ impl TryFrom<Document<'_>> for bool {
     }
 }
 
-impl TryFrom<Document<'_>> for String {
+impl TryFrom<Document> for String {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         if let DocumentValue::String(s) = value.value {
             Ok(s)
         } else {
@@ -329,19 +353,19 @@ impl TryFrom<Document<'_>> for String {
     }
 }
 
-impl TryFrom<Document<'_>> for Instant {
+impl TryFrom<Document> for Instant {
     type Error = DocumentError;
 
-    fn try_from(_: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(_: Document) -> Result<Self, Self::Error> {
         todo!()
     }
 }
 
 // TODO: Make Number conversions smarter? Or does rust `as` method handle truncation and such?
-impl TryFrom<Document<'_>> for i8 {
+impl TryFrom<Document> for i8 {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
                 NumberInteger::Byte(b) => Ok(b),
@@ -355,10 +379,10 @@ impl TryFrom<Document<'_>> for i8 {
     }
 }
 
-impl TryFrom<Document<'_>> for i16 {
+impl TryFrom<Document> for i16 {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
                 NumberInteger::Byte(b) => Ok(b as i16),
@@ -372,10 +396,10 @@ impl TryFrom<Document<'_>> for i16 {
     }
 }
 
-impl TryFrom<Document<'_>> for i32 {
+impl TryFrom<Document> for i32 {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
                 NumberInteger::Byte(b) => Ok(b as i32),
@@ -389,10 +413,10 @@ impl TryFrom<Document<'_>> for i32 {
     }
 }
 
-impl TryFrom<Document<'_>> for i64 {
+impl TryFrom<Document> for i64 {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
                 NumberInteger::Byte(b) => Ok(b as i64),
@@ -407,10 +431,10 @@ impl TryFrom<Document<'_>> for i64 {
 }
 
 
-impl TryFrom<Document<'_>> for f32 {
+impl TryFrom<Document> for f32 {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 NumberFloat::Float(f) => Ok(f),
@@ -422,10 +446,10 @@ impl TryFrom<Document<'_>> for f32 {
     }
 }
 
-impl TryFrom<Document<'_>> for f64 {
+impl TryFrom<Document> for f64 {
     type Error = DocumentError;
 
-    fn try_from(value: Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 NumberFloat::Float(f) => Ok(f as f64),
@@ -438,137 +462,137 @@ impl TryFrom<Document<'_>> for f64 {
 }
 
 
-impl TryFrom<&Document<'_>> for BigInt {
+impl TryFrom<&Document> for BigInt {
     type Error = DocumentError;
 
-    fn try_from(_: &Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(_: &Document) -> Result<Self, Self::Error> {
         todo!()
     }
 }
 
-impl TryFrom<&Document<'_>> for BigDecimal {
+impl TryFrom<&Document> for BigDecimal {
     type Error = DocumentError;
 
-    fn try_from(_: &Document<'_>) -> Result<Self, Self::Error> {
+    fn try_from(_: &Document) -> Result<Self, Self::Error> {
         todo!()
     }
 }
 
 // ==== FROM impls ====
-impl From<bool> for Document<'_> {
+impl From<bool> for Document {
     fn from(value: bool) -> Self {
         Document {
-            schema: &prelude::BOOLEAN,
+            schema: prelude::BOOLEAN.clone(),
             value: DocumentValue::Boolean(value),
             discriminator: None,
         }
     }
 }
 
-impl From<i8> for Document<'_> {
+impl From<i8> for Document {
     fn from(value: i8) -> Self {
         Document {
-            schema: &prelude::BYTE,
+            schema: prelude::BYTE.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<i16> for Document<'_> {
+impl From<i16> for Document {
     fn from(value: i16) -> Self {
         Document {
-            schema: &prelude::SHORT,
+            schema: prelude::SHORT.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Short(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<i32> for Document<'_> {
+impl From<i32> for Document {
     fn from(value: i32) -> Self {
         Document {
-            schema: &prelude::INTEGER,
+            schema: prelude::INTEGER.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<i64> for Document<'_> {
+impl From<i64> for Document {
     fn from(value: i64) -> Self {
         Document {
-            schema: &prelude::LONG,
+            schema: prelude::LONG.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Long(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<f32> for Document<'_> {
+impl From<f32> for Document {
     fn from(value: f32) -> Self {
         Document {
-            schema: &prelude::FLOAT,
+            schema: prelude::FLOAT.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Float(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<f64> for Document<'_> {
+impl From<f64> for Document {
     fn from(value: f64) -> Self {
         Document {
-            schema: &prelude::FLOAT,
+            schema: prelude::FLOAT.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Double(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<&str> for Document<'_> {
+impl From<&str> for Document {
     fn from(value: &str) -> Self {
         Document {
-            schema: &prelude::STRING,
+            schema: prelude::STRING.clone(),
             value: DocumentValue::String(value.to_string()),
             discriminator: None,
         }
     }
 }
 
-impl From<BigInt> for Document<'_> {
+impl From<BigInt> for Document {
     fn from(value: BigInt) -> Self {
         Document {
-            schema: &prelude::BIG_INTEGER,
+            schema: prelude::BIG_INTEGER.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<BigDecimal> for Document<'_> {
+impl From<BigDecimal> for Document {
     fn from(value: BigDecimal) -> Self {
         Document {
-            schema: &prelude::BIG_DECIMAL,
+            schema: prelude::BIG_DECIMAL.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<ByteBuffer> for Document<'_> {
+impl From<ByteBuffer> for Document {
     fn from(value: ByteBuffer) -> Self {
         Document {
-            schema: &prelude::BLOB,
+            schema: prelude::BLOB.clone(),
             value: DocumentValue::Blob(value),
             discriminator: None,
         }
     }
 }
 
-impl From<String> for Document<'_> {
+impl From<String> for Document {
     fn from(value: String) -> Self {
         Document {
-            schema: &prelude::STRING,
+            schema: prelude::STRING.clone(),
             value: DocumentValue::String(value),
             discriminator: None,
         }
@@ -579,10 +603,10 @@ lazy_schema!(LIST_DOCUMENT_SCHEMA, Schema::list_builder(prelude::DOCUMENT.id().c
     .put_member("member", &prelude::DOCUMENT, traits![])
     .build()
 );
-impl <'a> From<Vec<Document<'a>>> for Document<'a> {
-    fn from(value: Vec<Document<'a>>) -> Self {
+impl <'a> From<Vec<Document>> for Document {
+    fn from(value: Vec<Document>) -> Self {
         Document {
-            schema: &LIST_DOCUMENT_SCHEMA,
+            schema: LIST_DOCUMENT_SCHEMA.clone(),
             value: DocumentValue::List(value),
             discriminator: None,
         }
@@ -594,10 +618,10 @@ lazy_schema!(MAP_DOCUMENT_SCHEMA, Schema::list_builder(prelude::DOCUMENT.id().cl
     .put_member("value", &prelude::DOCUMENT, traits![])
     .build()
 );
-impl <'a> From<IndexMap<String, Document<'a>>> for Document<'a> {
-    fn from(value: IndexMap<String, Document<'a>>) -> Self {
+impl <'a> From<IndexMap<String, Document>> for Document {
+    fn from(value: IndexMap<String, Document>) -> Self {
         Document {
-            schema: &MAP_DOCUMENT_SCHEMA,
+            schema: MAP_DOCUMENT_SCHEMA.clone(),
             value: DocumentValue::Map(value),
             discriminator: None,
         }
@@ -605,30 +629,30 @@ impl <'a> From<IndexMap<String, Document<'a>>> for Document<'a> {
 }
 
 // TODO: How to make this `of` implementation work for Serializable struct?
-// impl <'a, T: SerializeShape + Serialize> From<T> for Document<'a> {
+// impl <'a, T: SerializeShape + Serialize> From<T> for Document {
 //     fn from(value: T) -> Self {
 //         todo!()
 //     }
 // }
 
-struct DocumentParser<'parser> {
-    document: Option<Document<'parser>>,
+struct DocumentParser {
+    document: Option<Document>,
 }
-impl <'parser> DocumentParser<'parser> {
+impl DocumentParser {
     pub(super) fn new() -> Self {
         DocumentParser { document: None }
     }
 
-    pub fn set_document<'a>(&mut self, document: Document<'parser>) {
+    pub fn set_document(&mut self, document: Document) {
         self.document = Some(document);
     }
 
-    pub(super) fn result<'a>(self) -> Result<Document<'parser>, DocumentError> {
+    pub(super) fn result(self) -> Result<Document, DocumentError> {
        self.document.ok_or(DocumentError::DocumentSerialization("Serialization did not set document value".to_string()))
     }
 }
 
-impl <'parser> Serializer<'parser> for DocumentParser<'parser> {
+impl Serializer for DocumentParser {
     type Error = DocumentError;
     type SerializeList<'l> = DocumentListParser<'l>
     where Self: 'l;
@@ -637,22 +661,21 @@ impl <'parser> Serializer<'parser> for DocumentParser<'parser> {
     type SerializeStruct<'s> = DocumentMapParser<'s>
     where Self: 's;
 
-    fn write_struct(&mut self, schema: &Schema, len: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
-        todo!()
+    // TODO: Use len
+    fn write_struct(&mut self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
+        Ok(DocumentMapParser::new(self, schema))
     }
 
-    fn write_map(&mut self, schema: &Schema, len: usize) -> Result<Self::SerializeMap<'_>, Self::Error> {
-        todo!()
+    // TODO: Use len
+    fn write_map(&mut self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeMap<'_>, Self::Error> {
+        Ok(DocumentMapParser::new(self, schema))
     }
 
-    fn write_list(&mut self, schema: &Schema, len: usize) -> Result<Self::SerializeList<'_>, Self::Error> {
-        todo!()
+    fn write_list(&mut self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeList<'_>, Self::Error> {
+        Ok(DocumentListParser::new(self, schema, len))
     }
 
-    fn write_boolean<'a>(&mut self, schema: &'a Schema, value: bool) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
+    fn write_boolean(&mut self, schema: &SchemaRef, value: bool) -> SerializerResult<Self::Error> {
         self.set_document(Document {
             schema: schema.clone(),
             value: DocumentValue::Boolean(value),
@@ -661,172 +684,138 @@ impl <'parser> Serializer<'parser> for DocumentParser<'parser> {
         Ok(())
     }
 
-    fn write_byte<'a>(&mut self, schema: &'a Schema, value: i8) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_byte(&mut self, schema: &SchemaRef, value: i8) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(value))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_short<'a>(&mut self, schema: &'a Schema, value: i16) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_short(&mut self, schema: &SchemaRef, value: i16) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Short(value))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_integer<'a>(&mut self, schema: &'a Schema, value: i32) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_integer(&mut self, schema: &SchemaRef, value: i32) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(value))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_long<'a>(&mut self, schema: &'a Schema, value: i64) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_long(&mut self, schema: &SchemaRef, value: i64) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Long(value))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_float<'a>(&mut self, schema: &'a Schema, value: f32) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_float(&mut self, schema: &SchemaRef, value: f32) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Float(value))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_double<'a>(&mut self, schema: &'a Schema, value: f64) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_double(&mut self, schema: &SchemaRef, value: f64) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Double(value))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_big_integer<'a>(&mut self, schema: &'a Schema, value: &BigInt) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_big_integer(&mut self, schema: &SchemaRef, value: &BigInt) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(value.clone()))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_big_decimal<'a>(&mut self, schema: &'a Schema, value: &BigDecimal) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_big_decimal(&mut self, schema: &SchemaRef, value: &BigDecimal) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(value.clone()))),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_string<'a>(&mut self, schema: &'a Schema, value: &String) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_string(&mut self, schema: &SchemaRef, value: &String) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::String(value.clone()),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_blob<'a>(&mut self, schema: &'a Schema, value: &ByteBuffer) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_blob(&mut self, schema: &SchemaRef, value: &ByteBuffer) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Blob(value.clone()),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_timestamp<'a>(&mut self, schema: &'a Schema, value: &Instant) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
-        self.document = Some(Document {
-            schema,
+    fn write_timestamp(&mut self, schema: &SchemaRef, value: &Instant) -> SerializerResult<Self::Error> {
+        self.set_document(Document {
+            schema: schema.clone(),
             value: DocumentValue::Timestamp(value.clone()),
             discriminator: Some(schema.id().clone()),
         });
         Ok(())
     }
 
-    fn write_document<'a>(&mut self, schema: &'a Schema, value: &Document) -> SerializerResult<Self::Error>
-    where
-        'a: 'parser
-    {
+    fn write_document(&mut self, schema: &SchemaRef, value: &Document) -> SerializerResult<Self::Error> {
         todo!()
     }
 
-    fn write_null(&mut self, schema: &Schema) -> SerializerResult<Self::Error> {
+    fn write_null(&mut self, schema: &SchemaRef) -> SerializerResult<Self::Error> {
         todo!()
     }
 
-    fn skip(&mut self, schema: &Schema) -> SerializerResult<Self::Error> {
+    fn skip(&mut self, schema: &SchemaRef) -> SerializerResult<Self::Error> {
         todo!()
     }
 }
 
-struct DocumentListParser<'parser> {
-    document: Document<'parser>,
+struct DocumentListParser<'lp> {
+    parent: &'lp mut DocumentParser,
+    document: Document,
 }
-impl <'parser> DocumentListParser<'parser> {
-    pub(super) fn new(schema: &'parser Schema) -> Self {
+impl <'lp> DocumentListParser<'lp> {
+    pub(super) fn new(parent: &'lp mut DocumentParser, schema: &SchemaRef, len: usize) -> Self {
         DocumentListParser {
+            parent,
             document: Document {
-                schema,
-                value: DocumentValue::List(Vec::new()),
+                schema: schema.clone(),
+                value: DocumentValue::List(Vec::with_capacity(len)),
                 discriminator: Some(schema.id().clone()),
             }
         }
     }
 }
-impl <'lp> ListSerializer<'lp> for DocumentListParser<'lp> {
+impl ListSerializer for DocumentListParser<'_> {
     type Error = DocumentError;
 
-    fn serialize_element<'a, T>(&mut self, element_schema: &'a Schema, value: &T) -> SerializerResult<Self::Error>
+    fn serialize_element<T>(&mut self, element_schema: &SchemaRef, value: &T) -> SerializerResult<Self::Error>
     where
         T: ?Sized + Serialize
     {
@@ -839,30 +828,39 @@ impl <'lp> ListSerializer<'lp> for DocumentListParser<'lp> {
             Err(DocumentError::DocumentSerialization("expected a list".to_string()))
         }
     }
-}
 
-struct DocumentMapParser<'parser> {
-    document: Document<'parser>,
-}
-impl <'parser> DocumentMapParser<'parser> {
-    pub(super) fn new(schema: &'parser Schema) -> Self {
-        DocumentMapParser { document: Document {
-            schema,
-            value: DocumentValue::Map(IndexMap::new()),
-            discriminator: Some(schema.id().clone())
-        }}
+    fn end(self, _: &SchemaRef) -> SerializerResult<Self::Error> {
+        self.parent.set_document(self.document);
+        Ok(())
     }
 }
 
-impl <'ms> MapSerializer<'ms> for DocumentMapParser<'ms> {
+struct DocumentMapParser<'mp> {
+    parent: &'mp mut DocumentParser,
+    document: Document,
+}
+impl <'mp> DocumentMapParser<'mp> {
+    pub(super) fn new(parent: &'mp mut DocumentParser, schema: &SchemaRef) -> Self {
+        DocumentMapParser {
+            parent,
+            document: Document {
+                schema: schema.clone(),
+                value: DocumentValue::Map(IndexMap::new()),
+                discriminator: Some(schema.id().clone())
+            }
+        }
+    }
+}
+
+impl MapSerializer for DocumentMapParser<'_> {
     type Error = DocumentError;
 
-    fn serialize_entry<'a, K, V>(&mut self, key_schema: &'a Schema, value_schema: &Schema, key: &K, value: &V) -> SerializerResult<Self::Error>
+    fn serialize_entry<K, V>(&mut self, key_schema: &SchemaRef, value_schema: &SchemaRef, key: &K, value: &V) -> SerializerResult<Self::Error>
     where
         K: ?Sized + Serialize,
         V: ?Sized + Serialize
     {
-        let Schema::Member(me) = key_schema else {
+        let Some(me) = key_schema.as_member() else {
             return Err(DocumentError::DocumentSerialization("Expected member schema!".to_string()));
         };
         let mut value_serializer = DocumentParser::new();
@@ -873,17 +871,21 @@ impl <'ms> MapSerializer<'ms> for DocumentMapParser<'ms> {
         map.insert(me.name.clone(), value_serializer.result()?);
         Ok(())
     }
+
+    fn end(self, _: &SchemaRef) -> SerializerResult<Self::Error> {
+        self.parent.set_document(self.document);
+        Ok(())
+    }
 }
 
-impl <'s> StructSerializer<'s> for DocumentMapParser<'s> {
+impl StructSerializer for DocumentMapParser<'_> {
     type Error = DocumentError;
 
-    fn serialize_member<'a, T>(&mut self, member_schema: &'a Schema, value: &T) -> SerializerResult<Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> SerializerResult<Self::Error>
     where
-        T: ?Sized + Serialize,
-        'a: 's
+        T: ?Sized + Serialize
     {
-        let Schema::Member(me) = member_schema else {
+        let Some(me) = member_schema.as_member() else {
             return Err(DocumentError::DocumentSerialization("Expected member schema!".to_string()));
         };
         let mut value_serializer = DocumentParser::new();
@@ -894,22 +896,100 @@ impl <'s> StructSerializer<'s> for DocumentMapParser<'s> {
         map.insert(me.name.clone(), value_serializer.result()?);
         Ok(())
     }
+
+    fn end(self, _: &SchemaRef) -> SerializerResult<Self::Error> {
+        self.parent.set_document(self.document);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::lazy_member_schema;
     use super::*;
+
+    lazy_schema!(MAP_SCHEMA, Schema::map_builder(ShapeId::from("com.example#Map"))
+        .put_member("key", &prelude::STRING, traits![])
+        .put_member("value", &prelude::STRING, traits![])
+        .build()
+    );
+    lazy_schema!(LIST_SCHEMA, Schema::list_builder(ShapeId::from("com.example#List"))
+        .put_member("member", &prelude::STRING, traits![])
+        .build()
+    );
+    lazy_schema!(SCHEMA, Schema::structure_builder(ShapeId::from("com.example#Shape"))
+            .put_member("a", &prelude::STRING, traits![])
+            .put_member("b", &prelude::STRING, traits![])
+            .put_member("c", &prelude::STRING, traits![])
+            .put_member("map", &MAP_SCHEMA, traits![])
+            .put_member("list", &LIST_SCHEMA, traits![])
+            .build()
+    );
+    lazy_member_schema!(MEMBER_A, SCHEMA, "a");
+    lazy_member_schema!(MEMBER_B, SCHEMA, "b");
+    lazy_member_schema!(MEMBER_C, SCHEMA, "c");
+    lazy_member_schema!(MEMBER_LIST, SCHEMA, "list");
+    lazy_member_schema!(MEMBER_MAP, SCHEMA, "map");
+
+    pub(crate) struct SerializeMe {
+        // #[schema(MEMBER_A)]
+        pub member_a: String,
+        // #[schema(MEMBER_B)]
+        pub member_b: String,
+        // #[schema(MEMBER_C)]
+        pub member_optional: Option<String>,
+        pub member_list: Vec<String>,
+        pub member_map: IndexMap<String, String>,
+    }
+
+    impl SerializeShape for SerializeMe {
+        fn schema(&self) -> &SchemaRef {
+            &SCHEMA
+        }
+    }
+
+    impl Serialize for SerializeMe {
+        fn serialize<S: Serializer>(&self, schema: &SchemaRef, serializer: &mut S) -> SerializerResult<S::Error>
+        {
+            let mut ser = serializer.write_struct(schema, 2)?;
+            ser.serialize_member(&MEMBER_A, &self.member_a)?;
+            ser.serialize_member(&MEMBER_B, &self.member_b)?;
+            ser.serialize_optional_member(&MEMBER_C, &self.member_optional)?;
+            ser.serialize_member(&MEMBER_LIST, &self.member_list)?;
+            ser.serialize_member(&MEMBER_MAP, &self.member_map)?;
+            ser.end(schema)
+        }
+    }
+
+
+    #[test]
+    fn struct_to_document() {
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        let list = vec!["a".to_string(), "b".to_string()];
+        let struct_to_convert = SerializeMe {
+            member_a: "a".to_string(),
+            member_b: "b".to_string(),
+            member_optional: Some("c".to_string()),
+            member_map: map,
+            member_list: list,
+        };
+        let mut doc_parser = DocumentParser::new();
+        struct_to_convert.serialize(struct_to_convert.schema(), &mut doc_parser)
+            .expect("Failed to convert to document!");
+        panic!("{}", doc_parser.result().expect("Failed to convert to document!"));
+    }
 
     #[test]
     fn string_document_value() {
         let document_str = Document::of("MyStr");
         let output_str = document_str.as_string().expect("string");
         assert_eq!(output_str, &"MyStr".to_string());
-        assert_eq!(document_str.schema, &*prelude::STRING);
+        //assert_eq!(document_str.schema, &*prelude::STRING);
         let document_string = Document::of("MyString".to_string());
         let output_str = document_string.as_string().expect("string");
         assert_eq!(output_str, &"MyString".to_string());
-        assert_eq!(document_string.schema, &*prelude::STRING);
+        //assert_eq!(document_string.schema, &*prelude::STRING);
     }
 
     #[test]

@@ -9,16 +9,17 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 pub type Ref<T> = Arc<T>;
+pub type SchemaRef = Ref<Schema>;
 
 #[derive(Debug, PartialEq)]
-pub enum Schema<'schema> {
+pub enum Schema {
     Scalar(ScalarSchema),
-    Struct(StructSchema<'schema>),
+    Struct(StructSchema),
     Enum(EnumSchema<String>),
     IntEnum(EnumSchema<i32>),
-    List(ListSchema<'schema>),
-    Map(MapSchema<'schema>),
-    Member(MemberSchema<'schema>)
+    List(ListSchema),
+    Map(MapSchema),
+    Member(MemberSchema)
 }
 
 #[derive(Debug, PartialEq)]
@@ -28,31 +29,27 @@ pub struct ScalarSchema {
     traits: TraitMap,
 }
 #[derive(Debug, PartialEq)]
-pub struct StructSchema<'schema> {
+pub struct StructSchema {
     id: ShapeId,
     shape_type: ShapeType,
-    members: IndexMap<String, Ref<Schema<'schema>>>,
+    members: IndexMap<String, SchemaRef>,
     traits: TraitMap,
 }
 #[derive(Debug, PartialEq)]
-pub struct ListSchema<'schema> {
+pub struct ListSchema {
     id: ShapeId,
-    member: Ref<Schema<'schema>>,
+    pub member: SchemaRef,
     traits: TraitMap,
-}
-impl ListSchema<'_> {
-    fn member(&self) -> &Schema {
-        &*self.member
-    }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct MapSchema<'schema> {
+pub struct MapSchema {
     id: ShapeId,
-    pub key: Ref<Schema<'schema>>,
-    value: Ref<Schema<'schema>>,
+    pub key: SchemaRef,
+    value: SchemaRef,
     traits: TraitMap
 }
+
 #[derive(Debug, PartialEq)]
 pub struct EnumSchema<T: PartialEq + Hash + Eq> {
     id: ShapeId,
@@ -61,9 +58,9 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct MemberSchema<'schema> {
+pub struct MemberSchema {
     id: ShapeId,
-    pub target: Ref<&'schema Schema<'schema>>,
+    pub target: SchemaRef,
     pub name: String,
     pub index: usize,
     traits: TraitMap,
@@ -71,101 +68,96 @@ pub struct MemberSchema<'schema> {
 
 // FACTORY METHODS
 // TODO: What should be inlined?
-impl Schema<'_> {
-
-    fn into_arc(self) -> Ref<Self> {
-        Ref::new(self)
-    }
-
+impl Schema {
     // TODO: Can these generics be simplified at all?
     // TODO: Could arrays somehow be used instead of vecs?
     fn scalar(
         shape_type: ShapeType,
         id: impl Into<ShapeId>,
         traits: TraitList,
-    ) -> Self {
-        Schema::Scalar(ScalarSchema {
+    ) -> SchemaRef {
+        Ref::new(Schema::Scalar(ScalarSchema {
             id: id.into(),
             shape_type,
             traits: TraitMap::of(traits)
-        })
+        }))
     }
 
-    pub fn create_boolean(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_boolean(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Boolean, id, traits)
     }
 
-    pub fn create_byte(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_byte(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Byte, id, traits)
     }
 
-    pub fn create_short(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_short(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Short, id, traits)
     }
 
-    pub fn create_integer(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_integer(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Integer, id, traits)
     }
 
-    pub fn create_int_enum(id: impl Into<ShapeId>, values: HashSet<i32>, traits: TraitList) -> Self {
-        Self::IntEnum(EnumSchema { id: id.into(), values, traits: TraitMap::of(traits) })
+    pub fn create_int_enum(id: impl Into<ShapeId>, values: HashSet<i32>, traits: TraitList) -> SchemaRef {
+        Ref::new(Self::IntEnum(EnumSchema { id: id.into(), values, traits: TraitMap::of(traits) }))
     }
 
-    pub fn create_long(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_long(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Long, id, traits)
     }
 
-    pub fn create_float(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_float(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Float, id, traits)
     }
 
-    pub fn create_double(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_double(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Double, id, traits)
     }
 
-    pub fn create_big_integer(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_big_integer(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::BigInteger, id, traits)
     }
 
-    pub fn create_big_decimal(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_big_decimal(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::BigDecimal, id, traits)
     }
 
-    pub fn create_string(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_string(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::String, id, traits)
     }
 
-    pub fn create_enum(id: impl Into<ShapeId>, values: HashSet<String>, traits: TraitList) -> Self {
-        Self::Enum(EnumSchema { id: id.into(), values, traits: TraitMap::of(traits) })
+    pub fn create_enum(id: impl Into<ShapeId>, values: HashSet<String>, traits: TraitList) -> SchemaRef {
+        Ref::new(Self::Enum(EnumSchema { id: id.into(), values, traits: TraitMap::of(traits) }))
     }
 
-    pub fn create_blob(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_blob(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Blob, id, traits)
     }
 
-    pub fn create_document(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_document(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Document, id, traits)
     }
 
-    pub fn create_timestamp(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_timestamp(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Timestamp, id, traits)
     }
 
-    pub fn create_operation(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_operation(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Operation, id, traits)
     }
 
-    pub fn create_resource(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_resource(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Resource, id, traits)
     }
 
-    pub fn create_service(id: impl Into<ShapeId>, traits: TraitList) -> Self {
+    pub fn create_service(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Self::scalar(ShapeType::Service, id, traits)
     }
 }
 
 // BUILDER FACTORIES
-impl Schema<'_> {
+impl Schema {
     pub fn structure_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
         SchemaBuilder::new(id, ShapeType::Structure)
     }
@@ -184,7 +176,7 @@ impl Schema<'_> {
 }
 
 // GETTERS
-impl Schema<'_> {
+impl Schema {
     pub fn shape_type(&self) -> &ShapeType {
         match self {
             Schema::Scalar(ScalarSchema { shape_type, ..}) => shape_type,
@@ -221,24 +213,24 @@ impl Schema<'_> {
         }
     }
 
-    pub fn get_member(&self, member_name: &str) -> Option<Ref<Schema>> {
+    pub fn get_member(&self, member_name: &str) -> Option<&SchemaRef> {
         match self {
             Schema::Scalar(_) => None,
-            Schema::Struct(schema) => schema.members.get(member_name).map(Clone::clone),
+            Schema::Struct(schema) => schema.members.get(member_name),
             Schema::Enum(_) => None,
             Schema::IntEnum(_) => None,
             Schema::List(schema) => {
                 if member_name == "member" {
-                    Some(schema.member.clone())
+                    Some(&schema.member)
                 } else {
                     panic!("GAHHHH")
                 }
             },
             Schema::Map(schema) => {
                 if member_name == "key" {
-                    Some(schema.key.clone())
+                    Some(&schema.key)
                 } else if member_name == "value" {
-                    Some(schema.value.clone())
+                    Some(&schema.value)
                 } else {
                     None
                 }
@@ -247,8 +239,8 @@ impl Schema<'_> {
         }
     }
 
-    pub fn expect_member(&self, member_name: &str) -> Ref<Schema> {
-        self.get_member(member_name).expect(format!("Expected member: {member_name}").as_str())
+    pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
+        &self.get_member(member_name).expect(format!("Expected member: {member_name}").as_str())
     }
 
     pub fn contains_trait(&self, id: &ShapeId) -> bool {
@@ -267,6 +259,65 @@ impl Schema<'_> {
 
     pub fn get_trait_dyn(&self, id: &ShapeId) -> Option<&Ref<dyn SmithyTrait>> {
         self.traits().get(id)
+    }
+}
+
+// as-ers
+impl Schema {
+    pub fn as_member(&self) -> Option<&MemberSchema> {
+        if let Schema::Member(member) = self {
+            Some(member)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_list(&self) -> Option<&ListSchema> {
+        if let Schema::List(list) = self {
+            Some(list)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_struct(&self) -> Option<&StructSchema> {
+        if let Schema::Struct(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_scalar(&self) -> Option<&ScalarSchema> {
+        if let Schema::Scalar(schema) = self {
+            Some(schema)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_map(&self) -> Option<&MapSchema> {
+        if let Schema::Map(map) = self {
+            Some(map)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_enum(&self) -> Option<&EnumSchema<String>> {
+        if let Schema::Enum(enum_schema) = self {
+            Some(enum_schema)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_int_enum(&self) -> Option<&EnumSchema<i32>> {
+        if let Schema::IntEnum(enum_schema) = self {
+            Some(enum_schema)
+        } else {
+            None
+        }
     }
 }
 
@@ -296,7 +347,7 @@ impl<'b> SchemaBuilder<'b> {
     pub fn put_member<'t>(
         mut self,
         name: &str,
-        target: &'t Schema,
+        target: &'t SchemaRef,
         traits: TraitList,
     ) -> Self
     // Target reference will outlive this builder
@@ -323,7 +374,7 @@ impl<'b> SchemaBuilder<'b> {
         self.members.push(MemberSchemaBuilder::new(
             name.into(),
             self.id.with_member(name),
-            Ref::new(target),
+            target,
             traits,
         ));
         self
@@ -338,9 +389,7 @@ impl<'b> SchemaBuilder<'b> {
         // TODO: Implement.
     }
 
-    pub fn build<'a>(mut self) -> Schema<'a>
-    where 'b: 'a
-    {
+    pub fn build(mut self) -> SchemaRef {
         // Structure shapes need to sort members so that required members come before optional members.
         // Union types do not need this.
         if self.shape_type == ShapeType::Structure {
@@ -354,27 +403,27 @@ impl<'b> SchemaBuilder<'b> {
                     member_builder.set_index(idx);
                     member_map.insert(member_builder.name.clone(), Ref::new(member_builder.build()));
                 }
-                Schema::Struct(StructSchema {
+                Ref::new(Schema::Struct(StructSchema {
                     id: self.id.clone(),
                     shape_type: self.shape_type.clone(),
                     members: member_map.clone(),
                     traits: self.traits.clone(),
-                })
+                }))
             },
             ShapeType::List => {
-                Schema::List(ListSchema {
+                Ref::new(Schema::List(ListSchema {
                     id: self.id,
                     member: Ref::new(self.members.remove(0).build()),
                     traits: self.traits,
-                })
+                }))
             },
             ShapeType::Map => {
-                Schema::Map(MapSchema {
+                Ref::new(Schema::Map(MapSchema {
                     id: self.id,
                     key: Ref::new(self.members.remove(0).build()),
                     value: Ref::new(self.members.remove(0).build()),
                     traits: self.traits,
-                })
+                }))
             }
             _ => unreachable!("Builder can only be created for aggregate types.")
         }
@@ -386,7 +435,7 @@ impl<'b> SchemaBuilder<'b> {
 struct MemberSchemaBuilder<'schema> {
     name: String,
     id: ShapeId,
-    member_target: Ref<&'schema Schema<'schema>>,
+    member_target: &'schema SchemaRef,
     member_index: Option<usize>,
     trait_map: TraitMap,
 }
@@ -395,7 +444,7 @@ impl<'b> MemberSchemaBuilder<'b> {
     pub(super) fn new<'t>(
         name: String,
         id: ShapeId,
-        target: Ref<&'t Schema>,
+        member_target: &'t SchemaRef,
         traits: TraitList,
     ) -> Self
     // Schema reference outlives this builder
@@ -404,11 +453,11 @@ impl<'b> MemberSchemaBuilder<'b> {
     {
         // Flatten all target traits into member
         let mut trait_map= TraitMap::of(traits);
-        trait_map.extend(target.traits());
+        trait_map.extend(member_target.traits());
         MemberSchemaBuilder {
             name,
             id,
-            member_target: target,
+            member_target,
             member_index: None,
             trait_map,
         }
@@ -418,10 +467,10 @@ impl<'b> MemberSchemaBuilder<'b> {
         self.member_index = Some(index);
     }
 
-    pub(super) fn build(self) -> Schema<'b> {
+    pub(super) fn build(self) -> Schema {
         Schema::Member(MemberSchema {
             id: self.id,
-            target: self.member_target,
+            target: self.member_target.clone(),
             name: self.name,
             index: self.member_index.unwrap_or_default(),
             traits: self.trait_map
@@ -455,7 +504,7 @@ mod tests {
         let member = schema.expect_member("target_a");
         assert_eq!(member.shape_type(), &ShapeType::Member);
         assert_eq!(member.id(), &ShapeId::from("api.smithy#Example$target_a"));
-        let Schema::Member(member_schema) = &*member else {
+        let Some(member_schema) = member.as_member() else {
             panic!("Should be member schema!")
         };
         assert_eq!(&member_schema.target.id(), &target.id());
@@ -476,7 +525,7 @@ mod tests {
             .build();
         assert_eq!(schema.shape_type(), &ShapeType::List);
         assert_eq!(schema.id(), &ShapeId::from("api.smithy#List"));
-        let Schema::List(list_schema) = schema else {
+        let Some(list_schema) = schema.as_list() else {
             panic!("Should be list!")
         };
         let member = &list_schema.member;
@@ -492,7 +541,7 @@ mod tests {
             .build();
         assert_eq!(schema.shape_type(), &ShapeType::Map);
         assert_eq!(schema.id(), &ShapeId::from("api.smithy#Map"));
-        let Schema::Map(map_schema) = schema else {
+        let Some(map_schema) = schema.as_map() else {
             panic!("Should be map!")
         };
         let key = &map_schema.key;

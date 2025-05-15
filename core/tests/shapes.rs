@@ -57,7 +57,7 @@ impl SerializeShape for SerializeMe {
     }
 }
 impl Serialize for SerializeMe {
-    fn serialize<'a, S: Serializer<'a>>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
         let mut struct_ser = serializer.write_struct(schema, 5)?;
         struct_ser.serialize_member(&MEMBER_A, &self.member_a)?;
         struct_ser.serialize_member(&MEMBER_B, &self.member_b)?;

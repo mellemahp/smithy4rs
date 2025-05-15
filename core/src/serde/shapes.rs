@@ -1,10 +1,10 @@
-use crate::schema::Schema;
+use crate::schema::{Schema, SchemaRef};
 use crate::serde::se::{Serialize, Serializer, SerializerResult};
 
 pub trait SerializeShape: Serialize {
-    fn schema(&self) -> &Schema;
+    fn schema(&self) -> &SchemaRef;
 
-    fn serialize_shape<'a, S: Serializer<'a>>(&self, serializer: &mut S) -> SerializerResult<S::Error> {
+    fn serialize_shape<S: Serializer>(&self, serializer: &mut S) -> SerializerResult<S::Error> {
         self.serialize(self.schema(), serializer)
     }
 

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::schema::documents::Document;
-use crate::schema::Schema;
+use crate::schema::{Schema, SchemaRef};
 use crate::serde::serializers::Serialize;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
@@ -10,7 +10,7 @@ use std::error::Error;
 use std::time::Instant;
 
 pub trait Deserializable: Sized {
-    fn schema<'a>() -> &'a Schema<'a>;
+    fn schema<'a>() -> &'a SchemaRef;
 
     fn deserialize<D: Deserializer>(mut self, decoder: &mut D) -> Result<Self, D::Error> {
         decoder.read_struct(Self::schema(), &mut self, Self::deserialize_member)?;

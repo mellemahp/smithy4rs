@@ -9,7 +9,7 @@ macro_rules! traits {
 #[macro_export]
 macro_rules! lazy_schema {
     ($schema_name:ident, $builder:expr) => {
-        pub static $schema_name: LazyLock<Schema> = LazyLock::new(|| {
+        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
             $builder
         });
     };
@@ -18,7 +18,7 @@ macro_rules! lazy_schema {
 #[macro_export]
 macro_rules! lazy_member_schema {
     ($member_schema_name:ident, $parent_schema:ident, $identifier:literal) => {
-        static $member_schema_name: LazyLock<Ref<Schema>> =
+        static $member_schema_name: LazyLock<&SchemaRef> =
             LazyLock::new(|| $parent_schema.expect_member($identifier));
     };
 }

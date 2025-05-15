@@ -20,7 +20,7 @@ fn impl_serializable_struct_derive(ast: &syn::DeriveInput) -> TokenStream {
     // TODO: How to handle enums and unions?
     let mut output = quote! {
         impl Serializable for #name {
-            fn serialize<'a, S: Serializer<'a>>(self, serializer: &mut S) -> Result<S::Ok<'_>, S::Error> {
+            fn serialize<S: Serializer>(self, serializer: &mut S) -> Result<S::Ok<'_>, S::Error> {
                 SerializableStruct::serialize(self, serializer)
             }
         }

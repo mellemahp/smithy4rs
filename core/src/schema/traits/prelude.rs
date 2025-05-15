@@ -92,7 +92,7 @@ annotation_trait!(
 );
 
 // ==== Traits with values ====
-pub struct DefaultTrait(DocumentValue<'static>);
+pub struct DefaultTrait(DocumentValue);
 static_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
@@ -120,7 +120,7 @@ impl Display for ErrorFault {
 
 pub struct ErrorTrait {
     pub error: ErrorFault,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl ErrorTrait {
     pub fn new(error: ErrorFault) -> Self {
@@ -143,7 +143,7 @@ impl SmithyTrait for ErrorTrait {
 
 pub struct MediaTypeTrait {
     pub media_type: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl MediaTypeTrait {
     pub fn new(media_type: &str) -> Self {
@@ -166,7 +166,7 @@ impl SmithyTrait for MediaTypeTrait {
 
 pub struct JsonNameTrait {
     pub name: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl JsonNameTrait {
     pub fn new(name: &str) -> Self {
@@ -189,7 +189,7 @@ impl SmithyTrait for JsonNameTrait {
 
 pub struct HTTPErrorTrait {
     pub code: i32,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl HTTPErrorTrait {
     pub fn new(code: i32) -> Self {
@@ -214,7 +214,7 @@ impl SmithyTrait for HTTPErrorTrait {
 
 struct HTTPHeaderTrait {
     pub name: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_id!(
     HTTPHeaderTrait,
@@ -240,7 +240,7 @@ impl SmithyTrait for HTTPHeaderTrait {
 
 struct HTTPPrefixHeadersTrait {
     pub prefix: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_id!(
     HTTPPrefixHeadersTrait,
@@ -267,7 +267,7 @@ impl SmithyTrait for HTTPPrefixHeadersTrait {
 
 struct HTTPQueryTrait {
     pub key: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
 impl HTTPQueryTrait {
@@ -289,7 +289,7 @@ impl SmithyTrait for HTTPQueryTrait {
 
 pub struct EndpointTrait {
     pub host_prefix: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
 impl EndpointTrait {
