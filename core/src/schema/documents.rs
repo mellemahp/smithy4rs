@@ -27,6 +27,10 @@ pub struct Document {
     pub discriminator: Option<ShapeId>,
 }
 
+/// Marker trait to distinguish documents from other [`SerializeShape`]'s
+pub trait DynamicShape: Sized {}
+impl DynamicShape for Document {}
+
 /// A Smithy document type, representing untyped data from the Smithy data model.
 #[derive(Clone, PartialEq)]
 pub enum DocumentValue {
@@ -628,12 +632,15 @@ impl <'a> From<IndexMap<String, Document>> for Document {
     }
 }
 
-// TODO: How to make this `of` implementation work for Serializable struct?
-// impl <'a, T: SerializeShape + Serialize> From<T> for Document {
-//     fn from(value: T) -> Self {
-//         todo!()
-//     }
-// }
+pub trait AsDocument: SerializeShape {
+    fn as_document(&self) -> Result<Document, DocumentError> where Self: Sized {
+        let mut doc_parser = DocumentParser::new();
+        self.serialize_shape(&mut doc_parser)?;
+        Ok(doc_parser.result()?)
+    }
+}
+impl <T: SerializeShape> AsDocument for T {}
+
 
 struct DocumentParser {
     document: Option<Document>,
@@ -974,11 +981,32 @@ mod tests {
             member_map: map,
             member_list: list,
         };
-        let mut doc_parser = DocumentParser::new();
-        struct_to_convert.serialize(struct_to_convert.schema(), &mut doc_parser)
-            .expect("Failed to convert to document!");
-        panic!("{}", doc_parser.result().expect("Failed to convert to document!"));
+        let document = struct_to_convert.as_document().expect("Expected document");
+        assert_eq!(document.discriminator.clone().unwrap().id, *struct_to_convert.schema().id().id);
+        assert_eq!(document.schema(), struct_to_convert.schema());
+        if let DocumentValue::Map(members) = document.value {
+            assert!(members.contains_key("a"));
+            if let DocumentValue::String(str) = &members.get("a").unwrap().value {
+                assert_eq!(str, &String::from("a"));
+            } else { panic!("Expected String") }
+            assert!(members.contains_key("b"));
+            if let DocumentValue::String(str) = &members.get("b").unwrap().value {
+                assert_eq!(str, &String::from("b"));
+            } else { panic!("Expected String") }
+            assert!(members.contains_key("c"));
+            if let DocumentValue::String(str) = &members.get("c").unwrap().value {
+                assert_eq!(str, &String::from("c"));
+            } else { panic!("Expected String") }
+            assert!(members.contains_key("map"));
+            assert!(members.contains_key("list"));
+        } else {
+            panic!("Expected document");
+        }
+        //assert!()
+       // panic!("{}", document);
     }
+
+
 
     #[test]
     fn string_document_value() {
