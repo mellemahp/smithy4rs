@@ -19,3 +19,4 @@ indexmap.workspace = true
 smithy4rs-core-derive.workspace = true
 thiserror.workspace = true
 downcast-rs = "2.0.1"
+rstest = "0.25.0"

@@ -52,7 +52,7 @@ impl SerializeMe {
 }
 
 impl Serialize for SerializeMe {
-    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+    fn serialize<'a, S: Serializer<'a>>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
         let mut struct_writer = serializer.write_struct(&SCHEMA, 4)?;
         struct_writer.serialize_member(&MEMBER_A, &self.member_a)?;
         struct_writer.serialize_member(&MEMBER_B, &self.member_b)?;
@@ -73,7 +73,7 @@ impl Nested {
 }
 
 impl Serialize for Nested {
-    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+    fn serialize<'a, S: Serializer<'a>>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
         let mut struct_writer = serializer.write_struct(&NESTED, 1)?;
         struct_writer.serialize_member(&MEMBER_C, &self.member_c)?;
         struct_writer.end(schema)

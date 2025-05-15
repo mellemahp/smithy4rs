@@ -32,7 +32,7 @@ impl SmithyTrait for DynamicTrait {
 
 pub type TraitList = Vec<Ref<dyn SmithyTrait>>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct TraitMap {
     map: HashMap<ShapeId, Ref<dyn SmithyTrait>>,
 }
@@ -72,6 +72,13 @@ impl Debug for dyn SmithyTrait {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         // TODO
         f.write_str("dyn SmithyTrait")
+    }
+}
+
+impl PartialEq for dyn SmithyTrait {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+            && (self.value() == other.value())
     }
 }
 
