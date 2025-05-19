@@ -2,13 +2,13 @@
 
 use indexmap::IndexMap;
 use smithy4rs_core::schema::shapes::ShapeId;
-use smithy4rs_core::schema::{prelude, Schema};
+use smithy4rs_core::schema::{Schema, prelude};
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
 use smithy4rs_core::serde::se::{Serialize, Serializer, StructSerializer};
+use smithy4rs_core::serde::{FmtSerializer, SerializeShape};
 use smithy4rs_core::{lazy_member_schema, traits};
 use std::fmt::Display;
 use std::sync::LazyLock;
-use smithy4rs_core::serde::{FmtSerializer, SerializeShape};
 
 pub static LIST_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::list_builder(ShapeId::from("com.example#MyList"))
@@ -57,7 +57,11 @@ impl SerializeShape for SerializeMe {
     }
 }
 impl Serialize for SerializeMe {
-    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: &mut S,
+    ) -> Result<S::Ok, S::Error> {
         let mut struct_ser = serializer.write_struct(schema, 5)?;
         struct_ser.serialize_member(&MEMBER_A, &self.member_a)?;
         struct_ser.serialize_member(&MEMBER_B, &self.member_b)?;

@@ -17,6 +17,4 @@ pub trait BuildShape: SerializeShape {
     //fn builder<B: Builder<Self>>() -> B;
 }
 
-pub trait Builder<T: SerializeShape> {
-
-}
+pub trait Builder<T: SerializeShape> {}

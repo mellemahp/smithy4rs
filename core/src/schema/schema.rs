@@ -19,7 +19,7 @@ pub enum Schema {
     IntEnum(EnumSchema<i32>),
     List(ListSchema),
     Map(MapSchema),
-    Member(MemberSchema)
+    Member(MemberSchema),
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,14 +47,14 @@ pub struct MapSchema {
     id: ShapeId,
     pub key: SchemaRef,
     value: SchemaRef,
-    traits: TraitMap
+    traits: TraitMap,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct EnumSchema<T: PartialEq + Hash + Eq> {
     id: ShapeId,
     pub values: HashSet<T>,
-    traits: TraitMap
+    traits: TraitMap,
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,15 +71,11 @@ pub struct MemberSchema {
 impl Schema {
     // TODO: Can these generics be simplified at all?
     // TODO: Could arrays somehow be used instead of vecs?
-    fn scalar(
-        shape_type: ShapeType,
-        id: impl Into<ShapeId>,
-        traits: TraitList,
-    ) -> SchemaRef {
+    fn scalar(shape_type: ShapeType, id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
         Ref::new(Schema::Scalar(ScalarSchema {
             id: id.into(),
             shape_type,
-            traits: TraitMap::of(traits)
+            traits: TraitMap::of(traits),
         }))
     }
 
@@ -99,8 +95,16 @@ impl Schema {
         Self::scalar(ShapeType::Integer, id, traits)
     }
 
-    pub fn create_int_enum(id: impl Into<ShapeId>, values: HashSet<i32>, traits: TraitList) -> SchemaRef {
-        Ref::new(Self::IntEnum(EnumSchema { id: id.into(), values, traits: TraitMap::of(traits) }))
+    pub fn create_int_enum(
+        id: impl Into<ShapeId>,
+        values: HashSet<i32>,
+        traits: TraitList,
+    ) -> SchemaRef {
+        Ref::new(Self::IntEnum(EnumSchema {
+            id: id.into(),
+            values,
+            traits: TraitMap::of(traits),
+        }))
     }
 
     pub fn create_long(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
@@ -127,8 +131,16 @@ impl Schema {
         Self::scalar(ShapeType::String, id, traits)
     }
 
-    pub fn create_enum(id: impl Into<ShapeId>, values: HashSet<String>, traits: TraitList) -> SchemaRef {
-        Ref::new(Self::Enum(EnumSchema { id: id.into(), values, traits: TraitMap::of(traits) }))
+    pub fn create_enum(
+        id: impl Into<ShapeId>,
+        values: HashSet<String>,
+        traits: TraitList,
+    ) -> SchemaRef {
+        Ref::new(Self::Enum(EnumSchema {
+            id: id.into(),
+            values,
+            traits: TraitMap::of(traits),
+        }))
     }
 
     pub fn create_blob(id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
@@ -179,37 +191,37 @@ impl Schema {
 impl Schema {
     pub fn shape_type(&self) -> &ShapeType {
         match self {
-            Schema::Scalar(ScalarSchema { shape_type, ..}) => shape_type,
-            Schema::Struct(StructSchema { shape_type, ..}) => shape_type,
+            Schema::Scalar(ScalarSchema { shape_type, .. }) => shape_type,
+            Schema::Struct(StructSchema { shape_type, .. }) => shape_type,
             Schema::Enum(_) => &ShapeType::Enum,
             Schema::IntEnum(_) => &ShapeType::IntEnum,
             Schema::List(_) => &ShapeType::List,
             Schema::Map(_) => &ShapeType::Map,
-            Schema::Member(_) => &ShapeType::Member
+            Schema::Member(_) => &ShapeType::Member,
         }
     }
 
     pub fn id(&self) -> &ShapeId {
         match self {
-            Schema::Scalar(ScalarSchema { id, .. }) |
-            Schema::Struct(StructSchema { id, .. }) |
-            Schema::List(ListSchema { id, .. }) |
-            Schema::Enum(EnumSchema { id, .. }) |
-            Schema::IntEnum(EnumSchema { id, .. }) |
-            Schema::Map(MapSchema { id, .. }) |
-            Schema::Member(MemberSchema{ id, ..} ) => id,
+            Schema::Scalar(ScalarSchema { id, .. })
+            | Schema::Struct(StructSchema { id, .. })
+            | Schema::List(ListSchema { id, .. })
+            | Schema::Enum(EnumSchema { id, .. })
+            | Schema::IntEnum(EnumSchema { id, .. })
+            | Schema::Map(MapSchema { id, .. })
+            | Schema::Member(MemberSchema { id, .. }) => id,
         }
     }
 
     fn traits(&self) -> &TraitMap {
         match self {
-            Schema::Scalar(ScalarSchema { traits, .. }) |
-            Schema::Struct(StructSchema { traits, .. }) |
-            Schema::List(ListSchema { traits, .. }) |
-            Schema::Map(MapSchema { traits, .. }) |
-            Schema::Enum(EnumSchema { traits, .. }) |
-            Schema::IntEnum(EnumSchema { traits, .. }) |
-            Schema::Member(MemberSchema{ traits, ..} ) => traits,
+            Schema::Scalar(ScalarSchema { traits, .. })
+            | Schema::Struct(StructSchema { traits, .. })
+            | Schema::List(ListSchema { traits, .. })
+            | Schema::Map(MapSchema { traits, .. })
+            | Schema::Enum(EnumSchema { traits, .. })
+            | Schema::IntEnum(EnumSchema { traits, .. })
+            | Schema::Member(MemberSchema { traits, .. }) => traits,
         }
     }
 
@@ -225,7 +237,7 @@ impl Schema {
                 } else {
                     panic!("GAHHHH")
                 }
-            },
+            }
             Schema::Map(schema) => {
                 if member_name == "key" {
                     Some(&schema.key)
@@ -234,13 +246,15 @@ impl Schema {
                 } else {
                     None
                 }
-            },
+            }
             Schema::Member(member) => member.target.get_member(member_name),
         }
     }
 
     pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
-        &self.get_member(member_name).expect(format!("Expected member: {member_name}").as_str())
+        &self
+            .get_member(member_name)
+            .expect(format!("Expected member: {member_name}").as_str())
     }
 
     pub fn contains_trait(&self, id: &ShapeId) -> bool {
@@ -335,21 +349,16 @@ impl SchemaBuilder<'_> {
             members: match shape_type {
                 ShapeType::List => Vec::with_capacity(1),
                 ShapeType::Map => Vec::with_capacity(2),
-                _ => Vec::new()
+                _ => Vec::new(),
             },
             shape_type,
-            traits: TraitMap::new()
+            traits: TraitMap::new(),
         }
     }
 }
 
 impl<'b> SchemaBuilder<'b> {
-    pub fn put_member<'t>(
-        mut self,
-        name: &str,
-        target: &'t SchemaRef,
-        traits: TraitList,
-    ) -> Self
+    pub fn put_member<'t>(mut self, name: &str, target: &'t SchemaRef, traits: TraitList) -> Self
     // Target reference will outlive this builder
     where
         't: 'b,
@@ -401,7 +410,10 @@ impl<'b> SchemaBuilder<'b> {
                 let mut member_map = IndexMap::with_capacity(self.members.len());
                 for (idx, mut member_builder) in self.members.into_iter().enumerate() {
                     member_builder.set_index(idx);
-                    member_map.insert(member_builder.name.clone(), Ref::new(member_builder.build()));
+                    member_map.insert(
+                        member_builder.name.clone(),
+                        Ref::new(member_builder.build()),
+                    );
                 }
                 Ref::new(Schema::Struct(StructSchema {
                     id: self.id.clone(),
@@ -409,26 +421,21 @@ impl<'b> SchemaBuilder<'b> {
                     members: member_map.clone(),
                     traits: self.traits.clone(),
                 }))
-            },
-            ShapeType::List => {
-                Ref::new(Schema::List(ListSchema {
-                    id: self.id,
-                    member: Ref::new(self.members.remove(0).build()),
-                    traits: self.traits,
-                }))
-            },
-            ShapeType::Map => {
-                Ref::new(Schema::Map(MapSchema {
-                    id: self.id,
-                    key: Ref::new(self.members.remove(0).build()),
-                    value: Ref::new(self.members.remove(0).build()),
-                    traits: self.traits,
-                }))
             }
-            _ => unreachable!("Builder can only be created for aggregate types.")
+            ShapeType::List => Ref::new(Schema::List(ListSchema {
+                id: self.id,
+                member: Ref::new(self.members.remove(0).build()),
+                traits: self.traits,
+            })),
+            ShapeType::Map => Ref::new(Schema::Map(MapSchema {
+                id: self.id,
+                key: Ref::new(self.members.remove(0).build()),
+                value: Ref::new(self.members.remove(0).build()),
+                traits: self.traits,
+            })),
+            _ => unreachable!("Builder can only be created for aggregate types."),
         }
         // TODO: Could the clones be removed somehow?
-
     }
 }
 
@@ -452,7 +459,7 @@ impl<'b> MemberSchemaBuilder<'b> {
         't: 'b,
     {
         // Flatten all target traits into member
-        let mut trait_map= TraitMap::of(traits);
+        let mut trait_map = TraitMap::of(traits);
         trait_map.extend(member_target.traits());
         MemberSchemaBuilder {
             name,
@@ -473,15 +480,15 @@ impl<'b> MemberSchemaBuilder<'b> {
             target: self.member_target.clone(),
             name: self.name,
             index: self.member_index.unwrap_or_default(),
-            traits: self.trait_map
+            traits: self.trait_map,
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::schema::prelude;
     use super::*;
+    use crate::schema::prelude;
     use crate::schema::traits::JsonNameTrait;
     use crate::traits;
 

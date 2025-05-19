@@ -1,10 +1,10 @@
-use smithy4rs_core::schema::{prelude, Schema};
+use indexmap::IndexMap;
 use smithy4rs_core::schema::shapes::ShapeId;
+use smithy4rs_core::schema::{Schema, prelude};
 use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
 use smithy4rs_core::serde::se::{Serialize, Serializer, StructSerializer};
 use smithy4rs_core::{lazy_member_schema, traits};
 use std::sync::LazyLock;
-use indexmap::IndexMap;
 
 static NESTED: LazyLock<Schema> = LazyLock::new(|| {
     Schema::structure_builder(ShapeId::from("com.example#Nested"))
@@ -41,7 +41,7 @@ pub(crate) struct SerializeMe {
     pub member_a: String,
     pub member_b: String,
     pub nested: Nested,
-    pub map_nested: IndexMap<String, Nested>
+    pub map_nested: IndexMap<String, Nested>,
 }
 
 impl SerializeMe {
@@ -52,12 +52,16 @@ impl SerializeMe {
 }
 
 impl Serialize for SerializeMe {
-    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: &mut S,
+    ) -> Result<S::Ok, S::Error> {
         let mut struct_writer = serializer.write_struct(&SCHEMA, 4)?;
         struct_writer.serialize_member(&MEMBER_A, &self.member_a)?;
         struct_writer.serialize_member(&MEMBER_B, &self.member_b)?;
         struct_writer.serialize_member(&MEMBER_NESTED, &self.nested)?;
-       // struct_writer.serialize_member(&MEMBER_MAP_NESTED, &self.map_nested)?;
+        // struct_writer.serialize_member(&MEMBER_MAP_NESTED, &self.map_nested)?;
         struct_writer.end(schema)
     }
 }
@@ -73,7 +77,11 @@ impl Nested {
 }
 
 impl Serialize for Nested {
-    fn serialize<S: Serializer>(&self, schema: &Schema, serializer: &mut S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: &mut S,
+    ) -> Result<S::Ok, S::Error> {
         let mut struct_writer = serializer.write_struct(&NESTED, 1)?;
         struct_writer.serialize_member(&MEMBER_C, &self.member_c)?;
         struct_writer.end(schema)
@@ -132,7 +140,7 @@ pub struct SerializeMeBuilder {
     pub member_a: Option<String>,
     pub member_b: Option<String>,
     pub nested: Option<Nested>,
-    pub map_nested: Option<IndexMap<String, Nested>>
+    pub map_nested: Option<IndexMap<String, Nested>>,
 }
 impl SerializeMeBuilder {
     pub const fn new() -> SerializeMeBuilder {
@@ -140,7 +148,7 @@ impl SerializeMeBuilder {
             member_a: None,
             member_b: None,
             nested: None,
-            map_nested: None
+            map_nested: None,
         }
     }
 
@@ -214,7 +222,7 @@ impl ShapeBuilder<SerializeMe> for SerializeMeBuilder {
             member_a: self.member_a.expect("Could not find member_a"),
             member_b: self.member_b.expect("Could not find member_b"),
             nested: self.nested.expect("Could not find nested"),
-            map_nested: self.map_nested.expect("Could not find map_nested")
+            map_nested: self.map_nested.expect("Could not find map_nested"),
         }
     }
 }

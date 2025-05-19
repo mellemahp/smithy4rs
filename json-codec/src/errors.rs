@@ -1,6 +1,6 @@
 use jiter::JiterError;
-use thiserror::Error;
 use smithy4rs_core::schema::documents::DocumentError;
+use thiserror::Error;
 
 #[derive(Error, Debug, Default)]
 pub enum JsonSerdeError {

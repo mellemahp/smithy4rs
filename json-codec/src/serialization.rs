@@ -1,23 +1,23 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::fmt::Display;
 use crate::errors::JsonSerdeError;
 use crate::get_member_name;
 use json::JsonValue;
 use smithy4rs_core::schema::Schema;
 use smithy4rs_core::schema::documents::Document;
 use smithy4rs_core::serde::se::{MapSerializer, Serialize, Serializer};
-use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
-use std::time::Instant;
 use smithy4rs_core::serde::serializers::{ListSerializer, StructSerializer};
+use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
+use std::fmt::Display;
+use std::time::Instant;
 
 // TODO: This implementation should maybe just write to a Sink
 //       to allow writing really large objects without saving the whole state.
 //       It's fina
 // TODO: ADD Settings
 pub struct JsonSerializer {
-    pub value: Option<JsonValue>
+    pub value: Option<JsonValue>,
 }
 
 // TODO: Document discriminators
@@ -38,7 +38,11 @@ impl JsonSerializer {
         match root {
             JsonValue::Object(obj) => obj[get_member_name(schema)] = value,
             JsonValue::Array(arr) => arr.push(value),
-            _ => return Err(JsonSerdeError::SerializationError("Cannot push to non-aggregate type".to_string()))
+            _ => {
+                return Err(JsonSerdeError::SerializationError(
+                    "Cannot push to non-aggregate type".to_string(),
+                ));
+            }
         }
         Ok(())
     }
@@ -60,24 +64,42 @@ impl Display for JsonSerializer {
 impl Serializer for JsonSerializer {
     type Error = JsonSerdeError;
     type Ok = ();
-    type SerializeList<'l>  = JsonAggregateTypeSerializer<'l>
-    where Self: 'l;
+    type SerializeList<'l>
+        = JsonAggregateTypeSerializer<'l>
+    where
+        Self: 'l;
 
-    type SerializeMap<'m> = JsonAggregateTypeSerializer<'m>
-    where Self: 'm;
+    type SerializeMap<'m>
+        = JsonAggregateTypeSerializer<'m>
+    where
+        Self: 'm;
 
-    type SerializeStruct<'s>  = JsonAggregateTypeSerializer<'s>
-    where Self: 's;
+    type SerializeStruct<'s>
+        = JsonAggregateTypeSerializer<'s>
+    where
+        Self: 's;
 
-    fn write_struct<'a>(&'a mut self, schema: &'a Schema<'a>, size: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
+    fn write_struct<'a>(
+        &'a mut self,
+        schema: &'a Schema<'a>,
+        size: usize,
+    ) -> Result<Self::SerializeStruct<'_>, Self::Error> {
         Ok(JsonAggregateTypeSerializer::new_object(self))
     }
 
-    fn write_map<'a>(&'a mut self, schema: &'a Schema<'a>, len: usize) -> Result<Self::SerializeMap<'_>, Self::Error> {
+    fn write_map<'a>(
+        &'a mut self,
+        schema: &'a Schema<'a>,
+        len: usize,
+    ) -> Result<Self::SerializeMap<'_>, Self::Error> {
         Ok(JsonAggregateTypeSerializer::new_object(self))
     }
 
-    fn write_list<'a>(&'a mut self, schema: &'a Schema<'a>, len: usize) -> Result<Self::SerializeList<'_>, Self::Error> {
+    fn write_list<'a>(
+        &'a mut self,
+        schema: &'a Schema<'a>,
+        len: usize,
+    ) -> Result<Self::SerializeList<'_>, Self::Error> {
         Ok(JsonAggregateTypeSerializer::new_arr(self))
     }
 
@@ -161,15 +183,21 @@ impl Serializer for JsonSerializer {
 
 pub struct JsonAggregateTypeSerializer<'se> {
     parent: &'se mut JsonSerializer,
-    inner: JsonSerializer
+    inner: JsonSerializer,
 }
-impl <'se> JsonAggregateTypeSerializer<'se> {
+impl<'se> JsonAggregateTypeSerializer<'se> {
     fn new_arr(parent: &'se mut JsonSerializer) -> Self {
-        Self { parent, inner: JsonSerializer::of(JsonValue::new_array()) }
+        Self {
+            parent,
+            inner: JsonSerializer::of(JsonValue::new_array()),
+        }
     }
 
     fn new_object(parent: &'se mut JsonSerializer) -> Self {
-        Self { parent, inner: JsonSerializer::of(JsonValue::new_object()) }
+        Self {
+            parent,
+            inner: JsonSerializer::of(JsonValue::new_object()),
+        }
     }
 
     fn flush(mut self, schema: &Schema) -> Result<(), JsonSerdeError> {
@@ -183,9 +211,13 @@ impl ListSerializer for JsonAggregateTypeSerializer<'_> {
     type Error = JsonSerdeError;
     type Ok = ();
 
-    fn serialize_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(
+        &mut self,
+        element_schema: &Schema,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
-        T: ?Sized + Serialize
+        T: ?Sized + Serialize,
     {
         value.serialize(element_schema, &mut self.inner)
     }
@@ -198,10 +230,16 @@ impl MapSerializer for JsonAggregateTypeSerializer<'_> {
     type Ok = ();
     type Error = JsonSerdeError;
 
-    fn serialize_entry<K, V>(&mut self, key_schema: &Schema, value_schema: &Schema, key: &K, value: &V) -> Result<(), Self::Error>
+    fn serialize_entry<K, V>(
+        &mut self,
+        key_schema: &Schema,
+        value_schema: &Schema,
+        key: &K,
+        value: &V,
+    ) -> Result<(), Self::Error>
     where
         K: ?Sized + Serialize,
-        V: ?Sized + Serialize
+        V: ?Sized + Serialize,
     {
         value.serialize(key_schema, &mut self.inner)
     }
@@ -216,7 +254,7 @@ impl StructSerializer for JsonAggregateTypeSerializer<'_> {
 
     fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: ?Sized + Serialize
+        T: ?Sized + Serialize,
     {
         value.serialize(member_schema, &mut self.inner)
     }

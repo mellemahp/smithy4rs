@@ -1,10 +1,10 @@
+use crate::schema::Ref;
 #[allow(dead_code)]
 use crate::schema::documents::DocumentValue;
 use crate::schema::shapes::ShapeId;
-use downcast_rs::{impl_downcast, DowncastSync};
+use downcast_rs::{DowncastSync, impl_downcast};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use crate::schema::Ref;
 
 pub trait SmithyTrait: DowncastSync {
     fn id(&self) -> &ShapeId;
@@ -77,8 +77,7 @@ impl Debug for dyn SmithyTrait {
 
 impl PartialEq for dyn SmithyTrait {
     fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-            && (self.value() == other.value())
+        self.id() == other.id() && (self.value() == other.value())
     }
 }
 

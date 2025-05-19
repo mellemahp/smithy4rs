@@ -9,9 +9,7 @@ macro_rules! traits {
 #[macro_export]
 macro_rules! lazy_schema {
     ($schema_name:ident, $builder:expr) => {
-        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
-            $builder
-        });
+        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| $builder);
     };
 }
 
