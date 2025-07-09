@@ -10,6 +10,8 @@ use indexmap::IndexMap;
 use std::error::Error;
 use std::time::Instant;
 
+// TODO: SerializableShapes types should implement `Into<Document>` for conversion.
+
 /// Schema-Guided serialization
 /// TODO: Docs
 pub trait Serialize {

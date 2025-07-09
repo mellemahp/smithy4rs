@@ -2,6 +2,7 @@ pub mod deserializers;
 mod fmt;
 pub mod serializers;
 mod shapes;
+pub mod builders;
 
 pub use deserializers as de;
 pub use fmt::*;

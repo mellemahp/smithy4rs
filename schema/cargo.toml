@@ -1,6 +1,6 @@
 [package]
-name = "smithy4rs-core"
-description = "Core functionality for smithy4rs."
+name = "smithy4rs-schema"
+description = "Smithy Schema definitions for smithy4rs."
 repository.workspace = true
 publish = true
 readme.workspace = true

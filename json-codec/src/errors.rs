@@ -1,3 +1,4 @@
+use std::error::Error;
 use jiter::JiterError;
 use smithy4rs_core::schema::documents::DocumentError;
 use thiserror::Error;
@@ -15,6 +16,8 @@ pub enum JsonSerdeError {
     Default,
     #[error("Failed Document conversion")]
     DocumentConversionError(#[from] DocumentError),
+    #[error("Failed Serde")]
+    Generic(#[from] Box<dyn Error>)
 }
 
 impl From<JiterError> for JsonSerdeError {

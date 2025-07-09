@@ -17,7 +17,7 @@ use std::sync::LazyLock;
 use std::time::Instant;
 use thiserror::Error;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Document {
     pub schema: SchemaRef,
     pub value: DocumentValue,
@@ -34,7 +34,7 @@ pub trait DynamicShape: Sized {}
 impl DynamicShape for Document {}
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum DocumentValue {
     Null,
     Number(NumberValue),
@@ -178,7 +178,7 @@ impl Serialize for Document {
 }
 
 fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
-    let mut shape_type = schema.shape_type();
+    let shape_type = schema.shape_type();
     if shape_type == &ShapeType::Member {
         let Some(member) = schema.as_member() else {
             // TODO: Real error
@@ -889,17 +889,17 @@ impl Serializer for DocumentParser {
 
     fn write_document(
         &mut self,
-        schema: &SchemaRef,
-        value: &Document,
+        _schema: &SchemaRef,
+        _value: &Document,
     ) -> SerializerResult<Self::Error> {
         todo!()
     }
 
-    fn write_null(&mut self, schema: &SchemaRef) -> SerializerResult<Self::Error> {
+    fn write_null(&mut self, _schema: &SchemaRef) -> SerializerResult<Self::Error> {
         todo!()
     }
 
-    fn skip(&mut self, schema: &SchemaRef) -> SerializerResult<Self::Error> {
+    fn skip(&mut self, _schema: &SchemaRef) -> SerializerResult<Self::Error> {
         todo!()
     }
 }
@@ -973,7 +973,7 @@ impl MapSerializer for DocumentMapParser<'_> {
         &mut self,
         key_schema: &SchemaRef,
         value_schema: &SchemaRef,
-        key: &K,
+        _key: &K,
         value: &V,
     ) -> SerializerResult<Self::Error>
     where

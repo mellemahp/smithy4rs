@@ -1,7 +1,8 @@
-use crate::schema::{Schema, SchemaRef};
+use crate::schema::SchemaRef;
 use crate::serde::se::{Serialize, Serializer, SerializerResult};
 
 pub trait SerializeShape: Serialize {
+    // Should schema be moved to a Trait that can be shared with deserializeShape?
     fn schema(&self) -> &SchemaRef;
 
     fn serialize_shape<S: Serializer>(&self, serializer: &mut S) -> SerializerResult<S::Error> {
@@ -13,8 +14,3 @@ pub trait SerializeShape: Serialize {
     }
 }
 
-pub trait BuildShape: SerializeShape {
-    //fn builder<B: Builder<Self>>() -> B;
-}
-
-pub trait Builder<T: SerializeShape> {}
