@@ -1,4 +1,5 @@
-/// Create a list of traits for use in Schema builders
+
+// Create a list of traits for use in Schema builders
 #[macro_export]
 macro_rules! traits {
     () => { Vec::new() };
@@ -7,7 +8,7 @@ macro_rules! traits {
     );
 }
 
-/// Create a lazy, static schema definition
+// Create a lazy, static Schema definition
 #[macro_export]
 macro_rules! lazy_schema {
     ($schema_name:ident, $builder:expr) => {
@@ -15,7 +16,7 @@ macro_rules! lazy_schema {
     };
 }
 
-/// Create a lazy, static member schema definition
+// Create a lazy, static member schema definition
 #[macro_export]
 macro_rules! lazy_member_schema {
     ($member_schema_name:ident, $parent_schema:ident, $identifier:literal) => {
@@ -24,10 +25,46 @@ macro_rules! lazy_member_schema {
     };
 }
 
-/// Create a lazy, static Shape ID
+// Create a lazy, static ShapeId
 #[macro_export]
 macro_rules! lazy_shape_id {
     ($id_name:ident, $identifier:literal) => {
         static $id_name: LazyLock<ShapeId> = LazyLock::new(|| ShapeId::from($identifier));
+    };
+}
+
+// Add a StaticTraitId implementation for a SmithyTrait.
+#[macro_export]
+macro_rules! static_trait_id {
+    ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
+        lazy_shape_id!($id_var, $id_name);
+        impl StaticTraitId for $trait_struct {
+            fn trait_id() -> &'static ShapeId {
+                &$id_var
+            }
+        }
+    };
+}
+
+// Creates an implementation for a "marker" trait that contains no data
+#[macro_export]
+macro_rules! annotation_trait {
+    ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
+        pub struct $trait_struct {}
+        impl $trait_struct {
+            pub fn new() -> Self {
+                Self {}
+            }
+        }
+        static_trait_id!($trait_struct, $id_var, $id_name);
+        impl SmithyTrait for $trait_struct {
+            fn id(&self) -> &ShapeId {
+                &$id_var
+            }
+
+            fn value(&self) -> &DocumentValue {
+                &DocumentValue::Null
+            }
+        }
     };
 }

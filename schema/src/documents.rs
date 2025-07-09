@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
-use crate::{lazy_schema, traits, Schema, SchemaRef, ShapeId, ShapeType, BigDecimal, BigInt, ByteBuffer};
+use crate::{lazy_schema, traits, Schema, SchemaRef, ShapeId, ShapeType, BigDecimal, BigInt, ByteBuffer, Instant};
 use crate::prelude::*;
 use indexmap::IndexMap;
 use std::error::Error;
 use std::sync::LazyLock;
-use std::time::Instant;
 use thiserror::Error;
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
@@ -114,11 +113,13 @@ pub enum DocumentError {
     Default,
 }
 
+/// Get the shape type of the Document
+///
+/// If the Document is a member, then returns the type of the member target.
 fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
     let shape_type = schema.shape_type();
     if shape_type == &ShapeType::Member {
         let Some(member) = schema.as_member() else {
-            // TODO: Real error
             return Err(conversion_error(
                 "Expected memberSchema for member shape type",
             ));
@@ -133,8 +134,161 @@ fn conversion_error(expected: &'static str) -> Box<dyn Error> {
     Box::new(DocumentError::DocumentConversion(expected.to_string())) as Box<dyn Error>
 }
 
-// // ====== TRY INTO conversions =====
-// // TODO: Macro-ify these?
+
+//////////////////////////////////////////////////////////////////
+// Document Number Comparison
+//////////////////////////////////////////////////////////////////
+
+// TODO: Might be derive-able?
+
+//////////////////////////////////////////////////////////////////
+// AS-ers to borrow document value as type if possible
+//////////////////////////////////////////////////////////////////
+impl Document {
+    /// Get the blob value of the Document if it is a blob.
+    pub fn as_blob(&self) -> Option<&ByteBuffer> {
+        if let DocumentValue::Blob(b) = &self.value {
+            Some(b)
+        } else {
+            None
+        }
+    }
+
+    /// Get the boolean value of the Document if it is a boolean.
+    pub fn as_bool(&self) -> Option<bool> {
+        if let &DocumentValue::Boolean(b) = &self.value {
+            Some(b)
+        } else {
+            None
+        }
+    }
+
+    /// Get the string value of the Document if it is a string.
+    pub fn as_string(&self) -> Option<&String> {
+        if let DocumentValue::String(s) = &self.value {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    // TODO: I dont think these number conversions are right.
+    //      Just placeholders for now to get things working
+
+    /// Get the timestamp value of the Document if it is a timestamp.
+    pub fn as_timestamp(&self) -> Option<&Instant> {
+        todo!()
+    }
+
+    /// Get the byte value of the Document if it is a byte or can be converted into one.
+    pub fn as_byte(&self) -> Option<i8> {
+        match &self.value {
+            DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
+                &NumberInteger::Byte(b) => Some(b),
+                &NumberInteger::Short(s) => Some(s as i8),
+                &NumberInteger::Integer(i) => Some(i as i8),
+                &NumberInteger::Long(l) => Some(l as i8),
+                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+            },
+            _ => None,
+        }
+    }
+
+    /// Get the short value of the Document if it is a short or can be converted into one.
+    pub fn as_short(&self) -> Option<i16> {
+        match &self.value {
+            DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
+                &NumberInteger::Byte(b) => Some(b as i16),
+                &NumberInteger::Short(s) => Some(s),
+                &NumberInteger::Integer(i) => Some(i as i16),
+                &NumberInteger::Long(l) => Some(l as i16),
+                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+            },
+            _ => None,
+        }
+    }
+
+    /// Get the integer value of the Document if it is an integer or can be converted into one.
+    pub fn as_integer(&self) -> Option<i32> {
+        match &self.value {
+            DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
+                &NumberInteger::Byte(b) => Some(b as i32),
+                &NumberInteger::Short(s) => Some(s as i32),
+                &NumberInteger::Integer(i) => Some(i),
+                &NumberInteger::Long(l) => Some(l as i32),
+                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+            },
+            _ => None,
+        }
+    }
+
+    /// Get the long value of the Document if it is a long or can be converted into one.
+    pub fn as_long(&self) -> Option<i64> {
+        match &self.value {
+            DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
+                &NumberInteger::Byte(b) => Some(b as i64),
+                &NumberInteger::Short(s) => Some(s as i64),
+                &NumberInteger::Integer(i) => Some(i as i64),
+                &NumberInteger::Long(l) => Some(l),
+                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+            },
+            _ => None,
+        }
+    }
+
+    /// Get the float value of the Document if it is a float or can be converted into one.
+    pub fn as_float(&self) -> Option<f32> {
+        match &self.value {
+            DocumentValue::Number(NumberValue::Float(nf)) => match nf {
+                &NumberFloat::Float(f) => Some(f),
+                &NumberFloat::Double(d) => Some(d as f32),
+                NumberFloat::BigDecimal(_) => todo!(),
+            },
+            _ => None,
+        }
+    }
+
+    /// Get the decimal value of the Document if it is a decimal or can be converted into one.
+    pub fn as_double(&self) -> Option<f64> {
+        match &self.value {
+            DocumentValue::Number(NumberValue::Float(nf)) => match nf {
+                &NumberFloat::Float(f) => Some(f as f64),
+                &NumberFloat::Double(d) => Some(d),
+                NumberFloat::BigDecimal(_) => todo!(),
+            },
+            _ => None,
+        }
+    }
+
+    pub fn as_big_integer(&self) -> Option<BigInt> {
+        todo!()
+    }
+
+    pub fn as_big_decimal(&self) -> Option<BigDecimal> {
+        todo!()
+    }
+
+    pub fn as_list(&self) -> Option<&Vec<Document>> {
+        if let DocumentValue::List(document_list) = &self.value {
+            Some(document_list)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_map(&self) -> Option<&IndexMap<String, Document>> {
+        if let DocumentValue::Map(document_map) = &self.value {
+            Some(document_map)
+        } else {
+            None
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////
+// Conversions of documents to other types
+//////////////////////////////////////////////////////////////////
+
 impl TryFrom<Document> for ByteBuffer {
     type Error = DocumentError;
 
@@ -330,7 +484,10 @@ impl <T: TryFrom<Document, Error=DocumentError>> TryFrom<Document> for IndexMap<
     }
 }
 
-// ==== FROM impls ====
+//////////////////////////////////////////////////////////////////
+// Conversions INTO Document types
+//////////////////////////////////////////////////////////////////
+
 impl From<bool> for Document {
     fn from(value: bool) -> Self {
         Document {
@@ -394,7 +551,7 @@ impl From<f32> for Document {
 impl From<f64> for Document {
     fn from(value: f64) -> Self {
         Document {
-            schema: FLOAT.clone(),
+            schema: DOUBLE.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Double(value))),
             discriminator: None,
         }
@@ -533,7 +690,42 @@ mod tests {
     }
 
     #[test]
-    fn number_document_values() {
-        // TODO
+    fn integer_document_values() {
+        let byte: Document = 1i8.into();
+        assert_eq!(byte.schema(), &*BYTE);
+
+        let short: Document = 1i16.into();
+        assert_eq!(short.schema(), &*SHORT);
+
+        let integer: Document = 1i32.into();
+        assert_eq!(integer.schema(), &*INTEGER);
+
+        let long: Document = 1i64.into();
+        assert_eq!(long.schema(), &*LONG);
+
+        let byte_value:i8 = byte.try_into().unwrap();
+        assert_eq!(byte_value, 1i8);
+        let short_value: i16 = short.try_into().unwrap();
+        assert_eq!(short_value, 1i16);
+        let integer_value: i32 = integer.try_into().unwrap();
+        assert_eq!(integer_value, 1i32);
+        let long_value: i64 = long.try_into().unwrap();
+        assert_eq!(long_value, 1i64);
+    }
+
+    // TODO: Add comparison checks
+
+    #[test]
+    fn float_document_values() {
+        let float: Document = 1f32.into();
+        assert_eq!(float.schema(), &*FLOAT);
+
+        let double: Document = 1f64.into();
+        assert_eq!(double.schema(), &*DOUBLE);
+
+        let float_value: f32 = float.try_into().unwrap();
+        assert_eq!(float_value, 1f32);
+        let double_value: f64 = double.try_into().unwrap();
+        assert_eq!(double_value, 1f64);
     }
 }

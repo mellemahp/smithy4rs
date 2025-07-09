@@ -1,6 +1,6 @@
 [package]
-name = "smithy4rs-schema"
-description = "Smithy Schema definitions for smithy4rs."
+name = "smithy4rs-serde"
+description = "Custom Serde Implementation for smithy4rs."
 repository.workspace = true
 publish = true
 readme.workspace = true
@@ -17,4 +17,4 @@ bigdecimal.workspace = true
 bytebuffer.workspace = true
 indexmap.workspace = true
 thiserror.workspace = true
-downcast-rs.workspace = true
+smithy4rs-schema.workspace = true

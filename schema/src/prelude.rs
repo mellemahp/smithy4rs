@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{ShapeId, SchemaRef, SmithyTrait, StaticTraitId, Schema, traits};
+use crate::{ShapeId, SchemaRef, SmithyTrait, StaticTraitId, Schema, traits, annotation_trait, static_trait_id };
 use std::sync::LazyLock;
 use crate::lazy_shape_id;
 use crate::documents::{DocumentValue, NumberInteger, NumberValue};
@@ -65,88 +65,116 @@ pub static DOCUMENT: LazyLock<SchemaRef> =
 // TODO:
 // - Primitive types
 
-// =============================
+///////////////////////////////////////////////////////////////////////
 // Prelude Traits
-// =============================
-macro_rules! static_id {
-    ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
-        lazy_shape_id!($id_var, $id_name);
-        impl StaticTraitId for $trait_struct {
-            fn trait_id() -> &'static ShapeId {
-                &$id_var
-            }
-        }
-    };
-}
-
-macro_rules! annotation_trait {
-    ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
-        pub struct $trait_struct {}
-        impl $trait_struct {
-            pub fn new() -> Self {
-                Self {}
-            }
-        }
-        static_id!($trait_struct, $id_var, $id_name);
-        impl SmithyTrait for $trait_struct {
-            fn id(&self) -> &ShapeId {
-                &$id_var
-            }
-
-            fn value(&self) -> &DocumentValue {
-                &DocumentValue::Null
-            }
-        }
-    };
-}
+///////////////////////////////////////////////////////////////////////
 
 // ==== Annotation traits ====
+/// Indicates that the data stored in the shape is sensitive and MUST be handled with care.
+///
+/// *See* - [Sensitive Trait](https://smithy.io/2.0/spec/documentation-traits.html#smithy-api-sensitive-trait)
 annotation_trait!(SensitiveTrait, SENSITIVE_TRAIT_ID, "smithy.api#sensitive");
+
+/// Indicates that the data represented by the shape needs to be streamed.
+/// *Note*: Should only be applied to `Blob` or `Union` schemas.
+/// *See* - [Streaming Trait](https://smithy.io/2.0/spec/streaming.html#streaming-trait)
 annotation_trait!(StreamingTrait, STREAMING_TRAIT_ID, "smithy.api#streaming");
+
+/// Indicates that lists and maps MAY contain null values.
+/// *Note*: Should only be applied to `List` or `Map` schemas.
+/// *See* - [Sparse Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-sparse-trait)
 annotation_trait!(SparseTrait, SPARSE_TRAIT_ID, "smithy.api#sparse");
+
+/// Marks a structure member as required, meaning a value for the member MUST be present.
+///
+/// *See* - [Required Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-required-trait)
 annotation_trait!(RequiredTrait, REQUIRED_TRAIT_ID, "smithy.api#required");
+
+/// Shapes marked with the internal trait are meant only for internal use.
+///
+/// *See* - [Internal Trait](https://smithy.io/2.0/spec/documentation-traits.html#smithy-api-internal-trait)
 annotation_trait!(InternalTrait, INTERNAL_TRAIT_ID, "smithy.api#internal");
+
+/// Marks a value an empty "Unit" shape.
+///
+/// Used for marker values in operations and Unions.
 annotation_trait!(
     UnitTypeTrait,
     UNIT_TYPE_TRAIT_ID,
     "smithy.api#UnitTypeTrait"
 );
+
+/// Binds a member of a structure to be serialized as an event header when sent through an event stream.
+///
+/// *See* - [EventHeader Trait](https://smithy.io/2.0/spec/streaming.html#smithy-api-eventheader-trait)
 annotation_trait!(
     EventHeaderTrait,
     EVENT_HEADER_TRAIT_ID,
     "smithy.api#eventheader"
 );
+
+/// Binds a member of a structure to be serialized as the payload of an event sent through an event stream.
+///
+/// *See* - [EventPayload Trait](https://smithy.io/2.0/spec/streaming.html#smithy-api-eventpayload-trait)
 annotation_trait!(
     EventPayloadTrait,
     EVENT_PAYLOAD_TRAIT_ID,
     "smithy.api#eventPayload"
 );
+
+/// Defines the input member of an operation that is used by the server to identify and discard replayed requests.
+///
+/// *See* - [IdempotencyToken Trait](https://smithy.io/2.0/spec/behavior-traits.html#smithy-api-idempotencytoken-trait)
 annotation_trait!(
     IdempotencyTokenTrait,
     IDEMPOTENCY_TOKEN_TRAIT_ID,
     "smithy.api#IdempotencyToken"
 );
+
+/// Binds an operation input structure member to an HTTP label.
+///
+/// *See* - [HttpLabel Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httplabel-trait)
 annotation_trait!(HttpLabelTrait, HTTP_LABEL_TRAIT_ID, "smithy.api#httpLabel");
+
+/// Binds a single structure member to the body of an HTTP message.
+///
+/// *See* - [HttpPayload Trait](https://smithy.io/2.0/spec/http-bindings.html#httppayload-trait)
 annotation_trait!(
     HttpPayloadTrait,
     HTTP_PAYLOAD_TRAIT_ID,
     "smithy.api#httpPayload"
 );
+
+/// Binds a map of key-value pairs to query string parameters.
+///
+/// *See* - [HttpQueryParams Trait](https://smithy.io/2.0/spec/http-bindings.html#httpqueryparams-trait)
 annotation_trait!(
     HTTPQueryParamsTrait,
     HTTP_QUERY_PARAMS_TRAIT_ID,
     "smithy.api#httpQueryParams"
 );
+
+/// Binds a structure member to the HTTP response status code.
+///
+/// *See* - [HttpResponseCode Trait](https://smithy.io/2.0/spec/http-bindings.html#httpresponsecode-trait)
 annotation_trait!(
     HTTPResponseCodeTrait,
     HTTP_RESPONSE_CODE_TRAIT_ID,
     "smithy.api#httpResponseCode"
 );
+
+/// Indicates that an operation requires a checksum in its HTTP request.
+///
+/// *See* - [HttpChecksumRequired Trait](https://smithy.io/2.0/spec/http-bindings.html#httpchecksumrequired-trait)
 annotation_trait!(
     HTTPChecksumRequiredTrait,
     HTTP_CHECKSUM_REQUIRED_TRAIT_ID,
     "smithy.api#httpChecksumRequired"
 );
+
+/// Binds a top-level operation input structure member to a label in the hostPrefix of an endpoint trait.
+///
+/// *See* - [HostLabel Trait](https://smithy.io/2.0/spec/endpoint-traits.html#smithy-api-hostlabel-trait)
 annotation_trait!(
     HostLabelTrait,
     HTTP_HOST_LABEL_TRAIT_ID,
@@ -154,8 +182,12 @@ annotation_trait!(
 );
 
 // ==== Traits with values ====
+
+/// Provides a structure member with a default value.
+///
+/// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
 pub struct DefaultTrait(DocumentValue);
-static_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
+static_trait_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
         DefaultTrait::trait_id()
@@ -166,6 +198,33 @@ impl SmithyTrait for DefaultTrait {
     }
 }
 
+/// Indicates that a structure shape represents an error.
+///
+/// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)
+pub struct ErrorTrait {
+    pub error: ErrorFault,
+    value: DocumentValue,
+}
+impl ErrorTrait {
+    pub fn new(error: ErrorFault) -> Self {
+        ErrorTrait {
+            value: DocumentValue::String(error.to_string()),
+            error,
+        }
+    }
+}
+static_trait_id!(ErrorTrait, ERROR_TRAIT_ID, "smithy.api#error");
+impl SmithyTrait for ErrorTrait {
+    fn id(&self) -> &ShapeId {
+        ErrorTrait::trait_id()
+    }
+
+    fn value(&self) -> &DocumentValue {
+        &self.value
+    }
+}
+
+/// Indicates if the client or server is at fault for a given error.
 pub enum ErrorFault {
     Client,
     Server,
@@ -180,29 +239,11 @@ impl Display for ErrorFault {
     }
 }
 
-pub struct ErrorTrait {
-    pub error: ErrorFault,
-    value: DocumentValue,
-}
-impl ErrorTrait {
-    pub fn new(error: ErrorFault) -> Self {
-        ErrorTrait {
-            value: DocumentValue::String(error.to_string()),
-            error,
-        }
-    }
-}
-static_id!(ErrorTrait, ERROR_TRAIT_ID, "smithy.api#error");
-impl SmithyTrait for ErrorTrait {
-    fn id(&self) -> &ShapeId {
-        ErrorTrait::trait_id()
-    }
 
-    fn value(&self) -> &DocumentValue {
-        &self.value
-    }
-}
-
+/// Describes the contents of a blob or string shape using a design-time media type as
+/// defined by [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838.html).
+///
+/// *See* - [MediaType Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-mediatype-trait)
 pub struct MediaTypeTrait {
     pub media_type: String,
     value: DocumentValue,
@@ -215,7 +256,7 @@ impl MediaTypeTrait {
         }
     }
 }
-static_id!(MediaTypeTrait, MEDIA_TYPE_TRAIT_ID, "smithy.api#mediaType");
+static_trait_id!(MediaTypeTrait, MEDIA_TYPE_TRAIT_ID, "smithy.api#mediaType");
 impl SmithyTrait for MediaTypeTrait {
     fn id(&self) -> &ShapeId {
         MediaTypeTrait::trait_id()
@@ -226,6 +267,9 @@ impl SmithyTrait for MediaTypeTrait {
     }
 }
 
+/// Allows a serialized object property name in a JSON document to differ from a structure or union member name.
+///
+/// *See* - [JsonName Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-jsonname-trait)
 pub struct JsonNameTrait {
     pub name: String,
     value: DocumentValue,
@@ -238,7 +282,7 @@ impl JsonNameTrait {
         }
     }
 }
-static_id!(JsonNameTrait, JSON_NAME_TRAIT_ID, "smithy.api#jsonName");
+static_trait_id!(JsonNameTrait, JSON_NAME_TRAIT_ID, "smithy.api#jsonName");
 impl SmithyTrait for JsonNameTrait {
     fn id(&self) -> &ShapeId {
         JsonNameTrait::trait_id()
@@ -249,6 +293,9 @@ impl SmithyTrait for JsonNameTrait {
     }
 }
 
+/// Defines an HTTP response code for an operation error.
+///
+/// *See* - [HttpError Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httperror-trait)
 pub struct HTTPErrorTrait {
     pub code: i32,
     value: DocumentValue,
@@ -264,7 +311,7 @@ impl HTTPErrorTrait {
         }
     }
 }
-static_id!(HTTPErrorTrait, HTTP_ERROR_TRAIT_ID, "smithy.api#httpError");
+static_trait_id!(HTTPErrorTrait, HTTP_ERROR_TRAIT_ID, "smithy.api#httpError");
 impl SmithyTrait for HTTPErrorTrait {
     fn id(&self) -> &ShapeId {
         HTTPErrorTrait::trait_id()
@@ -274,11 +321,14 @@ impl SmithyTrait for HTTPErrorTrait {
     }
 }
 
+/// Binds a structure member to an HTTP header.
+///
+/// *See* - [HttpHeader Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpheader-trait)
 struct HTTPHeaderTrait {
     pub name: String,
     value: DocumentValue,
 }
-static_id!(
+static_trait_id!(
     HTTPHeaderTrait,
     HTTP_HEADER_TRAIT_ID,
     "smithy.api#httpHeader"
@@ -300,11 +350,14 @@ impl SmithyTrait for HTTPHeaderTrait {
     }
 }
 
+/// Binds a map of key-value pairs to prefixed HTTP headers.
+///
+/// *See* - [HttpPrefixHeaders Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpprefixheaders-trait)
 struct HTTPPrefixHeadersTrait {
     pub prefix: String,
     value: DocumentValue,
 }
-static_id!(
+static_trait_id!(
     HTTPPrefixHeadersTrait,
     HTTP_PREFIX_HEADERS_TRAIT_ID,
     "smithy.api#httpPrefixHeaders"
@@ -327,11 +380,14 @@ impl SmithyTrait for HTTPPrefixHeadersTrait {
     }
 }
 
+/// Binds an operation input structure member to a query string parameter.
+///
+/// *See* - [HttpQuery Trait](https://smithy.io/2.0/spec/http-bindings.html#httpquery-trait)
 struct HTTPQueryTrait {
     pub key: String,
     value: DocumentValue,
 }
-static_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
+static_trait_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
 impl HTTPQueryTrait {
     pub fn new(key: &str) -> Self {
         HTTPQueryTrait {
@@ -349,11 +405,14 @@ impl SmithyTrait for HTTPQueryTrait {
     }
 }
 
+/// Configures a custom operation endpoint.
+///
+/// *See* - [Endpoint Trait](https://smithy.io/2.0/spec/endpoint-traits.html#smithy-api-endpoint-trait)
 pub struct EndpointTrait {
     pub host_prefix: String,
     value: DocumentValue,
 }
-static_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
+static_trait_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
 impl EndpointTrait {
     pub fn new(host_prefix: &str) -> Self {
         EndpointTrait {
