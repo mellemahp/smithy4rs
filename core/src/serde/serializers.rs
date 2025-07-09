@@ -1,20 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::BigDecimal;
-use crate::BigInt;
-use crate::ByteBuffer;
-use crate::schema::documents::Document;
-use crate::schema::{Schema, SchemaRef};
+use crate::schema::{Schema, SchemaRef, Document};
+use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
 use indexmap::IndexMap;
 use std::error::Error;
-use std::time::Instant;
-
-// TODO: SerializableShapes types should implement `Into<Document>` for conversion.
 
 /// Schema-Guided serialization
-/// TODO: Docs
 pub trait Serialize {
+    /// Serialize a Shape using a
     fn serialize<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -22,10 +16,28 @@ pub trait Serialize {
     ) -> SerializerResult<S::Error>;
 }
 
+#[derive(serde::Serialize)]
+pub struct Test {
+    name: String,
+    other: i32
+}
+#[automatically_derived]
+impl serde::Serialize for Test {
+    fn serialize<__S>(&self, __serializer: __S) -> serde::__private::Result<__S::Ok, __S::Error>
+    where
+        __S: serde::Serializer,
+    {
+        let mut _serde_state = serde::Serializer::serialize_struct(__serializer, "Test", false as usize + 1 + 1)?;
+        serde::ser::SerializeStruct::serialize_field(&mut _serde_state, "name", &self.name)?;
+        serde::ser::SerializeStruct::serialize_field(&mut _serde_state, "other", &self.other)?;
+        serde::ser::SerializeStruct::end(_serde_state)
+    }
+}
+
 /// Represents the empty return of a serializer call that could fail.
 pub type SerializerResult<E> = Result<(), E>;
 
-// TODO: Docs
+/// List Serializer that can be called in a loop to serialize list values
 pub trait ListSerializer {
     /// Must match the `Error` type of our `Serializer and be able to handle unknown errors.
     type Error: Error + From<Box<dyn Error>>;

@@ -1,6 +1,8 @@
 use crate::schema::SchemaRef;
 use crate::serde::se::{Serialize, Serializer, SerializerResult};
 
+// TODO: SerializableShapes types should implement `Into<Document>` for conversion.
+
 pub trait SerializeShape: Serialize {
     // Should schema be moved to a Trait that can be shared with deserializeShape?
     fn schema(&self) -> &SchemaRef;
@@ -13,4 +15,5 @@ pub trait SerializeShape: Serialize {
         todo!()
     }
 }
+
 

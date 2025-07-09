@@ -17,5 +17,5 @@ bigdecimal.workspace = true
 bytebuffer.workspace = true
 indexmap.workspace = true
 thiserror.workspace = true
-downcast-rs = "2.0.1"
-triomphe = "0.1.14"
+downcast-rs.workspace = true
+serde = { version = "1.0", features = ["derive"] }

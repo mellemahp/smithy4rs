@@ -1,16 +1,14 @@
 #![allow(dead_code)]
 
-use crate::schema::{Schema, SchemaRef, ShapeId, ShapeType, prelude};
+use crate::schema::{Schema, SchemaRef, ShapeId, ShapeType, prelude, Document};
 use crate::serde::se::{
     ListSerializer, MapSerializer, Serializer, SerializerResult, StructSerializer,
 };
 use crate::serde::serializers::Serialize;
 use crate::serde::{FmtSerializer, SerializeShape};
 use crate::{lazy_schema, traits};
-use bigdecimal::BigDecimal;
-use bytebuffer::ByteBuffer;
+use crate::{BigDecimal, ByteBuffer, BigInt};
 use indexmap::IndexMap;
-use num_bigint::BigInt;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::sync::LazyLock;

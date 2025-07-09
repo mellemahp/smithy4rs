@@ -1,6 +1,13 @@
 #![allow(dead_code)]
 
-// TODO: Could this be made more efficient?
+/// Immutable identifier for a shape in a Smithy model.
+///
+/// A shape ID is constructed from an absolute or relative shape
+/// reference. A shape reference has the following structure:
+///
+/// ```<NAMESPACE>#<NAME>$<MEMBER>```
+///
+/// The member value is optional.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShapeId {
     pub id: String,
@@ -46,6 +53,8 @@ impl ShapeId {
     }
 }
 
+/// Smithy shape type representing one of the shapes in the
+/// [Smithy Data Model](https://smithy.io/2.0/spec/model.html#shapes)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ShapeType {
     Blob,

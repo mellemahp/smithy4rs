@@ -1,13 +1,10 @@
-use crate::schema::documents::Document;
-use crate::schema::traits::SensitiveTrait;
-use crate::schema::{Schema, SchemaRef};
+use crate::schema::{Schema, SchemaRef, Document};
+use crate::{BigDecimal, BigInt, ByteBuffer};
+use crate::prelude::SensitiveTrait;
 use crate::serde::se::{
     ListSerializer, MapSerializer, Serialize, Serializer, SerializerResult, StructSerializer,
 };
-use bigdecimal::BigDecimal;
-use bytebuffer::ByteBuffer;
-use num_bigint::BigInt;
-use std::fmt::{Error, Write};
+use std::fmt::{Display, Error, Write};
 use std::time::Instant;
 use thiserror::Error;
 
@@ -350,16 +347,28 @@ impl<W: Write> StructSerializer for FmtStructSerializer<'_, W> {
     }
 }
 
+/// TODO: How to implement display if it requires serde?
+// impl Display for Document {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         let mut fmter = FmtSerializer::default();
+//         match self.serialize_shape(&mut fmter) {
+//             Ok(_) => f.write_str(&fmter.flush()),
+//             Err(_) => Err(std::fmt::Error),
+//         }
+//     }
+// }
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::ShapeId;
-    use crate::schema::traits::SensitiveTrait;
-    use crate::schema::{Ref, prelude};
-    use crate::serde::shapes::SerializeShape;
+    use smithy4rs_schema::{ShapeId, , };
+    use smithy4rs_schema::prelude::*;
+    use crate::shapes::SerializeShape;
     use crate::{lazy_member_schema, lazy_schema, traits};
     use indexmap::IndexMap;
     use std::sync::LazyLock;
+    use smithy4rs_schema::{lazy_member_schema, lazy_schema};
+    use crate::serde::SerializeShape;
 
     lazy_schema!(
         MAP_SCHEMA,

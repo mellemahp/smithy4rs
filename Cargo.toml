@@ -1,16 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
-    "schema",
-    "serde",
     "core",
     "core-derive",
     "json-codec"
 ]
 default-members = [
     "core",
-    "schema",
-    "serde",
     "core-derive",
     "json-codec"
 ]

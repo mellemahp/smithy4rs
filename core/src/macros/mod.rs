@@ -1,4 +1,3 @@
-
 // Create a list of traits for use in Schema builders
 #[macro_export]
 macro_rules! traits {
@@ -45,6 +44,30 @@ macro_rules! static_trait_id {
         }
     };
 }
+
+// Creates an implementation for a "marker" trait that contains no data
+#[macro_export]
+macro_rules! annotation_trait {
+    ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
+        pub struct $trait_struct {}
+        impl $trait_struct {
+            pub fn new() -> Self {
+                Self {}
+            }
+        }
+        static_trait_id!($trait_struct, $id_var, $id_name);
+        impl SmithyTrait for $trait_struct {
+            fn id(&self) -> &ShapeId {
+                &$id_var
+            }
+
+            fn value(&self) -> &DocumentValue {
+                &DocumentValue::Null
+            }
+        }
+    };
+}
+
 
 // Creates an implementation for a "marker" trait that contains no data
 #[macro_export]
