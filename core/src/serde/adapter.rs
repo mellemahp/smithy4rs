@@ -221,6 +221,7 @@ impl <T: Serialize + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
 #[cfg(test)]
 mod tests {
     use std::sync::LazyLock;
+    use indexmap::IndexMap;
     use crate::{lazy_member_schema, lazy_schema, traits};
     use crate::prelude::*;
     use crate::serde::se::{Serialize, Serializer};
@@ -228,18 +229,37 @@ mod tests {
     use super::*;
 
     lazy_schema!(
+        MAP_SCHEMA,
+        Schema::map_builder(ShapeId::from("com.example#Map"))
+            .put_member("key", &STRING, traits![])
+            .put_member("value", &STRING, traits![])
+            .build()
+    );
+    lazy_schema!(
+        LIST_SCHEMA,
+        Schema::list_builder(ShapeId::from("com.example#List"))
+            .put_member("member", &STRING, traits![])
+            .build()
+    );
+    lazy_schema!(
         SCHEMA,
         Schema::structure_builder(ShapeId::from("com.example#Test"))
             .put_member("a", &STRING, traits![])
             .put_member("b", &STRING, traits![])
+            .put_member("map", &MAP_SCHEMA, traits![])
+            .put_member("list", &LIST_SCHEMA, traits![])
             .build()
     );
     lazy_member_schema!(MEMBER_A, SCHEMA, "a");
     lazy_member_schema!(MEMBER_B, SCHEMA, "b");
+    lazy_member_schema!(MEMBER_LIST, SCHEMA, "list");
+    lazy_member_schema!(MEMBER_MAP, SCHEMA, "map");
 
     struct Test {
-        pub a: String,
-        pub b: String,
+        a: String,
+        b: String,
+        member_list: Vec<String>,
+        member_map: IndexMap<String, String>,
     }
     impl Test {
         fn write_out<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -251,6 +271,8 @@ mod tests {
             let mut ser = serializer.write_struct(schema, 2)?;
             ser.serialize_member(&MEMBER_A, &self.a)?;
             ser.serialize_member(&MEMBER_B, &self.b)?;
+            ser.serialize_member(&MEMBER_LIST, &self.member_list)?;
+            ser.serialize_member(&MEMBER_MAP, &self.member_map)?;
             ser.end(schema)
         }
     }
@@ -266,10 +288,29 @@ mod tests {
 
     #[test]
     fn can_use_serde_json() {
-        let test = Test { a: "a".to_string(), b: "b".to_string() };
-        println!("{}", serde_json::to_string_pretty(&test).unwrap());
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        map.insert(String::from("c"), String::from("d"));
+        let test = Test {
+            a: "a".to_string(),
+            b: "b".to_string(),
+            member_list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            member_map: map
+        };
+        let expected = r#"{
+  "a": "a",
+  "b": "b",
+  "list": [
+    "a",
+    "b",
+    "c"
+  ],
+  "map": {
+    "a": "b",
+    "c": "d"
+  }
+}"#;
+        assert_eq!(serde_json::to_string_pretty(&test).unwrap(), expected);
     }
-
-
 }
 
