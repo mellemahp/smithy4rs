@@ -10,10 +10,10 @@
 /// The member value is optional.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShapeId {
-    pub id: String,
-    pub namespace: String,
-    pub name: String,
-    pub member: Option<String>,
+    id: String,
+    namespace: String,
+    name: String,
+    member: Option<String>,
 }
 
 impl From<&str> for ShapeId {
@@ -34,6 +34,7 @@ impl From<&str> for ShapeId {
     }
 }
 
+// TODO: These could use some docs.
 impl ShapeId {
     pub fn from_parts<'a>(namespace: &'a str, name: &'a str, member: Option<&'a str>) -> ShapeId {
         let mut id = namespace.to_string() + "#" + name;
@@ -50,6 +51,22 @@ impl ShapeId {
 
     pub fn with_member(&self, member: &str) -> ShapeId {
         Self::from_parts(&self.namespace, &self.name, Some(member))
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    pub fn member(&self) -> Option<&str> {
+        self.member.as_ref().map(String::as_str)
     }
 }
 
