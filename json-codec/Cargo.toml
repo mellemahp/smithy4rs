@@ -21,3 +21,7 @@ json.workspace = true
 # used to deserialize
 jiter.workspace = true
 thiserror.workspace = true
+
+[lints]
+workspace = true
+

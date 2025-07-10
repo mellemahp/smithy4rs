@@ -42,3 +42,13 @@ thiserror = "2.0.12"
 indexmap = "2.8.0"
 downcast-rs = "2.0.1"
 
+[workspace.lints.rust]
+future-incompatible = "warn"
+nonstandard_style = { level = "deny", priority = 1 }
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = 10 }
+redundant_clone = { level = "deny", priority = 10 }
+manual_while_let_some = { level = "deny", priority = 4 }
+# pedantic = { level = "warn", priority = 3 } #TODO: Turn these back on at some point.
+

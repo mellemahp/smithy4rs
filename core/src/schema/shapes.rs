@@ -18,10 +18,10 @@ pub struct ShapeId {
 
 impl From<&str> for ShapeId {
     fn from(value: &str) -> Self {
-        let split = value.split_once("#").expect("Invalid Shape Id");
+        let split = value.split_once('#').expect("Invalid Shape Id");
         let (namespace, mut base_name) = split;
         let mut member = None;
-        if let Some((name, split_member)) = base_name.split_once("$") {
+        if let Some((name, split_member)) = base_name.split_once('$') {
             base_name = name;
             member = Some(split_member.to_string());
         }
@@ -49,24 +49,29 @@ impl ShapeId {
         }
     }
 
+    #[must_use]
     pub fn with_member(&self, member: &str) -> ShapeId {
         Self::from_parts(&self.namespace, &self.name, Some(member))
     }
 
+    #[must_use]
     pub fn id(&self) -> &str {
         &self.id
     }
 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    #[must_use]
     pub fn namespace(&self) -> &str {
         &self.namespace
     }
 
+    #[must_use]
     pub fn member(&self) -> Option<&str> {
-        self.member.as_ref().map(String::as_str)
+        self.member.as_deref()
     }
 }
 

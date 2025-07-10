@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::{Ref};
+use crate::Ref;
 use crate::schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef};
 use indexmap::IndexMap;
 use std::collections::HashSet;
@@ -200,35 +200,40 @@ impl Schema {
 // BUILDER FACTORIES
 impl Schema {
     /// Create a new [`SchemaBuilder`] for a [Structure](https://smithy.io/2.0/spec/aggregate-types.html#structure) shape.
+    #[must_use]
     pub fn structure_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
         SchemaBuilder::new(id, ShapeType::Structure)
     }
 
     /// Create a new [`SchemaBuilder`] for a [Union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape.
+    #[must_use]
     pub fn union_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
         SchemaBuilder::new(id, ShapeType::Union)
     }
 
     /// Create a new [`SchemaBuilder`] for a [List](https://smithy.io/2.0/spec/aggregate-types.html#list) shape.
+    #[must_use]
     pub fn list_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
         SchemaBuilder::new(id, ShapeType::List)
     }
 
     /// Create a new [`SchemaBuilder`] for a [Map](https://smithy.io/2.0/spec/aggregate-types.html#map) shape.
+    #[must_use]
     pub fn map_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
         SchemaBuilder::new(id, ShapeType::Map)
     }
 }
 
-static EMPTY: LazyLock<IndexMap<String, SchemaRef>> = LazyLock::new(|| IndexMap::new());
+static EMPTY: LazyLock<IndexMap<String, SchemaRef>> = LazyLock::new(IndexMap::new);
 
 // GETTERS
 impl Schema {
     /// Get the [`ShapeType`] of the schema.
+    #[must_use]
     pub fn shape_type(&self) -> &ShapeType {
         match self {
-            Schema::Scalar(ScalarSchema { shape_type, .. }) => shape_type,
-            Schema::Struct(StructSchema { shape_type, .. }) => shape_type,
+            Schema::Scalar(ScalarSchema { shape_type, .. })
+            | Schema::Struct(StructSchema { shape_type, .. }) => shape_type,
             Schema::Enum(_) => &ShapeType::Enum,
             Schema::IntEnum(_) => &ShapeType::IntEnum,
             Schema::List(_) => &ShapeType::List,
@@ -238,6 +243,7 @@ impl Schema {
     }
 
     /// Get the [`ShapeId`] of the schema.
+    #[must_use]
     pub fn id(&self) -> &ShapeId {
         match self {
             Schema::Scalar(ScalarSchema { id, .. })
@@ -268,49 +274,46 @@ impl Schema {
     pub(crate) fn members(&self) -> &IndexMap<String, SchemaRef> {
         match self {
             Schema::Struct(StructSchema { members, .. }) => members,
-            _ => &EMPTY
+            _ => &EMPTY,
         }
     }
 
     /// Get the schema for a specific member by member name
+    #[must_use]
     pub fn get_member(&self, member_name: &str) -> Option<&SchemaRef> {
         match self {
-            Schema::Scalar(_) => None,
             Schema::Struct(schema) => schema.members.get(member_name),
-            Schema::Enum(_) => None,
-            Schema::IntEnum(_) => None,
-            Schema::List(schema) => {
-                match member_name {
-                    "member" => Some(&schema.member),
-                    _ => None,
-                }
-            }
-            Schema::Map(schema) => {
-                match member_name {
-                    "key" => Some(&schema.key),
-                    "value" => Some(&schema.value),
-                    _ => None,
-                }
-            }
+            Schema::List(schema) => match member_name {
+                "member" => Some(&schema.member),
+                _ => None,
+            },
+            Schema::Map(schema) => match member_name {
+                "key" => Some(&schema.key),
+                "value" => Some(&schema.value),
+                _ => None,
+            },
             Schema::Member(member) => member.target.get_member(member_name),
+            _ => None,
         }
     }
 
     /// Returns member schema reference or *panics*
     ///
     /// **WARNING**: In general this should only be used in generated code.
+    #[must_use]
     pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
-        &self
-            .get_member(member_name)
-            .expect(format!("Expected member: {member_name}").as_str())
+        self.get_member(member_name)
+            .unwrap_or_else(|| panic!("Expected member: {member_name}"))
     }
 
     /// Returns true if the map contains a value for the specified trait ID.
+    #[must_use]
     pub fn contains_trait(&self, id: &ShapeId) -> bool {
         self.traits().contains_trait(id)
     }
 
     /// Returns true if the map contains a trait of type `T`.
+    #[must_use]
     pub fn contains_trait_type<T: StaticTraitId>(&self) -> bool {
         self.traits().contains_trait_type::<T>()
     }
@@ -318,6 +321,7 @@ impl Schema {
     /// Gets a [`SmithyTrait`] as a specific implementation if it exists.
     ///
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
+    #[must_use]
     pub fn get_trait_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
         self.traits().get_trait_as::<T>()
     }
@@ -325,6 +329,7 @@ impl Schema {
     /// Get a dynamic implementation of a [`SmithyTrait`] by shape ID.
     ///
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
+    #[must_use]
     pub fn get_trait_dyn(&self, id: &ShapeId) -> Option<&TraitRef> {
         self.traits().get(id)
     }
@@ -333,6 +338,7 @@ impl Schema {
 // AS-ers
 impl Schema {
     /// Get as a [`MemberSchema`] type if possible, otherwise `None`.
+    #[must_use]
     pub fn as_member(&self) -> Option<&MemberSchema> {
         if let Schema::Member(member) = self {
             Some(member)
@@ -342,6 +348,7 @@ impl Schema {
     }
 
     /// Get as a [`ListSchema`] type if possible, otherwise `None`.
+    #[must_use]
     pub fn as_list(&self) -> Option<&ListSchema> {
         if let Schema::List(list) = self {
             Some(list)
@@ -351,6 +358,7 @@ impl Schema {
     }
 
     /// Get as a [`StructSchema`] type if possible, otherwise `None`.
+    #[must_use]
     pub fn as_struct(&self) -> Option<&StructSchema> {
         if let Schema::Struct(s) = self {
             Some(s)
@@ -360,6 +368,7 @@ impl Schema {
     }
 
     /// Get as a [`ScalarSchema`] type if possible, otherwise `None`.
+    #[must_use]
     pub fn as_scalar(&self) -> Option<&ScalarSchema> {
         if let Schema::Scalar(schema) = self {
             Some(schema)
@@ -369,6 +378,7 @@ impl Schema {
     }
 
     /// Get as a [`MapSchema`] type if possible, otherwise `None`.
+    #[must_use]
     pub fn as_map(&self) -> Option<&MapSchema> {
         if let Schema::Map(map) = self {
             Some(map)
@@ -379,6 +389,7 @@ impl Schema {
 
     /// Get as an [`EnumSchema`] type with `String` inner value
     /// if possible, otherwise `None`.
+    #[must_use]
     pub fn as_enum(&self) -> Option<&EnumSchema<String>> {
         if let Schema::Enum(enum_schema) = self {
             Some(enum_schema)
@@ -389,6 +400,7 @@ impl Schema {
 
     /// Get as an [`EnumSchema`] type with `i32` inner type if possible,
     /// otherwise `None`.
+    #[must_use]
     pub fn as_int_enum(&self) -> Option<&EnumSchema<i32>> {
         if let Schema::IntEnum(enum_schema) = self {
             Some(enum_schema)
@@ -424,6 +436,7 @@ impl SchemaBuilder<'_> {
 
 impl<'b> SchemaBuilder<'b> {
     /// Add a member to the [`SchemaBuilder`]
+    #[must_use]
     pub fn put_member<'t>(mut self, name: &str, target: &'t SchemaRef, traits: TraitList) -> Self
     // Target reference will outlive this builder
     where
@@ -432,18 +445,13 @@ impl<'b> SchemaBuilder<'b> {
         // TODO: Return a result instead of panicking
         match self.shape_type {
             ShapeType::List => {
-                if name != "member" {
-                    // TODO: Real error
-                    panic!(
-                        "Lists can only have members named `member`. Found `{}`",
-                        name
-                    )
-                }
+                assert_ne!(name, "member", "Lists can only have members named `member`. Found `{name}`");
             }
             ShapeType::Map => {
-                if !(name == "key" || name == "value") {
-                    panic!("Map can only have members named `key` or `value`")
-                }
+                assert!(
+                    (name == "key" || name == "value"),
+                    "Map can only have members named `key` or `value`"
+                );
             }
             _ => { /* fall through otherwise */ }
         }
@@ -457,6 +465,7 @@ impl<'b> SchemaBuilder<'b> {
     }
 
     /// Adds a trait to the [`SchemaBuilder`]
+    #[must_use]
     pub fn with_trait(mut self, smithy_trait: impl SmithyTrait) -> Self {
         self.traits.insert(smithy_trait);
         self
@@ -468,6 +477,7 @@ impl<'b> SchemaBuilder<'b> {
 
     /// Build a [`Schema`] and return a [`SchemaRef`] to it.
     // TODO: Convert to `Result<SchemaRef, BuildError>
+    #[must_use]
     pub fn build(mut self) -> SchemaRef {
         // Structure shapes need to sort members so that required members come before optional members.
         // Union types do not need this.
@@ -487,7 +497,7 @@ impl<'b> SchemaBuilder<'b> {
                 }
                 Ref::new(Schema::Struct(StructSchema {
                     id: self.id.clone(),
-                    shape_type: self.shape_type.clone(),
+                    shape_type: self.shape_type,
                     members: member_map.clone(),
                     traits: self.traits.clone(),
                 }))

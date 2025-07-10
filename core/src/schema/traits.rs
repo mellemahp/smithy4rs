@@ -1,5 +1,5 @@
-use crate::schema::{DocumentValue, ShapeId};
 use crate::Ref;
+use crate::schema::{DocumentValue, ShapeId};
 use downcast_rs::{DowncastSync, impl_downcast};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -77,11 +77,13 @@ impl TraitMap {
     }
 
     /// Returns true if the map contains a value for the specified trait ID.
+    #[must_use]
     pub fn contains_trait(&self, id: &ShapeId) -> bool {
         self.map.contains_key(id)
     }
 
     /// Returns true if the map contains a trait of type `T`.
+    #[must_use]
     pub fn contains_trait_type<T: StaticTraitId>(&self) -> bool {
         self.map.contains_key(T::trait_id())
     }
@@ -112,6 +114,7 @@ impl TraitMap {
     /// Gets a [`SmithyTrait`] as a specific implementation if it exists.
     ///
     /// If the [`SmithyTrait`] does not exist in the map, returns `None`.
+    #[must_use]
     pub fn get_trait_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
         self.map
             .get(T::trait_id())
@@ -134,9 +137,9 @@ impl PartialEq for dyn SmithyTrait {
 
 #[cfg(test)]
 mod tests {
-    use std::any::{Any, TypeId};
     use super::*;
     use crate::prelude::{HTTPErrorTrait, JsonNameTrait};
+    use std::any::{Any, TypeId};
 
     #[test]
     fn basic_map_functionality() {

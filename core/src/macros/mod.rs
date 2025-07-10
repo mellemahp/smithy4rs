@@ -51,8 +51,14 @@ macro_rules! annotation_trait {
     ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
         pub struct $trait_struct {}
         impl $trait_struct {
+            #[must_use]
             pub fn new() -> Self {
                 Self {}
+            }
+        }
+        impl Default for $trait_struct {
+            fn default() -> Self {
+                Self::new()
             }
         }
         static_trait_id!($trait_struct, $id_var, $id_name);

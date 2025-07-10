@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-use crate::schema::{ShapeId, SchemaRef, SmithyTrait, StaticTraitId, Schema};
 use crate::schema::{DocumentValue, NumberInteger, NumberValue};
-use crate::{lazy_shape_id, annotation_trait, static_trait_id, traits};
-use std::sync::LazyLock;
+use crate::schema::{Schema, SchemaRef, ShapeId, SmithyTrait, StaticTraitId};
+use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
 use std::fmt::Display;
+use std::sync::LazyLock;
 
 // =============================
 // Prelude Shape Schemas
@@ -147,6 +147,7 @@ pub struct ErrorTrait {
     value: DocumentValue,
 }
 impl ErrorTrait {
+    #[must_use]
     pub fn new(error: ErrorFault) -> Self {
         ErrorTrait {
             value: DocumentValue::String(error.to_string()),
@@ -176,10 +177,9 @@ impl Display for ErrorFault {
             ErrorFault::Client => String::from("client"),
             ErrorFault::Server => String::from("server"),
         };
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
-
 
 /// Describes the contents of a blob or string shape using a design-time media type as
 /// defined by [RFC 6838](https://datatracker.ietf.org/doc/html/rfc6838.html).
@@ -190,6 +190,7 @@ pub struct MediaTypeTrait {
     value: DocumentValue,
 }
 impl MediaTypeTrait {
+    #[must_use]
     pub fn new(media_type: &str) -> Self {
         MediaTypeTrait {
             media_type: media_type.to_string(),
@@ -216,6 +217,7 @@ pub struct JsonNameTrait {
     value: DocumentValue,
 }
 impl JsonNameTrait {
+    #[must_use]
     pub fn new(name: &str) -> Self {
         JsonNameTrait {
             name: name.to_string(),
@@ -242,10 +244,12 @@ pub struct HTTPErrorTrait {
     value: DocumentValue,
 }
 impl HTTPErrorTrait {
+    #[must_use]
     pub fn new(code: i32) -> Self {
-        if !(200 < code && code < 599) {
-            panic!("HTTPErrorTrait code out of range: {}", code);
-        }
+        assert!(
+            (200 < code && code < 599),
+            "HTTPErrorTrait code out of range: {code}"
+        );
         HTTPErrorTrait {
             code,
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(code))),
@@ -275,6 +279,7 @@ static_trait_id!(
     "smithy.api#httpHeader"
 );
 impl HTTPHeaderTrait {
+    #[must_use]
     pub fn new(name: &str) -> Self {
         HTTPHeaderTrait {
             name: name.to_string(),
@@ -304,6 +309,7 @@ static_trait_id!(
     "smithy.api#httpPrefixHeaders"
 );
 impl HTTPPrefixHeadersTrait {
+    #[must_use]
     pub fn new(prefix: &str) -> Self {
         HTTPPrefixHeadersTrait {
             prefix: prefix.to_string(),
@@ -330,6 +336,7 @@ struct HTTPQueryTrait {
 }
 static_trait_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
 impl HTTPQueryTrait {
+    #[must_use]
     pub fn new(key: &str) -> Self {
         HTTPQueryTrait {
             key: key.to_string(),
@@ -355,6 +362,7 @@ pub struct EndpointTrait {
 }
 static_trait_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
 impl EndpointTrait {
+    #[must_use]
     pub fn new(host_prefix: &str) -> Self {
         EndpointTrait {
             host_prefix: host_prefix.to_string(),

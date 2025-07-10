@@ -1,27 +1,26 @@
-
 // TODO: Remove
 #![allow(unused_variables)]
 
-use std::time::Instant;
+use crate::schema::{Document, SchemaRef};
+use crate::serde::se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer};
+use crate::serde::serializers::Serializer;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use serde::ser::{SerializeMap, SerializeSeq, SerializeStruct};
 use static_str_ops::staticize;
-use crate::schema::{Document, SchemaRef};
-use crate::serde::se::{ListSerializer, MapSerializer, Serialize, StructSerializer};
-use crate::serde::serializers::Serializer;
+use std::time::Instant;
 
 struct SerdeAdapter<S: serde::Serializer> {
     serializer: S,
 }
-impl <S: serde::Serializer> SerdeAdapter<S> {
+impl<S: serde::Serializer> SerdeAdapter<S> {
     fn new(serializer: S) -> Self {
         SerdeAdapter { serializer }
     }
 }
 
-impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
+impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
     type SerializeList = ListSerializeAdapter<S>;
@@ -29,7 +28,11 @@ impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
     type SerializeStruct = StructSerializerAdapter<S>;
 
     #[inline]
-    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(
+        self,
+        schema: &SchemaRef,
+        len: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
         let struct_name = staticize(schema.id().name());
         let struct_ser = self.serializer.serialize_struct(struct_name, len)?;
         Ok(StructSerializerAdapter::new(struct_ser))
@@ -42,7 +45,11 @@ impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
     }
 
     #[inline]
-    fn write_list(self, _schema: &SchemaRef, len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(
+        self,
+        _schema: &SchemaRef,
+        len: usize,
+    ) -> Result<Self::SerializeList, Self::Error> {
         let list_ser = self.serializer.serialize_seq(Some(len))?;
         Ok(ListSerializeAdapter::new(list_ser))
     }
@@ -83,18 +90,26 @@ impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
     }
 
     #[inline]
-    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(
+        self,
+        schema: &SchemaRef,
+        value: &BigInt,
+    ) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     #[inline]
-    fn write_big_decimal(self, schema: &SchemaRef, value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
+    fn write_big_decimal(
+        self,
+        schema: &SchemaRef,
+        value: &BigDecimal,
+    ) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     #[inline]
-    fn write_string(self, _: &SchemaRef, value: &String) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_str(value.as_str())
+    fn write_string(self, _: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+        self.serializer.serialize_str(value)
     }
 
     #[inline]
@@ -125,12 +140,12 @@ impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
 pub struct ListSerializeAdapter<S: serde::Serializer> {
     serializer: S::SerializeSeq,
 }
-impl <S: serde::Serializer> ListSerializeAdapter<S> {
+impl<S: serde::Serializer> ListSerializeAdapter<S> {
     fn new(serializer: S::SerializeSeq) -> Self {
         Self { serializer }
     }
 }
-impl <S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
+impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
 
@@ -141,9 +156,10 @@ impl <S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + Serialize,
+        T: ?Sized + SerializeWithSchema,
     {
-        self.serializer.serialize_element(&ValueWrapper(value_schema, value))
+        self.serializer
+            .serialize_element(&ValueWrapper(value_schema, value))
     }
 
     #[inline]
@@ -153,14 +169,14 @@ impl <S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
 }
 
 pub struct MapSerializerAdapter<S: serde::Serializer> {
-    serializer: S::SerializeMap
+    serializer: S::SerializeMap,
 }
-impl <S: serde::Serializer> MapSerializerAdapter<S> {
+impl<S: serde::Serializer> MapSerializerAdapter<S> {
     fn new(serializer: S::SerializeMap) -> Self {
         Self { serializer }
     }
 }
-impl <S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
+impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
 
@@ -173,12 +189,12 @@ impl <S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: Serialize + ?Sized,
-        V: Serialize + ?Sized,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         self.serializer.serialize_entry(
             &ValueWrapper(key_schema, key),
-            &ValueWrapper(value_schema, value)
+            &ValueWrapper(value_schema, value),
         )
     }
 
@@ -207,13 +223,14 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: Serialize + ?Sized,
+        T: SerializeWithSchema + ?Sized,
     {
         // TODO: How to handle error?
         let Some(me) = member_schema.as_member() else {
             panic!("Expected member schema!");
         };
-        self.serializer.serialize_field(staticize(&me.name), &ValueWrapper(member_schema, value))
+        self.serializer
+            .serialize_field(staticize(&me.name), &ValueWrapper(member_schema, value))
     }
 
     #[inline]
@@ -222,26 +239,26 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     }
 }
 
-struct ValueWrapper<'a, T: Serialize + ?Sized>(&'a SchemaRef, &'a T);
-impl <T: Serialize + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
+struct ValueWrapper<'a, T: SerializeWithSchema + ?Sized>(&'a SchemaRef, &'a T);
+impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let adapter = SerdeAdapter::new(serializer);
-        self.1.serialize(self.0, adapter)
+        self.1.serialize_with_schema(self.0, adapter)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::sync::LazyLock;
-    use indexmap::IndexMap;
-    use crate::{lazy_member_schema, lazy_schema, traits};
-    use crate::prelude::*;
-    use crate::serde::se::{Serialize, Serializer};
-    use crate::schema::{Schema, ShapeId};
     use super::*;
+    use crate::prelude::*;
+    use crate::schema::{Schema, ShapeId};
+    use crate::serde::se::{SerializeWithSchema, Serializer};
+    use crate::{lazy_member_schema, lazy_schema, traits};
+    use indexmap::IndexMap;
+    use std::sync::LazyLock;
 
     lazy_schema!(
         MAP_SCHEMA,
@@ -278,11 +295,15 @@ mod tests {
     }
     impl Test {
         fn write_out<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            self.serialize(&SCHEMA, serializer)
+            self.serialize_with_schema(&SCHEMA, serializer)
         }
     }
-    impl Serialize for Test {
-        fn serialize<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    impl SerializeWithSchema for Test {
+        fn serialize_with_schema<S: Serializer>(
+            &self,
+            schema: &SchemaRef,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 2)?;
             ser.serialize_member(&MEMBER_A, &self.a)?;
             ser.serialize_member(&MEMBER_B, &self.b)?;
@@ -294,7 +315,7 @@ mod tests {
     impl serde::Serialize for Test {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
-            S: serde::Serializer
+            S: serde::Serializer,
         {
             let adapter = SerdeAdapter::new(serializer);
             self.write_out(adapter)
@@ -310,7 +331,7 @@ mod tests {
             a: "a".to_string(),
             b: "b".to_string(),
             member_list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
-            member_map: map
+            member_map: map,
         };
         let expected = r#"{
   "a": "a",
@@ -329,4 +350,3 @@ mod tests {
         println!("{}", serde_json::to_string_pretty(&test).unwrap());
     }
 }
-

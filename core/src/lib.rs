@@ -2,10 +2,10 @@ extern crate core;
 
 pub mod errors;
 pub mod schema;
-pub use schema::prelude as prelude;
+pub use schema::prelude;
 
-pub mod serde;
 pub mod macros;
+pub mod serde;
 
 // =========== Common Types ==========
 use std::sync::Arc;
@@ -15,6 +15,6 @@ use std::sync::Arc;
 pub type Ref<T> = Arc<T>;
 
 pub use bigdecimal::BigDecimal;
-pub use num_bigint::BigInt;
 pub use bytebuffer::ByteBuffer;
+pub use num_bigint::BigInt;
 pub use std::time::Instant;

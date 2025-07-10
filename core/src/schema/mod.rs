@@ -9,5 +9,5 @@ pub use documents::*;
 mod shapes;
 pub use shapes::*;
 
-mod schema;
-pub use schema::*;
+mod schemas;
+pub use schemas::*;

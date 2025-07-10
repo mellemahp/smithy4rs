@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use crate::schema::{Schema, SchemaRef, ShapeId, ShapeType};
 use crate::prelude::*;
+use crate::schema::{Schema, SchemaRef, ShapeId, ShapeType};
 use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
-use crate::{traits, lazy_schema};
+use crate::{lazy_schema, traits};
 use indexmap::IndexMap;
 use std::error::Error;
 use std::sync::LazyLock;
@@ -21,11 +21,13 @@ pub struct Document {
 }
 impl Document {
     /// Get the Schema of the document
+    #[must_use]
     pub fn schema(&self) -> &SchemaRef {
         &self.schema
     }
 
     /// Get the value of the document
+    #[must_use]
     pub fn value(&self) -> &DocumentValue {
         &self.value
     }
@@ -35,6 +37,7 @@ impl Document {
     /// The discriminator is primarily used to implement polymorphism using documents in deserialization.
     ///
     /// *Impl note*: It is expected that protocols set the discriminator on deserialization if applicable
+    #[must_use]
     pub fn discriminator(&self) -> &Option<ShapeId> {
         &self.discriminator
     }
@@ -42,6 +45,7 @@ impl Document {
     /// Get the size of the document.
     ///
     /// **NOTE**: Scalar documents always return a size of 1
+    #[must_use]
     pub fn size(&self) -> usize {
         match self.value {
             DocumentValue::List(ref array) => array.len(),
@@ -76,7 +80,7 @@ pub enum DocumentValue {
 ///
 /// Smithy numbers types include: byte, short, integer, long, float, double, bigInteger, bigDecimal.
 ///
-/// *Note*: IntEnum shapes are represented as integers in the Smithy data model.
+/// *Note*: `IntEnum` shapes are represented as integers in the Smithy data model.
 #[derive(Debug, Clone, PartialEq)]
 pub enum NumberValue {
     Integer(NumberInteger),
@@ -136,7 +140,6 @@ fn conversion_error(expected: &'static str) -> Box<dyn Error> {
     Box::new(DocumentError::DocumentConversion(expected.to_string())) as Box<dyn Error>
 }
 
-
 //////////////////////////////////////////////////////////////////
 // Document Number Comparison
 //////////////////////////////////////////////////////////////////
@@ -148,6 +151,7 @@ fn conversion_error(expected: &'static str) -> Box<dyn Error> {
 //////////////////////////////////////////////////////////////////
 impl Document {
     /// Get the blob value of the Document if it is a blob.
+    #[must_use]
     pub fn as_blob(&self) -> Option<&ByteBuffer> {
         if let DocumentValue::Blob(b) = &self.value {
             Some(b)
@@ -157,6 +161,7 @@ impl Document {
     }
 
     /// Get the boolean value of the Document if it is a boolean.
+    #[must_use]
     pub fn as_bool(&self) -> Option<bool> {
         if let &DocumentValue::Boolean(b) = &self.value {
             Some(b)
@@ -166,6 +171,7 @@ impl Document {
     }
 
     /// Get the string value of the Document if it is a string.
+    #[must_use]
     pub fn as_string(&self) -> Option<&String> {
         if let DocumentValue::String(s) = &self.value {
             Some(s)
@@ -178,18 +184,20 @@ impl Document {
     //      Just placeholders for now to get things working
 
     /// Get the timestamp value of the Document if it is a timestamp.
+    #[must_use]
     pub fn as_timestamp(&self) -> Option<&Instant> {
         todo!()
     }
 
     /// Get the byte value of the Document if it is a byte or can be converted into one.
+    #[must_use]
     pub fn as_byte(&self) -> Option<i8> {
         match &self.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
                 &NumberInteger::Byte(b) => Some(b),
-                &NumberInteger::Short(s) => Some(s as i8),
-                &NumberInteger::Integer(i) => Some(i as i8),
-                &NumberInteger::Long(l) => Some(l as i8),
+                &NumberInteger::Short(s) => s.try_into().ok(),
+                &NumberInteger::Integer(i) => i.try_into().ok(),
+                &NumberInteger::Long(l) => l.try_into().ok(),
                 NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
             },
             _ => None,
@@ -197,13 +205,14 @@ impl Document {
     }
 
     /// Get the short value of the Document if it is a short or can be converted into one.
+    #[must_use]
     pub fn as_short(&self) -> Option<i16> {
         match &self.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
-                &NumberInteger::Byte(b) => Some(b as i16),
+                &NumberInteger::Byte(b) => Some(b.into()),
                 &NumberInteger::Short(s) => Some(s),
-                &NumberInteger::Integer(i) => Some(i as i16),
-                &NumberInteger::Long(l) => Some(l as i16),
+                &NumberInteger::Integer(i) => i.try_into().ok(),
+                &NumberInteger::Long(l) => l.try_into().ok(),
                 NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
             },
             _ => None,
@@ -211,13 +220,14 @@ impl Document {
     }
 
     /// Get the integer value of the Document if it is an integer or can be converted into one.
+    #[must_use]
     pub fn as_integer(&self) -> Option<i32> {
         match &self.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
-                &NumberInteger::Byte(b) => Some(b as i32),
-                &NumberInteger::Short(s) => Some(s as i32),
+                &NumberInteger::Byte(b) => Some(b.into()),
+                &NumberInteger::Short(s) => Some(s.into()),
                 &NumberInteger::Integer(i) => Some(i),
-                &NumberInteger::Long(l) => Some(l as i32),
+                &NumberInteger::Long(l) => l.try_into().ok(),
                 NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
             },
             _ => None,
@@ -225,12 +235,13 @@ impl Document {
     }
 
     /// Get the long value of the Document if it is a long or can be converted into one.
+    #[must_use]
     pub fn as_long(&self) -> Option<i64> {
         match &self.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
-                &NumberInteger::Byte(b) => Some(b as i64),
-                &NumberInteger::Short(s) => Some(s as i64),
-                &NumberInteger::Integer(i) => Some(i as i64),
+                &NumberInteger::Byte(b) => Some(b.into()),
+                &NumberInteger::Short(s) => Some(s.into()),
+                &NumberInteger::Integer(i) => Some(i.into()),
                 &NumberInteger::Long(l) => Some(l),
                 NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
             },
@@ -239,6 +250,7 @@ impl Document {
     }
 
     /// Get the float value of the Document if it is a float or can be converted into one.
+    #[must_use]
     pub fn as_float(&self) -> Option<f32> {
         match &self.value {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
@@ -251,10 +263,11 @@ impl Document {
     }
 
     /// Get the decimal value of the Document if it is a decimal or can be converted into one.
+    #[must_use]
     pub fn as_double(&self) -> Option<f64> {
         match &self.value {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
-                &NumberFloat::Float(f) => Some(f as f64),
+                &NumberFloat::Float(f) => Some(f.into()),
                 &NumberFloat::Double(d) => Some(d),
                 NumberFloat::BigDecimal(_) => todo!(),
             },
@@ -262,14 +275,17 @@ impl Document {
         }
     }
 
+    #[must_use]
     pub fn as_big_integer(&self) -> Option<BigInt> {
         todo!()
     }
 
+    #[must_use]
     pub fn as_big_decimal(&self) -> Option<BigDecimal> {
         todo!()
     }
 
+    #[must_use]
     pub fn as_list(&self) -> Option<&Vec<Document>> {
         if let DocumentValue::List(document_list) = &self.value {
             Some(document_list)
@@ -278,6 +294,7 @@ impl Document {
         }
     }
 
+    #[must_use]
     pub fn as_map(&self) -> Option<&IndexMap<String, Document>> {
         if let DocumentValue::Map(document_map) = &self.value {
             Some(document_map)
@@ -376,8 +393,8 @@ impl TryFrom<Document> for i32 {
     fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
-                NumberInteger::Byte(b) => Ok(b as i32),
-                NumberInteger::Short(s) => Ok(s as i32),
+                NumberInteger::Byte(b) => Ok(b.into()),
+                NumberInteger::Short(s) => Ok(s.into()),
                 NumberInteger::Integer(i) => Ok(i),
                 NumberInteger::Long(l) => Ok(l as i32),
                 NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
@@ -393,9 +410,9 @@ impl TryFrom<Document> for i64 {
     fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Integer(ni)) => match ni {
-                NumberInteger::Byte(b) => Ok(b as i64),
-                NumberInteger::Short(s) => Ok(s as i64),
-                NumberInteger::Integer(i) => Ok(i as i64),
+                NumberInteger::Byte(b) => Ok(b.into()),
+                NumberInteger::Short(s) => Ok(s.into()),
+                NumberInteger::Integer(i) => Ok(i.into()),
                 NumberInteger::Long(l) => Ok(l),
                 NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
             },
@@ -425,7 +442,7 @@ impl TryFrom<Document> for f64 {
     fn try_from(value: Document) -> Result<Self, Self::Error> {
         match value.value {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
-                NumberFloat::Float(f) => Ok(f as f64),
+                NumberFloat::Float(f) => Ok(f64::from(f)),
                 NumberFloat::Double(d) => Ok(d),
                 NumberFloat::BigDecimal(_) => todo!(),
             },
@@ -450,7 +467,7 @@ impl TryFrom<&Document> for BigDecimal {
     }
 }
 
-impl <T: TryFrom<Document, Error=DocumentError>> TryFrom<Document> for Vec<T> {
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Vec<T> {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -468,7 +485,7 @@ impl <T: TryFrom<Document, Error=DocumentError>> TryFrom<Document> for Vec<T> {
     }
 }
 
-impl <T: TryFrom<Document, Error=DocumentError>> TryFrom<Document> for IndexMap<String, T> {
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap<String, T> {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -616,7 +633,7 @@ lazy_schema!(
         .put_member("member", &DOCUMENT, traits![])
         .build()
 );
-impl<'a, T: Into<Document>> From<Vec<T>> for Document {
+impl<T: Into<Document>> From<Vec<T>> for Document {
     fn from(value: Vec<T>) -> Self {
         let result = value.into_iter().map(Into::into).collect();
         Document {
@@ -634,11 +651,11 @@ lazy_schema!(
         .put_member("value", &DOCUMENT, traits![])
         .build()
 );
-impl<'a, T: Into<Document>> From<IndexMap<String, T>> for Document {
+impl<T: Into<Document>> From<IndexMap<String, T>> for Document {
     fn from(value: IndexMap<String, T>) -> Self {
         let mut result = IndexMap::new();
-        for (key, value) in value.into_iter() {
-            result.insert(key.into(), value.into());
+        for (key, value) in value {
+            result.insert(key, value.into());
         }
         Document {
             schema: MAP_DOCUMENT_SCHEMA.clone(),
@@ -705,7 +722,7 @@ mod tests {
         let long: Document = 1i64.into();
         assert_eq!(long.schema(), &*LONG);
 
-        let byte_value:i8 = byte.try_into().unwrap();
+        let byte_value: i8 = byte.try_into().unwrap();
         assert_eq!(byte_value, 1i8);
         let short_value: i16 = short.try_into().unwrap();
         assert_eq!(short_value, 1i16);
