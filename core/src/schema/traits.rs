@@ -8,7 +8,7 @@ use std::fmt::Debug;
 ///
 /// This trait can be downcast into a specific trait implementation.
 ///
-/// ```rust
+/// ```rust,ignore
 /// my_trait.downcast_ref::<SpecificTraitImpl>()
 /// ```
 ///

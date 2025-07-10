@@ -445,7 +445,7 @@ impl<'b> SchemaBuilder<'b> {
         // TODO: Return a result instead of panicking
         match self.shape_type {
             ShapeType::List => {
-                assert_ne!(name, "member", "Lists can only have members named `member`. Found `{name}`");
+                assert_eq!(name, "member", "Lists can only have members named `member`. Found `{name}`");
             }
             ShapeType::Map => {
                 assert!(

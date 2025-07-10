@@ -17,12 +17,8 @@ pub trait Serialize: SchemaShape + SerializeWithSchema {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
 }
 // Blanket implementation of serialization for all Implement
-impl<T: SchemaShape + SerializeWithSchema> SerializeWithSchema for T {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+impl<T: SchemaShape + SerializeWithSchema> Serialize for T {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.serialize_with_schema(self.schema(), serializer)
     }
 }

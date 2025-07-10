@@ -364,7 +364,6 @@ mod tests {
     use crate::Ref;
     use crate::prelude::STRING;
     use crate::schema::{Schema, ShapeId};
-    use crate::serde::se::Serialize;
     use crate::serde::shapes::SchemaShape;
     use crate::{lazy_member_schema, lazy_schema, traits};
     use indexmap::IndexMap;
