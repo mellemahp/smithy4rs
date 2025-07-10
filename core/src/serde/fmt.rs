@@ -1,32 +1,52 @@
-use crate::schema::{Schema, SchemaRef, Document};
+use std::cmp::PartialEq;
+use crate::schema::{SchemaRef, Document};
 use crate::{BigDecimal, BigInt, ByteBuffer};
 use crate::prelude::SensitiveTrait;
 use crate::serde::se::{
     ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer,
 };
-use std::fmt::{Display, Error, Write};
+use std::fmt::Error;
+use std::io;
 use std::time::Instant;
 use thiserror::Error;
-
-macro_rules! comma {
-    ($self:ident) => {
-        if (!$self.is_first) {
-            $self.parent.sink.write_str(", ")?;
-        } else {
-            $self.is_first = false;
-        };
-    };
-}
 
 const REDACTED_STRING: &str = "**REDACTED**";
 macro_rules! redact {
     ($self:ident, $schema:ident, $expr:expr) => {
         if $schema.contains_trait_type::<SensitiveTrait>() {
-            $self.sink.write_str(REDACTED_STRING)?;
-            Ok(())
+            $self.writer.write_all(REDACTED_STRING.as_ref()).map_err(FmtError::Io)
         } else {
-            $expr?;
-            Ok(())
+            $expr.map_err(FmtError::Io)
+        }
+    };
+}
+
+macro_rules! redact_aggregate {
+    ($self:ident, $schema:ident) => {
+        if $schema.contains_trait_type::<SensitiveTrait>() {
+            $self.writer.write_all(REDACTED_STRING.as_ref()).map_err(FmtError::Io)?;
+            Ok(InnerFmtSerializer {
+                ser: $self,
+                state: State::REDACTED
+            })
+        } else {
+            Ok(InnerFmtSerializer {
+                ser: $self,
+                state: State::FIRST
+            })
+        }
+    };
+}
+
+macro_rules! start_text {
+    ($self:ident) => {
+        if $self.state == State::FIRST {
+            $self.state = State::REST;
+        } else if $self.state == State::REDACTED {
+            /* Skip redacted lists */
+            return Ok(())
+        } else {
+            $self.ser.writer.write_all(b", ").map_err(FmtError::Io)?;
         }
     };
 }
@@ -35,313 +55,275 @@ macro_rules! redact {
 pub enum FmtError {
     #[error(transparent)]
     Fmt(#[from] Error),
+    #[error(transparent)]
+    Io(#[from] io::Error),
     #[error("Encountered unknown error")]
     Unknown(#[from] Box<dyn std::error::Error>),
 }
 
+// TODO: Update to just accept structs with schema.
+#[allow(dead_code)]
+pub fn to_string<T: Serialize + ?Sized>(schema: &SchemaRef, value: &T) -> Result<String, FmtError> {
+    let mut writer: Vec<u8> = Vec::with_capacity(128);
+    let mut ser = FmtSerializer::new(&mut writer);
+    value.serialize(schema, &mut ser).map_err(|e| FmtError::Unknown(e.into()))?;
+    String::from_utf8(writer).map_err(|e| FmtError::Unknown(e.into()))
+}
+
 /// Serializer used to format and print a shape.
-///
-/// U
-pub struct FmtSerializer<W: Write> {
-    pub(super) sink: W,
+pub struct FmtSerializer<W: io::Write> {
+    pub(super) writer: W,
 }
 
-impl<'a, W: Write> FmtSerializer<W> {
-    pub const fn new(sink: W) -> Self {
-        FmtSerializer { sink }
+impl<W: io::Write> FmtSerializer<W> {
+    pub const fn new(writer: W) -> Self {
+        FmtSerializer { writer }
     }
 
-    pub fn flush(self) -> W {
-        self.sink
+    #[inline]
+    pub fn into_inner(self) -> W {
+        self.writer
     }
 }
 
-impl<W: Write> Serializer for FmtSerializer<W> {
+impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     type Error = FmtError;
     type Ok = ();
 
-    type SerializeList<'l> = FmtListSerialize<W>
-    where
-        Self: 'l;
-    type SerializeMap<'m>
-        = FmtMapSerializer<'m, W>
-    where
-        Self: 'm;
-    type SerializeStruct<'s>
-        = FmtStructSerializer<'s, W>
-    where
-        Self: 's;
+    type SerializeList = InnerFmtSerializer<'a, W>;
+    type SerializeMap = InnerFmtSerializer<'a, W>;
+    type SerializeStruct = InnerFmtSerializer<'a, W>;
 
     fn write_struct(
-        mut self,
+        self,
         schema: &SchemaRef,
         _: usize,
-    ) -> Result<Self::SerializeStruct<'_>, Self::Error> {
-        self.sink.write_str(schema.id().name())?;
-        self.sink.write_char('[')?;
-        let redacted = schema.contains_trait_type::<SensitiveTrait>();
-        if redacted {
-            self.sink.write_str(REDACTED_STRING)?;
-        }
-        Ok(FmtStructSerializer::new(&mut self, redacted))
+    ) -> Result<Self::SerializeStruct, Self::Error> {
+        self.writer.write_all(schema.id().name().as_ref())?;
+        self.writer.write_all(b"[").map_err(FmtError::Io)?;
+        redact_aggregate!(self, schema)
     }
 
     fn write_map(
-        mut self,
+        self,
         schema: &SchemaRef,
         _: usize,
-    ) -> Result<Self::SerializeMap<'_>, Self::Error> {
-        self.sink.write_str("{")?;
-        let redacted = schema.contains_trait_type::<SensitiveTrait>();
-        if redacted {
-            self.sink.write_str(REDACTED_STRING)?;
-        }
-        Ok(FmtMapSerializer::new(&mut self, redacted))
+    ) -> Result<Self::SerializeMap, Self::Error> {
+        self.writer.write_all(b"{").map_err(FmtError::Io)?;
+        redact_aggregate!(self, schema)
     }
 
     fn write_list(
-        mut self,
+        self,
         schema: &SchemaRef,
         _: usize,
-    ) -> Result<Self::SerializeList<'_>, Self::Error> {
-        self.sink.write_str("[")?;
-        let redacted = schema.contains_trait_type::<SensitiveTrait>();
-        if redacted {
-            self.sink.write_str(REDACTED_STRING)?;
-        }
-        Ok(FmtListSerialize::new(&mut self, redacted))
+    ) -> Result<Self::SerializeList, Self::Error> {
+        self.writer.write_all(b"[").map_err(FmtError::Io)?;
+        redact_aggregate!(self, schema)
     }
 
-    fn write_boolean(mut self, schema: &SchemaRef, value: bool) -> Result<(), Self::Error> {
-        redact!(self, schema, self.sink.write_str(&value.to_string()))
-    }
-
-    fn write_byte(mut self, schema: &SchemaRef, value: i8) -> Result<(), Self::Error> {
+    fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(&value.to_string().as_ref())
         )
     }
 
-    fn write_short(mut self, schema: &SchemaRef, value: i16) -> Result<(), Self::Error> {
+    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
-    fn write_integer(mut self, schema: &SchemaRef, value: i32) -> Result<(), Self::Error> {
+    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
-    fn write_long(mut self, schema: &SchemaRef, value: i64) -> Result<(), Self::Error> {
+    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
-    fn write_float(mut self, schema: &SchemaRef, value: f32) -> Result<(), Self::Error> {
+    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
-    fn write_double(mut self, schema: &SchemaRef, value: f64) -> Result<(), Self::Error> {
+    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
-    fn write_big_integer(mut self, schema: &SchemaRef, value: &BigInt) -> Result<(), Self::Error> {
+    // TODO: INLINE ALL THESE
+    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
+        )
+    }
+
+    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
     fn write_big_decimal(
-        mut self,
+        self,
         schema: &SchemaRef,
         value: &BigDecimal,
     ) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
-            self.sink.write_str(value.to_string().as_str())
+            self.writer.write_all(value.to_string().as_str().as_ref())
         )
     }
 
-    fn write_string(mut self, schema: &SchemaRef, value: &String) -> Result<(), Self::Error> {
-        redact!(self, schema, self.sink.write_str(value.as_str()))
+    fn write_string(self, schema: &SchemaRef, value: &String) -> Result<(), Self::Error> {
+        redact!(self, schema, self.writer.write_all(value.as_str().as_ref()))
     }
 
-    fn write_blob(mut self, _: &SchemaRef, _: &ByteBuffer) -> Result<(), Self::Error> {
+    fn write_blob(self, _: &SchemaRef, _: &ByteBuffer) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_timestamp(mut self, schema: &SchemaRef, value: &Instant) -> Result<(), Self::Error> {
+    fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<(), Self::Error> {
         // TODO: This is incorrect and needs to be fixed. Just to get all branches running
         redact!(
             self,
             schema,
-            self.sink
-                .write_str(value.elapsed().as_secs().to_string().as_str())
+            self.writer.write_all(
+                value.elapsed().as_secs().to_string().as_str().as_ref())
         )
     }
 
-    fn write_document(mut self, _: &SchemaRef, _: &Document) -> Result<(), Self::Error> {
+    fn write_document(self, _: &SchemaRef, _: &Document) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write_null(mut self, _: &SchemaRef) -> Result<(), Self::Error> {
-        Ok(self.sink.write_str("null")?)
+    fn write_null(self, schema: &SchemaRef) -> Result<(), Self::Error> {
+        redact!(
+            self,
+            schema,
+            self.writer.write_all(b"null")
+        )
     }
 
-    fn skip(mut self, _: &SchemaRef) -> Result<(), Self::Error> {
+    fn skip(self, _: &SchemaRef) -> Result<(), Self::Error> {
         /* Do not write anything on non-present fields */
         Ok(())
     }
 
-    fn flush(mut self) -> Result<(), Self::Error> {
+    fn flush(self) -> Result<(), Self::Error> {
         // Does nothing for string serializer
         Ok(())
     }
 }
 
-pub struct FmtListSerialize<W: Write> {
-    parent: FmtSerializer<W>,
-    redacted: bool,
-    is_first: bool,
+// TODO: Add formatter for control characters?
+// Must be public to statisfy "leaking" of internal types.
+#[doc(hidden)]
+pub struct InnerFmtSerializer<'a, W: 'a>
+ where
+    W: io::Write
+{
+    ser: &'a mut FmtSerializer<W>,
+    state: State,
 }
-impl<'a, W: Write> FmtListSerialize<W> {
-    fn new(parent: FmtSerializer<W>, redacted: bool) -> Self {
-        FmtListSerialize {
-            parent,
-            redacted,
-            is_first: true,
-        }
-    }
+
+#[derive(PartialEq, Eq)]
+#[doc(hidden)]
+pub enum State {
+    FIRST,
+    REST,
+    REDACTED
 }
-impl<W: Write> ListSerializer for FmtListSerialize<W> {
+
+
+impl<'a, W> ListSerializer for InnerFmtSerializer<'a, W>
+where
+    W: io::Write
+{
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
     where
-        T: ?Sized + Serialize,
+        T: ?Sized + Serialize
     {
-        if self.redacted {
-            return Ok(());
-        }
-        comma!(self);
-        value.serialize(element_schema, FmtSerializer::new(&mut self.parent.sink))
+        start_text!(self);
+        value.serialize(element_schema, &mut *self.ser)
     }
 
-    fn end(mut self, _: &SchemaRef) -> Result<(), Self::Error> {
-        Ok(self.parent.sink.write_char(']')?)
+    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        self.ser.writer.write_all(b"]").map_err(FmtError::Io)
     }
 }
 
-pub struct FmtMapSerializer<W: Write> {
-    parent: FmtSerializer<W>,
-    redacted: bool,
-    is_first: bool,
-}
-impl<W: Write> FmtMapSerializer<W> {
-    fn new(parent: FmtSerializer<W>, redacted: bool) -> Self {
-        Self {
-            parent,
-            redacted,
-            is_first: true,
-        }
-    }
-}
-impl<W: Write> MapSerializer for FmtMapSerializer<W> {
+impl<'a, W> MapSerializer for InnerFmtSerializer<'a, W> where
+    W: io::Write
+{
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_entry<K, V>(
-        &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
-        key: &K,
-        value: &V,
-    ) -> Result<(), Self::Error>
+    fn serialize_entry<K, V>(&mut self, key_schema: &SchemaRef, value_schema: &SchemaRef, key: &K, value: &V) -> Result<(), Self::Error>
     where
         K: ?Sized + Serialize,
-        V: ?Sized + Serialize,
+        V: ?Sized + Serialize
     {
-        if self.redacted {
-            return Ok(());
-        }
-        comma!(self);
-        key.serialize(key_schema, FmtSerializer::new(&mut self.parent.sink))?;
-        self.parent.sink.write_char(':')?;
-        value.serialize(value_schema, FmtSerializer::new(&mut self.parent.sink))
+        start_text!(self);
+        key.serialize(key_schema, &mut *self.ser)?;
+        self.ser.writer.write_all(b":").map_err(FmtError::Io)?;
+        value.serialize(value_schema, &mut *self.ser)
     }
 
-    fn end(mut self, _: &SchemaRef) -> Result<(), Self::Error> {
-        Ok(self.parent.sink.write_char('}')?)
+    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        self.ser.writer.write_all(b"}").map_err(FmtError::Io)
     }
 }
 
-pub struct FmtStructSerializer<'se, W: Write> {
-    parent: &'se mut FmtSerializer<W>,
-    redacted: bool,
-    is_first: bool,
-}
-impl<'se, W: Write> FmtStructSerializer<'se, W> {
-    fn new(parent: &'se mut FmtSerializer<W>, redacted: bool) -> Self {
-        Self {
-            parent,
-            redacted,
-            is_first: true,
-        }
-    }
-}
-impl<W: Write> StructSerializer for FmtStructSerializer<'_, W> {
+impl<'a, W> StructSerializer for InnerFmtSerializer<'a, W>
+where
+    W: io::Write
+{
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
     where
-        T: ?Sized + Serialize,
+        T: ?Sized + Serialize
     {
-        if self.redacted {
-            return Ok(());
-        }
-        comma!(self);
+        start_text!(self);
         let Some(me) = member_schema.as_member() else {
             panic!("Expected member schema!");
         };
-        self.parent.sink.write_str(me.name.as_str())?;
-        self.parent.sink.write_char('=')?;
-        value.serialize(member_schema, self.parent)
+        self.ser.writer.write_all(me.name.as_str().as_ref()).map_err(FmtError::Io)?;
+        self.ser.writer.write_all(b"=").map_err(FmtError::Io)?;
+        value.serialize(member_schema, &mut *self.ser)
     }
 
-    fn end(self, _: &SchemaRef) -> Result<(), Self::Error> {
-        Ok(self.parent.sink.write_char(']')?)
+    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        self.ser.writer.write_all(b"]").map_err(FmtError::Io)
     }
 }
 
@@ -364,7 +346,7 @@ mod tests {
     use crate::{lazy_member_schema, lazy_schema, traits};
     use indexmap::IndexMap;
     use std::sync::LazyLock;
-    use crate::schema::ShapeId;
+    use crate::schema::{Schema, ShapeId};
 
     lazy_schema!(
         MAP_SCHEMA,
@@ -454,8 +436,6 @@ mod tests {
 
     #[test]
     fn fmt_serializer_all() {
-        let mut writer = String::new();
-        let fmter = FmtSerializer::new(&mut writer);
         let mut map = IndexMap::new();
         map.insert(String::from("a"), String::from("b"));
         let list = vec!["a".to_string(), "b".to_string()];
@@ -466,14 +446,12 @@ mod tests {
             member_map: map,
             member_list: list,
         };
-        struct_to_write.serialize(&SCHEMA, fmter).expect("serialization failed");
-        assert_eq!(writer, "Shape[a=a, b=**REDACTED**, c=c, list=[a, b], map={a:b}]");
+        let output = to_string(&SCHEMA, &struct_to_write).expect("serialization failed");
+        assert_eq!(output, "Shape[a=a, b=**REDACTED**, c=c, list=[a, b], map={a:b}]");
     }
 
     #[test]
     fn fmt_serializer_omits_none() {
-        let mut writer = String::new();
-        let fmter = FmtSerializer::new(&mut writer);
         let struct_to_write = SerializeMe {
             member_a: "a".to_string(),
             member_b: "b".to_string(),
@@ -481,14 +459,12 @@ mod tests {
             member_list: Vec::new(),
             member_map: IndexMap::new(),
         };
-        struct_to_write.serialize(&SCHEMA, fmter).expect("serialization failed");
-        assert_eq!(writer, "Shape[a=a, b=**REDACTED**, list=[], map={}]");
+        let output = to_string(&SCHEMA, &struct_to_write).expect("serialization failed");
+        assert_eq!(output, "Shape[a=a, b=**REDACTED**, list=[], map={}]");
     }
 
     #[test]
     fn redacts_aggregates() {
-        let mut writer = String::new();
-        let fmter = FmtSerializer::new(&mut writer);
         let mut map = IndexMap::new();
         map.insert(String::from("a"), String::from("b"));
         let list = vec!["a".to_string(), "b".to_string()];
@@ -496,9 +472,7 @@ mod tests {
             member_list: list,
             member_map: map,
         };
-        struct_to_write.serialize(&REDACTED_AGGREGATES, fmter).expect("serialization failed");
-        assert_eq!(writer,
-            "Shape[list=[**REDACTED**], map={**REDACTED**}]"
-        );
+        let output = to_string(&REDACTED_AGGREGATES, &struct_to_write).expect("serialization failed");
+        assert_eq!(output, "Shape[list=[**REDACTED**], map={**REDACTED**}]");
     }
 }

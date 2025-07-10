@@ -116,19 +116,13 @@ pub trait Serializer: Sized {
     /// Ok return type. Should almost always be ()
     type Ok;
 
-    type SerializeList<'l>: ListSerializer<Ok = Self::Ok, Error = Self::Error>
-    where
-        Self: 'l;
-    type SerializeMap<'m>: MapSerializer<Ok = Self::Ok, Error = Self::Error>
-    where
-        Self: 'm;
-    type SerializeStruct<'s>: StructSerializer<Ok = Self::Ok, Error = Self::Error>
-    where
-        Self: 's;
+    type SerializeList: ListSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type SerializeMap: MapSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type SerializeStruct: StructSerializer<Ok = Self::Ok, Error = Self::Error>;
 
-    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct<'_>, Self::Error>;
-    fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap<'_>, Self::Error>;
-    fn write_list(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeList<'_>, Self::Error>;
+    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct, Self::Error>;
+    fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error>;
+    fn write_list(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeList, Self::Error>;
     fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error>;
     fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error>;
     fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error>;

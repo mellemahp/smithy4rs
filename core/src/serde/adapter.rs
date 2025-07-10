@@ -2,7 +2,6 @@
 // TODO: Remove
 #![allow(unused_variables)]
 
-use std::marker::PhantomData;
 use std::time::Instant;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
@@ -25,84 +24,95 @@ impl <S: serde::Serializer> SerdeAdapter<S> {
 impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
-    type SerializeList<'l> = ListSerializeAdapter<'l, S>
-    where
-        Self: 'l;
-    type SerializeMap<'m> = MapSerializerAdapter<'m, S>
-    where
-        Self: 'm;
-    type SerializeStruct<'s> = StructSerializerAdapter<'s, S>
-    where
-        Self: 's;
+    type SerializeList = ListSerializeAdapter<S>;
+    type SerializeMap = MapSerializerAdapter<S>;
+    type SerializeStruct = StructSerializerAdapter<S>;
 
-    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct<'_>, Self::Error> {
+    #[inline]
+    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
         let struct_name = staticize(schema.id().name());
         let struct_ser = self.serializer.serialize_struct(struct_name, len)?;
         Ok(StructSerializerAdapter::new(struct_ser))
     }
 
-    fn write_map(self, _schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap<'_>, Self::Error> {
+    #[inline]
+    fn write_map(self, _schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error> {
         let map_ser = self.serializer.serialize_map(Some(len))?;
         Ok(MapSerializerAdapter::new(map_ser))
     }
 
-    fn write_list(self, _schema: &SchemaRef, len: usize) -> Result<Self::SerializeList<'_>, Self::Error> {
+    #[inline]
+    fn write_list(self, _schema: &SchemaRef, len: usize) -> Result<Self::SerializeList, Self::Error> {
         let list_ser = self.serializer.serialize_seq(Some(len))?;
         Ok(ListSerializeAdapter::new(list_ser))
     }
 
+    #[inline]
     fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_bool(value)
     }
 
+    #[inline]
     fn write_byte(self, _: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_i8(value)
     }
 
+    #[inline]
     fn write_short(self, _: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_i16(value)
     }
 
+    #[inline]
     fn write_integer(self, _: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_i32(value)
     }
 
+    #[inline]
     fn write_long(self, _: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_i64(value)
     }
 
+    #[inline]
     fn write_float(self, _: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_f32(value)
     }
 
+    #[inline]
     fn write_double(self, _: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_f64(value)
     }
 
+    #[inline]
     fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
+    #[inline]
     fn write_big_decimal(self, schema: &SchemaRef, value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
+    #[inline]
     fn write_string(self, _: &SchemaRef, value: &String) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_str(value.as_str())
     }
 
+    #[inline]
     fn write_blob(self, schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
+    #[inline]
     fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
+    #[inline]
     fn write_document(self, schema: &SchemaRef, value: &Document) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
+    #[inline]
     fn write_null(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.serializer.serialize_none()
     }
@@ -112,19 +122,19 @@ impl <S: serde::Serializer> Serializer for SerdeAdapter<S> {
     }
 }
 
-pub struct ListSerializeAdapter<'ls, S: serde::Serializer> {
+pub struct ListSerializeAdapter<S: serde::Serializer> {
     serializer: S::SerializeSeq,
-    phantom: PhantomData<&'ls S>,
 }
-impl <S: serde::Serializer> ListSerializeAdapter<'_, S> {
+impl <S: serde::Serializer> ListSerializeAdapter<S> {
     fn new(serializer: S::SerializeSeq) -> Self {
-        Self { serializer, phantom: PhantomData }
+        Self { serializer }
     }
 }
-impl <S: serde::Serializer> ListSerializer for ListSerializeAdapter<'_, S> {
+impl <S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
-    
+
+    #[inline]
     fn serialize_element<T>(
         &mut self,
         value_schema: &SchemaRef,
@@ -136,24 +146,25 @@ impl <S: serde::Serializer> ListSerializer for ListSerializeAdapter<'_, S> {
         self.serializer.serialize_element(&ValueWrapper(value_schema, value))
     }
 
+    #[inline]
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.serializer.end()
     }
 }
 
-pub struct MapSerializerAdapter<'ms, S: serde::Serializer> {
-    serializer: S::SerializeMap,
-    phantom: PhantomData<&'ms S>,
+pub struct MapSerializerAdapter<S: serde::Serializer> {
+    serializer: S::SerializeMap
 }
-impl <S: serde::Serializer> MapSerializerAdapter<'_, S> {
+impl <S: serde::Serializer> MapSerializerAdapter<S> {
     fn new(serializer: S::SerializeMap) -> Self {
-        Self { serializer, phantom: PhantomData }
+        Self { serializer }
     }
 }
-impl <S: serde::Serializer> MapSerializer for MapSerializerAdapter<'_, S> {
+impl <S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
-    
+
+    #[inline]
     fn serialize_entry<K, V>(
         &mut self,
         key_schema: &SchemaRef,
@@ -171,24 +182,25 @@ impl <S: serde::Serializer> MapSerializer for MapSerializerAdapter<'_, S> {
         )
     }
 
+    #[inline]
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.serializer.end()
     }
 }
 
-pub struct StructSerializerAdapter<'s, S: serde::Serializer> {
+pub struct StructSerializerAdapter<S: serde::Serializer> {
     serializer: S::SerializeStruct,
-    phantom: PhantomData<&'s S>,
 }
-impl<S: serde::Serializer> StructSerializerAdapter<'_, S> {
+impl<S: serde::Serializer> StructSerializerAdapter<S> {
     fn new(serializer: S::SerializeStruct) -> Self {
-        Self { serializer, phantom: PhantomData }
+        Self { serializer }
     }
 }
-impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<'_, S> {
+impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     type Error = S::Error;
     type Ok = S::Ok;
-    
+
+    #[inline]
     fn serialize_member<T>(
         &mut self,
         member_schema: &SchemaRef,
@@ -198,10 +210,13 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<'_, S> {
         T: Serialize + ?Sized,
     {
         // TODO: How to handle error?
-        let member_name = staticize(member_schema.id().member().unwrap());
-        self.serializer.serialize_field(member_name, &ValueWrapper(member_schema, value))
+        let Some(me) = member_schema.as_member() else {
+            panic!("Expected member schema!");
+        };
+        self.serializer.serialize_field(staticize(&me.name), &ValueWrapper(member_schema, value))
     }
 
+    #[inline]
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.serializer.end()
     }
@@ -311,6 +326,7 @@ mod tests {
   }
 }"#;
         assert_eq!(serde_json::to_string_pretty(&test).unwrap(), expected);
+        println!("{}", serde_json::to_string_pretty(&test).unwrap());
     }
 }
 
