@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::schema::SchemaRef;
+
 /// Immutable identifier for a shape in a Smithy model.
 ///
 /// A shape ID is constructed from an absolute or relative shape
@@ -148,4 +150,12 @@ mod tests {
         assert_eq!(shape_id.member.unwrap(), "member");
         assert_eq!(shape_id.id, "com.example#MyShape$member");
     }
+}
+
+/// Returns the schema for a shape
+///
+/// This schema is typically statically defined in generate code.
+pub trait SchemaShape {
+    /// Schema of this shape.
+    fn schema(&self) -> &SchemaRef;
 }

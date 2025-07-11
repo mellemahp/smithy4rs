@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::prelude::*;
-use crate::schema::{Schema, SchemaRef, ShapeId, ShapeType};
+use crate::schema::{Schema, SchemaRef, SchemaShape, ShapeId, ShapeType};
 use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
 use crate::{lazy_schema, traits};
 use indexmap::IndexMap;
@@ -15,10 +15,11 @@ use thiserror::Error;
 /// to smooth over protocol incompatibilities with the Smithy data model.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Document {
-    schema: SchemaRef,
-    value: DocumentValue,
-    discriminator: Option<ShapeId>,
+    pub(crate) schema: SchemaRef,
+    pub(crate) value: DocumentValue,
+    pub(crate) discriminator: Option<ShapeId>,
 }
+
 impl Document {
     /// Get the Schema of the document
     #[must_use]
@@ -56,12 +57,13 @@ impl Document {
     }
 }
 
-// TODO: Should documents implement iterators?
+impl SchemaShape for Document {
+    fn schema(&self) -> &SchemaRef {
+        &self.schema
+    }
+}
 
-// TODO: Use a blanket impl per: https://www.greyblake.com/blog/alternative-blanket-implementations-for-single-rust-trait/
-/// Marker trait to distinguish documents from other [`SerializeShape`]'s
-pub trait DynamicShape: Sized {}
-impl DynamicShape for Document {}
+// TODO: Should documents implement iterators?
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
 #[derive(Clone, PartialEq, Debug)]
@@ -122,7 +124,7 @@ pub enum DocumentError {
 /// Get the shape type of the Document
 ///
 /// If the Document is a member, then returns the type of the member target.
-fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
+pub(crate) fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
     let shape_type = schema.shape_type();
     if shape_type == &ShapeType::Member {
         let Some(member) = schema.as_member() else {
@@ -136,7 +138,7 @@ fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
     }
 }
 
-fn conversion_error(expected: &'static str) -> Box<dyn Error> {
+pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
     Box::new(DocumentError::DocumentConversion(expected.to_string())) as Box<dyn Error>
 }
 
@@ -276,12 +278,12 @@ impl Document {
     }
 
     #[must_use]
-    pub fn as_big_integer(&self) -> Option<BigInt> {
+    pub fn as_big_integer(&self) -> Option<&BigInt> {
         todo!()
     }
 
     #[must_use]
-    pub fn as_big_decimal(&self) -> Option<BigDecimal> {
+    pub fn as_big_decimal(&self) -> Option<&BigDecimal> {
         todo!()
     }
 

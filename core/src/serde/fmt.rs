@@ -364,7 +364,7 @@ mod tests {
     use crate::Ref;
     use crate::prelude::STRING;
     use crate::schema::{Schema, ShapeId};
-    use crate::serde::shapes::SchemaShape;
+    use crate::schema::SchemaShape;
     use crate::{lazy_member_schema, lazy_schema, traits};
     use indexmap::IndexMap;
     use std::sync::LazyLock;

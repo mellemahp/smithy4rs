@@ -442,7 +442,7 @@ impl<'b> SchemaBuilder<'b> {
     where
         't: 'b,
     {
-        // TODO: Return a result instead of panicking
+        // TODO: Return a result instead of panicking?
         match self.shape_type {
             ShapeType::List => {
                 assert_eq!(name, "member", "Lists can only have members named `member`. Found `{name}`");

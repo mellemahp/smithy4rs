@@ -1,14 +1,12 @@
 // TODO: SerializableShapes types should implement `Into<Document>` for conversion.
 
-use crate::schema::SchemaRef;
+use crate::serde::se::Serialize;
 
-/// Returns the schema for a shape
+/// Marker Trait used to differentiate between generated shapes and Documents for
+/// some blanket impelementations.
 ///
-/// This schema is typically statically defined in generate code.
-pub trait SchemaShape {
-    /// Schema of this shape.
-    fn schema(&self) -> &SchemaRef;
-}
+/// NOTE: In general you should not need to implement this yourself
+pub trait SerializableShape: Serialize {}
 
 // pub trait SerializeShape: Serialize {
 //     // Should schema be moved to a Trait that can be shared with deserializeShape?

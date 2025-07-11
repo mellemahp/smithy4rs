@@ -3,7 +3,7 @@
 #![allow(clippy::missing_errors_doc)]
 
 use crate::schema::{Document, Schema, SchemaRef};
-use crate::serde::shapes::SchemaShape;
+use crate::schema::SchemaShape;
 use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
 use indexmap::IndexMap;
 use std::error::Error;
