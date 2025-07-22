@@ -386,8 +386,8 @@ impl SmithyTrait for EndpointTrait {
 // TODO: ADD ALL CONSTRAINT TRAITS WITH NICE BUILDERS
 #[derive(Debug)]
 pub struct RangeTrait {
-    pub min: Option<BigDecimal>,
-    pub max: Option<BigDecimal>,
+    pub min: Option<usize>,
+    pub max: Option<usize>,
 }
 static_trait_id!(RangeTrait, RANGE_TRAIT_ID, "smithy.api#range");
 
@@ -398,6 +398,40 @@ impl SmithyTrait for RangeTrait {
 
     fn value(&self) -> &DocumentValue {
         todo!()
+    }
+}
+// Builder
+impl RangeTrait {
+    #[must_use]
+    pub fn builder() -> RangeTraitBuilder {
+        RangeTraitBuilder::new()
+    }
+}
+
+pub struct RangeTraitBuilder {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+impl RangeTraitBuilder {
+    pub(crate) const fn new() -> Self {
+        RangeTraitBuilder {
+            min: None,
+            max: None,
+        }
+    }
+
+    pub fn min(mut self, min: usize) -> Self {
+        self.min = Some(min);
+        self
+    }
+
+    pub fn max(mut self, max: usize) -> Self {
+        self.max = Some(max);
+        self
+    }
+
+    pub fn build(self) -> RangeTrait {
+        RangeTrait { min: self.min, max: self.max }
     }
 }
 
@@ -415,5 +449,40 @@ impl SmithyTrait for LengthTrait {
 
     fn value(&self) -> &DocumentValue {
         todo!()
+    }
+}
+
+// Builder
+impl LengthTrait {
+    #[must_use]
+    pub fn builder() -> LengthTraitBuilder {
+        LengthTraitBuilder::new()
+    }
+}
+
+pub struct LengthTraitBuilder {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+impl LengthTraitBuilder {
+    pub(crate) const fn new() -> Self {
+        LengthTraitBuilder {
+            min: None,
+            max: None,
+        }
+    }
+
+    pub fn min(mut self, min: usize) -> Self {
+        self.min = Some(min);
+        self
+    }
+
+    pub fn max(mut self, max: usize) -> Self {
+        self.max = Some(max);
+        self
+    }
+
+    pub fn build(self) -> LengthTrait {
+        LengthTrait { min: self.min, max: self.max }
     }
 }

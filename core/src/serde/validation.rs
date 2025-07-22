@@ -83,6 +83,7 @@
 //! }
 //! ```
 
+use std::cmp::min;
 use crate::schema::{Document, SchemaRef, ShapeId, ShapeType};
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
@@ -93,6 +94,7 @@ use std::fmt::Display;
 use std::marker::PhantomData;
 use std::time::Instant;
 use thiserror::Error;
+use crate::prelude::{LengthTrait, LengthTraitBuilder};
 use crate::serde::se::ListSerializer;
 use crate::serde::shapes::{Builder, ShapeBuilder};
 
@@ -106,80 +108,17 @@ macro_rules! check_type {
     };
 }
 
-pub trait Validate: ValidateImpl + Send + 'static {
-    type ValidationMode: ValidationMode;
+pub trait Validate {
+    type Value;
 
     /// Validate a shape given its schema and a validator.
+    ///
+    /// NOTE: For builders this will result in them being built
     fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
-    ) -> Result<<Self as ValidateImpl>::Value, ValidationErrors> {
-        Self::ValidationMode::validate(self, schema, validator)
-    }
-}
-
-/// Allows us to support multiple possible blanket implementations.
-///
-/// This is mostly useful for handling the builder-collection case where the
-/// validation mutates a collection of builders by building and validating them.
-///
-/// This is based on https://www.greyblake.com/blog/alternative-blanket-implementations-for-single-rust-trait/
-///
-// TODO: Should this only be implementable by shapes in this crate?
-pub trait ValidationMode {
-    fn validate<I: ValidateImpl, V: Validator>(
-        implementation: I,
-        schema: &SchemaRef,
-        validator: V
-    ) -> Result<I::Value, ValidationErrors>;
-}
-
-pub struct Mutate {}
-pub struct InPlace {}
-impl ValidationMode for Mutate {
-    #[inline]
-    fn validate<I: ValidateImpl, V: Validator>(
-        implementation: I,
-        schema: &SchemaRef,
-        validator: V,
-    ) -> Result<I::Value, ValidationErrors> {
-        implementation.validate_and_move(schema, validator)
-    }
-}
-impl ValidationMode for InPlace {
-    #[inline]
-    fn validate<I: ValidateImpl, V: Validator>(
-        implementation: I,
-        schema: &SchemaRef,
-        validator: V,
-    ) -> Result<I::Value, ValidationErrors> {
-        implementation.validate_in_place(schema, validator)
-    }
-}
-
-pub trait ValidateImpl: Sized {
-    type Value;
-
-    /// Validate the value without moving or mutating.
-    fn validate_in_place<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        validator: V,
     ) -> Result<Self::Value, ValidationErrors>;
-
-    /// Validate a value and mutate the result. This is primarily used to
-    /// validate and build ['ShapeBuilder']'s.
-    ///
-    /// *Note*: This generally should not be implemented by users and by default
-    /// will raise an error.
-    fn validate_and_move<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        _validator: V,
-    ) -> Result<Self::Value, ValidationErrors> {
-        Err(ValidationErrors::from(ValidationError::unsupported(schema)))
-    }
 }
 
 // TODO: could this be a serializer?
@@ -404,11 +343,10 @@ pub trait ItemValidator {
 //     }
 // }
 
-// TODO: Make macro for these
-impl ValidateImpl for ByteBuffer {
+impl Validate for ByteBuffer {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -417,14 +355,10 @@ impl ValidateImpl for ByteBuffer {
     }
 }
 
-impl Validate for ByteBuffer {
-    type ValidationMode = InPlace;
-}
-
-impl ValidateImpl for bool {
+impl Validate for bool {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -432,14 +366,11 @@ impl ValidateImpl for bool {
         validator.validate_boolean(schema, self)
     }
 }
-impl Validate for bool {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for String {
+impl Validate for String {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V
@@ -447,14 +378,11 @@ impl ValidateImpl for String {
         validator.validate_string(schema, self)
     }
 }
-impl Validate for String {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for Instant {
+impl Validate for Instant {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V
@@ -462,14 +390,11 @@ impl ValidateImpl for Instant {
         validator.validate_timestamp(schema, self)
     }
 }
-impl Validate for Instant {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for i8 {
+impl Validate for i8 {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -477,14 +402,11 @@ impl ValidateImpl for i8 {
         validator.validate_byte(schema, self)
     }
 }
-impl Validate for i8 {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for i16 {
+impl Validate for i16 {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -492,14 +414,11 @@ impl ValidateImpl for i16 {
         validator.validate_short(schema, self)
     }
 }
-impl Validate for i16 {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for i32 {
+impl Validate for i32 {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -507,14 +426,11 @@ impl ValidateImpl for i32 {
         validator.validate_integer(schema, self)
     }
 }
-impl Validate for i32 {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for i64 {
+impl Validate for i64 {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -522,14 +438,12 @@ impl ValidateImpl for i64 {
         validator.validate_long(schema, self)
     }
 }
-impl Validate for i64 {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for f32 {
+
+impl Validate for f32 {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -537,14 +451,11 @@ impl ValidateImpl for f32 {
         validator.validate_float(schema, self)
     }
 }
-impl Validate for f32 {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for f64 {
+impl Validate for f64 {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -552,14 +463,11 @@ impl ValidateImpl for f64 {
         validator.validate_double(schema, self)
     }
 }
-impl Validate for f64 {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for BigDecimal {
+impl Validate for BigDecimal {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -567,14 +475,11 @@ impl ValidateImpl for BigDecimal {
         validator.validate_big_decimal(schema, self)
     }
 }
-impl Validate for BigDecimal {
-    type ValidationMode = InPlace;
-}
 
-impl ValidateImpl for BigInt {
+impl Validate for BigInt {
     type Value = Self;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -582,34 +487,12 @@ impl ValidateImpl for BigInt {
         validator.validate_big_integer(schema, self)
     }
 }
-impl Validate for BigInt {
-    type ValidationMode = InPlace;
-}
 
-/// List validation thinking....
-/// When validating everything except Builders the fn for lists is like
-/// ```rust, ignore
-/// use smithy4rs_core::schema::SchemaRef;
-/// use smithy4rs_core::serde::validation::*;
-///
-/// fn myfn<V: Validate, O: Validator>(
-///     list: Vec<V>,
-///     validator: O
-/// ) -> Result<Vec<V>, ValidationErrors> {
-///     let item_schema: &SchemaRef = &smithy4rs_core::prelude::STRING;
-///     let errors = ValidationErrors::new();
-///     for item in list {
-///         item.validate_in_place(item_schema, &validator)
-///     }
-///
-/// }
-/// ```
-
-
-impl<I: Validate> ValidateImpl for Vec<I> {
+// TODO: Should builder lists be validated in place?
+impl<I: Validate> Validate for Vec<I> {
     type Value = Vec<I::Value>;
 
-    fn validate_in_place<V: Validator>(
+    fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -619,54 +502,57 @@ impl<I: Validate> ValidateImpl for Vec<I> {
             return Err(ValidationError::expected_member(schema, "member").into())
         };
         let mut errors = ValidationErrors::new();
-        for item in &self {
-            let _ = item_validator.validate_item(item_schema, item)
-                .map_err(|error| errors.extend(error));
-        }
+        // TODO: limit depth of validation
+        let res = self.into_iter()
+            .map(|item| item_validator.validate_item(item_schema, item))
+            .filter_map(|res| res.map_err(|e| errors.extend(e)).ok())
+            .collect();
         if errors.is_empty() {
-            Ok(self)
+            Ok(res)
         } else {
             Err(errors)
         }
     }
-
-    fn validate_and_move<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        validator: V
-    ) -> Result<Self::Value, ValidationErrors> {
-        todo!()
-    }
-}
-impl <I: Validate> Validate for Vec<I> {
-    type ValidationMode = I::ValidationMode;
 }
 
-impl<V: Validate> ValidateImpl for IndexMap<String, V>
+impl<V: Validate> Validate for IndexMap<String, V>
 {
     type Value = IndexMap<String, V::Value>;
 
-    fn validate_in_place<T: Validator>(
+    fn validate<T: Validator>(
         self,
         schema: &SchemaRef,
         validator: T,
     ) -> Result<Self::Value, ValidationErrors> {
-        todo!()
-    }
+        let mut item_validator = validator.validate_map(schema, self.len())?;
+        let Some(value_schema) = schema.get_member("value") else {
+            return Err(ValidationError::expected_member(schema, "value").into())
+        };
+        let Some(key_schema) = schema.get_member("key") else {
+            return Err(ValidationError::expected_member(schema, "key").into())
+        };
+        check_type!(key_schema, ShapeType::String);
 
-    fn validate_and_move<T: Validator>(
-        self,
-        schema: &SchemaRef,
-        validator: T,
-    ) -> Result<Self::Value, ValidationErrors> {
-        todo!()
+        let mut errors = ValidationErrors::new();
+        // TODO: limit depth of validation
+        let res = self.into_iter()
+            .map(|(key, value)| match item_validator.validate_item(value_schema, value) {
+                Ok(val) => Ok((key, val)),
+                Err(e) => Err(errors.extend(e)),
+            })
+            .filter_map(|res| res.ok())
+            .collect();
+        if errors.is_empty() {
+            Ok(res)
+        } else {
+            Err(errors)
+        }
     }
 }
-impl <V: Validate> Validate for IndexMap<String, V> {
-    type ValidationMode = V::ValidationMode;
-}
 
-/// TODO: VALIDATE FOR DOCUMENT
+// TODO: Is it possible to make a blanket impl for builders?
+
+// TODO: VALIDATE FOR DOCUMENT
 
 //////////////////////////////////////////////////////////////////////////////
 // Pre-built Validators
@@ -687,7 +573,7 @@ impl <'a> Validator for &'a mut DefaultValidator {
         size: usize
     ) -> Result<Self::ItemValidator, ValidationErrors> {
         check_type!(schema, ShapeType::List);
-        // TODO: Check length
+        check_length(schema, size)?;
         Ok(DefaultItemValidator { validator: self })
     }
 
@@ -697,9 +583,21 @@ impl <'a> Validator for &'a mut DefaultValidator {
         size: usize
     ) -> Result<Self::ItemValidator, ValidationErrors> {
         check_type!(schema, ShapeType::Map);
-        // TODO: check length
+        check_length(schema, size)?;
         Ok(DefaultItemValidator { validator: self })
     }
+}
+
+fn check_length(schema: &SchemaRef, size: usize) -> Result<(), ValidationErrors> {
+    if let Some(length) = schema.get_trait_as::<LengthTrait>() {
+        let errors = ValidationErrors::new();
+        let min = length.min.unwrap_or(0);
+        let max = length.max.unwrap_or(usize::MAX);
+        if size > max || size < min {
+            return Err(ValidationError::length(schema, size, min, max).into());
+        }
+    }
+    Ok(())
 }
 
 // TODO: This could handle the validation of uniqueness and sparseness!
@@ -805,6 +703,13 @@ impl ValidationError {
             code: Box::new(SmithyConstraints::Required),
         }
     }
+
+    fn length(schema: &SchemaRef, size: usize, min: usize, max: usize) -> Self {
+        Self {
+            path: schema.id().clone(),
+            code: Box::new(SmithyConstraints::Length(size, min, max)),
+        }
+    }
 }
 
 impl From<ValidationError> for ValidationErrors {
@@ -846,3 +751,44 @@ pub enum SmithyConstraints {
     Unsupported,
 }
 impl ValidationErrorCode for SmithyConstraints {}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::Deref;
+    use super::*;
+    use crate::Ref;
+    use crate::prelude::STRING;
+    use crate::schema::SchemaShape;
+    use crate::schema::{Schema, ShapeId};
+    use crate::{lazy_member_schema, lazy_schema, traits};
+    use indexmap::IndexMap;
+    use std::sync::LazyLock;
+
+    lazy_schema!(
+        MAP_SCHEMA,
+        Schema::map_builder(ShapeId::from("com.example#Map"))
+            .put_member("key", &STRING, traits![])
+            .put_member("value", &STRING, traits![])
+            .build()
+    );
+    lazy_schema!(
+        LIST_SCHEMA,
+        Schema::list_builder(ShapeId::from("com.example#List"))
+            .with_trait(LengthTrait::builder().min(1).max(2).build())
+            .put_member("member", &STRING, traits![])
+            .build()
+    );
+
+    #[test]
+    fn checks_list_too_long() {
+        let too_long = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let mut validator = DefaultValidator::new();
+        let res = too_long.validate(&LIST_SCHEMA, &mut validator);
+        let Err(ValidationErrors { errors }) = res else {
+            panic!("Expected an error")
+        };
+        assert_eq!(errors.len(), 1);
+        let expected = "Size: 3 does not conform to @length constraint. Expected between 1 and 2.".to_string();
+        assert_eq!(expected, format!("{}", errors.get(0).unwrap().code));
+    }
+}
