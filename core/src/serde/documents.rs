@@ -1,38 +1,60 @@
 #![allow(dead_code)]
 
-use crate::schema::{get_shape_type, Document, DocumentError, DocumentValue, NumberFloat, NumberInteger, NumberValue, SchemaRef, SchemaShape, ShapeType};
-use crate::serde::se::{
-    ListSerializer, MapSerializer, Serializer, StructSerializer,
+use crate::schema::{
+    Document, DocumentError, DocumentValue, NumberFloat, NumberInteger, NumberValue, SchemaRef,
+    SchemaShape, ShapeType, get_shape_type,
 };
-use crate::serde::serializers::{SerializeWithSchema};
-use std::time::Instant;
+use crate::serde::se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer};
+use crate::serde::serializers::SerializeWithSchema;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use crate::serde::shapes::SerializableShape;
+use std::time::Instant;
+
+/// Marker Trait used to differentiate between generated shapes and Documents for
+/// some blanket impelementations.
+///
+/// NOTE: In general you should not need to implement this yourself
+pub trait SerializableShape: Serialize {}
 
 impl SerializeWithSchema for Document {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         // TODO: Handle exceptions?
         match get_shape_type(schema).unwrap() {
             ShapeType::Blob => serializer.write_blob(schema, self.as_blob().unwrap()),
             ShapeType::Boolean => serializer.write_boolean(schema, self.as_bool().unwrap()),
             ShapeType::String => serializer.write_string(schema, self.as_string().unwrap()),
-            ShapeType::Timestamp => serializer.write_timestamp(schema, self.as_timestamp().unwrap()),
+            ShapeType::Timestamp => {
+                serializer.write_timestamp(schema, self.as_timestamp().unwrap())
+            }
             ShapeType::Byte => serializer.write_byte(schema, self.as_byte().unwrap()),
             ShapeType::Short => serializer.write_short(schema, self.as_short().unwrap()),
             ShapeType::Integer => serializer.write_integer(schema, self.as_integer().unwrap()),
             ShapeType::Long => serializer.write_long(schema, self.as_long().unwrap()),
             ShapeType::Float => serializer.write_float(schema, self.as_float().unwrap()),
             ShapeType::Double => serializer.write_double(schema, self.as_double().unwrap()),
-            ShapeType::BigInteger => serializer.write_big_integer(schema, self.as_big_integer().unwrap()),
-            ShapeType::BigDecimal => serializer.write_big_decimal(schema, self.as_big_decimal().unwrap()),
+            ShapeType::BigInteger => {
+                serializer.write_big_integer(schema, self.as_big_integer().unwrap())
+            }
+            ShapeType::BigDecimal => {
+                serializer.write_big_decimal(schema, self.as_big_decimal().unwrap())
+            }
             ShapeType::Document => serializer.write_document(schema, &self),
             ShapeType::Enum => serializer.write_string(schema, self.as_string().unwrap()),
             ShapeType::IntEnum => serializer.write_integer(schema, self.as_integer().unwrap()),
-            ShapeType::List => self.as_list().unwrap().serialize_with_schema(schema, serializer),
-            ShapeType::Map => self.as_map().unwrap().serialize_with_schema(schema, serializer),
+            ShapeType::List => self
+                .as_list()
+                .unwrap()
+                .serialize_with_schema(schema, serializer),
+            ShapeType::Map => self
+                .as_map()
+                .unwrap()
+                .serialize_with_schema(schema, serializer),
             ShapeType::Structure | ShapeType::Union => {
                 let document_map = self.as_map().unwrap();
                 let mut struct_serializer = serializer.write_struct(schema, self.size())?;
@@ -52,7 +74,7 @@ impl SerializeWithSchema for Document {
     }
 }
 
-impl <T: SerializableShape> From<T> for Document {
+impl<T: SerializableShape> From<T> for Document {
     fn from(value: T) -> Self {
         let mut doc_parser = DocumentParser::new();
         // TODO: Should this be fallible? I think it should always work?
@@ -99,22 +121,18 @@ impl<'a> Serializer for &'a mut DocumentParser {
                 schema: schema.clone(),
                 value: DocumentValue::Map(IndexMap::new()),
                 discriminator: Some(schema.id().clone()),
-            }
+            },
         })
     }
 
-    fn write_map(
-        self,
-        schema: &SchemaRef,
-        len: usize,
-    ) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error> {
         Ok(InnerParser {
             parser: self,
             document: Document {
                 schema: schema.clone(),
                 value: DocumentValue::Map(IndexMap::with_capacity(len)),
                 discriminator: Some(schema.id().clone()),
-            }
+            },
         })
     }
 
@@ -226,11 +244,7 @@ impl<'a> Serializer for &'a mut DocumentParser {
         Ok(())
     }
 
-    fn write_string(
-        self,
-        schema: &SchemaRef,
-        value: &str,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
         self.set_document(Document {
             schema: schema.clone(),
             value: DocumentValue::String(value.to_string()),
@@ -239,11 +253,7 @@ impl<'a> Serializer for &'a mut DocumentParser {
         Ok(())
     }
 
-    fn write_blob(
-        self,
-        schema: &SchemaRef,
-        value: &ByteBuffer,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         self.set_document(Document {
             schema: schema.clone(),
             value: DocumentValue::Blob(value.clone()),
@@ -252,11 +262,7 @@ impl<'a> Serializer for &'a mut DocumentParser {
         Ok(())
     }
 
-    fn write_timestamp(
-        self,
-        schema: &SchemaRef,
-        value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
         self.set_document(Document {
             schema: schema.clone(),
             value: DocumentValue::Timestamp(value.clone()),
@@ -392,11 +398,11 @@ impl StructSerializer for InnerParser<'_> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::LazyLock;
     use super::*;
-    use crate::{lazy_member_schema, lazy_schema, traits};
-    use crate::schema::{Schema, ShapeId};
     use crate::prelude::*;
+    use crate::schema::{Schema, ShapeId};
+    use crate::{lazy_member_schema, lazy_schema, traits};
+    use std::sync::LazyLock;
 
     lazy_schema!(
         MAP_SCHEMA,
@@ -446,7 +452,11 @@ mod tests {
     }
 
     impl SerializeWithSchema for SerializeMe {
-        fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+        fn serialize_with_schema<S: Serializer>(
+            &self,
+            schema: &SchemaRef,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 2)?;
             ser.serialize_member(&MEMBER_A, &self.member_a)?;
             ser.serialize_member(&MEMBER_B, &self.member_b)?;

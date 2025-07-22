@@ -3,9 +3,9 @@
 use crate::schema::{DocumentValue, NumberInteger, NumberValue};
 use crate::schema::{Schema, SchemaRef, ShapeId, SmithyTrait, StaticTraitId};
 use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
+use bigdecimal::BigDecimal;
 use std::fmt::Display;
 use std::sync::LazyLock;
-
 // =============================
 // Prelude Shape Schemas
 // =============================
@@ -377,5 +377,43 @@ impl SmithyTrait for EndpointTrait {
 
     fn value(&self) -> &DocumentValue {
         &self.value
+    }
+}
+
+/////////////////////////////////////////////////
+// Constraint Traits
+/////////////////////////////////////////////////
+// TODO: ADD ALL CONSTRAINT TRAITS WITH NICE BUILDERS
+#[derive(Debug)]
+pub struct RangeTrait {
+    pub min: Option<BigDecimal>,
+    pub max: Option<BigDecimal>,
+}
+static_trait_id!(RangeTrait, RANGE_TRAIT_ID, "smithy.api#range");
+
+impl SmithyTrait for RangeTrait {
+    fn id(&self) -> &ShapeId {
+        RangeTrait::trait_id()
+    }
+
+    fn value(&self) -> &DocumentValue {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub struct LengthTrait {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+static_trait_id!(LengthTrait, LENGTH_TRAIT_ID, "smithy.api#length");
+
+impl SmithyTrait for LengthTrait {
+    fn id(&self) -> &ShapeId {
+        LengthTrait::trait_id()
+    }
+
+    fn value(&self) -> &DocumentValue {
+        todo!()
     }
 }

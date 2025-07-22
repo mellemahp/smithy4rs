@@ -1,0 +1,818 @@
+//! # Validation
+//!
+//! Validation allows us to compare a shape against a set of constraints.
+//!
+//! ## Some basic requirements
+//!
+//! Validation in `smithy4rs` has a few fundamental requirements:
+//! - Validation needs to occur AFTER deserialization -- Validation should occur only
+//!   once all data has been properly unmarshalled into the ShapeBuilder. Multiple different
+//!   sources could be deserialized into a single shape definition, so ALL deserialization
+//!   must be completed before validation can occur. This also avoids validating multiple times
+//!   if multiple sources are used. It does unfortunately mean that a second pass over the
+//!   data is required, but I believe that is a worthwhile tradeoff.
+//! - Validation and deserialization errors should be distinct (i.e. no shared trait) -- This
+//!   allows users to clearly distinguish where issues occured in a processing pipeline
+//! - Validation should aggregate all errors from all nested types -- Users should get a single
+//!   error for _ALL_ of their validation errors so they can fix them all at once.
+//!
+//! ## Build and Validation
+//!
+//! For `smithy4rs`, [`Builder`] implementations are built when validated. We do not
+//! want to allow a user to construct an invalid shape.
+//! If you have a different definition of "invalid" that is fine, but you have to encode that in a
+//! [`Validator`] implementation.  For example, if you don't care if a response from a
+//! server missed a `@required` value, then you could create a `clientValidator` that encodes
+//! that mode/behavior.
+//!
+//! #### Basic user experience
+//!
+//! Basically, I expect shape construction to look like:
+//! ```rust, ignore
+//! let shape = Shape::builder()
+//!     .deserialize(deserializer)? // this will raise any deserialization errors
+//!     .build(validator // optional)? // this with raise any build/validation errors
+//! ```
+//!
+//! This allows us to neatly separate validation and serialization exceptions so we can
+//! clearly understand _where_ in the request/response pipeline an error occured.
+//!
+//! Ok... more examples. As with Smithy-java we want to be able to
+//! ```rust,ignore
+//! use std::fmt::Error;
+//! use smithy4rs_core::errors;
+//! use smithy4rs_core::schema::SchemaRef;
+//! use smithy4rs_core::serde::validation::*;
+//!
+//!  /// Example type
+//! struct Test {
+//!     a: Option<String>,
+//!     nest: Nested
+//! }
+//!
+//! struct TestBuilder {
+//!     a: Option<String>,
+//!     b: Option<Nested>
+//! }
+//!
+//! struct Nested {
+//!     c: String
+//! }
+//!
+//! struct NestedBuilder {
+//!     c: Option<String>
+//! }
+//! static MEMBER_A: &SchemaRef = todo!();
+//! static MEMBER_B: &SchemaRef = todo!();
+//! /// NOTE: Consumes self
+//! impl TestBuilder {
+//! fn build_impl(self, validator: &mut impl Validator) -> Result<Self, ValidationErrors> {
+//!     let errors = ValidationErrors::new();
+//!     let value = Self {
+//!         a: validator.validate(&MEMBER_A, self.a).map_err(errors::extend),
+//!         b: validator.validate_required(&MEMBER_B, self.b).map_err(errors::extend)
+//!     };
+//!     if errors.is_empty() {
+//!         Ok(value)
+//!     } else {
+//!         Err(errors)
+//!     }
+//!  }
+//! }
+//! ```
+
+use crate::schema::{Document, SchemaRef, ShapeId, ShapeType};
+use bigdecimal::BigDecimal;
+use bytebuffer::ByteBuffer;
+use indexmap::IndexMap;
+use num_bigint::BigInt;
+use std::error::Error;
+use std::fmt::Display;
+use std::marker::PhantomData;
+use std::time::Instant;
+use thiserror::Error;
+use crate::serde::se::{ListSerializer, SerializeWithSchema};
+use crate::serde::shapes::{Builder, ShapeBuilder};
+
+macro_rules! check_type {
+    ($schema:ident, $expected:path) => {
+        if $schema.shape_type() != &$expected {
+            return Err(ValidationErrors::from(ValidationError::invalid_type(
+                $schema, $expected,
+            )));
+        }
+    };
+}
+
+pub trait Validate: Send + 'static {
+    type Value;
+    type ValidationMode: ValidationMode<Self>;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self::Value, ValidationErrors> {
+        Self::ValidationMode::validate(self, schema, validator)
+    }
+}
+pub(crate) trait ValidationMode<I: ValidateImpl> {
+    fn validate<V: Validator>(
+        implementation: I,
+        schema: &SchemaRef,
+        validator: V
+    ) -> Result<I::Value, ValidationErrors>;
+}
+
+pub struct Mutate<V: ValidateImpl>(PhantomData<V>);
+pub struct InPlace<V: ValidateImpl>(PhantomData<V>);
+impl <I: ValidateImpl> ValidationMode<I> for Mutate<I> {
+    #[inline]
+    fn validate<V: Validator>(
+        implementation: I,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<I::Value, ValidationErrors> {
+        implementation.validate_and_move(schema, validator)
+    }
+}
+impl <I: ValidateImpl> ValidationMode<I> for InPlace<I> {
+    #[inline]
+    fn validate<V: Validator>(
+        implementation: I,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<I::Value, ValidationErrors> {
+        implementation.validate_in_place(schema, validator)
+    }
+}
+
+pub trait ValidateImpl {
+    type Value;
+
+    /// Validate the value without moving or mutating.
+    fn validate_in_place<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self::Value, ValidationErrors>;
+
+    /// Validate a value and mutate the result.
+    /// *Note*: This generally should not be implemented by users and by default
+    /// will raise an error.
+    fn validate_and_move<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self::Value, ValidationErrors> {
+        Err(ValidationErrors::from(ValidationError::))
+    }
+}
+
+
+/// Shape that can be validated by a validator.
+pub trait Validate {
+    /// Value of type returned by validator. Should mostly be `Self`.
+    type Value;
+
+    /// Validate a shape given its schema and a validator.
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self::Value, ValidationErrors>;
+}
+
+// TODO: How to handle max allowed errors and max depth? Dont want to allow huge reccursion
+/// NOTE: validate_struct is not needed here as that is handled by the builders.
+pub trait Validator: Sized {
+
+    //type ValidateList: ListValidator;
+
+    //type ValidateMap: MapValidator;
+
+    /// Validates a required field, returning a non-optional value.
+    ///
+    /// Default implementation errors on missing values.
+    fn validate_required<V: Validate>(
+        self,
+        schema: &SchemaRef,
+        value: Option<V>,
+    ) -> Result<V::Value, ValidationErrors> {
+        let Some(value) = value else {
+            return Err(ValidationError::required(schema).into());
+        };
+        value.validate(schema, self)
+    }
+
+    fn validate_optional<V: Validate>(
+        self,
+        schema: &SchemaRef,
+        value: Option<V>,
+    ) -> Result<Option<V::Value>, ValidationErrors> {
+        if let Some(value) = value {
+            value.validate(schema, self).map(|v| Some(v))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn validate_blob(
+        self,
+        schema: &SchemaRef,
+        blob: ByteBuffer,
+    ) -> Result<ByteBuffer, ValidationErrors> {
+        check_type!(schema, ShapeType::Blob);
+        Ok(blob)
+    }
+
+    fn validate_boolean(
+        self,
+        schema: &SchemaRef,
+        boolean: bool
+    ) -> Result<bool, ValidationErrors> {
+        check_type!(schema, ShapeType::Boolean);
+        Ok(boolean)
+    }
+
+    fn validate_string(
+        self,
+        schema: &SchemaRef,
+        string: String,
+    ) -> Result<String, ValidationErrors> {
+        check_type!(schema, ShapeType::String);
+        // TODO: By default should check length and pattern
+        Ok(string)
+    }
+
+    fn validate_timestamp(
+        self,
+        schema: &SchemaRef,
+        timestamp: Instant,
+    ) -> Result<Instant, ValidationErrors> {
+        check_type!(schema, ShapeType::Timestamp);
+        Ok(timestamp)
+    }
+
+    /// TODO: Could these delegate to the largest int validation?
+    /// TODO: All the number impls should check range.
+    fn validate_byte(
+        self,
+        schema: &SchemaRef,
+        byte: i8
+    ) -> Result<i8, ValidationErrors> {
+        check_type!(schema, ShapeType::Byte);
+        Ok(byte)
+    }
+
+    fn validate_short(
+        self,
+        schema: &SchemaRef,
+        short: i16
+    ) -> Result<i16, ValidationErrors> {
+        check_type!(schema, ShapeType::Short);
+        Ok(short)
+    }
+
+    fn validate_integer(
+        self,
+        schema: &SchemaRef,
+        integer: i32
+    ) -> Result<i32, ValidationErrors> {
+        check_type!(schema, ShapeType::Integer);
+        Ok(integer)
+    }
+
+    fn validate_long(
+        self,
+        schema: &SchemaRef,
+        long: i64
+    ) -> Result<i64, ValidationErrors> {
+        check_type!(schema, ShapeType::Long);
+        Ok(long)
+    }
+
+    fn validate_float(
+        self,
+        schema: &SchemaRef,
+        float: f32
+    ) -> Result<f32, ValidationErrors> {
+        check_type!(schema, ShapeType::Float);
+        Ok(float)
+    }
+
+    fn validate_double(
+        self,
+        schema: &SchemaRef,
+        double: f64
+    ) -> Result<f64, ValidationErrors> {
+        check_type!(schema, ShapeType::Double);
+        Ok(double)
+    }
+
+    fn validate_big_integer(
+        self,
+        schema: &SchemaRef,
+        big_int: BigInt,
+    ) -> Result<BigInt, ValidationErrors> {
+        check_type!(schema, ShapeType::BigInteger);
+        Ok(big_int)
+    }
+
+    fn validate_big_decimal(
+        self,
+        schema: &SchemaRef,
+        big_decimal: BigDecimal,
+    ) -> Result<BigDecimal, ValidationErrors> {
+        check_type!(schema, ShapeType::BigDecimal);
+        Ok(big_decimal)
+    }
+
+    fn validate_document(
+        self,
+        schema: &SchemaRef,
+        document: Document,
+    ) -> Result<Document, ValidationErrors> {
+        // TODO: How should this be handled?
+        check_type!(schema, ShapeType::Document);
+        Ok(document)
+    }
+
+    // TODO: Should the enums check if the value is out of expected for validation? Could just check if
+    //       the value is ::__Unknown?
+    /// TODO: Should these check string validation?
+    fn validate_enum<E>(
+        self,
+        schema: &SchemaRef,
+        value: E
+    ) -> Result<E, ValidationErrors> {
+        check_type!(schema, ShapeType::Enum);
+        Ok(value)
+    }
+
+    fn validate_int_enum<E>(
+        self,
+        schema: &SchemaRef,
+        value: E
+    ) -> Result<E, ValidationErrors> {
+        check_type!(schema, ShapeType::IntEnum);
+        Ok(value)
+    }
+
+    fn validate_list<I: Validate>(
+        self,
+        schema: &SchemaRef,
+        list: Vec<I>,
+    ) -> Result<Vec<I::Value>, ValidationErrors>
+    {
+        check_type!(schema, ShapeType::List);
+        // TODO: Check size constraints and sparseness?
+        let Some(item_schema) = schema.get_member("member") else {
+            Err(ValidationError::expected_member(schema, "member"))?
+        };
+        let mut errors = ValidationErrors::new();
+        // Is there a way to avoid the extra allocation?
+        let mut result = Vec::new();
+        for item in list.into_iter() {
+            match item.validate(item_schema, self) {
+                Ok(value) => result.push(value),
+                Err(e) => errors.extend(e),
+            }
+        }
+        if errors.is_empty() {
+            Ok(result)
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn validate_map<V: Validate>(
+        self,
+        schema: &SchemaRef,
+        map: IndexMap<String, V>,
+    ) -> Result<IndexMap<String, V::Value>, ValidationErrors>
+    {
+        check_type!(schema, ShapeType::Map);
+        // TODO: Check size constraints and sparseness?
+        let Some(value_schema) = schema.get_member("value") else {
+            return Err(ValidationError::expected_member(schema, "value").into());
+        };
+        let mut errors = ValidationErrors::new();
+
+        // Is there a way to avoid the extra allocation?
+        let mut result = IndexMap::new();
+        for (k, item) in map.into_iter() {
+            match item.validate(value_schema, self) {
+                Ok(v) => {
+                    let _ = result.insert(k, v);
+                }
+                Err(error) => errors.extend(error),
+            };
+        }
+        if errors.is_empty() {
+            Ok(result)
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn validate_struct<V: Validate>(
+        &mut self,
+        _schema: &SchemaRef,
+        _builder: V,
+    ) -> Result<V::Value, ValidationErrors> {
+        // NOTE: This validates a _built_ structure, not a stucture builder!
+        // TODO: Check type?
+        // TODO: are there any structure-level constraints that might need validation?
+        todo!()
+    }
+}
+
+// trait ItemValidator {
+//     /// Serialize a sequence element.
+//     fn serialize_element<T>(
+//         &mut self,
+//         element_schema: &SchemaRef,
+//         value: &T,
+//     ) -> Result<(), Self::Error>
+//     where
+//         T: ?Sized + SerializeWithSchema;
+// }
+
+/////////////////////////////////////////////////////////////////////////////////
+// `Validate` Implementations
+/////////////////////////////////////////////////////////////////////////////////
+
+// Blanket implementation for Shape builders.
+// Validating a shape builder will build and validate it's contained values.
+// TODO: Get blanket impl working. May require marker traits.
+// impl <B: ShapeBuilder<S>, S> Validate for B {
+//     // Return the built shape
+//     type Value = S;
+//
+//     fn validate<V: Validator>(self, _: &SchemaRef, validator: &V) -> Result<Self::Value, ValidationErrors> {
+//         self.build_with_validator(validator)
+//     }
+// }
+
+impl Validate for ByteBuffer {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_blob(schema, self)
+    }
+}
+
+impl Validate for bool {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_boolean(schema, self)
+    }
+}
+
+impl Validate for String {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<String, ValidationErrors> {
+        validator.validate_string(schema, self)
+    }
+}
+
+impl Validate for Instant {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_timestamp(schema, self)
+    }
+}
+
+impl Validate for i8 {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_byte(schema, self)
+    }
+}
+
+impl Validate for i16 {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_short(schema, self)
+    }
+}
+
+impl Validate for i32 {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_integer(schema, self)
+    }
+}
+
+impl Validate for i64 {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_long(schema, self)
+    }
+}
+
+impl Validate for f32 {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_float(schema, self)
+    }
+}
+
+impl Validate for f64 {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_double(schema, self)
+    }
+}
+
+impl Validate for BigDecimal {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_big_decimal(schema, self)
+    }
+}
+
+impl Validate for BigInt {
+    type Value = Self;
+    type Mode = InPlace;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_big_integer(schema, self)
+    }
+}
+
+/// List validation thinking....
+/// When validating everything except Builders the fn for lists is like
+/// ```rust, ignore
+/// use smithy4rs_core::schema::SchemaRef;
+/// use smithy4rs_core::serde::validation::*;
+///
+/// fn myfn<V: Validate, O: Validator>(
+///     list: Vec<V>,
+///     validator: O
+/// ) -> Result<Vec<V>, ValidationErrors> {
+///     let item_schema: &SchemaRef = &smithy4rs_core::prelude::STRING;
+///     let errors = ValidationErrors::new();
+///     for item in list {
+///         item.validate_in_place(item_schema, &validator)
+///     }
+///
+/// }
+/// ```
+
+
+// TODO: Is there some way to validate some of these in-place rather than
+//       duplicating list?
+impl<V: Validate<Mode=InPlace>> Validate for Vec<V> {
+    type Value = Vec<V::Value>;
+    type Mode = InPlace;
+
+    fn validate<T: Validator>(
+        self,
+        _schema: &SchemaRef,
+        _validator: T,
+    ) -> Result<Self::Value, ValidationErrors> {
+        todo!()
+    }
+}
+
+impl<V: Validate<Mode=Mutate>> Validate for Vec<V> {
+    type Value = Vec<V::Value>;
+    type Mode = Mutate;
+
+    fn validate<T: Validator>(
+        self,
+        _schema: &SchemaRef,
+        _validator: T,
+    ) -> Result<Self::Value, ValidationErrors> {
+        todo!()
+    }
+}
+
+impl<V: Validate> Validate for IndexMap<String, V>
+{
+    type Value = IndexMap<String, V::Value>;
+
+    fn validate<T: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: T,
+    ) -> Result<Self, ValidationErrors> {
+        validator.validate_map(schema, self)
+    }
+}
+
+/// TODO: VALIDATE FOR DOCUMENT
+
+//////////////////////////////////////////////////////////////////////////////
+// Pre-built Validators
+//////////////////////////////////////////////////////////////////////////////
+
+pub struct DefaultValidator {}
+impl DefaultValidator {
+    pub(crate) const fn new() -> Self {
+        DefaultValidator {}
+    }
+}
+impl Validator for &mut DefaultValidator {}
+
+// TODO: Add an empty, pass-through validator.
+
+// TODO: Also add a tracking validator that is infallible, but collects all errors.
+
+// TODO: How to validate built shape?
+
+//////////////////////////////////////////////////////////////////////////////
+// ERRORS
+//////////////////////////////////////////////////////////////////////////////
+
+// Aggregated list of all validation errors encountered while building a shape.
+#[derive(Error, Debug)]
+pub struct ValidationErrors {
+    errors: Vec<ValidationError>,
+}
+
+impl Display for ValidationErrors {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!();
+    }
+}
+
+impl ValidationErrors {
+    pub const fn new() -> Self {
+        Self { errors: Vec::new() }
+    }
+
+    pub fn extend(&mut self, other: ValidationErrors) {
+        self.errors.extend(other.errors);
+    }
+
+    pub fn add(&mut self, error: ValidationError) {
+        self.errors.push(error);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
+    }
+}
+
+#[derive(Debug)]
+pub struct ValidationError {
+    path: ShapeId,
+    code: Box<dyn ValidationErrorCode>,
+}
+impl Display for ValidationError {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl ValidationError {
+    fn custom(schema: &SchemaRef, code: Box<dyn ValidationErrorCode>) -> Self {
+        Self {
+            path: schema.id().clone(),
+            code,
+        }
+    }
+
+    fn invalid_type(schema: &SchemaRef, expected: ShapeType) -> Self {
+        Self {
+            path: schema.id().clone(),
+            code: Box::new(SmithyConstraints::InvalidType(
+                *schema.shape_type(),
+                expected,
+            )),
+        }
+    }
+
+    fn expected_member(schema: &SchemaRef, expected: &str) -> Self {
+        Self {
+            path: schema.id().clone(),
+            code: Box::new(SmithyConstraints::ExpectedMember(expected.to_owned())),
+        }
+    }
+
+    fn required(schema: &SchemaRef) -> Self {
+        Self {
+            path: schema.id().clone(),
+            code: Box::new(SmithyConstraints::Required),
+        }
+    }
+
+    fn unsupported(schema: &SchemaRef) -> Self {
+        Self {
+            path: schema.id().clone(),
+            code: Box::new(SmithyConstraints::Required),
+        }
+    }
+}
+
+impl From<ValidationError> for ValidationErrors {
+    fn from(field: ValidationError) -> Self {
+        let mut vec: Vec<ValidationError> = Vec::with_capacity(1);
+        vec.push(field);
+        ValidationErrors { errors: vec }
+    }
+}
+
+/// Marker trait for validation errors.
+pub trait ValidationErrorCode: Error {}
+
+#[derive(Error, Debug)]
+pub enum SmithyConstraints {
+    /// This error should only occur for manually constructed schemas.
+    /// It should be unreachable in generated shapes.
+    #[error("Expected member: {0}")]
+    ExpectedMember(String),
+    /// This error should only ever occur for manual schema interactions,
+    /// not for automatically generated Shapes.
+    #[error("Invalid Shape type. Expected {0:?}, recieved {1:?}.")]
+    InvalidType(ShapeType, ShapeType),
+    #[error("Field is Required.")]
+    Required,
+    // TODO: Better error messages when min/max None
+    #[error("Size: {0} does not conform to @length constraint. Expected between {1} and {2}.")]
+    Length(usize, usize, usize),
+    #[error("Type did not conform to expected pattern {0}")]
+    Pattern(String),
+    // TODO: Better error messages when min/max None
+    #[error("Size: {0} does not conform to @range constraint. Expected between {1} and {2}.")]
+    Range(BigDecimal, BigDecimal, BigDecimal),
+    // Could this be security risk if non-unique are returned?
+    #[error("Items in collection should be unique.")]
+    UniqueItems,
+    // TODO: SHould this be in a different enum?
+    #[error("Unsupported validation operation.")]
+    Unsupported,
+}
+impl ValidationErrorCode for SmithyConstraints {}

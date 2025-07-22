@@ -2,8 +2,8 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_errors_doc)]
 
-use crate::schema::{Document, Schema, SchemaRef};
 use crate::schema::SchemaShape;
+use crate::schema::{Document, Schema, SchemaRef};
 use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
 use indexmap::IndexMap;
 use std::error::Error;

@@ -288,6 +288,7 @@ impl Document {
     }
 
     #[must_use]
+    // TODO: could the vec be replaced with slice?
     pub fn as_list(&self) -> Option<&Vec<Document>> {
         if let DocumentValue::List(document_list) = &self.value {
             Some(document_list)

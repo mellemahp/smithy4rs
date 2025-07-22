@@ -1,11 +1,10 @@
 mod adapter;
-pub mod builders;
 pub mod deserializers;
 mod documents;
 mod fmt;
 pub mod serializers;
 mod shapes;
-
+pub mod validation;
 //pub use documents::*;
 
 pub use deserializers as de;

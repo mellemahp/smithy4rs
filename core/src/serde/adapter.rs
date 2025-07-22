@@ -245,8 +245,8 @@ impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
     where
         S: serde::Serializer,
     {
-        let adapter = SerdeAdapter::new(serializer);
-        self.1.serialize_with_schema(self.0, adapter)
+        self.1
+            .serialize_with_schema(self.0, SerdeAdapter::new(serializer))
     }
 }
 
