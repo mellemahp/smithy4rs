@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports, unused_variables)]
 
 use crate::schema::{
     Document, DocumentError, DocumentValue, NumberFloat, NumberInteger, NumberValue, SchemaRef,

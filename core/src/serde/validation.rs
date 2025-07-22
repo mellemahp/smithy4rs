@@ -1,3 +1,5 @@
+#![allow(unused_variables, unused_imports)]
+
 //! # Validation
 //!
 //! Validation allows us to compare a shape against a set of constraints.
@@ -91,7 +93,7 @@ use std::fmt::Display;
 use std::marker::PhantomData;
 use std::time::Instant;
 use thiserror::Error;
-use crate::serde::se::{ListSerializer, SerializeWithSchema};
+use crate::serde::se::ListSerializer;
 use crate::serde::shapes::{Builder, ShapeBuilder};
 
 macro_rules! check_type {
@@ -104,31 +106,40 @@ macro_rules! check_type {
     };
 }
 
-pub trait Validate: Send + 'static {
-    type Value;
-    type ValidationMode: ValidationMode<Self>;
+pub trait Validate: ValidateImpl + Send + 'static {
+    type ValidationMode: ValidationMode;
 
+    /// Validate a shape given its schema and a validator.
     fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
-    ) -> Result<Self::Value, ValidationErrors> {
+    ) -> Result<<Self as ValidateImpl>::Value, ValidationErrors> {
         Self::ValidationMode::validate(self, schema, validator)
     }
 }
-pub(crate) trait ValidationMode<I: ValidateImpl> {
-    fn validate<V: Validator>(
+
+/// Allows us to support multiple possible blanket implementations.
+///
+/// This is mostly useful for handling the builder-collection case where the
+/// validation mutates a collection of builders by building and validating them.
+///
+/// This is based on https://www.greyblake.com/blog/alternative-blanket-implementations-for-single-rust-trait/
+///
+// TODO: Should this only be implementable by shapes in this crate?
+pub trait ValidationMode {
+    fn validate<I: ValidateImpl, V: Validator>(
         implementation: I,
         schema: &SchemaRef,
         validator: V
     ) -> Result<I::Value, ValidationErrors>;
 }
 
-pub struct Mutate<V: ValidateImpl>(PhantomData<V>);
-pub struct InPlace<V: ValidateImpl>(PhantomData<V>);
-impl <I: ValidateImpl> ValidationMode<I> for Mutate<I> {
+pub struct Mutate {}
+pub struct InPlace {}
+impl ValidationMode for Mutate {
     #[inline]
-    fn validate<V: Validator>(
+    fn validate<I: ValidateImpl, V: Validator>(
         implementation: I,
         schema: &SchemaRef,
         validator: V,
@@ -136,9 +147,9 @@ impl <I: ValidateImpl> ValidationMode<I> for Mutate<I> {
         implementation.validate_and_move(schema, validator)
     }
 }
-impl <I: ValidateImpl> ValidationMode<I> for InPlace<I> {
+impl ValidationMode for InPlace {
     #[inline]
-    fn validate<V: Validator>(
+    fn validate<I: ValidateImpl, V: Validator>(
         implementation: I,
         schema: &SchemaRef,
         validator: V,
@@ -147,7 +158,7 @@ impl <I: ValidateImpl> ValidationMode<I> for InPlace<I> {
     }
 }
 
-pub trait ValidateImpl {
+pub trait ValidateImpl: Sized {
     type Value;
 
     /// Validate the value without moving or mutating.
@@ -157,39 +168,25 @@ pub trait ValidateImpl {
         validator: V,
     ) -> Result<Self::Value, ValidationErrors>;
 
-    /// Validate a value and mutate the result.
+    /// Validate a value and mutate the result. This is primarily used to
+    /// validate and build ['ShapeBuilder']'s.
+    ///
     /// *Note*: This generally should not be implemented by users and by default
     /// will raise an error.
     fn validate_and_move<V: Validator>(
         self,
         schema: &SchemaRef,
-        validator: V,
+        _validator: V,
     ) -> Result<Self::Value, ValidationErrors> {
-        Err(ValidationErrors::from(ValidationError::))
+        Err(ValidationErrors::from(ValidationError::unsupported(schema)))
     }
 }
 
-
-/// Shape that can be validated by a validator.
-pub trait Validate {
-    /// Value of type returned by validator. Should mostly be `Self`.
-    type Value;
-
-    /// Validate a shape given its schema and a validator.
-    fn validate<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        validator: V,
-    ) -> Result<Self::Value, ValidationErrors>;
-}
-
+// TODO: could this be a serializer?
 // TODO: How to handle max allowed errors and max depth? Dont want to allow huge reccursion
 /// NOTE: validate_struct is not needed here as that is handled by the builders.
 pub trait Validator: Sized {
-
-    //type ValidateList: ListValidator;
-
-    //type ValidateMap: MapValidator;
+    type ItemValidator: ItemValidator;
 
     /// Validates a required field, returning a non-optional value.
     ///
@@ -359,62 +356,17 @@ pub trait Validator: Sized {
         Ok(value)
     }
 
-    fn validate_list<I: Validate>(
+    fn validate_list(
         self,
         schema: &SchemaRef,
-        list: Vec<I>,
-    ) -> Result<Vec<I::Value>, ValidationErrors>
-    {
-        check_type!(schema, ShapeType::List);
-        // TODO: Check size constraints and sparseness?
-        let Some(item_schema) = schema.get_member("member") else {
-            Err(ValidationError::expected_member(schema, "member"))?
-        };
-        let mut errors = ValidationErrors::new();
-        // Is there a way to avoid the extra allocation?
-        let mut result = Vec::new();
-        for item in list.into_iter() {
-            match item.validate(item_schema, self) {
-                Ok(value) => result.push(value),
-                Err(e) => errors.extend(e),
-            }
-        }
-        if errors.is_empty() {
-            Ok(result)
-        } else {
-            Err(errors)
-        }
-    }
+        size: usize,
+    ) -> Result<Self::ItemValidator, ValidationErrors>;
 
-    fn validate_map<V: Validate>(
+    fn validate_map(
         self,
         schema: &SchemaRef,
-        map: IndexMap<String, V>,
-    ) -> Result<IndexMap<String, V::Value>, ValidationErrors>
-    {
-        check_type!(schema, ShapeType::Map);
-        // TODO: Check size constraints and sparseness?
-        let Some(value_schema) = schema.get_member("value") else {
-            return Err(ValidationError::expected_member(schema, "value").into());
-        };
-        let mut errors = ValidationErrors::new();
-
-        // Is there a way to avoid the extra allocation?
-        let mut result = IndexMap::new();
-        for (k, item) in map.into_iter() {
-            match item.validate(value_schema, self) {
-                Ok(v) => {
-                    let _ = result.insert(k, v);
-                }
-                Err(error) => errors.extend(error),
-            };
-        }
-        if errors.is_empty() {
-            Ok(result)
-        } else {
-            Err(errors)
-        }
-    }
+        size: usize,
+    ) -> Result<Self::ItemValidator, ValidationErrors>;
 
     fn validate_struct<V: Validate>(
         &mut self,
@@ -428,16 +380,13 @@ pub trait Validator: Sized {
     }
 }
 
-// trait ItemValidator {
-//     /// Serialize a sequence element.
-//     fn serialize_element<T>(
-//         &mut self,
-//         element_schema: &SchemaRef,
-//         value: &T,
-//     ) -> Result<(), Self::Error>
-//     where
-//         T: ?Sized + SerializeWithSchema;
-// }
+pub trait ItemValidator {
+    fn validate_item<V: Validate>(
+        &mut self,
+        item_schema: &SchemaRef,
+        value: V,
+    ) -> Result<V::Value, ValidationErrors>;
+}
 
 /////////////////////////////////////////////////////////////////////////////////
 // `Validate` Implementations
@@ -455,11 +404,11 @@ pub trait Validator: Sized {
 //     }
 // }
 
-impl Validate for ByteBuffer {
+// TODO: Make macro for these
+impl ValidateImpl for ByteBuffer {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -468,11 +417,14 @@ impl Validate for ByteBuffer {
     }
 }
 
-impl Validate for bool {
-    type Value = Self;
-    type Mode = InPlace;
+impl Validate for ByteBuffer {
+    type ValidationMode = InPlace;
+}
 
-    fn validate<V: Validator>(
+impl ValidateImpl for bool {
+    type Value = Self;
+
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -480,38 +432,44 @@ impl Validate for bool {
         validator.validate_boolean(schema, self)
     }
 }
+impl Validate for bool {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for String {
+impl ValidateImpl for String {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
-        validator: V,
-    ) -> Result<String, ValidationErrors> {
+        validator: V
+    ) -> Result<Self::Value, ValidationErrors> {
         validator.validate_string(schema, self)
     }
 }
+impl Validate for String {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for Instant {
+impl ValidateImpl for Instant {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
-        validator: V,
-    ) -> Result<Self, ValidationErrors> {
+        validator: V
+    ) -> Result<Self::Value, ValidationErrors> {
         validator.validate_timestamp(schema, self)
     }
 }
+impl Validate for Instant {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for i8 {
+impl ValidateImpl for i8 {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -519,12 +477,14 @@ impl Validate for i8 {
         validator.validate_byte(schema, self)
     }
 }
+impl Validate for i8 {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for i16 {
+impl ValidateImpl for i16 {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -532,12 +492,14 @@ impl Validate for i16 {
         validator.validate_short(schema, self)
     }
 }
+impl Validate for i16 {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for i32 {
+impl ValidateImpl for i32 {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -545,12 +507,14 @@ impl Validate for i32 {
         validator.validate_integer(schema, self)
     }
 }
+impl Validate for i32 {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for i64 {
+impl ValidateImpl for i64 {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -558,12 +522,14 @@ impl Validate for i64 {
         validator.validate_long(schema, self)
     }
 }
+impl Validate for i64 {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for f32 {
+impl ValidateImpl for f32 {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -571,12 +537,14 @@ impl Validate for f32 {
         validator.validate_float(schema, self)
     }
 }
+impl Validate for f32 {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for f64 {
+impl ValidateImpl for f64 {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -584,12 +552,14 @@ impl Validate for f64 {
         validator.validate_double(schema, self)
     }
 }
+impl Validate for f64 {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for BigDecimal {
+impl ValidateImpl for BigDecimal {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
@@ -597,18 +567,23 @@ impl Validate for BigDecimal {
         validator.validate_big_decimal(schema, self)
     }
 }
+impl Validate for BigDecimal {
+    type ValidationMode = InPlace;
+}
 
-impl Validate for BigInt {
+impl ValidateImpl for BigInt {
     type Value = Self;
-    type Mode = InPlace;
 
-    fn validate<V: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
         schema: &SchemaRef,
         validator: V,
     ) -> Result<Self, ValidationErrors> {
         validator.validate_big_integer(schema, self)
     }
+}
+impl Validate for BigInt {
+    type ValidationMode = InPlace;
 }
 
 /// List validation thinking....
@@ -631,45 +606,64 @@ impl Validate for BigInt {
 /// ```
 
 
-// TODO: Is there some way to validate some of these in-place rather than
-//       duplicating list?
-impl<V: Validate<Mode=InPlace>> Validate for Vec<V> {
-    type Value = Vec<V::Value>;
-    type Mode = InPlace;
+impl<I: Validate> ValidateImpl for Vec<I> {
+    type Value = Vec<I::Value>;
 
-    fn validate<T: Validator>(
+    fn validate_in_place<V: Validator>(
         self,
-        _schema: &SchemaRef,
-        _validator: T,
+        schema: &SchemaRef,
+        validator: V,
+    ) -> Result<Self::Value, ValidationErrors> {
+        let mut item_validator = validator.validate_list(schema, self.len())?;
+        let Some(item_schema) = schema.get_member("member") else {
+            return Err(ValidationError::expected_member(schema, "member").into())
+        };
+        let mut errors = ValidationErrors::new();
+        for item in &self {
+            let _ = item_validator.validate_item(item_schema, item)
+                .map_err(|error| errors.extend(error));
+        }
+        if errors.is_empty() {
+            Ok(self)
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn validate_and_move<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V
     ) -> Result<Self::Value, ValidationErrors> {
         todo!()
     }
 }
-
-impl<V: Validate<Mode=Mutate>> Validate for Vec<V> {
-    type Value = Vec<V::Value>;
-    type Mode = Mutate;
-
-    fn validate<T: Validator>(
-        self,
-        _schema: &SchemaRef,
-        _validator: T,
-    ) -> Result<Self::Value, ValidationErrors> {
-        todo!()
-    }
+impl <I: Validate> Validate for Vec<I> {
+    type ValidationMode = I::ValidationMode;
 }
 
-impl<V: Validate> Validate for IndexMap<String, V>
+impl<V: Validate> ValidateImpl for IndexMap<String, V>
 {
     type Value = IndexMap<String, V::Value>;
 
-    fn validate<T: Validator>(
+    fn validate_in_place<T: Validator>(
         self,
         schema: &SchemaRef,
         validator: T,
-    ) -> Result<Self, ValidationErrors> {
-        validator.validate_map(schema, self)
+    ) -> Result<Self::Value, ValidationErrors> {
+        todo!()
     }
+
+    fn validate_and_move<T: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: T,
+    ) -> Result<Self::Value, ValidationErrors> {
+        todo!()
+    }
+}
+impl <V: Validate> Validate for IndexMap<String, V> {
+    type ValidationMode = V::ValidationMode;
 }
 
 /// TODO: VALIDATE FOR DOCUMENT
@@ -684,7 +678,43 @@ impl DefaultValidator {
         DefaultValidator {}
     }
 }
-impl Validator for &mut DefaultValidator {}
+impl <'a> Validator for &'a mut DefaultValidator {
+    type ItemValidator = DefaultItemValidator<'a>;
+
+    fn validate_list(
+        self,
+        schema: &SchemaRef,
+        size: usize
+    ) -> Result<Self::ItemValidator, ValidationErrors> {
+        check_type!(schema, ShapeType::List);
+        // TODO: Check length
+        Ok(DefaultItemValidator { validator: self })
+    }
+
+    fn validate_map(
+        self,
+        schema: &SchemaRef,
+        size: usize
+    ) -> Result<Self::ItemValidator, ValidationErrors> {
+        check_type!(schema, ShapeType::Map);
+        // TODO: check length
+        Ok(DefaultItemValidator { validator: self })
+    }
+}
+
+// TODO: This could handle the validation of uniqueness and sparseness!
+pub struct DefaultItemValidator<'a> {
+    validator: &'a mut DefaultValidator
+}
+impl ItemValidator for DefaultItemValidator<'_> {
+    fn validate_item<V: Validate>(
+        &mut self,
+        item_schema: &SchemaRef,
+        value: V,
+    ) -> Result<V::Value, ValidationErrors> {
+        value.validate(item_schema, &mut *self.validator)
+    }
+}
 
 // TODO: Add an empty, pass-through validator.
 

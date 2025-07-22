@@ -6,7 +6,6 @@ pub use schema::prelude;
 
 pub mod macros;
 pub mod serde;
-pub mod validation;
 
 // =========== Common Types ==========
 use std::sync::Arc;
