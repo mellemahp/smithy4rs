@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use crate::schema::Schema;
+use std::fmt::Display;
+use crate::schema::{Schema, SchemaRef};
 
 /// Immutable identifier for a shape in a Smithy model.
 ///
@@ -110,6 +111,35 @@ pub enum ShapeType {
     Resource,
     Operation,
 }
+impl Display for ShapeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShapeType::Blob => write!(f, "Blob"),
+            ShapeType::Boolean => write!(f, "Boolean"),
+            ShapeType::String => write!(f, "String"),
+            ShapeType::Timestamp => write!(f, "Timestamp"),
+            ShapeType::Byte => write!(f, "Byte"),
+            ShapeType::Short => write!(f, "Short"),
+            ShapeType::Integer => write!(f, "Integer"),
+            ShapeType::Long => write!(f, "Long"),
+            ShapeType::Float => write!(f, "Float"),
+            ShapeType::Double => write!(f, "Double"),
+            ShapeType::BigInteger => write!(f, "BigInteger"),
+            ShapeType::BigDecimal => write!(f, "BigDecimal"),
+            ShapeType::Document => write!(f, "Document"),
+            ShapeType::Enum => write!(f, "Enum"),
+            ShapeType::IntEnum => write!(f, "IntEnum"),
+            ShapeType::List => write!(f, "List"),
+            ShapeType::Map => write!(f, "Map"),
+            ShapeType::Structure => write!(f, "Structure"),
+            ShapeType::Union => write!(f, "Union"),
+            ShapeType::Member => write!(f, "Member"),
+            ShapeType::Service => write!(f, "Service"),
+            ShapeType::Resource => write!(f, "Resource"),
+            ShapeType::Operation => write!(f, "Operation"),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -161,6 +191,6 @@ mod tests {
 ///
 /// This schema is typically statically defined in generate code.
 pub trait SchemaShape {
-    /// Schema of this shape.
+    /// Get a reference to the Schema of this shape.
     fn schema(&self) -> &Schema;
 }

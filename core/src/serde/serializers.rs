@@ -15,11 +15,12 @@ use std::fmt::Display;
 /// with both a [`SchemaShape`], and [`SerializeWithSchema`] implementation.
 pub trait Serialize: SchemaShape + SerializeWithSchema {
     /// Serialize a shape with its pre-defined schema
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok<'_>, S::Error>;
 }
+
 // Blanket implementation of serialization for all Implement
 impl<T: SchemaShape + SerializeWithSchema> Serialize for T {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok<'_>, S::Error> {
         self.serialize_with_schema(self.schema(), serializer)
     }
 }
@@ -31,7 +32,7 @@ pub trait SerializeWithSchema {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error>;
+    ) -> Result<S::Ok<'_>, S::Error>;
 }
 
 /// List Serializer that can be called in a loop to serialize list values
@@ -138,13 +139,13 @@ pub trait Serializer: Sized {
     type Error: Error;
 
     /// Ok return type. Should almost always be ()
-    type Ok;
+    type Ok<'ok>;
 
     /// Type returned from [`write_list`] for serializing the contents of a
     /// list.
     ///
     /// [`write_list`]: #tymethod.write_list
-    type SerializeList: ListSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type SerializeList<'sl>: ListSerializer<Ok = Self::Ok<'sl>, Error = Self::Error>;
 
     /// Type returned from [`write_map`] for serializing the contents of a
     /// map.
@@ -175,62 +176,61 @@ pub trait Serializer: Sized {
     /// Begin to serialize a variably sized list. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
     /// `end`.
-    fn write_list(self, schema: &Schema, len: usize)
-    -> Result<Self::SerializeList, Self::Error>;
+    fn write_list<'a>(self, schema: &'a Schema, len: usize) -> Result<Self::SerializeList<'a>, Self::Error>;
 
     /// Serialize a `boolean`
-    fn write_boolean(self, schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error>;
+    fn write_boolean(self, schema: &Schema, value: bool) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize a byte (`i8`)
-    fn write_byte(self, schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error>;
+    fn write_byte(self, schema: &Schema, value: i8) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize a short (`i16`)
-    fn write_short(self, schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error>;
+    fn write_short(self, schema: &Schema, value: i16) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize an integer (`i32`)
-    fn write_integer(self, schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error>;
+    fn write_integer(self, schema: &Schema, value: i32) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize a long (`i64`)
-    fn write_long(self, schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error>;
+    fn write_long(self, schema: &Schema, value: i64) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize a float (`f32`)
-    fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error>;
+    fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize a double (`f64`)
-    fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error>;
+    fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Serialize a [`BigInt`]
-    fn write_big_integer(self, schema: &Schema, value: &BigInt)
-    -> Result<Self::Ok, Self::Error>;
+    fn write_big_integer<'a, 'b>(self, schema: &'a Schema, value: &'b BigInt)
+    -> Result<Self::Ok<'a>, Self::Error>;
 
     /// Serialize a [`BigDecimal`]
-    fn write_big_decimal(
+    fn write_big_decimal<'a, 'b>(
         self,
-        schema: &Schema,
-        value: &BigDecimal,
-    ) -> Result<Self::Ok, Self::Error>;
+        schema: &'a Schema,
+        value: &'b BigDecimal,
+    ) -> Result<Self::Ok<'a>, Self::Error>;
 
     /// Serialize a string (`&str`)
-    fn write_string(self, schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error>;
+    fn write_string<'a>(self, schema: &'a Schema, value: &'a str) -> Result<Self::Ok<'a>, Self::Error>;
 
     /// Serialize a blob (i.e. a buffer)
-    fn write_blob(self, schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error>;
+    fn write_blob<'a>(self, schema: &'a Schema, value: &'a ByteBuffer) -> Result<Self::Ok<'a>, Self::Error>;
 
     /// Serialize a timestamp
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error>;
+    fn write_timestamp<'a>(self, schema: &'a Schema, value: &'a Instant) -> Result<Self::Ok<'a>, Self::Error>;
 
     /// Serialize an untyped [`Document`]
-    fn write_document(self, schema: &Schema, value: &Document) -> Result<Self::Ok, Self::Error>;
+    fn write_document<'a>(self, schema: &'a Schema, value: &'a Document) -> Result<Self::Ok<'a>, Self::Error>;
 
     /// Serialize a `null` value
-    fn write_null(self, schema: &Schema) -> Result<Self::Ok, Self::Error>;
+    fn write_null(self, schema: &Schema) -> Result<Self::Ok<'_>, Self::Error>;
 
     /// Skip the serialization of a value.
-    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error>;
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok<'_>, Self::Error>;
 
     // TODO: Is this necessary?
     /// Flush all remaining data.
-    fn flush(self) -> Result<Self::Ok, Self::Error> {
+    fn flush(self) -> Result<Self::Ok<'static>, Self::Error> {
         todo!();
     }
 }
@@ -241,7 +241,7 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Vec<T> {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         let mut list = serializer.write_list(schema, self.len())?;
         let value_schema = schema.expect_member("member");
         for element in self {
@@ -260,7 +260,7 @@ where
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         let mut map = serializer.write_map(schema, self.len())?;
         // TODO: is there a more efficient way to store/get these schemas?
         let key_schema = schema.get_member("key").expect("Should have key schema");
@@ -279,7 +279,7 @@ impl SerializeWithSchema for bool {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_boolean(schema, *self)
     }
 }
@@ -289,7 +289,7 @@ impl SerializeWithSchema for i8 {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_byte(schema, *self)
     }
 }
@@ -299,7 +299,7 @@ impl SerializeWithSchema for i16 {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_short(schema, *self)
     }
 }
@@ -309,7 +309,7 @@ impl SerializeWithSchema for i32 {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_integer(schema, *self)
     }
 }
@@ -319,7 +319,7 @@ impl SerializeWithSchema for i64 {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_long(schema, *self)
     }
 }
@@ -329,7 +329,7 @@ impl SerializeWithSchema for f32 {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_float(schema, *self)
     }
 }
@@ -339,7 +339,7 @@ impl SerializeWithSchema for f64 {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_double(schema, *self)
     }
 }
@@ -349,7 +349,7 @@ impl SerializeWithSchema for BigInt {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_big_integer(schema, self)
     }
 }
@@ -359,7 +359,7 @@ impl SerializeWithSchema for BigDecimal {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_big_decimal(schema, self)
     }
 }
@@ -369,7 +369,7 @@ impl SerializeWithSchema for ByteBuffer {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_blob(schema, self)
     }
 }
@@ -379,7 +379,7 @@ impl SerializeWithSchema for String {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         serializer.write_string(schema, self)
     }
 }
@@ -389,7 +389,7 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
         &self,
         schema: &Schema,
         serializer: S,
-    ) -> Result<S::Ok, S::Error> {
+    ) -> Result<S::Ok<'_>, S::Error> {
         if let Some(value) = self.as_ref() {
             value.serialize_with_schema(schema, serializer)
         } else {
