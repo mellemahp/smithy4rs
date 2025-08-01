@@ -36,8 +36,8 @@ impl From<&str> for ShapeId {
     }
 }
 
-// TODO: These could use some docs.
 impl ShapeId {
+    /// Creates a shape ID from parts of a shape ID.
     pub fn from_parts<'a>(namespace: &'a str, name: &'a str, member: Option<&'a str>) -> ShapeId {
         let mut id = namespace.to_string() + "#" + name;
         if let Some(m) = member {
@@ -51,26 +51,31 @@ impl ShapeId {
         }
     }
 
+    /// Creates a new member Shape ID as a child of this Shape ID.
     #[must_use]
     pub fn with_member(&self, member: &str) -> ShapeId {
         Self::from_parts(&self.namespace, &self.name, Some(member))
     }
 
+    /// Get the ID as a string slice.
     #[must_use]
     pub fn id(&self) -> &str {
         &self.id
     }
 
+    /// Get the name part of this Shape ID.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Get the namespace part of this Shape ID.
     #[must_use]
     pub fn namespace(&self) -> &str {
         &self.namespace
     }
 
+    /// Get the member part of this Shape ID if present.
     #[must_use]
     pub fn member(&self) -> Option<&str> {
         self.member.as_deref()

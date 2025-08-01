@@ -702,16 +702,16 @@ mod tests {
 
     #[test]
     fn map_document_value() {
-        // let mut map_in: IndexMap<String, String> = IndexMap::new();
-        // map_in.insert("a".to_string(), "b".to_string());
-        // let map_doc: Document = map_in.into();
-        // let val: &Schema = &MAP_DOCUMENT_SCHEMA;
-        // assert_eq!(map_doc.schema(), val);
-        // assert_eq!(map_doc.size(), 1);
-        //
-        // let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
-        // assert_eq!(map_out.len(), 1);
-        // assert_eq!(map_out["a"], "b");
+        let mut map_in: IndexMap<String, String> = IndexMap::new();
+        map_in.insert("a".to_string(), "b".to_string());
+        let map_doc: Document = map_in.into();
+        let val: &Schema = &MAP_DOCUMENT_SCHEMA;
+        assert_eq!(map_doc.schema(), val);
+        assert_eq!(map_doc.size(), 1);
+
+        let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
+        assert_eq!(map_out.len(), 1);
+        assert_eq!(map_out["a"], "b");
     }
 
     #[test]

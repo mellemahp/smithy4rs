@@ -9,7 +9,10 @@ use std::hash::Hash;
 use std::sync::LazyLock;
 
 /// Reference to a Smithy Schema type.
+///
 /// Allows for cheap copying and read only access to schema data.
+/// This type is primarily used to handle indirection required to build
+/// aggregate schemas and potentially recursive schemas.
 pub type SchemaRef = Ref<Schema>;
 
 /// Convenience type representing a list of trait implementations.
@@ -452,7 +455,7 @@ impl<'b> SchemaBuilder<'b> {
             }
             ShapeType::Map => {
                 assert!(
-                    (name == "key" || name == "value"),
+                    name == "key" || name == "value",
                     "Map can only have members named `key` or `value`"
                 );
             }

@@ -5,11 +5,11 @@ use crate::schema::{Schema, ShapeId, SmithyTrait, StaticTraitId};
 use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
 use std::fmt::Display;
 use std::sync::LazyLock;
-// =============================
-// Prelude Shape Schemas
-// =============================
 
-// TODO: Should we wrap these in Arcs to make builders faster?
+////////////////////////////////////////////////////////////////////////////////////
+// Prelude Shape Schemas
+////////////////////////////////////////////////////////////////////////////////////
+
 /// Schema for Smithy [Blob](https://smithy.io/2.0/spec/simple-types.html#blob) Type
 pub static BLOB: LazyLock<SchemaRef> =
     LazyLock::new(|| Schema::create_blob("smithy.api#Blob", traits![]));
