@@ -6,7 +6,8 @@ use crate::schema::SchemaShape;
 use crate::schema::{Document, Schema};
 use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
 use indexmap::IndexMap;
-use std::error::Error;
+use std::error::Error as StdError;
+use std::fmt::Display;
 
 /// Serialize a shape with its pre-defined schema.
 ///
@@ -54,7 +55,7 @@ pub trait ListSerializer {
     fn end(self, schema: &Schema) -> Result<Self::Ok, Self::Error>;
 }
 
-// TODO: Docs
+/// Map Serializer that can be called in a loop to serialize map values
 pub trait MapSerializer {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
@@ -119,6 +120,12 @@ pub trait StructSerializer {
 
     /// Finish serializing a structure.
     fn end(self, schema: &Schema) -> Result<Self::Ok, Self::Error>;
+}
+
+/// Basically just a clone of the serde::Error trait.
+/// We use our own to ensure we don't enforce a `serde` dependency on consumers.
+pub trait Error: Sized + StdError {
+    fn custom<T: Display>(msg: T) -> Self;
 }
 
 // TODO: datastream?

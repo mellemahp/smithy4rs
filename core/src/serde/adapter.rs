@@ -1,16 +1,18 @@
-// TODO: Remove
-#![allow(unused_variables)]
 
+use std::error::Error as StdError;
+use std::fmt::{Debug, Display, Formatter};
 use crate::schema::{Document, Schema};
 use crate::serde::se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer};
-use crate::serde::serializers::Serializer;
+use crate::serde::serializers::{Error, Serializer};
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use serde::ser::{SerializeMap, SerializeSeq, SerializeStruct};
 use static_str_ops::staticize;
 use std::time::Instant;
-
+use serde::ser::Error as SerdeError;
+// TODO: This should all be behind a feature flag so serde is not
+//       required for all consumers.
 struct SerdeAdapter<S: serde::Serializer> {
     serializer: S,
 }
@@ -20,8 +22,28 @@ impl<S: serde::Serializer> SerdeAdapter<S> {
     }
 }
 
+#[derive(Debug)]
+pub struct SerdeErrorWrapper<E: SerdeError>(E);
+impl<E: SerdeError> Display for SerdeErrorWrapper<E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+impl<E: SerdeError> StdError for SerdeErrorWrapper<E> {}
+impl<E: SerdeError> Error for SerdeErrorWrapper<E> {
+    fn custom<T: Display>(msg: T) -> Self {
+        SerdeErrorWrapper(E::custom(msg))
+    }
+}
+
+impl <E: SerdeError> From<E> for SerdeErrorWrapper<E> {
+    fn from(e: E) -> Self {
+        SerdeErrorWrapper(e)
+    }
+}
+
 impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
-    type Error = S::Error;
+    type Error = SerdeErrorWrapper<S::Error>;
     type Ok = S::Ok;
     type SerializeList = ListSerializeAdapter<S>;
     type SerializeMap = MapSerializerAdapter<S>;
@@ -55,45 +77,45 @@ impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
     }
 
     #[inline]
-    fn write_boolean(self, schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_bool(value)
+    fn write_boolean(self, _: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
+        Ok(self.serializer.serialize_bool(value)?)
     }
 
     #[inline]
     fn write_byte(self, _: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_i8(value)
+        Ok(self.serializer.serialize_i8(value)?)
     }
 
     #[inline]
     fn write_short(self, _: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_i16(value)
+        Ok(self.serializer.serialize_i16(value)?)
     }
 
     #[inline]
     fn write_integer(self, _: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_i32(value)
+        Ok(self.serializer.serialize_i32(value)?)
     }
 
     #[inline]
     fn write_long(self, _: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_i64(value)
+        Ok(self.serializer.serialize_i64(value)?)
     }
 
     #[inline]
     fn write_float(self, _: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_f32(value)
+        Ok(self.serializer.serialize_f32(value)?)
     }
 
     #[inline]
     fn write_double(self, _: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_f64(value)
+        Ok(self.serializer.serialize_f64(value)?)
     }
 
     #[inline]
     fn write_big_integer(
         self,
-        schema: &Schema,
-        value: &BigInt,
+        _schema: &Schema,
+        _value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
@@ -101,39 +123,39 @@ impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
     #[inline]
     fn write_big_decimal(
         self,
-        schema: &Schema,
-        value: &BigDecimal,
+        _schema: &Schema,
+        _value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     #[inline]
     fn write_string(self, _: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_str(value)
+        Ok(self.serializer.serialize_str(value)?)
     }
 
     #[inline]
-    fn write_blob(self, schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, _: &Schema, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     #[inline]
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     #[inline]
-    fn write_document(self, schema: &Schema, value: &Document) -> Result<Self::Ok, Self::Error> {
+    fn write_document(self, _: &Schema, _value: &Document) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     #[inline]
     fn write_null(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_none()
+        Ok(self.serializer.serialize_none()?)
     }
 
     fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.serializer.serialize_none()
+        Ok(self.serializer.serialize_none()?)
     }
 }
 
@@ -146,7 +168,7 @@ impl<S: serde::Serializer> ListSerializeAdapter<S> {
     }
 }
 impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
-    type Error = S::Error;
+    type Error = SerdeErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
@@ -158,13 +180,13 @@ impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     where
         T: ?Sized + SerializeWithSchema,
     {
-        self.serializer
-            .serialize_element(&ValueWrapper(value_schema, value))
+        Ok(self.serializer
+            .serialize_element(&ValueWrapper(value_schema, value))?)
     }
 
     #[inline]
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.serializer.end()
+        Ok(self.serializer.end()?)
     }
 }
 
@@ -177,7 +199,7 @@ impl<S: serde::Serializer> MapSerializerAdapter<S> {
     }
 }
 impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
-    type Error = S::Error;
+    type Error = SerdeErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
@@ -192,15 +214,15 @@ impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
         K: SerializeWithSchema + ?Sized,
         V: SerializeWithSchema + ?Sized,
     {
-        self.serializer.serialize_entry(
+        Ok(self.serializer.serialize_entry(
             &ValueWrapper(key_schema, key),
             &ValueWrapper(value_schema, value),
-        )
+        )?)
     }
 
     #[inline]
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.serializer.end()
+        Ok(self.serializer.end()?)
     }
 }
 
@@ -213,7 +235,7 @@ impl<S: serde::Serializer> StructSerializerAdapter<S> {
     }
 }
 impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
-    type Error = S::Error;
+    type Error = SerdeErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
@@ -229,13 +251,13 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
         let Some(me) = member_schema.as_member() else {
             panic!("Expected member schema!");
         };
-        self.serializer
-            .serialize_field(staticize(&me.name), &ValueWrapper(member_schema, value))
+        Ok(self.serializer
+            .serialize_field(staticize(&me.name), &ValueWrapper(member_schema, value))?)
     }
 
     #[inline]
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        self.serializer.end()
+        Ok(self.serializer.end()?)
     }
 }
 
@@ -245,8 +267,8 @@ impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
     where
         S: serde::Serializer,
     {
-        self.1
-            .serialize_with_schema(self.0, SerdeAdapter::new(serializer))
+        self.1.serialize_with_schema(self.0, SerdeAdapter::new(serializer))
+            .map_err(|wrapper| wrapper.0)
     }
 }
 
@@ -318,7 +340,7 @@ mod tests {
             S: serde::Serializer,
         {
             let adapter = SerdeAdapter::new(serializer);
-            self.write_out(adapter)
+            self.write_out(adapter).map_err(|wrapper| wrapper.0)
         }
     }
 

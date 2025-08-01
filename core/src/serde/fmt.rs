@@ -5,10 +5,11 @@ use crate::serde::se::{
 };
 use crate::{BigDecimal, BigInt, ByteBuffer};
 use std::cmp::PartialEq;
-use std::fmt::Error;
+use std::fmt::{Display, Error};
 use std::io;
 use std::time::Instant;
 use thiserror::Error;
+use crate::serde::fmt::FmtError::Custom;
 
 const REDACTED_STRING: &str = "**REDACTED**";
 macro_rules! redact {
@@ -65,6 +66,17 @@ pub enum FmtError {
     Io(#[from] io::Error),
     #[error("Encountered unknown error")]
     Unknown(#[from] Box<dyn std::error::Error>),
+    #[error("Serialization error: {0}")]
+    Custom(String),
+}
+use crate::serde::se::Error as SerdeError;
+impl SerdeError for FmtError {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display
+    {
+        Custom(msg.to_string())
+    }
 }
 
 // TODO: Update to just accept structs with schema.

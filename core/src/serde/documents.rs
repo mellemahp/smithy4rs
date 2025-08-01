@@ -2,7 +2,7 @@
 
 use crate::schema::{Document, DocumentError, DocumentValue, NumberFloat, NumberInteger, NumberValue, SchemaRef, SchemaShape, ShapeType, get_shape_type, Schema};
 use crate::serde::se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer};
-use crate::serde::serializers::SerializeWithSchema;
+use crate::serde::serializers::{Error, SerializeWithSchema};
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
@@ -65,8 +65,7 @@ impl SerializeWithSchema for Document<'_> {
                 }
                 struct_serializer.end(schema)
             }
-            // TODO: Raise _some_ error? How to map it into the serializer error?
-            _ => panic!("Unsupported shape type"),
+            _ => Err(S::Error::custom("Unsupported shape type")),
         }
     }
 }
