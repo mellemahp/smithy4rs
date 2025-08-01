@@ -58,7 +58,7 @@ pub struct ListSchema {
 pub struct MapSchema {
     id: ShapeId,
     pub key: SchemaRef,
-    value: SchemaRef,
+    pub value: SchemaRef,
     traits: TraitMap,
 }
 
@@ -301,7 +301,7 @@ impl Schema {
     ///
     /// **WARNING**: In general this should only be used in generated code.
     #[must_use]
-    pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
+    pub fn expect_member(&self, member_name: &str) -> &Schema {
         self.get_member(member_name)
             .unwrap_or_else(|| panic!("Expected member: {member_name}"))
     }
@@ -495,7 +495,7 @@ impl<'b> SchemaBuilder<'b> {
                     member_builder.set_index(idx);
                     member_map.insert(
                         member_builder.name.clone(),
-                        Ref::new(member_builder.build()),
+                        member_builder.build(),
                     );
                 }
                 Ref::new(Schema::Struct(StructSchema {
@@ -507,13 +507,13 @@ impl<'b> SchemaBuilder<'b> {
             }
             ShapeType::List => Ref::new(Schema::List(ListSchema {
                 id: self.id,
-                member: Ref::new(self.members.remove(0).build()),
+                member: self.members.remove(0).build(),
                 traits: self.traits,
             })),
             ShapeType::Map => Ref::new(Schema::Map(MapSchema {
                 id: self.id,
-                key: Ref::new(self.members.remove(0).build()),
-                value: Ref::new(self.members.remove(0).build()),
+                key: self.members.remove(0).build(),
+                value: self.members.remove(0).build(),
                 traits: self.traits,
             })),
             _ => unreachable!("Builder can only be created for aggregate types."),
@@ -521,10 +521,10 @@ impl<'b> SchemaBuilder<'b> {
     }
 }
 
-struct MemberSchemaBuilder<'schema> {
+struct MemberSchemaBuilder<'target> {
     name: String,
     id: ShapeId,
-    member_target: &'schema SchemaRef,
+    member_target: &'target SchemaRef,
     member_index: Option<usize>,
     trait_map: TraitMap,
 }
@@ -556,14 +556,14 @@ impl<'b> MemberSchemaBuilder<'b> {
         self.member_index = Some(index);
     }
 
-    pub(super) fn build(self) -> Schema {
-        Schema::Member(MemberSchema {
+    pub(super) fn build(self) -> SchemaRef {
+        Ref::new(Schema::Member(MemberSchema {
             id: self.id,
             target: self.member_target.clone(),
             name: self.name,
             index: self.member_index.unwrap_or_default(),
             traits: self.trait_map,
-        })
+        }))
     }
 }
 

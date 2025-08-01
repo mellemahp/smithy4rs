@@ -38,7 +38,7 @@ pub trait StaticTraitId {
 #[derive(Debug, Clone)]
 pub struct DynamicTrait {
     id: ShapeId,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 impl SmithyTrait for DynamicTrait {
     fn id(&self) -> &ShapeId {

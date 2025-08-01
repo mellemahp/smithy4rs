@@ -1,15 +1,15 @@
 #![allow(dead_code)]
 
-use crate::schema::{DocumentValue, NumberInteger, NumberValue};
-use crate::schema::{Schema, SchemaRef, ShapeId, SmithyTrait, StaticTraitId};
+use crate::schema::{DocumentValue, NumberInteger, NumberValue, SchemaRef};
+use crate::schema::{Schema, ShapeId, SmithyTrait, StaticTraitId};
 use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
-use bigdecimal::BigDecimal;
 use std::fmt::Display;
 use std::sync::LazyLock;
 // =============================
 // Prelude Shape Schemas
 // =============================
 
+// TODO: Should we wrap these in Arcs to make builders faster?
 /// Schema for Smithy [Blob](https://smithy.io/2.0/spec/simple-types.html#blob) Type
 pub static BLOB: LazyLock<SchemaRef> =
     LazyLock::new(|| Schema::create_blob("smithy.api#Blob", traits![]));
@@ -127,7 +127,7 @@ annotation_trait!(
 /// Provides a structure member with a default value.
 ///
 /// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
-pub struct DefaultTrait(DocumentValue);
+pub struct DefaultTrait(DocumentValue<'static>);
 static_trait_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
@@ -144,7 +144,7 @@ impl SmithyTrait for DefaultTrait {
 /// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)
 pub struct ErrorTrait {
     pub error: ErrorFault,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 impl ErrorTrait {
     #[must_use]
@@ -187,7 +187,7 @@ impl Display for ErrorFault {
 /// *See* - [MediaType Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-mediatype-trait)
 pub struct MediaTypeTrait {
     pub media_type: String,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 impl MediaTypeTrait {
     #[must_use]
@@ -214,7 +214,7 @@ impl SmithyTrait for MediaTypeTrait {
 /// *See* - [JsonName Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-jsonname-trait)
 pub struct JsonNameTrait {
     pub name: String,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 impl JsonNameTrait {
     #[must_use]
@@ -241,13 +241,13 @@ impl SmithyTrait for JsonNameTrait {
 /// *See* - [HttpError Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httperror-trait)
 pub struct HTTPErrorTrait {
     pub code: i32,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 impl HTTPErrorTrait {
     #[must_use]
     pub fn new(code: i32) -> Self {
         assert!(
-            (200 < code && code < 599),
+            200 < code && code < 599,
             "HTTPErrorTrait code out of range: {code}"
         );
         HTTPErrorTrait {
@@ -271,7 +271,7 @@ impl SmithyTrait for HTTPErrorTrait {
 /// *See* - [HttpHeader Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpheader-trait)
 struct HTTPHeaderTrait {
     pub name: String,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 static_trait_id!(
     HTTPHeaderTrait,
@@ -301,7 +301,7 @@ impl SmithyTrait for HTTPHeaderTrait {
 /// *See* - [HttpPrefixHeaders Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpprefixheaders-trait)
 struct HTTPPrefixHeadersTrait {
     pub prefix: String,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 static_trait_id!(
     HTTPPrefixHeadersTrait,
@@ -332,7 +332,7 @@ impl SmithyTrait for HTTPPrefixHeadersTrait {
 /// *See* - [HttpQuery Trait](https://smithy.io/2.0/spec/http-bindings.html#httpquery-trait)
 struct HTTPQueryTrait {
     pub key: String,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 static_trait_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
 impl HTTPQueryTrait {
@@ -358,7 +358,7 @@ impl SmithyTrait for HTTPQueryTrait {
 /// *See* - [Endpoint Trait](https://smithy.io/2.0/spec/endpoint-traits.html#smithy-api-endpoint-trait)
 pub struct EndpointTrait {
     pub host_prefix: String,
-    value: DocumentValue,
+    value: DocumentValue<'static>,
 }
 static_trait_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
 impl EndpointTrait {
