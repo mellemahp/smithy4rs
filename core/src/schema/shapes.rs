@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use std::fmt::Display;
 use crate::schema::{Schema, SchemaRef};
+use std::fmt::Display;
 
 /// Immutable identifier for a shape in a Smithy model.
 ///
@@ -192,5 +192,5 @@ mod tests {
 /// This schema is typically statically defined in generate code.
 pub trait SchemaShape {
     /// Get a reference to the Schema of this shape.
-    fn schema(&self) -> &Schema;
+    fn schema(&self) -> &SchemaRef;
 }

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::schema::{DocumentValue, NumberInteger, NumberValue, SchemaRef};
+use crate::schema::{Document, DocumentValue, NumberInteger, NumberValue, SchemaRef};
 use crate::schema::{Schema, ShapeId, SmithyTrait, StaticTraitId};
 use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
 use std::fmt::Display;
@@ -127,7 +127,7 @@ annotation_trait!(
 /// Provides a structure member with a default value.
 ///
 /// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
-pub struct DefaultTrait(DocumentValue<'static>);
+pub struct DefaultTrait(DocumentValue);
 static_trait_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
@@ -144,7 +144,7 @@ impl SmithyTrait for DefaultTrait {
 /// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)
 pub struct ErrorTrait {
     pub error: ErrorFault,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl ErrorTrait {
     #[must_use]
@@ -187,7 +187,7 @@ impl Display for ErrorFault {
 /// *See* - [MediaType Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-mediatype-trait)
 pub struct MediaTypeTrait {
     pub media_type: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl MediaTypeTrait {
     #[must_use]
@@ -214,7 +214,7 @@ impl SmithyTrait for MediaTypeTrait {
 /// *See* - [JsonName Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-jsonname-trait)
 pub struct JsonNameTrait {
     pub name: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl JsonNameTrait {
     #[must_use]
@@ -241,7 +241,7 @@ impl SmithyTrait for JsonNameTrait {
 /// *See* - [HttpError Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httperror-trait)
 pub struct HTTPErrorTrait {
     pub code: i32,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 impl HTTPErrorTrait {
     #[must_use]
@@ -271,7 +271,7 @@ impl SmithyTrait for HTTPErrorTrait {
 /// *See* - [HttpHeader Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpheader-trait)
 struct HTTPHeaderTrait {
     pub name: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_trait_id!(
     HTTPHeaderTrait,
@@ -301,7 +301,7 @@ impl SmithyTrait for HTTPHeaderTrait {
 /// *See* - [HttpPrefixHeaders Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpprefixheaders-trait)
 struct HTTPPrefixHeadersTrait {
     pub prefix: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_trait_id!(
     HTTPPrefixHeadersTrait,
@@ -332,7 +332,7 @@ impl SmithyTrait for HTTPPrefixHeadersTrait {
 /// *See* - [HttpQuery Trait](https://smithy.io/2.0/spec/http-bindings.html#httpquery-trait)
 struct HTTPQueryTrait {
     pub key: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_trait_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
 impl HTTPQueryTrait {
@@ -358,7 +358,7 @@ impl SmithyTrait for HTTPQueryTrait {
 /// *See* - [Endpoint Trait](https://smithy.io/2.0/spec/endpoint-traits.html#smithy-api-endpoint-trait)
 pub struct EndpointTrait {
     pub host_prefix: String,
-    value: DocumentValue<'static>,
+    value: DocumentValue,
 }
 static_trait_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
 impl EndpointTrait {
@@ -431,7 +431,10 @@ impl RangeTraitBuilder {
     }
 
     pub fn build(self) -> RangeTrait {
-        RangeTrait { min: self.min, max: self.max }
+        RangeTrait {
+            min: self.min,
+            max: self.max,
+        }
     }
 }
 
@@ -483,6 +486,9 @@ impl LengthTraitBuilder {
     }
 
     pub fn build(self) -> LengthTrait {
-        LengthTrait { min: self.min, max: self.max }
+        LengthTrait {
+            min: self.min,
+            max: self.max,
+        }
     }
 }

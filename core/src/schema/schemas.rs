@@ -496,10 +496,7 @@ impl<'b> SchemaBuilder<'b> {
                 let mut member_map = IndexMap::with_capacity(self.members.len());
                 for (idx, mut member_builder) in self.members.into_iter().enumerate() {
                     member_builder.set_index(idx);
-                    member_map.insert(
-                        member_builder.name.clone(),
-                        member_builder.build(),
-                    );
+                    member_map.insert(member_builder.name.clone(), member_builder.build());
                 }
                 Ref::new(Schema::Struct(StructSchema {
                     id: self.id.clone(),

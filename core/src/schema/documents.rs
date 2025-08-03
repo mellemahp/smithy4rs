@@ -13,18 +13,20 @@ use thiserror::Error;
 ///
 /// Document types are a protocol-agnostic view of untyped data. Protocols should attempt
 /// to smooth over protocol incompatibilities with the Smithy data model.
+///
+// TODO: Is there data loss in struct conversions to Documents that should be noted?
 #[derive(Clone, PartialEq, Debug)]
-pub struct Document<'schema> {
-    pub(crate) schema: &'schema Schema,
-    pub(crate) value: DocumentValue<'schema>,
+pub struct Document {
+    pub(crate) schema: SchemaRef,
+    pub(crate) value: DocumentValue,
     pub(crate) discriminator: Option<ShapeId>,
 }
 
-impl Document<'_> {
+impl Document {
     /// Get the Schema of the document
     #[must_use]
     pub fn schema(&self) -> &Schema {
-        self.schema
+        &self.schema
     }
 
     /// Get the value of the document
@@ -57,9 +59,9 @@ impl Document<'_> {
     }
 }
 
-impl SchemaShape for Document<'_> {
-    fn schema(&self) -> &Schema {
-        self.schema
+impl SchemaShape for Document {
+    fn schema(&self) -> &SchemaRef {
+        &self.schema
     }
 }
 
@@ -67,15 +69,15 @@ impl SchemaShape for Document<'_> {
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
 #[derive(Clone, PartialEq, Debug)]
-pub enum DocumentValue<'document> {
+pub enum DocumentValue {
     Null,
     Number(NumberValue),
     Boolean(bool),
     Blob(ByteBuffer),
     String(String),
     Timestamp(Instant),
-    List(Vec<Document<'document>>),
-    Map(IndexMap<String, Document<'document>>),
+    List(Vec<Document>),
+    Map(IndexMap<String, Document>),
 }
 
 /// Represents numbers in the smithy data model
@@ -151,7 +153,7 @@ pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
 //////////////////////////////////////////////////////////////////
 // AS-ers to borrow document value as type if possible
 //////////////////////////////////////////////////////////////////
-impl Document<'_> {
+impl Document {
     /// Get the blob value of the Document if it is a blob.
     #[must_use]
     pub fn as_blob(&self) -> Option<&ByteBuffer> {
@@ -311,7 +313,7 @@ impl Document<'_> {
 // Conversions of documents to other types
 //////////////////////////////////////////////////////////////////
 
-impl TryFrom<Document<'_>> for ByteBuffer {
+impl TryFrom<Document> for ByteBuffer {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -323,7 +325,7 @@ impl TryFrom<Document<'_>> for ByteBuffer {
     }
 }
 
-impl TryFrom<Document<'_>> for bool {
+impl TryFrom<Document> for bool {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -335,7 +337,7 @@ impl TryFrom<Document<'_>> for bool {
     }
 }
 
-impl TryFrom<Document<'_>> for String {
+impl TryFrom<Document> for String {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -347,7 +349,7 @@ impl TryFrom<Document<'_>> for String {
     }
 }
 
-impl TryFrom<Document<'_>> for Instant {
+impl TryFrom<Document> for Instant {
     type Error = DocumentError;
 
     fn try_from(_: Document) -> Result<Self, Self::Error> {
@@ -356,7 +358,7 @@ impl TryFrom<Document<'_>> for Instant {
 }
 
 // TODO: Make Number conversions smarter? Or does rust `as` method handle truncation and such?
-impl TryFrom<Document<'_>> for i8 {
+impl TryFrom<Document> for i8 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -373,7 +375,7 @@ impl TryFrom<Document<'_>> for i8 {
     }
 }
 
-impl TryFrom<Document<'_>> for i16 {
+impl TryFrom<Document> for i16 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -390,7 +392,7 @@ impl TryFrom<Document<'_>> for i16 {
     }
 }
 
-impl TryFrom<Document<'_>> for i32 {
+impl TryFrom<Document> for i32 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -407,7 +409,7 @@ impl TryFrom<Document<'_>> for i32 {
     }
 }
 
-impl TryFrom<Document<'_>> for i64 {
+impl TryFrom<Document> for i64 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -424,7 +426,7 @@ impl TryFrom<Document<'_>> for i64 {
     }
 }
 
-impl TryFrom<Document<'_>> for f32 {
+impl TryFrom<Document> for f32 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -439,7 +441,7 @@ impl TryFrom<Document<'_>> for f32 {
     }
 }
 
-impl TryFrom<Document<'_>> for f64 {
+impl TryFrom<Document> for f64 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -454,7 +456,7 @@ impl TryFrom<Document<'_>> for f64 {
     }
 }
 
-impl TryFrom<&Document<'_>> for BigInt {
+impl TryFrom<&Document> for BigInt {
     type Error = DocumentError;
 
     fn try_from(_: &Document) -> Result<Self, Self::Error> {
@@ -462,7 +464,7 @@ impl TryFrom<&Document<'_>> for BigInt {
     }
 }
 
-impl TryFrom<&Document<'_>> for BigDecimal {
+impl TryFrom<&Document> for BigDecimal {
     type Error = DocumentError;
 
     fn try_from(_: &Document) -> Result<Self, Self::Error> {
@@ -470,7 +472,7 @@ impl TryFrom<&Document<'_>> for BigDecimal {
     }
 }
 
-impl<T: for<'a> TryFrom<Document<'a>, Error = DocumentError>> TryFrom<Document<'_>> for Vec<T> {
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Vec<T> {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -488,7 +490,7 @@ impl<T: for<'a> TryFrom<Document<'a>, Error = DocumentError>> TryFrom<Document<'
     }
 }
 
-impl<T: for<'a> TryFrom<Document<'a>, Error = DocumentError>> TryFrom<Document<'_>> for IndexMap<String, T> {
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap<String, T> {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -510,120 +512,120 @@ impl<T: for<'a> TryFrom<Document<'a>, Error = DocumentError>> TryFrom<Document<'
 // Conversions INTO Document types
 //////////////////////////////////////////////////////////////////
 
-impl From<bool> for Document<'static> {
+impl From<bool> for Document {
     fn from(value: bool) -> Self {
         Document {
-            schema: &BOOLEAN,
+            schema: BOOLEAN.clone(),
             value: DocumentValue::Boolean(value),
             discriminator: None,
         }
     }
 }
 
-impl From<i8> for Document<'static> {
+impl From<i8> for Document {
     fn from(value: i8) -> Self {
         Document {
-            schema: &BYTE,
+            schema: BYTE.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<i16> for Document<'static> {
+impl From<i16> for Document {
     fn from(value: i16) -> Self {
         Document {
-            schema: &SHORT,
+            schema: SHORT.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Short(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<i32> for Document<'static> {
+impl From<i32> for Document {
     fn from(value: i32) -> Self {
         Document {
-            schema: &INTEGER,
+            schema: INTEGER.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<i64> for Document<'static> {
+impl From<i64> for Document {
     fn from(value: i64) -> Self {
         Document {
-            schema: &LONG,
+            schema: LONG.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Long(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<f32> for Document<'static> {
+impl From<f32> for Document {
     fn from(value: f32) -> Self {
         Document {
-            schema: &FLOAT,
+            schema: FLOAT.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Float(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<f64> for Document<'static> {
+impl From<f64> for Document {
     fn from(value: f64) -> Self {
         Document {
-            schema: &DOUBLE,
+            schema: DOUBLE.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::Double(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<&str> for Document<'static> {
+impl From<&str> for Document {
     fn from(value: &str) -> Self {
         Document {
-            schema: &STRING,
+            schema: STRING.clone(),
             value: DocumentValue::String(value.to_string()),
             discriminator: None,
         }
     }
 }
 
-impl From<BigInt> for Document<'static> {
+impl From<BigInt> for Document {
     fn from(value: BigInt) -> Self {
         Document {
-            schema: &BIG_INTEGER,
+            schema: BIG_INTEGER.clone(),
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<BigDecimal> for Document<'static> {
+impl From<BigDecimal> for Document {
     fn from(value: BigDecimal) -> Self {
         Document {
-            schema: &BIG_DECIMAL,
+            schema: BIG_DECIMAL.clone(),
             value: DocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(value))),
             discriminator: None,
         }
     }
 }
 
-impl From<ByteBuffer> for Document<'static> {
+impl From<ByteBuffer> for Document {
     fn from(value: ByteBuffer) -> Self {
         Document {
-            schema: &BLOB,
+            schema: BLOB.clone(),
             value: DocumentValue::Blob(value),
             discriminator: None,
         }
     }
 }
 
-impl From<String> for Document<'static> {
+impl From<String> for Document {
     fn from(value: String) -> Self {
         Document {
-            schema: &STRING,
+            schema: STRING.clone(),
             value: DocumentValue::String(value),
             discriminator: None,
         }
@@ -636,11 +638,11 @@ lazy_schema!(
         .put_member("member", &DOCUMENT, traits![])
         .build()
 );
-impl<T: Into<Document<'static>>> From<Vec<T>> for Document<'static> {
+impl<T: Into<Document>> From<Vec<T>> for Document {
     fn from(value: Vec<T>) -> Self {
         let result = value.into_iter().map(Into::into).collect();
         Document {
-            schema: &LIST_DOCUMENT_SCHEMA,
+            schema: LIST_DOCUMENT_SCHEMA.clone(),
             value: DocumentValue::List(result),
             discriminator: None,
         }
@@ -654,14 +656,14 @@ lazy_schema!(
         .put_member("value", &DOCUMENT, traits![])
         .build()
 );
-impl<T: Into<Document<'static>>> From<IndexMap<String, T>> for Document<'static> {
+impl<T: Into<Document>> From<IndexMap<String, T>> for Document {
     fn from(value: IndexMap<String, T>) -> Self {
         let mut result = IndexMap::new();
         for (key, value) in value {
             result.insert(key, value.into());
         }
         Document {
-            schema: &MAP_DOCUMENT_SCHEMA,
+            schema: MAP_DOCUMENT_SCHEMA.clone(),
             value: DocumentValue::Map(result),
             discriminator: None,
         }
