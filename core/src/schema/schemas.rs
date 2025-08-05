@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::Ref;
-use crate::schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef};
+use std::{collections::HashSet, hash::Hash, sync::LazyLock};
+
 use indexmap::IndexMap;
-use std::collections::HashSet;
-use std::hash::Hash;
-use std::sync::LazyLock;
+
+use crate::{
+    Ref,
+    schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
+};
 
 /// Reference to a Smithy Schema type.
 ///
@@ -570,8 +572,10 @@ impl<'b> MemberSchemaBuilder<'b> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::{JsonNameTrait, STRING};
-    use crate::traits;
+    use crate::{
+        prelude::{JsonNameTrait, STRING},
+        traits,
+    };
 
     #[test]
     fn scalar_schemas() {

@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use crate::schema::SchemaRef;
 use std::fmt::Display;
+
+use crate::schema::SchemaRef;
 
 /// Immutable identifier for a shape in a Smithy model.
 ///

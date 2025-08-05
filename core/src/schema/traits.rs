@@ -1,8 +1,11 @@
-use crate::Ref;
-use crate::schema::{DocumentValue, ShapeId};
+use std::{collections::HashMap, fmt::Debug};
+
 use downcast_rs::{DowncastSync, impl_downcast};
-use std::collections::HashMap;
-use std::fmt::Debug;
+
+use crate::{
+    Ref,
+    schema::{DocumentValue, ShapeId},
+};
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -137,9 +140,10 @@ impl PartialEq for dyn SmithyTrait {
 
 #[cfg(test)]
 mod tests {
+    use std::any::{Any, TypeId};
+
     use super::*;
     use crate::prelude::{HTTPErrorTrait, JsonNameTrait};
-    use std::any::{Any, TypeId};
 
     #[test]
     fn basic_map_functionality() {

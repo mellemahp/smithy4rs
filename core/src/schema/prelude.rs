@@ -1,10 +1,15 @@
 #![allow(dead_code)]
 
-use crate::schema::{DocumentValue, NumberInteger, NumberValue, SchemaRef};
-use crate::schema::{Schema, ShapeId, SmithyTrait, StaticTraitId};
-use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
-use std::fmt::Display;
-use std::sync::LazyLock;
+use std::{fmt::Display, sync::LazyLock};
+
+use crate::{
+    annotation_trait, lazy_shape_id,
+    schema::{
+        DocumentValue, NumberInteger, NumberValue, Schema, SchemaRef, ShapeId, SmithyTrait,
+        StaticTraitId,
+    },
+    static_trait_id, traits,
+};
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Prelude Shape Schemas

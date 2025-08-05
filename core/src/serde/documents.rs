@@ -1,22 +1,25 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use crate::prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE};
-use crate::schema::{
-    Document, DocumentError, DocumentValue, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA, NumberFloat,
-    NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId, ShapeType, TraitList,
-    get_shape_type,
-};
-use crate::serde::se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer};
-use crate::serde::serializers::{Error, SerializeWithSchema};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData, time::Instant};
+
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use std::collections::HashMap;
-use std::fmt::Display;
-use std::marker::PhantomData;
-use std::time::Instant;
 use thiserror::Error;
+
+use crate::{
+    prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE},
+    schema::{
+        Document, DocumentError, DocumentValue, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA,
+        NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId,
+        ShapeType, TraitList, get_shape_type,
+    },
+    serde::{
+        se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer},
+        serializers::{Error, SerializeWithSchema},
+    },
+};
 
 /////////////////////////////////////////////////////////////////////////////////
 // Serialization
@@ -90,7 +93,6 @@ impl<T: SerializableShape> From<T> for Document {
     }
 }
 
-
 impl Error for DocumentError {
     fn custom<T: Display>(msg: T) -> Self {
         DocumentError::CustomError(msg.to_string())
@@ -107,7 +109,11 @@ impl Serializer for DocumentParser {
     type SerializeMap = Document;
     type SerializeStruct = Document;
 
-    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(
+        self,
+        schema: &SchemaRef,
+        len: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
         Ok(Document {
             schema: schema.clone(),
             value: DocumentValue::Map(IndexMap::with_capacity(len)),
@@ -123,7 +129,11 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_list(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(
+        self,
+        schema: &SchemaRef,
+        len: usize,
+    ) -> Result<Self::SerializeList, Self::Error> {
         Ok(Document {
             schema: schema.clone(),
             value: DocumentValue::List(Vec::with_capacity(len)),
@@ -187,7 +197,11 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(
+        self,
+        schema: &SchemaRef,
+        value: &BigInt,
+    ) -> Result<Self::Ok, Self::Error> {
         Ok(Document {
             schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::from_big_int(value.clone())),
@@ -195,7 +209,11 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_big_decimal(self, schema: &SchemaRef, value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
+    fn write_big_decimal(
+        self,
+        schema: &SchemaRef,
+        value: &BigDecimal,
+    ) -> Result<Self::Ok, Self::Error> {
         Ok(Document {
             schema: schema.clone(),
             value: DocumentValue::Number(NumberValue::from_big_decimal(value.clone())),
@@ -249,12 +267,18 @@ impl ListSerializer for Document {
     type Error = DocumentError;
     type Ok = Document;
 
-    fn serialize_element<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(
+        &mut self,
+        element_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema
+        T: ?Sized + SerializeWithSchema,
     {
         let DocumentValue::List(list) = &mut self.value else {
-            return Err(DocumentError::DocumentConversion("Could not convert document to list.".to_string()));
+            return Err(DocumentError::DocumentConversion(
+                "Could not convert document to list.".to_string(),
+            ));
         };
         let el = value.serialize_with_schema(element_schema, DocumentParser)?;
         list.push(el);
@@ -270,16 +294,26 @@ impl MapSerializer for Document {
     type Error = DocumentError;
     type Ok = Document;
 
-    fn serialize_entry<K, V>(&mut self, key_schema: &SchemaRef, value_schema: &SchemaRef, key: &K, value: &V) -> Result<(), Self::Error>
+    fn serialize_entry<K, V>(
+        &mut self,
+        key_schema: &SchemaRef,
+        value_schema: &SchemaRef,
+        key: &K,
+        value: &V,
+    ) -> Result<(), Self::Error>
     where
         K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema
+        V: ?Sized + SerializeWithSchema,
     {
         let DocumentValue::Map(map) = &mut self.value else {
-            return Err(DocumentError::DocumentConversion("Could not convert document to Map.".to_string()));
+            return Err(DocumentError::DocumentConversion(
+                "Could not convert document to Map.".to_string(),
+            ));
         };
         let Some(me) = key_schema.as_member() else {
-            return Err(DocumentError::DocumentConversion("Expected `key` schema.".to_string()));
+            return Err(DocumentError::DocumentConversion(
+                "Expected `key` schema.".to_string(),
+            ));
         };
         let val = value.serialize_with_schema(value_schema, DocumentParser)?;
         map.insert(me.name.clone(), val);
@@ -295,15 +329,23 @@ impl StructSerializer for Document {
     type Error = DocumentError;
     type Ok = Document;
 
-    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    fn serialize_member<T>(
+        &mut self,
+        member_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema
+        T: ?Sized + SerializeWithSchema,
     {
         let DocumentValue::Map(map) = &mut self.value else {
-            return Err(DocumentError::DocumentConversion("Expected map document".to_string()));
+            return Err(DocumentError::DocumentConversion(
+                "Expected map document".to_string(),
+            ));
         };
         let Some(me) = member_schema.as_member() else {
-            return Err(DocumentError::DocumentConversion("Expected member schema!".to_string(), ));
+            return Err(DocumentError::DocumentConversion(
+                "Expected member schema!".to_string(),
+            ));
         };
         let val = value.serialize_with_schema(member_schema, DocumentParser)?;
         map.insert(me.name.clone(), val);
@@ -317,11 +359,15 @@ impl StructSerializer for Document {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::prelude::*;
-    use crate::schema::{Schema, ShapeId};
-    use crate::{lazy_member_schema, lazy_schema, traits};
     use std::sync::LazyLock;
+
+    use super::*;
+    use crate::{
+        lazy_member_schema, lazy_schema,
+        prelude::*,
+        schema::{Schema, ShapeId},
+        traits,
+    };
 
     lazy_schema!(
         MAP_SCHEMA,

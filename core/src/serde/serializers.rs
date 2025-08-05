@@ -2,11 +2,14 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_errors_doc)]
 
-use crate::schema::{Document, SchemaRef, SchemaShape};
-use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
+use std::{error::Error as StdError, fmt::Display};
+
 use indexmap::IndexMap;
-use std::error::Error as StdError;
-use std::fmt::Display;
+
+use crate::{
+    BigDecimal, BigInt, ByteBuffer, Instant,
+    schema::{Document, SchemaRef, SchemaShape},
+};
 
 /// Serialize a shape with its pre-defined schema.
 ///
@@ -88,7 +91,11 @@ pub trait StructSerializer {
     type Ok;
 
     /// Serialize a member on the struct
-    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    fn serialize_member<T>(
+        &mut self,
+        member_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
         T: ?Sized + SerializeWithSchema;
 
@@ -171,7 +178,8 @@ pub trait Serializer: Sized {
     /// Begin to serialize a variably sized list. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
     /// `end`.
-    fn write_list(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeList, Self::Error>;
+    fn write_list(self, schema: &SchemaRef, len: usize)
+    -> Result<Self::SerializeList, Self::Error>;
 
     /// Serialize a `boolean`
     fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error>;
@@ -195,7 +203,8 @@ pub trait Serializer: Sized {
     fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a [`BigInt`]
-    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error>;
+    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt)
+    -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a [`BigDecimal`]
     fn write_big_decimal(

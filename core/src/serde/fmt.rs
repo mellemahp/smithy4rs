@@ -1,15 +1,21 @@
-use crate::prelude::SensitiveTrait;
-use crate::schema::{Document, SchemaRef};
-use crate::serde::fmt::FmtError::Custom;
-use crate::serde::se::{
-    ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
+use std::{
+    cmp::PartialEq,
+    fmt::{Display, Error},
+    io,
+    time::Instant,
 };
-use crate::{BigDecimal, BigInt, ByteBuffer};
-use std::cmp::PartialEq;
-use std::fmt::{Display, Error};
-use std::io;
-use std::time::Instant;
+
 use thiserror::Error;
+
+use crate::{
+    BigDecimal, BigInt, ByteBuffer,
+    prelude::SensitiveTrait,
+    schema::{Document, SchemaRef},
+    serde::{
+        fmt::FmtError::Custom,
+        se::{ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer},
+    },
+};
 
 const REDACTED_STRING: &str = "**REDACTED**";
 macro_rules! redact {
@@ -113,7 +119,11 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     type SerializeStruct = InnerFmtSerializer<'a, W>;
 
     #[inline]
-    fn write_struct(self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(
+        self,
+        schema: &SchemaRef,
+        _: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
         self.writer.write_all(schema.id().name().as_ref())?;
         self.writer.write_all(b"[").map_err(FmtError::Io)?;
         redact_aggregate!(self, schema)
@@ -340,7 +350,11 @@ where
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    fn serialize_member<T>(
+        &mut self,
+        member_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
     where
         T: ?Sized + SerializeWithSchema,
     {
@@ -364,14 +378,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Ref;
-    use crate::prelude::STRING;
-    use crate::schema::SchemaShape;
-    use crate::schema::{Schema, ShapeId};
-    use crate::{lazy_member_schema, lazy_schema, traits};
-    use indexmap::IndexMap;
     use std::sync::LazyLock;
+
+    use indexmap::IndexMap;
+
+    use super::*;
+    use crate::{
+        Ref, lazy_member_schema, lazy_schema,
+        prelude::STRING,
+        schema::{Schema, SchemaShape, ShapeId},
+        traits,
+    };
 
     lazy_schema!(
         MAP_SCHEMA,

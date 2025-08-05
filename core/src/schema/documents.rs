@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 
-use crate::prelude::*;
-use crate::schema::{Schema, SchemaRef, SchemaShape, ShapeId, ShapeType};
-use crate::{BigDecimal, BigInt, ByteBuffer, Instant};
-use crate::{lazy_schema, traits};
+use std::{error::Error, sync::LazyLock};
+
 use indexmap::IndexMap;
-use std::error::Error;
-use std::sync::LazyLock;
 use thiserror::Error;
+
+use crate::{
+    BigDecimal, BigInt, ByteBuffer, Instant, lazy_schema,
+    prelude::*,
+    schema::{Schema, SchemaRef, SchemaShape, ShapeId, ShapeType},
+    traits,
+};
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
 ///

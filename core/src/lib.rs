@@ -14,7 +14,8 @@ use std::sync::Arc;
 /// Defined as a common type so Arc type could be swapped out.
 pub type Ref<T> = Arc<T>;
 
+pub use std::time::Instant;
+
 pub use bigdecimal::BigDecimal;
 pub use bytebuffer::ByteBuffer;
 pub use num_bigint::BigInt;
-pub use std::time::Instant;
