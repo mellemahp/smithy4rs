@@ -1,5 +1,5 @@
-use crate::schema::SchemaShape;
-use crate::serde::documents::SerializableShape;
+//use crate::schema::SchemaShape;
+//use crate::serde::documents::SerializableShape;
 //use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
 
 ///// Smithy Shapes should implement Serializable, Deserializable, and Schema

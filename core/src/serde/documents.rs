@@ -23,7 +23,7 @@ use thiserror::Error;
 /////////////////////////////////////////////////////////////////////////////////
 
 /// Marker Trait used to differentiate between generated shapes and Documents for
-/// some blanket impelementations.
+/// some blanket implementations.
 ///
 /// NOTE: In general you should not need to implement this yourself
 pub trait SerializableShape: Serialize {}
@@ -31,7 +31,7 @@ pub trait SerializableShape: Serialize {}
 impl SerializeWithSchema for Document {
     fn serialize_with_schema<S: Serializer>(
         &self,
-        schema: &Schema,
+        schema: &SchemaRef,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         // TODO: Handle exceptions?
@@ -54,7 +54,7 @@ impl SerializeWithSchema for Document {
             ShapeType::BigDecimal => {
                 serializer.write_big_decimal(schema, self.as_big_decimal().unwrap())
             }
-            ShapeType::Document => serializer.write_document(schema, &self),
+            ShapeType::Document => serializer.write_document(schema, self),
             ShapeType::Enum => serializer.write_string(schema, self.as_string().unwrap()),
             ShapeType::IntEnum => serializer.write_integer(schema, self.as_integer().unwrap()),
             ShapeType::List => self
@@ -83,7 +83,237 @@ impl SerializeWithSchema for Document {
     }
 }
 
-/// TODO: How to convert document into
+impl<T: SerializableShape> From<T> for Document {
+    fn from(shape: T) -> Self {
+        // TODO: should this be fallible?
+        shape.serialize(DocumentParser).unwrap()
+    }
+}
+
+
+impl Error for DocumentError {
+    fn custom<T: Display>(msg: T) -> Self {
+        DocumentError::CustomError(msg.to_string())
+    }
+}
+
+struct DocumentParser;
+// TODO: Should this have schema type validation?
+impl Serializer for DocumentParser {
+    // TODO: Error
+    type Error = DocumentError;
+    type Ok = Document;
+    type SerializeList = Document;
+    type SerializeMap = Document;
+    type SerializeStruct = Document;
+
+    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Map(IndexMap::with_capacity(len)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Map(IndexMap::with_capacity(len)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_list(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeList, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::List(Vec::with_capacity(len)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Boolean(value),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_i8(value)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_i16(value)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_i32(value)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_i64(value)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_f32(value)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_f64(value)),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_big_int(value.clone())),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_big_decimal(self, schema: &SchemaRef, value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Number(NumberValue::from_big_decimal(value.clone())),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::String(value.to_owned()),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_blob(self, schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Blob(value.clone()),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Timestamp(*value),
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn write_document(self, schema: &SchemaRef, value: &Document) -> Result<Self::Ok, Self::Error> {
+        Ok(value.clone())
+    }
+
+    fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(Document {
+            schema: schema.clone(),
+            value: DocumentValue::Null,
+            discriminator: Some(schema.id().clone()),
+        })
+    }
+
+    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        todo!()
+    }
+}
+
+impl ListSerializer for Document {
+    // TODO: Errors
+    type Error = DocumentError;
+    type Ok = Document;
+
+    fn serialize_element<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        let DocumentValue::List(list) = &mut self.value else {
+            return Err(DocumentError::DocumentConversion("Could not convert document to list.".to_string()));
+        };
+        let el = value.serialize_with_schema(element_schema, DocumentParser)?;
+        list.push(el);
+        Ok(())
+    }
+
+    fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(self)
+    }
+}
+
+impl MapSerializer for Document {
+    type Error = DocumentError;
+    type Ok = Document;
+
+    fn serialize_entry<K, V>(&mut self, key_schema: &SchemaRef, value_schema: &SchemaRef, key: &K, value: &V) -> Result<(), Self::Error>
+    where
+        K: ?Sized + SerializeWithSchema,
+        V: ?Sized + SerializeWithSchema
+    {
+        let DocumentValue::Map(map) = &mut self.value else {
+            return Err(DocumentError::DocumentConversion("Could not convert document to Map.".to_string()));
+        };
+        let Some(me) = key_schema.as_member() else {
+            return Err(DocumentError::DocumentConversion("Expected `key` schema.".to_string()));
+        };
+        let val = value.serialize_with_schema(value_schema, DocumentParser)?;
+        map.insert(me.name.clone(), val);
+        Ok(())
+    }
+
+    fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(self)
+    }
+}
+
+impl StructSerializer for Document {
+    type Error = DocumentError;
+    type Ok = Document;
+
+    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        let DocumentValue::Map(map) = &mut self.value else {
+            return Err(DocumentError::DocumentConversion("Expected map document".to_string()));
+        };
+        let Some(me) = member_schema.as_member() else {
+            return Err(DocumentError::DocumentConversion("Expected member schema!".to_string(), ));
+        };
+        let val = value.serialize_with_schema(member_schema, DocumentParser)?;
+        map.insert(me.name.clone(), val);
+        Ok(())
+    }
+
+    fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(self)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -143,7 +373,7 @@ mod tests {
     impl SerializeWithSchema for SerializeMe {
         fn serialize_with_schema<S: Serializer>(
             &self,
-            schema: &Schema,
+            schema: &SchemaRef,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 2)?;

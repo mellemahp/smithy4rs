@@ -1,5 +1,5 @@
 use crate::prelude::SensitiveTrait;
-use crate::schema::{Document, Schema, SchemaRef};
+use crate::schema::{Document, SchemaRef};
 use crate::serde::fmt::FmtError::Custom;
 use crate::serde::se::{
     ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
@@ -113,26 +113,26 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     type SerializeStruct = InnerFmtSerializer<'a, W>;
 
     #[inline]
-    fn write_struct(self, schema: &Schema, _: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeStruct, Self::Error> {
         self.writer.write_all(schema.id().name().as_ref())?;
         self.writer.write_all(b"[").map_err(FmtError::Io)?;
         redact_aggregate!(self, schema)
     }
 
     #[inline]
-    fn write_map(self, schema: &Schema, _: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeMap, Self::Error> {
         self.writer.write_all(b"{").map_err(FmtError::Io)?;
         redact_aggregate!(self, schema)
     }
 
     #[inline]
-    fn write_list(self, schema: &Schema, _: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeList, Self::Error> {
         self.writer.write_all(b"[").map_err(FmtError::Io)?;
         redact_aggregate!(self, schema)
     }
 
     #[inline]
-    fn write_boolean(self, schema: &Schema, value: bool) -> Result<(), Self::Error> {
+    fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -141,7 +141,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_byte(self, schema: &Schema, value: i8) -> Result<(), Self::Error> {
+    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -150,7 +150,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_short(self, schema: &Schema, value: i16) -> Result<(), Self::Error> {
+    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -159,7 +159,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_integer(self, schema: &Schema, value: i32) -> Result<(), Self::Error> {
+    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -168,7 +168,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_long(self, schema: &Schema, value: i64) -> Result<(), Self::Error> {
+    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -177,7 +177,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_float(self, schema: &Schema, value: f32) -> Result<(), Self::Error> {
+    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -186,7 +186,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_double(self, schema: &Schema, value: f64) -> Result<(), Self::Error> {
+    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -195,7 +195,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<(), Self::Error> {
+    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -204,7 +204,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_big_decimal(self, schema: &Schema, value: &BigDecimal) -> Result<(), Self::Error> {
+    fn write_big_decimal(self, schema: &SchemaRef, value: &BigDecimal) -> Result<(), Self::Error> {
         redact!(
             self,
             schema,
@@ -213,17 +213,17 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_string(self, schema: &Schema, value: &str) -> Result<(), Self::Error> {
+    fn write_string(self, schema: &SchemaRef, value: &str) -> Result<(), Self::Error> {
         redact!(self, schema, self.writer.write_all(value.as_ref()))
     }
 
     #[inline]
-    fn write_blob(self, _: &Schema, _: &ByteBuffer) -> Result<(), Self::Error> {
+    fn write_blob(self, _: &SchemaRef, _: &ByteBuffer) -> Result<(), Self::Error> {
         todo!()
     }
 
     #[inline]
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<(), Self::Error> {
+    fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<(), Self::Error> {
         // TODO: This is incorrect and needs to be fixed. Just to get all branches running
         redact!(
             self,
@@ -234,17 +234,17 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_document(self, _: &Schema, _: &Document) -> Result<(), Self::Error> {
+    fn write_document(self, _: &SchemaRef, _: &Document) -> Result<(), Self::Error> {
         todo!()
     }
 
     #[inline]
-    fn write_null(self, schema: &Schema) -> Result<(), Self::Error> {
+    fn write_null(self, schema: &SchemaRef) -> Result<(), Self::Error> {
         redact!(self, schema, self.writer.write_all(b"null"))
     }
 
     #[inline]
-    fn skip(self, _: &Schema) -> Result<(), Self::Error> {
+    fn skip(self, _: &SchemaRef) -> Result<(), Self::Error> {
         /* Do not write anything on non-present fields */
         Ok(())
     }
@@ -285,7 +285,7 @@ where
     #[inline]
     fn serialize_element<T>(
         &mut self,
-        element_schema: &Schema,
+        element_schema: &SchemaRef,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -296,7 +296,7 @@ where
     }
 
     #[inline]
-    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.ser.writer.write_all(b"]").map_err(FmtError::Io)
     }
 }
@@ -311,8 +311,8 @@ where
     #[inline]
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &Schema,
-        value_schema: &Schema,
+        key_schema: &SchemaRef,
+        value_schema: &SchemaRef,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -327,7 +327,7 @@ where
     }
 
     #[inline]
-    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.ser.writer.write_all(b"}").map_err(FmtError::Io)
     }
 }
@@ -340,7 +340,7 @@ where
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
     where
         T: ?Sized + SerializeWithSchema,
     {
@@ -357,7 +357,7 @@ where
     }
 
     #[inline]
-    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.ser.writer.write_all(b"]").map_err(FmtError::Io)
     }
 }
@@ -434,7 +434,7 @@ mod tests {
     impl SerializeWithSchema for SerializeMe {
         fn serialize_with_schema<S: Serializer>(
             &self,
-            schema: &Schema,
+            schema: &SchemaRef,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 2)?;
@@ -461,7 +461,7 @@ mod tests {
     impl SerializeWithSchema for RedactMe {
         fn serialize_with_schema<S: Serializer>(
             &self,
-            schema: &Schema,
+            schema: &SchemaRef,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 2)?;

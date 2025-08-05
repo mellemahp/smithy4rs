@@ -304,7 +304,7 @@ impl Schema {
     ///
     /// **WARNING**: In general this should only be used in generated code.
     #[must_use]
-    pub fn expect_member(&self, member_name: &str) -> &Schema {
+    pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
         self.get_member(member_name)
             .unwrap_or_else(|| panic!("Expected member: {member_name}"))
     }

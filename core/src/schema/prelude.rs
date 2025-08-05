@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::schema::{Document, DocumentValue, NumberInteger, NumberValue, SchemaRef};
+use crate::schema::{DocumentValue, NumberInteger, NumberValue, SchemaRef};
 use crate::schema::{Schema, ShapeId, SmithyTrait, StaticTraitId};
 use crate::{annotation_trait, lazy_shape_id, static_trait_id, traits};
 use std::fmt::Display;
