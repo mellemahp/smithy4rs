@@ -5,6 +5,8 @@ use proc_macro_crate::{crate_name, FoundCrate};
 use quote::quote;
 use syn::{parse_macro_input, Attribute, Data, DeriveInput, Type};
 
+// TODO: Enable feature to generate serde adapters
+// TODO: Add some unit tests!
 // TODO: Make error handling use: `syn::Error::into_compile_error`
 #[proc_macro_derive(SerializableStruct, attributes(smithy_schema))]
 pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -13,13 +15,13 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
     let input = parse_macro_input!(input as DeriveInput);
     let schema_ident = parse_schema(&input.attrs);
     let shape_name = &input.ident;
-    let is_test = parse_is_test(&input.attrs);
     // Add the base SerializableShape trait
     let base_trait = base_trait_impl(shape_name);
     // Now add the SchemaShape trait that returns the base schema
     let schema_trait = schema_impl(shape_name, &schema_ident);
     // And now the serializer implementation
     let serialization = serialization_impl(shape_name, &input);
+
     // TODO: Deserialization impl
 
     // Allows us to use these within the smithy4rs tests
@@ -79,15 +81,6 @@ fn parse_schema(attrs: &[Attribute]) -> Ident {
     target_schema.expect("Could not find `smithy_schema` attribute")
 }
 
-fn parse_is_test(attrs: &[Attribute]) -> bool {
-    for attr in attrs {
-        if attr.path().is_ident("smithy_test") {
-            return true;
-        }
-    }
-    false
-}
-
 fn base_trait_impl(shape_name: &Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
@@ -136,7 +129,7 @@ fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
                 serializer: S,
             ) -> Result<S::Ok, S::Error> {
                 let mut ser = serializer.write_struct(schema, #length)?;
-                #(ser.#method(&#member_schema, &self.#member_name);)*
+                #(ser.#method(&#member_schema, &self.#member_name)?;)*
                 ser.end(schema)
             }
         }

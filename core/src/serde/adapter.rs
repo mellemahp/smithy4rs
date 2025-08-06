@@ -286,15 +286,15 @@ mod tests {
     use std::sync::LazyLock;
 
     use indexmap::IndexMap;
-    use serde::Serialize;
+    use smithy4rs_core_derive::SerializableStruct;
     use super::*;
     use crate::{
         lazy_schema,
         prelude::*,
         schema::{Schema, SchemaRef, ShapeId},
-        serde::se::{SerializeWithSchema, Serializer},
         traits,
     };
+    use crate::schema::SchemaShape;
 
     lazy_schema!(
         MAP_SCHEMA,
@@ -316,38 +316,27 @@ mod tests {
         (MEMBER_LIST, "list", LIST_SCHEMA, traits![])
     );
 
+    #[derive(SerializableStruct)]
+    #[smithy_schema(SCHEMA)]
     struct Test {
+        #[smithy_schema(MEMBER_A)]
         a: String,
+        #[smithy_schema(MEMBER_B)]
         b: String,
+        #[smithy_schema(MEMBER_LIST)]
         member_list: Vec<String>,
+        #[smithy_schema(MEMBER_MAP)]
         member_map: IndexMap<String, String>,
     }
-    impl Test {
-        fn write_out<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            self.serialize_with_schema(&SCHEMA, serializer)
-        }
-    }
-    impl SerializeWithSchema for Test {
-        fn serialize_with_schema<S: Serializer>(
-            &self,
-            schema: &SchemaRef,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error> {
-            let mut ser = serializer.write_struct(schema, 2)?;
-            ser.serialize_member(&MEMBER_A, &self.a)?;
-            ser.serialize_member(&MEMBER_B, &self.b)?;
-            ser.serialize_member(&MEMBER_LIST, &self.member_list)?;
-            ser.serialize_member(&MEMBER_MAP, &self.member_map)?;
-            ser.end(schema)
-        }
-    }
+
     impl serde::Serialize for Test {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
         {
             let adapter = SerdeAdapter::new(serializer);
-            self.write_out(adapter).map_err(|wrapper| wrapper.0)
+            self.serialize_with_schema(self.schema(), adapter)
+                .map_err(|wrapper| wrapper.0)
         }
     }
 
@@ -377,10 +366,5 @@ mod tests {
 }"#;
         assert_eq!(serde_json::to_string_pretty(&test).unwrap(), expected);
         println!("{}", serde_json::to_string_pretty(&test).unwrap());
-    }
-
-    #[derive(Serialize)]
-    struct Dummy {
-        a: String,
     }
 }

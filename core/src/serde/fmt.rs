@@ -381,12 +381,12 @@ mod tests {
     use std::sync::LazyLock;
 
     use indexmap::IndexMap;
-
+    use smithy4rs_core_derive::SerializableStruct;
     use super::*;
     use crate::{
         Ref, lazy_schema,
         prelude::STRING,
-        schema::{Schema, SchemaShape, ShapeId},
+        schema::{Schema, ShapeId},
         traits,
     };
 
@@ -418,63 +418,28 @@ mod tests {
         (MEMBER_LIST_REDACT, "list", LIST_SCHEMA, traits![SensitiveTrait::new()])
     );
 
-    //#[derive(SerializableStruct)]
-    //#[schema(SCHEMA)]
+    #[derive(SerializableStruct)]
+    #[smithy_schema(SCHEMA)]
     pub(crate) struct SerializeMe {
-        // #[schema(MEMBER_A)]
+        #[smithy_schema(MEMBER_A)]
         pub member_a: String,
-        // #[schema(MEMBER_B)]
+        #[smithy_schema(MEMBER_B)]
         pub member_b: String,
-        // #[schema(MEMBER_C)]
+        #[smithy_schema(MEMBER_C)]
         pub member_optional: Option<String>,
+        #[smithy_schema(MEMBER_LIST)]
         pub member_list: Vec<String>,
+        #[smithy_schema(MEMBER_MAP)]
         pub member_map: IndexMap<String, String>,
     }
 
-    impl SchemaShape for SerializeMe {
-        fn schema(&self) -> &SchemaRef {
-            &SCHEMA
-        }
-    }
-
-    impl SerializeWithSchema for SerializeMe {
-        fn serialize_with_schema<S: Serializer>(
-            &self,
-            schema: &SchemaRef,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error> {
-            let mut ser = serializer.write_struct(schema, 2)?;
-            ser.serialize_member(&MEMBER_A, &self.member_a)?;
-            ser.serialize_member(&MEMBER_B, &self.member_b)?;
-            ser.serialize_optional_member(&MEMBER_C, &self.member_optional)?;
-            ser.serialize_member(&MEMBER_LIST, &self.member_list)?;
-            ser.serialize_member(&MEMBER_MAP, &self.member_map)?;
-            ser.end(schema)
-        }
-    }
-
+    #[derive(SerializableStruct)]
+    #[smithy_schema(REDACTED_AGGREGATES)]
     pub(crate) struct RedactMe {
+        #[smithy_schema(MEMBER_LIST_REDACT)]
         pub member_list: Vec<String>,
+        #[smithy_schema(MEMBER_MAP_REDACT)]
         pub member_map: IndexMap<String, String>,
-    }
-
-    impl SchemaShape for RedactMe {
-        fn schema(&self) -> &SchemaRef {
-            &REDACTED_AGGREGATES
-        }
-    }
-
-    impl SerializeWithSchema for RedactMe {
-        fn serialize_with_schema<S: Serializer>(
-            &self,
-            schema: &SchemaRef,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error> {
-            let mut ser = serializer.write_struct(schema, 2)?;
-            ser.serialize_member(&MEMBER_LIST_REDACT, &self.member_list)?;
-            ser.serialize_member(&MEMBER_MAP_REDACT, &self.member_map)?;
-            ser.end(schema)
-        }
     }
 
     #[test]
