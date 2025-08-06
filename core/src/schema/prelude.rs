@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use std::{fmt::Display, sync::LazyLock};
-
 use crate::{
     annotation_trait, lazy_shape_id,
     schema::{
@@ -14,58 +13,26 @@ use crate::{
 ////////////////////////////////////////////////////////////////////////////////////
 // Prelude Shape Schemas
 ////////////////////////////////////////////////////////////////////////////////////
+macro_rules! prelude_schema {
+    ($ident:ident, $factory:expr, $id:literal) => {
+        pub static $ident: LazyLock<SchemaRef> =
+            LazyLock::new(|| $factory($id, traits![]));
+    };
+}
 
-/// Schema for Smithy [Blob](https://smithy.io/2.0/spec/simple-types.html#blob) Type
-pub static BLOB: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_blob("smithy.api#Blob", traits![]));
-
-/// Schema for Smithy [Boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) Type
-pub static BOOLEAN: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_boolean("smithy.api#Boolean", traits![]));
-
-/// Schema for Smithy [String](https://smithy.io/2.0/spec/simple-types.html#string) Type
-pub static STRING: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_string("smithy.api#String", traits![]));
-
-/// Schema for Smithy [Timestamp](https://smithy.io/2.0/spec/simple-types.html#timestamp) type
-pub static TIMESTAMP: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_timestamp("smithy.api#Timestamp", traits![]));
-
-/// Schema for Smithy [Byte](https://smithy.io/2.0/spec/simple-types.html#byte) type
-pub static BYTE: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_byte("smithy.api#Byte", traits![]));
-
-/// Schema for Smithy [short](https://smithy.io/2.0/spec/simple-types.html#short) type
-pub static SHORT: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_short("smithy.api#Short", traits![]));
-
-/// Schema for Smithy [integer](https://smithy.io/2.0/spec/simple-types.html#integer) type
-pub static INTEGER: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_integer("smithy.api#Integer", traits![]));
-
-/// Schema for Smithy [long](https://smithy.io/2.0/spec/simple-types.html#long) type
-pub static LONG: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_long("smithy.api#Long", traits![]));
-
-/// Schema for Smithy [float](https://smithy.io/2.0/spec/simple-types.html#float) type
-pub static FLOAT: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_float("smithy.api#Float", traits![]));
-
-/// Schema for Smithy [double](https://smithy.io/2.0/spec/simple-types.html#double) type
-pub static DOUBLE: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_double("smithy.api#Double", traits![]));
-
-/// Schema for Smithy [bigInteger](https://smithy.io/2.0/spec/simple-types.html#biginteger) type
-pub static BIG_INTEGER: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_big_integer("smithy.api#BigInteger", traits![]));
-
-/// Schema for Smithy [bigDecimal](https://smithy.io/2.0/spec/simple-types.html#bigdecimal) type
-pub static BIG_DECIMAL: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_big_decimal("smithy.api#BigDecimal", traits![]));
-
-/// Schema for Smithy [document](https://smithy.io/2.0/spec/simple-types.html#document) type
-pub static DOCUMENT: LazyLock<SchemaRef> =
-    LazyLock::new(|| Schema::create_document("smithy.api#Document", traits![]));
+prelude_schema!(BLOB, Schema::create_blob, "smithy.api#Blob");
+prelude_schema!(BOOLEAN, Schema::create_boolean, "smithy.api#Boolean");
+prelude_schema!(STRING, Schema::create_string, "smithy.api#String");
+prelude_schema!(TIMESTAMP, Schema::create_timestamp, "smithy.api#Timestamp");
+prelude_schema!(BYTE, Schema::create_byte, "smithy.api#Byte");
+prelude_schema!(SHORT, Schema::create_short, "smithy.api#Short");
+prelude_schema!(INTEGER, Schema::create_integer, "smithy.api#Integer");
+prelude_schema!(LONG, Schema::create_long, "smithy.api#Long");
+prelude_schema!(FLOAT, Schema::create_float, "smithy.api#Float");
+prelude_schema!(DOUBLE, Schema::create_double, "smithy.api#Double");
+prelude_schema!(BIG_INTEGER, Schema::create_big_integer, "smithy.api#BigInteger");
+prelude_schema!(BIG_DECIMAL, Schema::create_big_decimal, "smithy.api#BigDecimal");
+prelude_schema!(DOCUMENT, Schema::create_document, "smithy.api#Document");
 
 // TODO:
 // - Primitive types

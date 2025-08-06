@@ -674,10 +674,10 @@ impl From<String> for Document {
 
 lazy_schema!(
     LIST_DOCUMENT_SCHEMA,
-    Schema::list_builder(DOCUMENT.id().clone())
-        .put_member("member", &DOCUMENT, traits![])
-        .build()
+    Schema::list_builder(DOCUMENT.id().clone(), traits![]),
+    ("member", DOCUMENT, traits![])
 );
+
 impl<T: Into<Document>> From<Vec<T>> for Document {
     fn from(value: Vec<T>) -> Self {
         let result = value.into_iter().map(Into::into).collect();
@@ -691,10 +691,9 @@ impl<T: Into<Document>> From<Vec<T>> for Document {
 
 lazy_schema!(
     MAP_DOCUMENT_SCHEMA,
-    Schema::map_builder(DOCUMENT.id().clone())
-        .put_member("key", &STRING, traits![])
-        .put_member("value", &DOCUMENT, traits![])
-        .build()
+    Schema::map_builder(DOCUMENT.id().clone(), traits![]),
+    ("key", STRING, traits![]),
+    ("value", DOCUMENT, traits![])
 );
 impl<T: Into<Document>> From<IndexMap<String, T>> for Document {
     fn from(value: IndexMap<String, T>) -> Self {

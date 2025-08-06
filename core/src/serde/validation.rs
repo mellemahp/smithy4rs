@@ -752,7 +752,7 @@
 // }
 // impl ValidationErrorCode for SmithyConstraints {}
 //
-// #[cfg(test)]
+// #[cfg(test.rs)]
 // mod tests {
 //     use std::ops::Deref;
 //     use super::*;
@@ -779,7 +779,7 @@
 //             .build()
 //     );
 //
-//     #[test]
+//     #[test.rs]
 //     fn checks_list_too_long() {
 //         let too_long = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 //         let mut validator = DefaultValidator::new();

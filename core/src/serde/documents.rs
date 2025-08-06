@@ -363,7 +363,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        lazy_member_schema, lazy_schema,
+        lazy_schema,
         prelude::*,
         schema::{Schema, ShapeId},
         traits,
@@ -371,32 +371,23 @@ mod tests {
 
     lazy_schema!(
         MAP_SCHEMA,
-        Schema::map_builder(ShapeId::from("com.example#Map"))
-            .put_member("key", &STRING, traits![])
-            .put_member("value", &STRING, traits![])
-            .build()
+        Schema::map_builder(ShapeId::from("com.example#Map"), traits![]),
+        ("key", STRING, traits![]),
+        ("value", STRING, traits![])
     );
     lazy_schema!(
-        LIST_SCHEMA,
-        Schema::list_builder(ShapeId::from("com.example#List"))
-            .put_member("member", &STRING, traits![])
-            .build()
+        LIST_SCHEMA, Schema::list_builder("com.example#Map", traits![]),
+        ("member", STRING, traits![])
     );
     lazy_schema!(
         SCHEMA,
-        Schema::structure_builder(ShapeId::from("com.example#Shape"))
-            .put_member("a", &STRING, traits![])
-            .put_member("b", &STRING, traits![])
-            .put_member("c", &STRING, traits![])
-            .put_member("map", &MAP_SCHEMA, traits![])
-            .put_member("list", &LIST_SCHEMA, traits![])
-            .build()
+        Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
+        (MEMBER_A, "a", STRING, traits![]),
+        (MEMBER_B, "b", STRING, traits![]),
+        (MEMBER_C, "c", STRING, traits![]),
+        (MEMBER_LIST, "list", LIST_SCHEMA, traits![]),
+        (MEMBER_MAP, "map", MAP_SCHEMA, traits![])
     );
-    lazy_member_schema!(MEMBER_A, SCHEMA, "a");
-    lazy_member_schema!(MEMBER_B, SCHEMA, "b");
-    lazy_member_schema!(MEMBER_C, SCHEMA, "c");
-    lazy_member_schema!(MEMBER_LIST, SCHEMA, "list");
-    lazy_member_schema!(MEMBER_MAP, SCHEMA, "map");
 
     pub(crate) struct SerializeMe {
         // #[schema(MEMBER_A)]

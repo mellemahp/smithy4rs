@@ -1,3 +1,6 @@
+//! Macros shared
+//! Primarily these macros are used to construct schemas and traits.
+
 // Create a list of traits for use in Schema builders
 #[macro_export]
 macro_rules! traits {
@@ -10,17 +13,41 @@ macro_rules! traits {
 // Create a lazy, static Schema definition
 #[macro_export]
 macro_rules! lazy_schema {
-    ($schema_name:ident, $builder:expr) => {
-        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| $builder);
+    (
+        $schema_name:ident,
+        $builder:expr,
+        $((
+            $member_schema_name:ident,
+            $member_ident:literal,
+            $member_schema:ident,
+            $member_traits:expr
+        )), +
+    ) => {
+        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+            $builder
+            $(.put_member($member_ident, &$member_schema, $member_traits))
+            *
+            .build()
+        });
+        $(static $member_schema_name: LazyLock<&SchemaRef> =
+            LazyLock::new(|| $schema_name.expect_member($member_ident));
+        )*
     };
-}
-
-// Create a lazy, static member schema definition
-#[macro_export]
-macro_rules! lazy_member_schema {
-    ($member_schema_name:ident, $parent_schema:ident, $identifier:literal) => {
-        static $member_schema_name: LazyLock<&SchemaRef> =
-            LazyLock::new(|| $parent_schema.expect_member($identifier));
+    (
+        $schema_name:ident,
+        $builder:expr,
+        $((
+            $member_ident:literal,
+            $member_schema:ident,
+            $member_traits:expr
+        )), +
+    ) => {
+        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+            $builder
+            $(.put_member($member_ident, &$member_schema, $member_traits))
+            *
+            .build()
+        });
     };
 }
 

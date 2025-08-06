@@ -2,7 +2,6 @@
 #![allow(unused_variables)]
 
 use std::{collections::HashSet, hash::Hash, sync::LazyLock};
-
 use indexmap::IndexMap;
 
 use crate::{
@@ -206,26 +205,26 @@ impl Schema {
 impl Schema {
     /// Create a new [`SchemaBuilder`] for a [Structure](https://smithy.io/2.0/spec/aggregate-types.html#structure) shape.
     #[must_use]
-    pub fn structure_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
-        SchemaBuilder::new(id, ShapeType::Structure)
+    pub fn structure_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+        SchemaBuilder::new(id, ShapeType::Structure, traits)
     }
 
     /// Create a new [`SchemaBuilder`] for a [Union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape.
     #[must_use]
-    pub fn union_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
-        SchemaBuilder::new(id, ShapeType::Union)
+    pub fn union_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+        SchemaBuilder::new(id, ShapeType::Union, traits)
     }
 
     /// Create a new [`SchemaBuilder`] for a [List](https://smithy.io/2.0/spec/aggregate-types.html#list) shape.
     #[must_use]
-    pub fn list_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
-        SchemaBuilder::new(id, ShapeType::List)
+    pub fn list_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+        SchemaBuilder::new(id, ShapeType::List, traits)
     }
 
     /// Create a new [`SchemaBuilder`] for a [Map](https://smithy.io/2.0/spec/aggregate-types.html#map) shape.
     #[must_use]
-    pub fn map_builder<'s>(id: ShapeId) -> SchemaBuilder<'s> {
-        SchemaBuilder::new(id, ShapeType::Map)
+    pub fn map_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+        SchemaBuilder::new(id, ShapeType::Map, traits)
     }
 }
 
@@ -425,7 +424,7 @@ pub struct SchemaBuilder<'b> {
 
 impl SchemaBuilder<'_> {
     /// Create a new [`SchemaBuilder`] with no traits or members.
-    fn new(id: impl Into<ShapeId>, shape_type: ShapeType) -> Self {
+    fn new(id: impl Into<ShapeId>, shape_type: ShapeType, traits: TraitList) -> Self {
         SchemaBuilder {
             id: id.into(),
             members: match shape_type {
@@ -434,7 +433,7 @@ impl SchemaBuilder<'_> {
                 _ => Vec::new(),
             },
             shape_type,
-            traits: TraitMap::new(),
+            traits: TraitMap::of(traits),
         }
     }
 }
@@ -587,7 +586,7 @@ mod tests {
     #[test]
     fn structure_schema() {
         let target = Schema::create_integer(ShapeId::from("api.smithy#Target"), traits![]);
-        let schema = Schema::structure_builder(ShapeId::from("api.smithy#Example"))
+        let schema = Schema::structure_builder(ShapeId::from("api.smithy#Example"), traits![])
             .put_member("target_a", &target, traits![])
             .put_member("target_b", &STRING, traits![])
             .build();
@@ -605,14 +604,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "Lists can only have members named `member`. Found `bad`")]
     fn disallowed_list_schema() {
-        let schema = Schema::list_builder(ShapeId::from("api.smithy#List"))
+        let schema = Schema::list_builder(ShapeId::from("api.smithy#List"), traits![])
             .put_member("bad", &STRING, traits![])
             .build();
     }
 
     #[test]
     fn list_schema() {
-        let schema = Schema::list_builder(ShapeId::from("api.smithy#List"))
+        let schema = Schema::list_builder(ShapeId::from("api.smithy#List"), traits![])
             .put_member("member", &STRING, traits![])
             .build();
         assert_eq!(schema.shape_type(), &ShapeType::List);
@@ -627,7 +626,7 @@ mod tests {
 
     #[test]
     fn map_schema() {
-        let schema = Schema::map_builder(ShapeId::from("api.smithy#Map"))
+        let schema = Schema::map_builder(ShapeId::from("api.smithy#Map"), traits![])
             .put_member("key", &STRING, traits![])
             .put_member("value", &STRING, traits![])
             .build();
@@ -664,7 +663,7 @@ mod tests {
             ShapeId::from("api.smithy#Target"),
             traits![JsonNameTrait::new("other")],
         );
-        let schema = Schema::structure_builder(ShapeId::from("api.smithy#Example"))
+        let schema = Schema::structure_builder(ShapeId::from("api.smithy#Example"), traits![])
             .put_member("target_a", &target, traits![])
             .build();
         let member = schema.get_member("target_a").expect("No such member");
