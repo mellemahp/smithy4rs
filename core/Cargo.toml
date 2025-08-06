@@ -20,15 +20,10 @@ thiserror.workspace = true
 downcast-rs.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 static_str_ops = "0.1.2"
-log = "0.4.27"
-
-# TODO: These ones should go behind a `derive` feature
-syn = {version = "1.0", features = ["full"]}
-quote = "1.0"
-proc-macro2 = "1.0.94"
 
 [dev-dependencies]
 serde_json = "1.0.140"
+smithy4rs-core-derive.workspace = true
 
 [lints]
 workspace = true

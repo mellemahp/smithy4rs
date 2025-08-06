@@ -286,7 +286,7 @@ mod tests {
     use std::sync::LazyLock;
 
     use indexmap::IndexMap;
-
+    use serde::Serialize;
     use super::*;
     use crate::{
         lazy_schema,
@@ -377,5 +377,10 @@ mod tests {
 }"#;
         assert_eq!(serde_json::to_string_pretty(&test).unwrap(), expected);
         println!("{}", serde_json::to_string_pretty(&test).unwrap());
+    }
+
+    #[derive(Serialize)]
+    struct Dummy {
+        a: String,
     }
 }

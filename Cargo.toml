@@ -31,7 +31,7 @@ keywords = ["smithy", "api"]
 categories = ["api-bindings"]
 
 [workspace.dependencies]
-# smithy4rs-core-derive = { version = "0.0.1", path = "core-derive" }
+smithy4rs-core-derive = { version = "0.0.1", path = "core-derive" }
 smithy4rs-core = { version = "0.0.1", path = "core" }
 jiter = "0.9.0"
 json = "0.12.4"
