@@ -1,9 +1,8 @@
 extern crate proc_macro;
-use proc_macro2::{Span, TokenStream};
-use proc_macro2::Ident;
-use proc_macro_crate::{crate_name, FoundCrate};
+use proc_macro_crate::{FoundCrate, crate_name};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{parse_macro_input, Attribute, Data, DeriveInput, Type};
+use syn::{Attribute, Data, DeriveInput, Type, parse_macro_input};
 
 // TODO: Enable feature to generate serde adapters
 // TODO: Add some unit tests!
@@ -25,8 +24,8 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
     // TODO: Deserialization impl
 
     // Allows us to use these within the smithy4rs tests
-    let found_crate = crate_name("smithy4rs-core")
-        .expect("smithy4rs-core is present in `Cargo.toml`");
+    let found_crate =
+        crate_name("smithy4rs-core").expect("smithy4rs-core is present in `Cargo.toml`");
     let extern_import = match &found_crate {
         FoundCrate::Itself => quote!(),
         FoundCrate::Name(name) => {
@@ -38,7 +37,7 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
         }
     };
     let crate_ident = match &found_crate {
-        FoundCrate::Itself => quote!( crate ),
+        FoundCrate::Itself => quote!(crate),
         FoundCrate::Name(_) => {
             let ident = Ident::new("_smithy4rs", Span::call_site());
             quote!( #ident )
@@ -101,7 +100,7 @@ fn schema_impl(shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
 
 fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
     let fields = match &input.data {
-        Data::Struct(data) => { &data.fields }
+        Data::Struct(data) => &data.fields,
         _ => panic!("SerializableStruct can only be derived for structs"),
     };
     let mut field_data = Vec::new();
@@ -113,7 +112,7 @@ fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
         field_data.push(FieldData {
             schema,
             field_ident,
-            optional
+            optional,
         });
     }
     // Now write the thing
@@ -139,14 +138,14 @@ fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
 struct FieldData {
     schema: Ident,
     field_ident: Ident,
-    optional: bool
+    optional: bool,
 }
 impl FieldData {
     fn method_call(&self) -> Ident {
         if self.optional {
             Ident::new("serialize_optional_member", Span::call_site())
         } else {
-            Ident::new( "serialize_member", Span::call_site())
+            Ident::new("serialize_member", Span::call_site())
         }
     }
 }
@@ -155,14 +154,11 @@ fn is_optional(ty: &Type) -> bool {
     match ty {
         Type::Path(type_path) => {
             let path = &type_path.path;
-            let idents_of_path = path
-                .segments
-                .iter()
-                .fold(String::new(), |mut acc, v| {
-                    acc.push_str(&v.ident.to_string());
-                    acc.push(':');
-                    acc
-                });
+            let idents_of_path = path.segments.iter().fold(String::new(), |mut acc, v| {
+                acc.push_str(&v.ident.to_string());
+                acc.push(':');
+                acc
+            });
             // Figure out if the type is optional
             // TODO: Might erroneously detect optionals in sparse lists or maps
             vec!["Option:", "std:option:Option:", "core:option:Option:"]
@@ -170,7 +166,6 @@ fn is_optional(ty: &Type) -> bool {
                 .find(|s| idents_of_path == *s)
                 .is_some()
         }
-        _ => panic!("Serde can only be derived for resolvable types")
+        _ => panic!("Serde can only be derived for resolvable types"),
     }
 }
-

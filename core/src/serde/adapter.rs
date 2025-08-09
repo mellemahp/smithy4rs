@@ -287,14 +287,14 @@ mod tests {
 
     use indexmap::IndexMap;
     use smithy4rs_core_derive::SerializableStruct;
+
     use super::*;
     use crate::{
         lazy_schema,
         prelude::*,
-        schema::{Schema, SchemaRef, ShapeId},
+        schema::{Schema, SchemaRef, SchemaShape, ShapeId},
         traits,
     };
-    use crate::schema::SchemaShape;
 
     lazy_schema!(
         MAP_SCHEMA,

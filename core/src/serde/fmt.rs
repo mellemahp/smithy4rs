@@ -382,6 +382,7 @@ mod tests {
 
     use indexmap::IndexMap;
     use smithy4rs_core_derive::SerializableStruct;
+
     use super::*;
     use crate::{
         Ref, lazy_schema,
@@ -414,8 +415,18 @@ mod tests {
     lazy_schema!(
         REDACTED_AGGREGATES,
         Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
-        (MEMBER_MAP_REDACT, "map", MAP_SCHEMA, traits![SensitiveTrait::new()]),
-        (MEMBER_LIST_REDACT, "list", LIST_SCHEMA, traits![SensitiveTrait::new()])
+        (
+            MEMBER_MAP_REDACT,
+            "map",
+            MAP_SCHEMA,
+            traits![SensitiveTrait::new()]
+        ),
+        (
+            MEMBER_LIST_REDACT,
+            "list",
+            LIST_SCHEMA,
+            traits![SensitiveTrait::new()]
+        )
     );
 
     #[derive(SerializableStruct)]
@@ -485,6 +496,20 @@ mod tests {
         };
         let output =
             to_string(&REDACTED_AGGREGATES, &struct_to_write).expect("serialization failed");
+        assert_eq!(output, "Shape[list=[**REDACTED**], map={**REDACTED**}]");
+    }
+
+    #[test]
+    fn document_conversion_retains_redaction() {
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        let list = vec!["a".to_string(), "b".to_string()];
+        let struct_to_write = RedactMe {
+            member_list: list,
+            member_map: map,
+        };
+        let document: Document = struct_to_write.into();
+        let output = to_string(&REDACTED_AGGREGATES, &document).expect("serialization failed");
         assert_eq!(output, "Shape[list=[**REDACTED**], map={**REDACTED**}]");
     }
 }

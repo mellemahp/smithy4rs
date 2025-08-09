@@ -360,7 +360,9 @@ impl StructSerializer for Document {
 #[cfg(test)]
 mod tests {
     use std::sync::LazyLock;
+
     use smithy4rs_core_derive::SerializableStruct;
+
     use super::*;
     use crate::{
         lazy_schema,
@@ -376,7 +378,8 @@ mod tests {
         ("value", STRING, traits![])
     );
     lazy_schema!(
-        LIST_SCHEMA, Schema::list_builder("com.example#Map", traits![]),
+        LIST_SCHEMA,
+        Schema::list_builder("com.example#Map", traits![]),
         ("member", STRING, traits![])
     );
     lazy_schema!(

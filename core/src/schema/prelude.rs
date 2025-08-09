@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::{fmt::Display, sync::LazyLock};
+
 use crate::{
     annotation_trait, lazy_shape_id,
     schema::{
@@ -15,8 +16,7 @@ use crate::{
 ////////////////////////////////////////////////////////////////////////////////////
 macro_rules! prelude_schema {
     ($ident:ident, $factory:expr, $id:literal) => {
-        pub static $ident: LazyLock<SchemaRef> =
-            LazyLock::new(|| $factory($id, traits![]));
+        pub static $ident: LazyLock<SchemaRef> = LazyLock::new(|| $factory($id, traits![]));
     };
 }
 
@@ -30,8 +30,16 @@ prelude_schema!(INTEGER, Schema::create_integer, "smithy.api#Integer");
 prelude_schema!(LONG, Schema::create_long, "smithy.api#Long");
 prelude_schema!(FLOAT, Schema::create_float, "smithy.api#Float");
 prelude_schema!(DOUBLE, Schema::create_double, "smithy.api#Double");
-prelude_schema!(BIG_INTEGER, Schema::create_big_integer, "smithy.api#BigInteger");
-prelude_schema!(BIG_DECIMAL, Schema::create_big_decimal, "smithy.api#BigDecimal");
+prelude_schema!(
+    BIG_INTEGER,
+    Schema::create_big_integer,
+    "smithy.api#BigInteger"
+);
+prelude_schema!(
+    BIG_DECIMAL,
+    Schema::create_big_decimal,
+    "smithy.api#BigDecimal"
+);
 prelude_schema!(DOCUMENT, Schema::create_document, "smithy.api#Document");
 
 // TODO:
