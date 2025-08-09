@@ -1,0 +1,18 @@
+[package]
+name = "smithy4rs-cedar"
+description = "Support for converting a Smithy shape to a Cedar Entity for Auth."
+repository.workspace = true
+publish = true
+readme.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license-file.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cedar-policy = "4.5.0"
+
+[lints]
+workspace = true

@@ -71,6 +71,9 @@ impl SerializeWithSchema for Document {
             ShapeType::Structure | ShapeType::Union => {
                 let document_map = self.as_map().unwrap();
                 let mut struct_serializer = serializer.write_struct(schema, self.size())?;
+                if let Some(discriminator) = &self.discriminator {
+                    struct_serializer.serialize_discriminator(discriminator)?;
+                }
                 for (key, value) in document_map {
                     if let Some(member_schema) = schema.get_member(key) {
                         struct_serializer.serialize_member(member_schema, value)?;

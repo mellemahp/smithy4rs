@@ -10,6 +10,7 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     schema::{Document, SchemaRef, SchemaShape},
 };
+use crate::schema::ShapeId;
 
 /// Serialize a shape with its pre-defined schema.
 ///
@@ -89,6 +90,18 @@ pub trait StructSerializer {
 
     /// Must match the `Ok` type of our `Serializer`.
     type Ok;
+
+    /// Optionally serializes the discriminator of a shape.
+    ///
+    /// In general this is only done for document types to allow for
+    /// over-the-wire polymorphism, and by default this method does nothing.
+    #[inline]
+    fn serialize_discriminator (
+        &mut self,
+        discriminator: &ShapeId,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
 
     /// Serialize a member on the struct
     fn serialize_member<T>(
