@@ -71,8 +71,8 @@
 // //! fn build_impl(self, validator: &mut impl Validator) -> Result<Self, ValidationErrors> {
 // //!     let errors = ValidationErrors::new();
 // //!     let value = Self {
-// //!         a: validator.validate(&MEMBER_A, self.a).map_err(errors::extend),
-// //!         b: validator.validate_required(&MEMBER_B, self.b).map_err(errors::extend)
+// //!         a: validator.validate_optional_and_extend(&MEMBER_A, self.a, errors).map_err(errors::extend),
+// //!         b: validator.validate_required_and_extend(&MEMBER_B, self.b).map_err(errors::extend)
 // //!     };
 // //!     if errors.is_empty() {
 // //!         Ok(value)
@@ -108,7 +108,12 @@
 //     };
 // }
 //
-// pub trait Validate {
+// /// Validates that a shape conforms to the constraints of a Schema
+// ///
+// /// *Note*: The `IN_PLACE` type parameter is used to indicate whether validation
+// /// happens in place (no modification) or creates a new value (as a builder does).
+// /// Users should, in general, use the default value.
+// pub trait Validate<const IN_PLACE: bool = true> {
 //     type Value;
 //
 //     /// Validate a shape given its schema and a validator.
@@ -488,8 +493,46 @@
 //     }
 // }
 //
-// // TODO: Should builder lists be validated in place?
-// impl<I: Validate> Validate for Vec<I> {
+// // In place validation of a list value (i.e. does not create new list)
+// impl<I> Validate<true> for Vec<I>
+// where
+//     I: Validate<true>,
+//     I::Value: Validate<true>
+// {
+//     type Value = Vec<I::Value>;
+//
+//     fn validate<V: Validator>(
+//         self,
+//         schema: &SchemaRef,
+//         validator: V,
+//     ) -> Result<Self::Value, ValidationErrors> {
+//         let mut item_validator = validator.validate_list(schema, self.len())?;
+//         let Some(item_schema) = schema.get_member("member") else {
+//             return Err(ValidationError::expected_member(schema, "member").into())
+//         };
+//         let mut errors = ValidationErrors::new();
+//         for item in &self {
+//             match item_validator.validate_item(item_schema, item) {
+//                 Ok(_) => () /* do nothing */,
+//                 Err(e) => errors.extend(e)
+//             };
+//         }
+//         // TODO: Limit validation depth
+//         if errors.is_empty() {
+//             Ok(self)
+//         } else {
+//             Err(errors)
+//         }
+//     }
+// }
+//
+// // Validation of a value that is moved (i.e. requires a new list to be created)
+// // Note that moving value should produce an in-place validatable value.
+// impl<I> Validate<false> for Vec<I>
+// where
+//     I: Validate<true>,
+//     I::Value: Validate<false>
+// {
 //     type Value = Vec<I::Value>;
 //
 //     fn validate<V: Validator>(
@@ -558,12 +601,13 @@
 // // Pre-built Validators
 // //////////////////////////////////////////////////////////////////////////////
 //
-// pub struct DefaultValidator {}
+// pub struct DefaultValidator;
 // impl DefaultValidator {
 //     pub(crate) const fn new() -> Self {
 //         DefaultValidator {}
 //     }
 // }
+//
 // impl <'a> Validator for &'a mut DefaultValidator {
 //     type ItemValidator = DefaultItemValidator<'a>;
 //
@@ -752,43 +796,78 @@
 // }
 // impl ValidationErrorCode for SmithyConstraints {}
 //
-// #[cfg(test.rs)]
+// #[cfg(test)]
 // mod tests {
 //     use std::ops::Deref;
 //     use super::*;
 //     use crate::Ref;
 //     use crate::prelude::STRING;
-//     use crate::schema::SchemaShape;
+//     use crate::schema::{SchemaShape, LIST_DOCUMENT_SCHEMA};
 //     use crate::schema::{Schema, ShapeId};
-//     use crate::{lazy_member_schema, lazy_schema, traits};
+//     use crate::{lazy_schema, traits};
 //     use indexmap::IndexMap;
 //     use std::sync::LazyLock;
+//     use std::time::SystemTime;
 //
 //     lazy_schema!(
 //         MAP_SCHEMA,
-//         Schema::map_builder(ShapeId::from("com.example#Map"))
-//             .put_member("key", &STRING, traits![])
-//             .put_member("value", &STRING, traits![])
-//             .build()
+//         Schema::map_builder(ShapeId::from("com.example#Map"), traits![]),
+//         ("key", STRING, traits![]),
+//         ("value", STRING, traits![])
 //     );
 //     lazy_schema!(
 //         LIST_SCHEMA,
-//         Schema::list_builder(ShapeId::from("com.example#List"))
-//             .with_trait(LengthTrait::builder().min(1).max(2).build())
-//             .put_member("member", &STRING, traits![])
-//             .build()
+//         Schema::list_builder(ShapeId::from("com.example#List"), traits![
+//             LengthTrait::builder().min(1).max(2).build()
+//         ]),
+//         ("member", STRING, traits![])
 //     );
 //
-//     #[test.rs]
+//     #[test]
 //     fn checks_list_too_long() {
 //         let too_long = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 //         let mut validator = DefaultValidator::new();
-//         let res = too_long.validate(&LIST_SCHEMA, &mut validator);
+//         let res = too_long.validate(&LIST_DOCUMENT_SCHEMA, &mut validator);
 //         let Err(ValidationErrors { errors }) = res else {
 //             panic!("Expected an error")
 //         };
 //         assert_eq!(errors.len(), 1);
 //         let expected = "Size: 3 does not conform to @length constraint. Expected between 1 and 2.".to_string();
 //         assert_eq!(expected, format!("{}", errors.get(0).unwrap().code));
+//     }
+//
+//     struct A {
+//         field: String,
+//     }
+//     struct ABuilder {
+//         field: Option<String>
+//     }
+//     impl ABuilder {
+//         fn build(self) -> A {
+//             let errors = ValidationErrors::new();
+//             let field = DefaultValidator.validate_required(&STRING, self.field).unwrap();
+//
+//             if errors.is_empty() {
+//                 A { field }
+//             }
+//
+//         }
+//     }
+//
+//     #[doc(hidden)]
+//     impl Validate for A {
+//         type Value = ();
+//
+//         #[doc(hidden)]
+//         fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+//             todo!()
+//         }
+//     }
+//
+//     fn x() {
+//         let a = A;
+//         a.validate()
+//
+//
 //     }
 // }

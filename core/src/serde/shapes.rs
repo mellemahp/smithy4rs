@@ -1,13 +1,17 @@
-//use crate::schema::SchemaShape;
-//use crate::serde::documents::SerializableShape;
-//use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
-
-///// Smithy Shapes should implement Serializable, Deserializable, and Schema
-///// MARKER TRAIT
-// TODO: Is this necessary?
-//pub trait SmithyShape: SerializableShape + SchemaShape {}
-
-//// Shape that can create a builder
+// //use crate::schema::SchemaShape;
+// //use crate::serde::documents::SerializableShape;
+// //use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
+//
+// use crate::schema::SchemaShape;
+// use crate::serde::documents::SerializableShape;
+// use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
+//
+// ///// Smithy Shapes should implement Serializable, Deserializable, and Schema
+// ///// MARKER TRAIT
+// // TODO: Is this necessary?
+// pub trait SmithyShape: SerializableShape + SchemaShape {}
+//
+// // Shape that can create a builder
 // pub trait Builder<B: ShapeBuilder<Self>>
 // where
 //     Self: Sized + SchemaShape,
@@ -22,7 +26,7 @@
 //         todo!("This should be implemented for each type")
 //     }
 // }
-
+//
 // /// Builder for a Smithy Shape
 // pub trait ShapeBuilder<S>: Sized {
 //     fn new() -> Self;
@@ -37,7 +41,7 @@
 //     ///
 //     /// Possibly raises errors if built shape is invalid.
 //     fn build(self) -> Result<S, ValidationErrors> {
-//         self.build_with_validator(&mut DefaultValidator{})
+//         self.build_with_validator(&mut DefaultValidator)
 //     }
 //
 //     /// Build a shape, using the specified validator to validate values.
