@@ -8,9 +8,8 @@ use indexmap::IndexMap;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, SchemaRef, SchemaShape},
+    schema::{Document, SchemaRef, SchemaShape, ShapeId},
 };
-use crate::schema::ShapeId;
 
 /// Serialize a shape with its pre-defined schema.
 ///
@@ -96,10 +95,7 @@ pub trait StructSerializer {
     /// In general this is only done for document types to allow for
     /// over-the-wire polymorphism, and by default this method does nothing.
     #[inline]
-    fn serialize_discriminator (
-        &mut self,
-        discriminator: &ShapeId,
-    ) -> Result<(), Self::Error> {
+    fn serialize_discriminator(&mut self, discriminator: &ShapeId) -> Result<(), Self::Error> {
         Ok(())
     }
 
