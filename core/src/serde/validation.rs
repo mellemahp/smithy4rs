@@ -118,16 +118,6 @@ pub trait Validate {
     ) -> Result<Self::Value, ValidationErrors>;
 }
 
-macro_rules! check_type {
-    ($schema:ident, $expected:path) => {
-        if $schema.shape_type() != &$expected {
-            return Err(ValidationErrors::from(ValidationError::invalid_type(
-                $schema, $expected,
-            )));
-        }
-    };
-}
-
 // TODO: could this be a serializer?
 // TODO: How to handle max allowed errors and max depth? Dont want to allow huge reccursion
 /// NOTE: validate_struct is not needed here as that is handled by the builders.
@@ -165,12 +155,12 @@ pub trait Validator: Sized {
         schema: &SchemaRef,
         blob: ByteBuffer,
     ) -> Result<ByteBuffer, ValidationErrors> {
-        check_type!(schema, ShapeType::Blob);
+        check_type(schema, ShapeType::Blob)?;
         Ok(blob)
     }
 
     fn validate_boolean(self, schema: &SchemaRef, boolean: bool) -> Result<bool, ValidationErrors> {
-        check_type!(schema, ShapeType::Boolean);
+        check_type(schema, ShapeType::Boolean)?;
         Ok(boolean)
     }
 
@@ -179,7 +169,7 @@ pub trait Validator: Sized {
         schema: &SchemaRef,
         string: String,
     ) -> Result<String, ValidationErrors> {
-        check_type!(schema, ShapeType::String);
+        check_type(schema, ShapeType::String)?;
         // TODO: By default should check length and pattern
         Ok(string)
     }
@@ -189,39 +179,39 @@ pub trait Validator: Sized {
         schema: &SchemaRef,
         timestamp: Instant,
     ) -> Result<Instant, ValidationErrors> {
-        check_type!(schema, ShapeType::Timestamp);
+        check_type(schema, ShapeType::Timestamp)?;
         Ok(timestamp)
     }
 
     /// TODO: Could these delegate to the largest int validation?
     /// TODO: All the number impls should check range.
     fn validate_byte(self, schema: &SchemaRef, byte: i8) -> Result<i8, ValidationErrors> {
-        check_type!(schema, ShapeType::Byte);
+        check_type(schema, ShapeType::Byte)?;
         Ok(byte)
     }
 
     fn validate_short(self, schema: &SchemaRef, short: i16) -> Result<i16, ValidationErrors> {
-        check_type!(schema, ShapeType::Short);
+        check_type(schema, ShapeType::Short)?;
         Ok(short)
     }
 
     fn validate_integer(self, schema: &SchemaRef, integer: i32) -> Result<i32, ValidationErrors> {
-        check_type!(schema, ShapeType::Integer);
+        check_type(schema, ShapeType::Integer)?;
         Ok(integer)
     }
 
     fn validate_long(self, schema: &SchemaRef, long: i64) -> Result<i64, ValidationErrors> {
-        check_type!(schema, ShapeType::Long);
+        check_type(schema, ShapeType::Long)?;
         Ok(long)
     }
 
     fn validate_float(self, schema: &SchemaRef, float: f32) -> Result<f32, ValidationErrors> {
-        check_type!(schema, ShapeType::Float);
+        check_type(schema, ShapeType::Float)?;
         Ok(float)
     }
 
     fn validate_double(self, schema: &SchemaRef, double: f64) -> Result<f64, ValidationErrors> {
-        check_type!(schema, ShapeType::Double);
+        check_type(schema, ShapeType::Double)?;
         Ok(double)
     }
 
@@ -230,7 +220,7 @@ pub trait Validator: Sized {
         schema: &SchemaRef,
         big_int: BigInt,
     ) -> Result<BigInt, ValidationErrors> {
-        check_type!(schema, ShapeType::BigInteger);
+        check_type(schema, ShapeType::BigInteger)?;
         Ok(big_int)
     }
 
@@ -239,7 +229,7 @@ pub trait Validator: Sized {
         schema: &SchemaRef,
         big_decimal: BigDecimal,
     ) -> Result<BigDecimal, ValidationErrors> {
-        check_type!(schema, ShapeType::BigDecimal);
+        check_type(schema, ShapeType::BigDecimal)?;
         Ok(big_decimal)
     }
 
@@ -249,7 +239,7 @@ pub trait Validator: Sized {
         document: Document,
     ) -> Result<Document, ValidationErrors> {
         // TODO: How should this be handled?
-        check_type!(schema, ShapeType::Document);
+        check_type(schema, ShapeType::Document)?;
         Ok(document)
     }
 
@@ -257,12 +247,12 @@ pub trait Validator: Sized {
     //       the value is ::__Unknown?
     /// TODO: Should these check string validation?
     fn validate_enum<E>(self, schema: &SchemaRef, value: E) -> Result<E, ValidationErrors> {
-        check_type!(schema, ShapeType::Enum);
+        check_type(schema, ShapeType::Enum)?;
         Ok(value)
     }
 
     fn validate_int_enum<E>(self, schema: &SchemaRef, value: E) -> Result<E, ValidationErrors> {
-        check_type!(schema, ShapeType::IntEnum);
+        check_type(schema, ShapeType::IntEnum)?;
         Ok(value)
     }
 
@@ -288,6 +278,15 @@ pub trait Validator: Sized {
         // TODO: are there any structure-level constraints that might need validation?
         todo!()
     }
+}
+
+fn check_type(schema: &SchemaRef, expected: ShapeType) -> Result<(), ValidationErrors> {
+    if schema.shape_type() == &expected {
+        return Ok(());
+    }
+    Err(ValidationErrors::from(ValidationError::invalid_type(
+        schema, expected,
+    )))
 }
 
 pub trait ItemValidator {
@@ -503,7 +502,7 @@ impl<V: Validate> Validate for IndexMap<String, V> {
         let Some(key_schema) = schema.get_member("key") else {
             return Err(ValidationError::expected_member(schema, "key").into());
         };
-        check_type!(key_schema, ShapeType::String);
+        check_type(key_schema, ShapeType::String)?;
 
         let mut errors = ValidationErrors::new();
         // TODO: limit depth of validation
@@ -548,7 +547,7 @@ impl<'a> Validator for &'a mut DefaultValidator {
         schema: &SchemaRef,
         size: usize,
     ) -> Result<Self::ItemValidator, ValidationErrors> {
-        check_type!(schema, ShapeType::List);
+        check_type(schema, ShapeType::List)?;
         check_length(schema, size)?;
         Ok(DefaultItemValidator { validator: self })
     }
@@ -558,7 +557,7 @@ impl<'a> Validator for &'a mut DefaultValidator {
         schema: &SchemaRef,
         size: usize,
     ) -> Result<Self::ItemValidator, ValidationErrors> {
-        check_type!(schema, ShapeType::Map);
+        check_type(schema, ShapeType::Map)?;
         check_length(schema, size)?;
         Ok(DefaultItemValidator { validator: self })
     }
