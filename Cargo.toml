@@ -3,12 +3,10 @@ resolver = "2"
 members = [
     "core",
     "core-derive",
-    "cedar-compat"
 ]
 default-members = [
     "core",
-    "core-derive",
-    "cedar-compat"
+    "core-derive"
 ]
 
 [profile.release]

@@ -243,7 +243,7 @@ impl Schema {
             Schema::IntEnum(_) => &ShapeType::IntEnum,
             Schema::List(_) => &ShapeType::List,
             Schema::Map(_) => &ShapeType::Map,
-            Schema::Member(_) => &ShapeType::Member,
+            Schema::Member(member) => member.target.shape_type(),
         }
     }
 
@@ -594,7 +594,7 @@ mod tests {
         assert_eq!(schema.shape_type(), &ShapeType::Structure);
         assert_eq!(schema.id(), &ShapeId::from("api.smithy#Example"));
         let member = schema.get_member("target_a").unwrap();
-        assert_eq!(member.shape_type(), &ShapeType::Member);
+        assert_eq!(member.shape_type(), &ShapeType::Integer);
         assert_eq!(member.id(), &ShapeId::from("api.smithy#Example$target_a"));
         let Some(member_schema) = member.as_member() else {
             panic!("Should be member schema!")
@@ -621,7 +621,7 @@ mod tests {
             panic!("Should be list!")
         };
         let member = &list_schema.member;
-        assert_eq!(member.shape_type(), &ShapeType::Member);
+        assert_eq!(member.shape_type(), &ShapeType::String);
         assert_eq!(member.id(), &ShapeId::from("api.smithy#List$member"));
     }
 
@@ -637,11 +637,11 @@ mod tests {
             panic!("Should be map!")
         };
         let key = &map_schema.key;
-        assert_eq!(key.shape_type(), &ShapeType::Member);
+        assert_eq!(key.shape_type(), &ShapeType::String);
         assert_eq!(key.id(), &ShapeId::from("api.smithy#Map$key"));
 
         let value = &map_schema.value;
-        assert_eq!(value.shape_type(), &ShapeType::Member);
+        assert_eq!(value.shape_type(), &ShapeType::String);
         assert_eq!(value.id(), &ShapeId::from("api.smithy#Map$value"));
     }
 
