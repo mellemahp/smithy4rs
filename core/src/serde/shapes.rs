@@ -3,42 +3,27 @@
 //use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
 
 use crate::{
-    schema::SchemaShape,
     serde::{
-        documents::SerializableShape,
-        validation::{DefaultValidator, ValidationErrors, Validator},
+        deserializers::Deserializer, documents::{DeserializableShape, SerializableShape}, validation::{DefaultValidator, ValidationErrors, Validator}
     },
 };
 
 ///// Smithy Shapes should implement Serializable, Deserializable, and Schema
 ///// MARKER TRAIT
 // TODO: Is this necessary?
-pub trait SmithyShape: SerializableShape + SchemaShape {}
-
-// Shape that can create a builder
-pub trait Builder<B: ShapeBuilder<Self>>
-where
-    Self: Sized + SchemaShape,
-{
-    /// Get a new builder for this shape.
-    fn builder() -> B {
-        B::new()
-    }
-
-    /// Convert a shape to a builder
-    fn to_builder(&self) -> B {
-        todo!("This should be implemented for each type")
-    }
-}
+pub trait SmithyShape: SerializableShape + DeserializableShape {}
 
 /// Builder for a Smithy Shape
-pub trait ShapeBuilder<S>: Sized {
+pub trait ShapeBuilder<'de, S: SerializableShape>: Sized {
     fn new() -> Self;
 
     /// Implements [Smithy Error Correction](https://smithy.io/2.0/spec/aggregate-types.html#client-error-correction)
     fn error_correction(self) -> Self {
         todo!("Should be code generated")
     }
+    
+    /// Deserializes data from the given deserializer into the builder.
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self, D::Error>;
 
     /// Build a shape. Default implementation uses the [`DefaultValidator`] for validation,
     /// which checks the basic Smithy constraints for types.

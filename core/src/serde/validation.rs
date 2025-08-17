@@ -96,7 +96,7 @@ use crate::{
     schema::{Document, Schema, SchemaRef, ShapeId, ShapeType},
     serde::{
         se::ListSerializer,
-        shapes::{Builder, ShapeBuilder},
+        shapes::{ShapeBuilder},
     },
 };
 
