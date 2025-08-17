@@ -230,7 +230,11 @@ impl Document {
     /// Get the timestamp value of the Document if it is a timestamp.
     #[must_use]
     pub fn as_timestamp(&self) -> Option<&Instant> {
-        todo!()
+        if let DocumentValue::Timestamp(timestamp) = &self.value {
+            Some(timestamp)
+        } else {
+            None
+        }
     }
 
     /// Get the byte value of the Document if it is a byte or can be converted into one.
@@ -321,12 +325,18 @@ impl Document {
 
     #[must_use]
     pub fn as_big_integer(&self) -> Option<&BigInt> {
-        todo!()
+        match &self.value {
+            DocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(big_int))) => Some(big_int),
+            _ => None,
+        }
     }
 
     #[must_use]
     pub fn as_big_decimal(&self) -> Option<&BigDecimal> {
-        todo!()
+        match &self.value {
+            DocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(big_decimal))) => Some(big_decimal),
+            _ => None,
+        }
     }
 
     #[must_use]
