@@ -1,30 +1,29 @@
+use core::fmt;
 use std::{
-    error::Error as StdError,
-    fmt::{Debug, Display, Formatter},
-    time::Instant,
+    error::Error as StdError, fmt::{Debug, Display, Formatter}, marker::PhantomData, time::Instant
 };
 
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
-use serde::ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct};
+use serde::{de::Visitor, ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct}};
 use static_str_ops::staticize;
 
 use crate::{
-    schema::{Document, SchemaRef},
+    schema::{Document, SchemaRef, ShapeId},
     serde::{
-        se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer},
-        serializers::{Error, Serializer},
+        de::{DeserializeWithSchema, ListDeserializer, MapDeserializer, StructDeserializer},
+        deserializers::{Deserialize, Deserializer, Error as DeserializerError}, se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer}, serializers::{Error, Serializer}
     },
 };
 // TODO: This should all be behind a feature flag so serde is not
 //       required for all consumers.
-struct SerdeAdapter<S: serde::Serializer> {
+struct SerdeSerializerAdapter<S: serde::Serializer> {
     serializer: S,
 }
-impl<S: serde::Serializer> SerdeAdapter<S> {
+impl<S: serde::Serializer> SerdeSerializerAdapter<S> {
     fn new(serializer: S) -> Self {
-        SerdeAdapter { serializer }
+        SerdeSerializerAdapter { serializer }
     }
 }
 
@@ -48,7 +47,7 @@ impl<E: SerdeError> From<E> for SerdeErrorWrapper<E> {
     }
 }
 
-impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
+impl<S: serde::Serializer> Serializer for SerdeSerializerAdapter<S> {
     type Error = SerdeErrorWrapper<S::Error>;
     type Ok = S::Ok;
     type SerializeList = ListSerializeAdapter<S>;
@@ -276,8 +275,313 @@ impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
         S: serde::Serializer,
     {
         self.1
-            .serialize_with_schema(self.0, SerdeAdapter::new(serializer))
+            .serialize_with_schema(self.0, SerdeSerializerAdapter::new(serializer))
             .map_err(|wrapper| wrapper.0)
+    }
+}
+
+// Deserialize
+pub struct SerdeDeserializerAdapter<'de, D: serde::Deserializer<'de>> {
+    deserializer: D,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, D: serde::Deserializer<'de>> SerdeDeserializerAdapter<'de, D> {
+    pub fn new(deserializer: D) -> Self {
+        Self {
+            deserializer,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+
+impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAdapter<'de, D> 
+    where 
+        D::Error: crate::serde::deserializers::Error, {
+    type Error = D::Error;
+    type DeserializeList = SerdeListDeserializerAdapter<'de, D>;
+    type DeserializeMap = SerdeMapDeserializerAdapter<'de, D>;
+    type DeserializeStruct = SerdeStructDeserializerAdapter<'de, D>;
+
+    fn read_struct(
+        self,
+        schema: &SchemaRef,
+    ) -> Result<Self::DeserializeStruct, Self::Error> {
+        todo!()
+    }
+
+    fn read_map(self, schema: &SchemaRef) -> Result<Self::DeserializeMap, Self::Error> {
+        todo!()
+    }
+
+    fn read_list(self, schema: &SchemaRef) -> Result<Self::DeserializeList, Self::Error> {
+        todo!()
+    }
+
+    fn read_boolean(self, schema: &SchemaRef) -> Result<bool, Self::Error> {
+        struct BoolVisitor;
+        
+        impl<'de> Visitor<'de> for BoolVisitor {
+            type Value = bool;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a boolean value")
+            }
+
+            fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_bool(BoolVisitor)
+    }
+
+    fn read_byte(self, schema: &SchemaRef) -> Result<i8, Self::Error> {
+        struct ByteVisitor;
+        
+        impl<'de> Visitor<'de> for ByteVisitor {
+            type Value = i8;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a byte value")
+            }
+
+            fn visit_i8<E>(self, value: i8) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_i8(ByteVisitor)
+    }
+
+    fn read_short(self, schema: &SchemaRef) -> Result<i16, Self::Error> {
+        struct ShortVisitor;
+        
+        impl<'de> Visitor<'de> for ShortVisitor {
+            type Value = i16;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a short value")
+            }
+
+            fn visit_i16<E>(self, value: i16) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_i16(ShortVisitor)
+    }
+
+    fn read_integer(self, schema: &SchemaRef) -> Result<i32, Self::Error> {
+        struct IntegerVisitor;
+        
+        impl<'de> Visitor<'de> for IntegerVisitor {
+            type Value = i32;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("an integer value")
+            }
+
+            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_i32(IntegerVisitor)
+    }
+
+    fn read_long(self, schema: &SchemaRef) -> Result<i64, Self::Error> {
+        struct LongVisitor;
+        
+        impl<'de> Visitor<'de> for LongVisitor {
+            type Value = i64;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a long value")
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_i64(LongVisitor)
+    }
+
+    fn read_float(self, schema: &SchemaRef) -> Result<f32, Self::Error> {
+        struct FloatVisitor;
+        
+        impl<'de> Visitor<'de> for FloatVisitor {
+            type Value = f32;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a float value")
+            }
+
+            fn visit_f32<E>(self, value: f32) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_f32(FloatVisitor)
+    }
+
+    fn read_double(self, schema: &SchemaRef) -> Result<f64, Self::Error> {
+        struct DoubleVisitor;
+        
+        impl<'de> Visitor<'de> for DoubleVisitor {
+            type Value = f64;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a double value")
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {
+                Ok(value)
+            }
+        }
+        
+        self.deserializer.deserialize_f64(DoubleVisitor)
+    }
+
+    fn read_big_integer(self, schema: &SchemaRef) -> Result<BigInt, Self::Error> {
+        todo!()
+    }
+
+    fn read_big_decimal(self, schema: &SchemaRef) -> Result<BigDecimal, Self::Error> {
+        todo!()
+    }
+
+    fn read_string(self, schema: &SchemaRef) -> Result<String, Self::Error> {
+        struct StringVisitor;
+        
+        impl<'de> Visitor<'de> for StringVisitor {
+            type Value = String;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a string value")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> {
+                Ok(value.to_string())
+            }
+        }
+        
+        self.deserializer.deserialize_string(StringVisitor)
+    }
+
+    fn read_blob(self, schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
+        todo!()
+    }
+
+    fn read_timestamp(self, schema: &SchemaRef) -> Result<Instant, Self::Error> {
+        todo!()
+    }
+
+    fn read_document(self, schema: &SchemaRef) -> Result<Document, Self::Error> {
+        todo!()
+    }
+
+    fn read_null(self, schema: &SchemaRef) -> Result<(), Self::Error> {
+        struct UnitVisitor;
+        
+        impl<'de> Visitor<'de> for UnitVisitor {
+            type Value = ();
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a unit value")
+            }
+        }
+
+        self.deserializer.deserialize_unit(UnitVisitor)
+    }
+}
+
+
+
+// Collection deserializers
+pub struct SerdeListDeserializerAdapter<'de, D: serde::Deserializer<'de>> {
+    deserializer: D,
+    schema: SchemaRef,
+    _phantom: PhantomData<&'de ()>,
+}
+
+// implement ListDeserializer for SerdeListDeserializerAdapter
+impl<'de, D: serde::Deserializer<'de>> ListDeserializer<'de> for SerdeListDeserializerAdapter<'de, D>
+where
+    D::Error: crate::serde::deserializers::Error,
+{
+    type Error = D::Error;
+
+    fn deserialize_element<T>(
+        &mut self,
+        _element_schema: &SchemaRef,
+    ) -> Result<Option<T>, Self::Error>
+    where
+        T: DeserializeWithSchema,
+    {
+        todo!()
+    }
+
+    fn finish(self) -> Result<(), Self::Error> {
+        todo!()
+    }
+}
+
+pub struct SerdeMapDeserializerAdapter<'de, D: serde::Deserializer<'de>> {
+    deserializer: D,
+    schema: SchemaRef,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, D: serde::Deserializer<'de>> MapDeserializer<'de> for SerdeMapDeserializerAdapter<'de, D> 
+where
+    D::Error: crate::serde::deserializers::Error,
+{
+    type Error = D::Error;
+    
+
+    fn finish(self) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn deserialize_entry<K, V>(
+        &mut self,
+        key_schema: &SchemaRef,
+        value_schema: &SchemaRef,
+    ) -> Result<Option<(K, V)>, Self::Error>
+    where
+        K: DeserializeWithSchema,
+        V: DeserializeWithSchema {
+        todo!()
+    }
+}
+
+pub struct SerdeStructDeserializerAdapter<'de, D: serde::Deserializer<'de>> {
+    deserializer: D,
+    schema: SchemaRef,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, D: serde::Deserializer<'de>> StructDeserializer<'de> for SerdeStructDeserializerAdapter<'de, D> 
+where
+    D::Error: crate::serde::deserializers::Error,
+{
+    type Error = D::Error;
+    
+
+    fn finish(self) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn deserialize_member<T>(
+        &mut self,
+        member_schema: &SchemaRef,
+    ) -> Result<Option<T>, Self::Error>
+    where
+        T: DeserializeWithSchema {
+        todo!()
     }
 }
 
@@ -334,7 +638,7 @@ mod tests {
         where
             S: serde::Serializer,
         {
-            let adapter = SerdeAdapter::new(serializer);
+            let adapter = SerdeSerializerAdapter::new(serializer);
             self.serialize_with_schema(self.schema(), adapter)
                 .map_err(|wrapper| wrapper.0)
         }
