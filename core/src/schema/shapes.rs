@@ -142,6 +142,14 @@ impl Display for ShapeType {
     }
 }
 
+/// Returns the schema for a shape
+///
+/// This schema is typically statically defined in generate code.
+pub trait SchemaShape {
+    /// Get a reference to the Schema of this shape.
+    fn schema(&self) -> &SchemaRef;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,12 +194,4 @@ mod tests {
         assert_eq!(shape_id.member.unwrap(), "member");
         assert_eq!(shape_id.id, "com.example#MyShape$member");
     }
-}
-
-/// Returns the schema for a shape
-///
-/// This schema is typically statically defined in generate code.
-pub trait SchemaShape {
-    /// Get a reference to the Schema of this shape.
-    fn schema(&self) -> &SchemaRef;
 }

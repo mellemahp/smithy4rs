@@ -95,7 +95,6 @@ pub enum NumberValue {
 }
 
 impl NumberValue {
-    ///
     pub const fn from_i8(value: i8) -> Self {
         Self::Integer(NumberInteger::Byte(value))
     }
