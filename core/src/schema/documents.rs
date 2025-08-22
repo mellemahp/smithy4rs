@@ -94,37 +94,37 @@ pub enum NumberValue {
     Float(NumberFloat),
 }
 
-// TODO: Convert some of the longer constructors to these utility methods
 impl NumberValue {
-    pub fn from_i8(value: i8) -> Self {
+    ///
+    pub const fn from_i8(value: i8) -> Self {
         Self::Integer(NumberInteger::Byte(value))
     }
 
-    pub fn from_i16(value: i16) -> Self {
+    pub const fn from_i16(value: i16) -> Self {
         Self::Integer(NumberInteger::Short(value))
     }
 
-    pub fn from_i32(value: i32) -> Self {
+    pub const fn from_i32(value: i32) -> Self {
         Self::Integer(NumberInteger::Integer(value))
     }
 
-    pub fn from_i64(value: i64) -> Self {
+    pub const fn from_i64(value: i64) -> Self {
         Self::Integer(NumberInteger::Long(value))
     }
 
-    pub fn from_big_int(value: BigInt) -> Self {
+    pub const fn from_big_int(value: BigInt) -> Self {
         Self::Integer(NumberInteger::BigInt(value))
     }
 
-    pub fn from_f32(value: f32) -> Self {
+    pub const fn from_f32(value: f32) -> Self {
         Self::Float(NumberFloat::Float(value))
     }
 
-    pub fn from_f64(value: f64) -> Self {
+    pub const fn from_f64(value: f64) -> Self {
         Self::Float(NumberFloat::Double(value))
     }
 
-    pub fn from_big_decimal(value: BigDecimal) -> Self {
+    pub const fn from_big_decimal(value: BigDecimal) -> Self {
         Self::Float(NumberFloat::BigDecimal(value))
     }
 }

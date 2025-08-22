@@ -23,7 +23,7 @@ struct SerdeAdapter<S: serde::Serializer> {
     serializer: S,
 }
 impl<S: serde::Serializer> SerdeAdapter<S> {
-    fn new(serializer: S) -> Self {
+    const fn new(serializer: S) -> Self {
         SerdeAdapter { serializer }
     }
 }
@@ -169,7 +169,7 @@ pub struct ListSerializeAdapter<S: serde::Serializer> {
     serializer: S::SerializeSeq,
 }
 impl<S: serde::Serializer> ListSerializeAdapter<S> {
-    fn new(serializer: S::SerializeSeq) -> Self {
+    const fn new(serializer: S::SerializeSeq) -> Self {
         Self { serializer }
     }
 }
@@ -201,7 +201,7 @@ pub struct MapSerializerAdapter<S: serde::Serializer> {
     serializer: S::SerializeMap,
 }
 impl<S: serde::Serializer> MapSerializerAdapter<S> {
-    fn new(serializer: S::SerializeMap) -> Self {
+    const fn new(serializer: S::SerializeMap) -> Self {
         Self { serializer }
     }
 }
@@ -237,7 +237,7 @@ pub struct StructSerializerAdapter<S: serde::Serializer> {
     serializer: S::SerializeStruct,
 }
 impl<S: serde::Serializer> StructSerializerAdapter<S> {
-    fn new(serializer: S::SerializeStruct) -> Self {
+    const fn new(serializer: S::SerializeStruct) -> Self {
         Self { serializer }
     }
 }

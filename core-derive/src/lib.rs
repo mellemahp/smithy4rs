@@ -163,8 +163,7 @@ fn is_optional(ty: &Type) -> bool {
             // TODO: Might erroneously detect optionals in sparse lists or maps
             vec!["Option:", "std:option:Option:", "core:option:Option:"]
                 .into_iter()
-                .find(|s| idents_of_path == *s)
-                .is_some()
+                .any(|s| idents_of_path == *s)
         }
         _ => panic!("Serde can only be derived for resolvable types"),
     }

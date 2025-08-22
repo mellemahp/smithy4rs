@@ -235,7 +235,7 @@ static EMPTY: LazyLock<IndexMap<String, SchemaRef>> = LazyLock::new(IndexMap::ne
 impl Schema {
     /// Get the [`ShapeType`] of the schema.
     #[must_use]
-    pub fn shape_type(&self) -> &ShapeType {
+    pub const fn shape_type(&self) -> &ShapeType {
         match self {
             Schema::Scalar(ScalarSchema { shape_type, .. })
             | Schema::Struct(StructSchema { shape_type, .. }) => shape_type,
@@ -249,7 +249,7 @@ impl Schema {
 
     /// Get the [`ShapeId`] of the schema.
     #[must_use]
-    pub fn id(&self) -> &ShapeId {
+    pub const fn id(&self) -> &ShapeId {
         match self {
             Schema::Scalar(ScalarSchema { id, .. })
             | Schema::Struct(StructSchema { id, .. })
@@ -261,7 +261,7 @@ impl Schema {
         }
     }
 
-    fn traits(&self) -> &TraitMap {
+    const fn traits(&self) -> &TraitMap {
         match self {
             Schema::Scalar(ScalarSchema { traits, .. })
             | Schema::Struct(StructSchema { traits, .. })
