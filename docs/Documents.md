@@ -42,7 +42,7 @@ any protocol-specific incompatibilities with the Smithy data model when deserial
 
 For example, If a protocol represents a blob as a base64 encoded string, then deserializing the value into a 
 document should base64 decode the value and use the underlying bytes as the blob value in the document. 
-When the document is re-serialized by the same procotol, the procotol should handle conversion from a byte 
+When the document is re-serialized by the same protocol, the protocol should handle conversion from a byte 
 buffer back to a base64 encoded string.
 
 ## Lossless serialization
@@ -173,7 +173,7 @@ If a translator is found then that would be used for document deserialization in
 We could just try to make documents an interface and have all serde return a `dyn Document`. 
 Each protocol would then implement it’s own document type. This would probably work OK, but is super not-”rusty”. 
 
-Trait objects are not the norm in rust and are usually kept out of API’s as they are not particularly egonomic. 
+Trait objects are not the norm in rust and are usually kept out of API’s as they are not particularly ergonomic. 
 A trait object is not actually much of a performance hit though relative to the previous “optional pointer” 
 approach b/c it is pretty much just a type pointer anyway. I worry that having to deal with trait objects 
 every time you wanted to work with a document would just be frustrating for users.

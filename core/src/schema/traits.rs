@@ -53,7 +53,7 @@ impl SmithyTrait for DynamicTrait {
     }
 }
 
-/// Convenience type for cheaply-clonable reference to a dynamic trait.
+/// Convenience type for cheaply-cloneable reference to a dynamic trait.
 pub type TraitRef = Ref<dyn SmithyTrait>;
 
 /// Map used to track the traits applied to a shape.
