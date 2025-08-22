@@ -16,6 +16,3 @@ target/
 .idea/
 *.iml
 *.iws
-
-# Dont commit lock file
-Cargo.lock

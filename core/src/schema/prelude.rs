@@ -383,7 +383,7 @@ impl SmithyTrait for RangeTrait {
 // Builder
 impl RangeTrait {
     #[must_use]
-    pub fn builder() -> RangeTraitBuilder {
+    pub const fn builder() -> RangeTraitBuilder {
         RangeTraitBuilder::new()
     }
 }
@@ -438,7 +438,7 @@ impl SmithyTrait for LengthTrait {
 // Builder
 impl LengthTrait {
     #[must_use]
-    pub fn builder() -> LengthTraitBuilder {
+    pub const fn builder() -> LengthTraitBuilder {
         LengthTraitBuilder::new()
     }
 }

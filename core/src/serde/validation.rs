@@ -14,7 +14,7 @@
 // //!   if multiple sources are used. It does unfortunately mean that a second pass over the
 // //!   data is required, but I believe that is a worthwhile tradeoff.
 // //! - Validation and deserialization errors should be distinct (i.e. no shared trait) -- This
-// //!   allows users to clearly distinguish where issues occured in a processing pipeline
+// //!   allows users to clearly distinguish where issues occurred in a processing pipeline
 // //! - Validation should aggregate all errors from all nested types -- Users should get a single
 // //!   error for _ALL_ of their validation errors so they can fix them all at once.
 // //!
@@ -37,7 +37,7 @@
 // //! ```
 // //!
 // //! This allows us to neatly separate validation and serialization exceptions so we can
-// //! clearly understand _where_ in the request/response pipeline an error occured.
+// //! clearly understand _where_ in the request/response pipeline an error occurred.
 // //!
 // //! Ok... more examples. As with Smithy-java we want to be able to
 // //! ```rust,ignore
@@ -317,7 +317,7 @@
 //         _schema: &SchemaRef,
 //         _builder: V,
 //     ) -> Result<V::Value, ValidationErrors> {
-//         // NOTE: This validates a _built_ structure, not a stucture builder!
+//         // NOTE: This validates a _built_ structure, not a structure builder!
 //         // TODO: Check type?
 //         // TODO: are there any structure-level constraints that might need validation?
 //         todo!()
@@ -775,7 +775,7 @@
 //     ExpectedMember(String),
 //     /// This error should only ever occur for manual schema interactions,
 //     /// not for automatically generated Shapes.
-//     #[error("Invalid Shape type. Expected {0:?}, recieved {1:?}.")]
+//     #[error("Invalid Shape type. Expected {0:?}, received {1:?}.")]
 //     InvalidType(ShapeType, ShapeType),
 //     #[error("Field is Required.")]
 //     Required,
@@ -790,7 +790,7 @@
 //     // Could this be security risk if non-unique are returned?
 //     #[error("Items in collection should be unique.")]
 //     UniqueItems,
-//     // TODO: SHould this be in a different enum?
+//     // TODO: Should this be in a different enum?
 //     #[error("Unsupported validation operation.")]
 //     Unsupported,
 // }

@@ -79,7 +79,7 @@ macro_rules! annotation_trait {
         pub struct $trait_struct {}
         impl $trait_struct {
             #[must_use]
-            pub fn new() -> Self {
+            pub const fn new() -> Self {
                 Self {}
             }
         }

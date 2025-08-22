@@ -267,7 +267,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
 }
 
 // TODO: Add formatter for control characters?
-// Must be public to statisfy "leaking" of internal types.
+// Must be public to satisfy "leaking" of internal types.
 #[doc(hidden)]
 pub struct InnerFmtSerializer<'a, W: 'a>
 where
