@@ -8,18 +8,25 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use thiserror::Error;
 
+// Bring Error trait into scope for D::Error::custom calls
+use crate::serde::de::Error as _;
 use crate::{
     prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE},
     schema::{
-        get_shape_type, Document, DocumentError, DocumentValue, NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId, ShapeType, TraitList, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA
+        Document, DocumentError, DocumentValue, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA,
+        NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId,
+        ShapeType, TraitList, get_shape_type,
     },
     serde::{
-        de::{DeserializeWithSchema, Deserializer, Error as DeserializationError, ListDeserializer, MapDeserializer, StructDeserializer}, deserializers::{Deserialize, Error as DeserializerError}, se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer}, serializers::{Error, SerializeWithSchema}
+        de::{
+            DeserializeWithSchema, Deserializer, Error as DeserializationError, ListDeserializer,
+            MapDeserializer, StructDeserializer,
+        },
+        deserializers::{Deserialize, Error as DeserializerError},
+        se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer},
+        serializers::{Error, SerializeWithSchema},
     },
 };
-
-// Bring Error trait into scope for D::Error::custom calls
-use crate::serde::de::Error as _;
 
 /////////////////////////////////////////////////////////////////////////////////
 // Serialization
@@ -498,11 +505,11 @@ impl DeserializeWithSchema for Document {
                 let element_schema = schema.expect_member("member");
                 let mut documents = Vec::new();
 
-                while let Some(element) = list_deser.deserialize_element::<Document>(element_schema)? {
+                while let Some(element) =
+                    list_deser.deserialize_element::<Document>(element_schema)?
+                {
                     documents.push(element);
                 }
-
-                list_deser.finish()?;
                 Ok(Document {
                     schema: schema.clone(),
                     value: DocumentValue::List(documents),
@@ -515,11 +522,12 @@ impl DeserializeWithSchema for Document {
                 let value_schema = schema.expect_member("value");
                 let mut documents = IndexMap::new();
 
-                while let Some((key, value)) = map_deser.deserialize_entry::<String, Document>(key_schema, value_schema)? {
+                while let Some((key, value)) =
+                    map_deser.deserialize_entry::<String, Document>(key_schema, value_schema)?
+                {
                     documents.insert(key, value);
                 }
 
-                map_deser.finish()?;
                 Ok(Document {
                     schema: schema.clone(),
                     value: DocumentValue::Map(documents),
@@ -539,7 +547,9 @@ impl DeserializeWithSchema for Document {
 
                 // Deserialize each member
                 for (member_name, member_schema) in schema.members() {
-                    if let Some(value) = struct_deser.deserialize_member::<Document>(member_schema)? {
+                    if let Some(value) =
+                        struct_deser.deserialize_member::<Document>(member_schema)?
+                    {
                         documents.insert(member_name.clone(), value);
                     }
                 }
@@ -551,7 +561,9 @@ impl DeserializeWithSchema for Document {
                     discriminator: Some(schema.id().clone()),
                 })
             }
-            _ => Err(D::Error::custom("Unsupported shape type for document deserialization")),
+            _ => Err(D::Error::custom(
+                "Unsupported shape type for document deserialization",
+            )),
         }
     }
 }
@@ -574,10 +586,7 @@ impl<'de, 'doc> Deserializer<'de> for DocumentDeserializer<'doc> {
     type DeserializeMap = DocumentMapDeserializer<'doc>;
     type DeserializeStruct = DocumentStructDeserializer<'doc>;
 
-    fn read_struct(
-        self,
-        schema: &SchemaRef,
-    ) -> Result<Self::DeserializeStruct, Self::Error> {
+    fn read_struct(self, schema: &SchemaRef) -> Result<Self::DeserializeStruct, Self::Error> {
         let Some(map) = self.document.as_map() else {
             return Err(DocumentError::DocumentConversion(
                 "Expected map document for struct".to_string(),
@@ -620,15 +629,15 @@ impl<'de, 'doc> Deserializer<'de> for DocumentDeserializer<'doc> {
     }
 
     fn read_byte(self, schema: &SchemaRef) -> Result<i8, Self::Error> {
-        self.document.as_byte().ok_or_else(|| {
-            DocumentError::DocumentConversion("Expected byte document".to_string())
-        })
+        self.document
+            .as_byte()
+            .ok_or_else(|| DocumentError::DocumentConversion("Expected byte document".to_string()))
     }
 
     fn read_short(self, schema: &SchemaRef) -> Result<i16, Self::Error> {
-        self.document.as_short().ok_or_else(|| {
-            DocumentError::DocumentConversion("Expected short document".to_string())
-        })
+        self.document
+            .as_short()
+            .ok_or_else(|| DocumentError::DocumentConversion("Expected short document".to_string()))
     }
 
     fn read_integer(self, schema: &SchemaRef) -> Result<i32, Self::Error> {
@@ -638,15 +647,15 @@ impl<'de, 'doc> Deserializer<'de> for DocumentDeserializer<'doc> {
     }
 
     fn read_long(self, schema: &SchemaRef) -> Result<i64, Self::Error> {
-        self.document.as_long().ok_or_else(|| {
-            DocumentError::DocumentConversion("Expected long document".to_string())
-        })
+        self.document
+            .as_long()
+            .ok_or_else(|| DocumentError::DocumentConversion("Expected long document".to_string()))
     }
 
     fn read_float(self, schema: &SchemaRef) -> Result<f32, Self::Error> {
-        self.document.as_float().ok_or_else(|| {
-            DocumentError::DocumentConversion("Expected float document".to_string())
-        })
+        self.document
+            .as_float()
+            .ok_or_else(|| DocumentError::DocumentConversion("Expected float document".to_string()))
     }
 
     fn read_double(self, schema: &SchemaRef) -> Result<f64, Self::Error> {
@@ -674,9 +683,10 @@ impl<'de, 'doc> Deserializer<'de> for DocumentDeserializer<'doc> {
     }
 
     fn read_blob(self, schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
-        self.document.as_blob().cloned().ok_or_else(|| {
-            DocumentError::DocumentConversion("Expected blob document".to_string())
-        })
+        self.document
+            .as_blob()
+            .cloned()
+            .ok_or_else(|| DocumentError::DocumentConversion("Expected blob document".to_string()))
     }
 
     fn read_timestamp(self, schema: &SchemaRef) -> Result<Instant, Self::Error> {
@@ -729,10 +739,6 @@ impl<'de, 'doc> ListDeserializer<'de> for DocumentListDeserializer<'doc> {
         self.current_index += 1;
         Ok(Some(element))
     }
-
-    fn finish(self) -> Result<(), Self::Error> {
-        Ok(())
-    }
 }
 
 /// Map deserializer for Document format
@@ -758,7 +764,7 @@ impl<'de, 'doc> MapDeserializer<'de> for DocumentMapDeserializer<'doc> {
         }
 
         let (key_string, value_document) = &self.entries[self.current_index];
-        
+
         // Deserialize key (typically a string)
         let key_document = Document::from((*key_string).clone());
         let key_deserializer = DocumentDeserializer::new(&key_document);
@@ -770,10 +776,6 @@ impl<'de, 'doc> MapDeserializer<'de> for DocumentMapDeserializer<'doc> {
 
         self.current_index += 1;
         Ok(Some((key, value)))
-    }
-
-    fn finish(self) -> Result<(), Self::Error> {
-        Ok(())
     }
 }
 
@@ -793,10 +795,7 @@ impl<'de, 'doc> StructDeserializer<'de> for DocumentStructDeserializer<'doc> {
         }
     }
 
-    fn deserialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-    ) -> Result<Option<T>, Self::Error>
+    fn deserialize_member<T>(&mut self, member_schema: &SchemaRef) -> Result<Option<T>, Self::Error>
     where
         T: DeserializeWithSchema,
     {
@@ -932,23 +931,23 @@ mod tests {
     fn document_deserializer_roundtrip() {
         // Test that DocumentSerializer -> DocumentDeserializer roundtrip works
         let original_value = "test_string";
-        
+
         // Serialize to document
         let document: Document = original_value.into();
-        
+
         // Deserialize back from document
         let deserialized: String = from_document(&document, &STRING).unwrap();
-        
+
         assert_eq!(original_value, deserialized);
     }
 
     #[test]
     fn document_deserializer_integer() {
         let original_value = 42i32;
-        
+
         let document: Document = original_value.into();
         let deserialized: i32 = from_document(&document, &INTEGER).unwrap();
-        
+
         assert_eq!(original_value, deserialized);
     }
 
@@ -957,10 +956,10 @@ mod tests {
         // Test that list deserialization works without cloning the entire list
         let original_list = vec!["item1", "item2", "item3"];
         let document: Document = original_list.clone().into();
-        
+
         // Deserialize back - this should use references to list elements, not clone them
         let deserialized: Vec<String> = from_document(&document, &LIST_DOCUMENT_SCHEMA).unwrap();
-        
+
         assert_eq!(deserialized.len(), 3);
         assert_eq!(deserialized[0], "item1");
         assert_eq!(deserialized[1], "item2");
