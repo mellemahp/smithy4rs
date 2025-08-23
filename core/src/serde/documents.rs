@@ -14,7 +14,7 @@ use crate::{
         get_shape_type, Document, DocumentError, DocumentValue, NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId, ShapeType, TraitList, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA
     },
     serde::{
-        de::{DeserializeWithSchema, Deserializer, Error as DeserializationError, ListDeserializer, MapDeserializer, StructDeserializer}, deserializers::{Deserialize, Error as DeserializerError}, se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer}, serializers::{Error, SerializeWithSchema}
+        de::{DeserializeWithSchema, Deserializer, Error as DeserializationError}, deserializers::{Deserialize, Error as DeserializerError}, se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer}, serializers::{Error as SerializerError, SerializeWithSchema}
     },
 };
 
@@ -84,7 +84,7 @@ impl SerializeWithSchema for Document {
                 }
                 struct_serializer.end(schema)
             }
-            _ => Err(Error::custom("Unsupported shape type")),
+            _ => Err(SerializerError::custom("Unsupported shape type")),
         }
     }
 }
@@ -96,7 +96,7 @@ impl<T: SerializableShape> From<T> for Document {
     }
 }
 
-impl Error for DocumentError {
+impl SerializerError for DocumentError {
     fn custom<T: Display>(msg: T) -> Self {
         DocumentError::CustomError(msg.to_string())
     }
@@ -494,62 +494,18 @@ impl DeserializeWithSchema for Document {
                 })
             }
             ShapeType::List => {
-                let mut list_deser = deserializer.read_list(schema)?;
-                let element_schema = schema.expect_member("member");
-                let mut documents = Vec::new();
-
-                while let Some(element) = list_deser.deserialize_element::<Document>(element_schema)? {
-                    documents.push(element);
-                }
-
-                list_deser.finish()?;
+                let value = deserializer.read_list(schema)?;
                 Ok(Document {
                     schema: schema.clone(),
-                    value: DocumentValue::List(documents),
+                    value: DocumentValue::List(value),
                     discriminator: Some(schema.id().clone()),
                 })
             }
             ShapeType::Map => {
-                let mut map_deser = deserializer.read_map(schema)?;
-                let key_schema = schema.expect_member("key");
-                let value_schema = schema.expect_member("value");
-                let mut documents = IndexMap::new();
-
-                while let Some((key, value)) = map_deser.deserialize_entry::<String, Document>(key_schema, value_schema)? {
-                    documents.insert(key, value);
-                }
-
-                map_deser.finish()?;
-                Ok(Document {
-                    schema: schema.clone(),
-                    value: DocumentValue::Map(documents),
-                    discriminator: Some(schema.id().clone()),
-                })
+                todo!()
             }
             ShapeType::Structure | ShapeType::Union => {
-                let mut struct_deser = deserializer.read_struct(schema)?;
-                let mut documents = IndexMap::new();
-
-                // Check discriminator for union types
-                if let Some(discriminator) = schema.id().clone().into() {
-                    if !struct_deser.check_discriminator(&discriminator)? {
-                        return Err(D::Error::custom("Discriminator mismatch"));
-                    }
-                }
-
-                // Deserialize each member
-                for (member_name, member_schema) in schema.members() {
-                    if let Some(value) = struct_deser.deserialize_member::<Document>(member_schema)? {
-                        documents.insert(member_name.clone(), value);
-                    }
-                }
-
-                struct_deser.finish()?;
-                Ok(Document {
-                    schema: schema.clone(),
-                    value: DocumentValue::Map(documents),
-                    discriminator: Some(schema.id().clone()),
-                })
+                todo!()
             }
             _ => Err(D::Error::custom("Unsupported shape type for document deserialization")),
         }
@@ -570,47 +526,35 @@ impl<'doc> DocumentDeserializer<'doc> {
 
 impl<'de, 'doc> Deserializer<'de> for DocumentDeserializer<'doc> {
     type Error = DocumentError;
-    type DeserializeList = DocumentListDeserializer<'doc>;
-    type DeserializeMap = DocumentMapDeserializer<'doc>;
-    type DeserializeStruct = DocumentStructDeserializer<'doc>;
 
-    fn read_struct(
+    fn read_struct<T: DeserializeWithSchema>(
         self,
         schema: &SchemaRef,
-    ) -> Result<Self::DeserializeStruct, Self::Error> {
-        let Some(map) = self.document.as_map() else {
-            return Err(DocumentError::DocumentConversion(
-                "Expected map document for struct".to_string(),
-            ));
-        };
-        Ok(DocumentStructDeserializer {
-            map,
-            discriminator: self.document.discriminator(),
-        })
+    ) -> Result<T, Self::Error> {
+        todo!()
     }
 
-    fn read_map(self, schema: &SchemaRef) -> Result<Self::DeserializeMap, Self::Error> {
-        let Some(map) = self.document.as_map() else {
-            return Err(DocumentError::DocumentConversion(
-                "Expected map document for map".to_string(),
-            ));
-        };
-        Ok(DocumentMapDeserializer {
-            entries: map.iter().collect(),
-            current_index: 0,
-        })
+    fn read_map<K: DeserializeWithSchema, V: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<IndexMap<K, V>, Self::Error> {
+        todo!()
     }
-
-    fn read_list(self, schema: &SchemaRef) -> Result<Self::DeserializeList, Self::Error> {
+    
+    fn read_list<T: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<Vec<T>, Self::Error> {
         let Some(list) = self.document.as_list() else {
             return Err(DocumentError::DocumentConversion(
                 "Expected list document for list".to_string(),
             ));
         };
-        Ok(DocumentListDeserializer {
-            elements: list.as_slice(),
-            current_index: 0,
-        })
+        
+        let element_schema = schema.expect_member("member");
+        let mut result = Vec::new();
+        
+        for document in list {
+            let deserializer = DocumentDeserializer::new(document);
+            let element = T::deserialize_with_schema(element_schema, deserializer)?;
+            result.push(element);
+        }
+        
+        Ok(result)
     }
 
     fn read_boolean(self, schema: &SchemaRef) -> Result<bool, Self::Error> {
@@ -700,123 +644,6 @@ impl<'de, 'doc> Deserializer<'de> for DocumentDeserializer<'doc> {
 
     fn is_null(&self) -> bool {
         matches!(self.document.value(), DocumentValue::Null)
-    }
-}
-
-/// List deserializer for Document format
-pub struct DocumentListDeserializer<'doc> {
-    elements: &'doc [Document],
-    current_index: usize,
-}
-
-impl<'de, 'doc> ListDeserializer<'de> for DocumentListDeserializer<'doc> {
-    type Error = DocumentError;
-
-    fn deserialize_element<T>(
-        &mut self,
-        element_schema: &SchemaRef,
-    ) -> Result<Option<T>, Self::Error>
-    where
-        T: DeserializeWithSchema,
-    {
-        if self.current_index >= self.elements.len() {
-            return Ok(None);
-        }
-
-        let document = &self.elements[self.current_index];
-        let deserializer = DocumentDeserializer::new(document);
-        let element = T::deserialize_with_schema(element_schema, deserializer)?;
-        self.current_index += 1;
-        Ok(Some(element))
-    }
-
-    fn finish(self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-}
-
-/// Map deserializer for Document format
-pub struct DocumentMapDeserializer<'doc> {
-    entries: Vec<(&'doc String, &'doc Document)>,
-    current_index: usize,
-}
-
-impl<'de, 'doc> MapDeserializer<'de> for DocumentMapDeserializer<'doc> {
-    type Error = DocumentError;
-
-    fn deserialize_entry<K, V>(
-        &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
-    ) -> Result<Option<(K, V)>, Self::Error>
-    where
-        K: DeserializeWithSchema,
-        V: DeserializeWithSchema,
-    {
-        if self.current_index >= self.entries.len() {
-            return Ok(None);
-        }
-
-        let (key_string, value_document) = &self.entries[self.current_index];
-        
-        // Deserialize key (typically a string)
-        let key_document = Document::from((*key_string).clone());
-        let key_deserializer = DocumentDeserializer::new(&key_document);
-        let key = K::deserialize_with_schema(key_schema, key_deserializer)?;
-
-        // Deserialize value
-        let value_deserializer = DocumentDeserializer::new(value_document);
-        let value = V::deserialize_with_schema(value_schema, value_deserializer)?;
-
-        self.current_index += 1;
-        Ok(Some((key, value)))
-    }
-
-    fn finish(self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-}
-
-/// Struct deserializer for Document format
-pub struct DocumentStructDeserializer<'doc> {
-    map: &'doc IndexMap<String, Document>,
-    discriminator: Option<&'doc ShapeId>,
-}
-
-impl<'de, 'doc> StructDeserializer<'de> for DocumentStructDeserializer<'doc> {
-    type Error = DocumentError;
-
-    fn check_discriminator(&mut self, expected: &ShapeId) -> Result<bool, Self::Error> {
-        match &self.discriminator {
-            Some(actual) => Ok(*actual == expected),
-            None => Ok(true), // No discriminator to check
-        }
-    }
-
-    fn deserialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-    ) -> Result<Option<T>, Self::Error>
-    where
-        T: DeserializeWithSchema,
-    {
-        let Some(member) = member_schema.as_member() else {
-            return Err(DocumentError::DocumentConversion(
-                "Expected member schema".to_string(),
-            ));
-        };
-
-        let Some(document) = self.map.get(&member.name) else {
-            return Ok(None); // Member not present
-        };
-
-        let deserializer = DocumentDeserializer::new(document);
-        let value = T::deserialize_with_schema(member_schema, deserializer)?;
-        Ok(Some(value))
-    }
-
-    fn finish(self) -> Result<(), Self::Error> {
-        Ok(())
     }
 }
 
@@ -932,23 +759,23 @@ mod tests {
     fn document_deserializer_roundtrip() {
         // Test that DocumentSerializer -> DocumentDeserializer roundtrip works
         let original_value = "test_string";
-        
+    
         // Serialize to document
         let document: Document = original_value.into();
-        
+    
         // Deserialize back from document
         let deserialized: String = from_document(&document, &STRING).unwrap();
-        
+    
         assert_eq!(original_value, deserialized);
     }
 
     #[test]
     fn document_deserializer_integer() {
         let original_value = 42i32;
-        
+
         let document: Document = original_value.into();
         let deserialized: i32 = from_document(&document, &INTEGER).unwrap();
-        
+
         assert_eq!(original_value, deserialized);
     }
 
@@ -957,10 +784,10 @@ mod tests {
         // Test that list deserialization works without cloning the entire list
         let original_list = vec!["item1", "item2", "item3"];
         let document: Document = original_list.clone().into();
-        
+
         // Deserialize back - this should use references to list elements, not clone them
         let deserialized: Vec<String> = from_document(&document, &LIST_DOCUMENT_SCHEMA).unwrap();
-        
+
         assert_eq!(deserialized.len(), 3);
         assert_eq!(deserialized[0], "item1");
         assert_eq!(deserialized[1], "item2");

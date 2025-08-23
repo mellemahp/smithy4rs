@@ -8,7 +8,7 @@ use indexmap::IndexMap;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, SchemaRef, SchemaShape, ShapeId},
+    schema::{Document, SchemaRef, SchemaShape},
 };
 
 /// Deserialize a shape with its pre-defined schema.
@@ -21,11 +21,6 @@ pub trait Deserialize: SchemaShape + DeserializeWithSchema {
 }
 
 // Blanket implementation of deserialization for all types with schema
-impl<T: SchemaShape + DeserializeWithSchema> Deserialize for T {
-    fn deserialize<'de, D: Deserializer<'de>>(&self, deserializer: D) -> Result<Self, D::Error> {
-        Self::deserialize_with_schema(self.schema(), deserializer)
-    }
-}
 
 /// Schema-Guided deserialization implementation.
 pub trait DeserializeWithSchema: Sized {
@@ -34,78 +29,6 @@ pub trait DeserializeWithSchema: Sized {
         schema: &SchemaRef,
         deserializer: D,
     ) -> Result<Self, D::Error>;
-}
-
-/// List Deserializer that can be called in a loop to deserialize list values
-pub trait ListDeserializer<'de> {
-    /// Must match the `Error` type of our `Deserializer`.
-    type Error: Error;
-
-    /// Deserialize a sequence element.
-    fn deserialize_element<T>(
-        &mut self,
-        element_schema: &SchemaRef,
-    ) -> Result<Option<T>, Self::Error>
-    where
-        T: DeserializeWithSchema;
-
-    /// Finish deserializing a sequence.
-    fn finish(self) -> Result<(), Self::Error>;
-}
-
-/// Map Deserializer that can be called in a loop to deserialize map values
-pub trait MapDeserializer<'de> {
-    /// Must match the `Error` type of our [`Deserializer`].
-    type Error: Error;
-
-    /// Deserialize a single map entry
-    fn deserialize_entry<K, V>(
-        &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
-    ) -> Result<Option<(K, V)>, Self::Error>
-    where
-        K: DeserializeWithSchema,
-        V: DeserializeWithSchema;
-
-    /// Finish deserializing a map.
-    fn finish(self) -> Result<(), Self::Error>;
-}
-
-/// Struct Deserializer for deserializing structure and union types
-pub trait StructDeserializer<'de> {
-    /// Must match the `Error` type of our [`Deserializer`].
-    type Error: Error;
-
-    /// Check if discriminator matches expected value (for union types).
-    /// 
-    /// Returns true if the discriminator matches or if no discriminator checking
-    /// is needed. Default implementation accepts all discriminators.
-    fn check_discriminator(&mut self, expected: &ShapeId) -> Result<bool, Self::Error> {
-        Ok(true)
-    }
-
-    /// Deserialize a member from the struct
-    fn deserialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-    ) -> Result<Option<T>, Self::Error>
-    where
-        T: DeserializeWithSchema;
-
-    /// Deserialize an optional member.
-    ///
-    /// This method will return `None` for any optional members that are missing,
-    /// otherwise it deserializes and returns `Some(value)`.
-    fn deserialize_optional_member<T: DeserializeWithSchema>(
-        &mut self,
-        member_schema: &SchemaRef,
-    ) -> Result<Option<T>, Self::Error> {
-        self.deserialize_member(member_schema)
-    }
-
-    /// Finish deserializing a structure.
-    fn finish(self) -> Result<(), Self::Error>;
 }
 
 /// Basically just a clone of the serde::Error trait.
@@ -119,26 +42,17 @@ pub trait Deserializer<'de>: Sized {
     /// Error type emitted on failed deserialization.
     type Error: Error;
 
-    /// Type returned from [`read_list`] for deserializing the contents of a list.
-    type DeserializeList: ListDeserializer<'de, Error = Self::Error>;
-
-    /// Type returned from [`read_map`] for deserializing the contents of a map.
-    type DeserializeMap: MapDeserializer<'de, Error = Self::Error>;
-
-    /// Type returned from [`read_struct`] for deserializing the contents of a struct or union.
-    type DeserializeStruct: StructDeserializer<'de, Error = Self::Error>;
-
     /// Begin to deserialize a variably sized structure or union.
-    fn read_struct(
+    fn read_struct<T: DeserializeWithSchema>(
         self,
         schema: &SchemaRef,
-    ) -> Result<Self::DeserializeStruct, Self::Error>;
+    ) -> Result<T, Self::Error>;
 
     /// Begin to deserialize a variably sized map.
-    fn read_map(self, schema: &SchemaRef) -> Result<Self::DeserializeMap, Self::Error>;
+    fn read_map<K: DeserializeWithSchema, V: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<IndexMap<K, V>, Self::Error>;
 
-    /// Begin to deserialize a variably sized list.
-    fn read_list(self, schema: &SchemaRef) -> Result<Self::DeserializeList, Self::Error>;
+    /// Begin to deserialize a variably sized list.x
+    fn read_list<T: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<Vec<T>, Self::Error>;
 
     /// Deserialize a `boolean`
     fn read_boolean(self, schema: &SchemaRef) -> Result<bool, Self::Error>;
@@ -194,16 +108,7 @@ impl<T: DeserializeWithSchema> DeserializeWithSchema for Vec<T> {
         schema: &SchemaRef,
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let mut list_deser = deserializer.read_list(schema)?;
-        let element_schema = schema.expect_member("member");
-        let mut vec = Vec::new();
-
-        while let Some(element) = list_deser.deserialize_element::<T>(element_schema)? {
-            vec.push(element);
-        }
-
-        list_deser.finish()?;
-        Ok(vec)
+        deserializer.read_list::<T>(schema) 
     }
 }
 
@@ -216,19 +121,7 @@ where
         schema: &SchemaRef,
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        let mut map_deser = deserializer.read_map(schema)?;
-        let key_schema = schema.get_member("key").expect("Should have key schema");
-        let value_schema = schema
-            .get_member("value")
-            .expect("Should have value schema");
-        let mut map = IndexMap::new();
-
-        while let Some((key, value)) = map_deser.deserialize_entry::<K, V>(key_schema, value_schema)? {
-            map.insert(key, value);
-        }
-
-        map_deser.finish()?;
-        Ok(map)
+        todo!()
     }
 }
 

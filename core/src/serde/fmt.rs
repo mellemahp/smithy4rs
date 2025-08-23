@@ -75,8 +75,8 @@ pub enum FmtError {
     #[error("Serialization error: {0}")]
     Custom(String),
 }
-use crate::serde::se::Error as SerdeError;
-impl SerdeError for FmtError {
+use crate::serde::se::Error as SerializerError;
+impl SerializerError for FmtError {
     fn custom<T>(msg: T) -> Self
     where
         T: Display,
