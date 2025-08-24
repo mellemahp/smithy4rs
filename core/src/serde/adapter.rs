@@ -1,18 +1,27 @@
 use core::fmt;
 use std::{
-    error::Error as StdError, fmt::{Debug, Display, Formatter}, marker::PhantomData, time::Instant
+    error::Error as StdError,
+    fmt::{Debug, Display, Formatter},
+    marker::PhantomData,
+    time::Instant,
 };
 
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
-use serde::{de::{DeserializeSeed, SeqAccess, Visitor, Error as DeError}, ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct}};
+use serde::{
+    de::{DeserializeSeed, Error as DeError, SeqAccess, Visitor},
+    ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct},
+};
 use static_str_ops::staticize;
 
 use crate::{
     schema::{Document, SchemaRef},
     serde::{
-        de::{DeserializeWithSchema}, deserializers::{Deserializer, Error as DeserializerError}, se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer}, serializers::{Error as SerializerError, Serializer}
+        de::DeserializeWithSchema,
+        deserializers::{Deserializer, Error as DeserializerError},
+        se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer},
+        serializers::{Error as SerializerError, Serializer},
     },
 };
 // TODO: This should all be behind a feature flag so serde is not
@@ -317,12 +326,14 @@ where
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: serde::Deserializer<'de>    {
+        D: serde::Deserializer<'de>,
+    {
         let adapter = SerdeDeserializerAdapter::new(deserializer);
-        let value = T::deserialize_with_schema(&self.schema, adapter)
-            .map_err(|wrapper_err| match wrapper_err {
+        let value = T::deserialize_with_schema(&self.schema, adapter).map_err(|wrapper_err| {
+            match wrapper_err {
                 DeErrorWrapper(original_err) => original_err,
-            })?;
+            }
+        })?;
         Ok(DeserializeWrapper { value })
     }
 }
@@ -350,25 +361,28 @@ impl<E: DeError> From<E> for DeErrorWrapper<E> {
 impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAdapter<'de, D> {
     type Error = DeErrorWrapper<D::Error>;
 
-    fn read_struct<T: DeserializeWithSchema>(
+    fn read_struct<T: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<T, Self::Error> {
+        todo!()
+    }
+
+    fn read_map<K: DeserializeWithSchema, V: DeserializeWithSchema>(
         self,
         schema: &SchemaRef,
-    ) -> Result<T, Self::Error> {
+    ) -> Result<indexmap::IndexMap<K, V>, Self::Error> {
         todo!()
     }
 
-    fn read_map<K: DeserializeWithSchema, V: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<indexmap::IndexMap<K, V>, Self::Error> {
-        todo!()
-    }
-
-    fn read_list<T: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<Vec<T>, Self::Error> {
+    fn read_list<T: DeserializeWithSchema>(
+        self,
+        schema: &SchemaRef,
+    ) -> Result<Vec<T>, Self::Error> {
         struct SeqVisitor<T> {
             element_schema: SchemaRef,
             _phantom: PhantomData<T>,
         }
 
         impl<'de, T: DeserializeWithSchema> Visitor<'de> for SeqVisitor<T> {
-            type Value = Vec<DeserializeWrapper<T>>;
+            type Value = Vec<T>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a sequence of values")
@@ -379,30 +393,27 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 A: SeqAccess<'de>,
             {
                 let mut values = Vec::new();
-                
+
                 while let Some(wrapper) = seq.next_element_seed(DeserializeWrapperSeed::<T> {
                     schema: self.element_schema.clone(),
                     _phantom: PhantomData,
                 })? {
-                    values.push(wrapper);
+                    values.push(wrapper.into_inner()); // Unwrap immediately
                 }
                 Ok(values)
             }
         }
-        
+
         let element_schema = schema.expect_member("member").clone();
-        let x = self.deserializer.deserialize_seq(SeqVisitor {
+        Ok(self.deserializer.deserialize_seq(SeqVisitor {
             element_schema,
             _phantom: PhantomData::<T>,
-        });
-        
-        // map into inner and convert error type using ?
-        Ok(x?.into_iter().map(|wrapper| wrapper.into_inner()).collect())
+        })?)
     }
 
     fn read_boolean(self, schema: &SchemaRef) -> Result<bool, Self::Error> {
         struct BoolVisitor;
-        
+
         impl<'de> Visitor<'de> for BoolVisitor {
             type Value = bool;
 
@@ -414,13 +425,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_bool(BoolVisitor)?)
     }
 
     fn read_byte(self, schema: &SchemaRef) -> Result<i8, Self::Error> {
         struct ByteVisitor;
-        
+
         impl<'de> Visitor<'de> for ByteVisitor {
             type Value = i8;
 
@@ -432,13 +443,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_i8(ByteVisitor)?)
     }
 
     fn read_short(self, schema: &SchemaRef) -> Result<i16, Self::Error> {
         struct ShortVisitor;
-        
+
         impl<'de> Visitor<'de> for ShortVisitor {
             type Value = i16;
 
@@ -450,13 +461,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_i16(ShortVisitor)?)
     }
 
     fn read_integer(self, schema: &SchemaRef) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
-        
+
         impl<'de> Visitor<'de> for IntegerVisitor {
             type Value = i32;
 
@@ -468,13 +479,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_i32(IntegerVisitor)?)
     }
 
     fn read_long(self, schema: &SchemaRef) -> Result<i64, Self::Error> {
         struct LongVisitor;
-        
+
         impl<'de> Visitor<'de> for LongVisitor {
             type Value = i64;
 
@@ -486,13 +497,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_i64(LongVisitor)?)
     }
 
     fn read_float(self, schema: &SchemaRef) -> Result<f32, Self::Error> {
         struct FloatVisitor;
-        
+
         impl<'de> Visitor<'de> for FloatVisitor {
             type Value = f32;
 
@@ -504,13 +515,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_f32(FloatVisitor)?)
     }
 
     fn read_double(self, schema: &SchemaRef) -> Result<f64, Self::Error> {
         struct DoubleVisitor;
-        
+
         impl<'de> Visitor<'de> for DoubleVisitor {
             type Value = f64;
 
@@ -522,7 +533,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value)
             }
         }
-        
+
         Ok(self.deserializer.deserialize_f64(DoubleVisitor)?)
     }
 
@@ -536,7 +547,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
 
     fn read_string(self, schema: &SchemaRef) -> Result<String, Self::Error> {
         struct StringVisitor;
-        
+
         impl<'de> Visitor<'de> for StringVisitor {
             type Value = String;
 
@@ -548,7 +559,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
                 Ok(value.to_string())
             }
         }
-        
+
         Ok(self.deserializer.deserialize_string(StringVisitor)?)
     }
 
@@ -566,7 +577,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for SerdeDeserializerAd
 
     fn read_null(self, schema: &SchemaRef) -> Result<(), Self::Error> {
         struct UnitVisitor;
-        
+
         impl<'de> Visitor<'de> for UnitVisitor {
             type Value = ();
 
@@ -588,7 +599,11 @@ mod tests {
 
     use super::*;
     use crate::{
-        lazy_schema, prelude::*, schema::{Schema, SchemaRef, SchemaShape, ShapeId}, serde::shapes::ShapeBuilder, traits
+        lazy_schema,
+        prelude::*,
+        schema::{Schema, SchemaRef, SchemaShape, ShapeId},
+        serde::shapes::ShapeBuilder,
+        traits,
     };
 
     lazy_schema!(
@@ -623,7 +638,7 @@ mod tests {
         #[smithy_schema(MEMBER_MAP)]
         member_map: IndexMap<String, String>,
     }
-    
+
     impl DeserializeWithSchema for Test {
         fn deserialize_with_schema<'de, D: Deserializer<'de>>(
             schema: &SchemaRef,
@@ -654,35 +669,34 @@ mod tests {
     //             .map_err(|wrapper| wrapper.0)
     //     }
     // }
-    
-    
+
     // struct TestBuilder {
     //     a: String,
     //     b: String,
     //     member_list: Vec<String>,
     //     member_map: IndexMap<String, String>,
     // }
-    
+
     // impl<'de> ShapeBuilder<'de, Test> for TestBuilder {
     //     fn new() -> Self {
     //         todo!()
     //     }
 
     //     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self, D::Error> {
-            
+
     //     }
 
     //     fn build_with_validator<V: crate::serde::validation::Validator>(self, validator: V) -> Result<S, crate::serde::validation::ValidationErrors> {
     //         todo!()
     //     }
     // }
-    
+
     // impl DeserializeWithSchema for TestBuilder {
     //     fn deserialize_with_schema<'de, D: Deserializer<'de>>(
     //         schema: &SchemaRef,
     //         deserializer: D,
     //     ) -> Result<Self, D::Error> {
-            
+
     //     }
     // }
 
