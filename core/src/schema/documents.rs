@@ -326,7 +326,9 @@ impl Document {
     #[must_use]
     pub fn as_big_integer(&self) -> Option<&BigInt> {
         match &self.value {
-            DocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(big_int))) => Some(big_int),
+            DocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(big_int))) => {
+                Some(big_int)
+            }
             _ => None,
         }
     }
@@ -334,7 +336,9 @@ impl Document {
     #[must_use]
     pub fn as_big_decimal(&self) -> Option<&BigDecimal> {
         match &self.value {
-            DocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(big_decimal))) => Some(big_decimal),
+            DocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(big_decimal))) => {
+                Some(big_decimal)
+            }
             _ => None,
         }
     }

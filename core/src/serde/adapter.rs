@@ -602,7 +602,7 @@ mod tests {
         lazy_schema,
         prelude::*,
         schema::{Schema, SchemaRef, SchemaShape, ShapeId},
-        serde::shapes::ShapeBuilder,
+        serde::builders::ShapeBuilder,
         traits,
     };
 
@@ -731,5 +731,60 @@ mod tests {
         // assert_eq!(x.b, test.b);
         // assert_eq!(x.member_list, test.member_list);
         // assert_eq!(x.member_map, test.member_map);
+    }
+
+    // TODO: Might be nice to split out unit tests from bigger e2e tests
+
+    #[test]
+    fn test_read_list_string() {
+        // Test deserialization of a simple string list
+        let json = r#"["hello", "world", "test"]"#;
+        let mut deserializer = serde_json::Deserializer::from_str(json);
+        let adapter = SerdeDeserializerAdapter::new(&mut deserializer);
+
+        let result: Vec<String> = adapter.read_list(&LIST_SCHEMA).unwrap();
+
+        assert_eq!(result, vec!["hello", "world", "test"]);
+    }
+
+    #[test]
+    fn test_read_list_empty() {
+        // Test deserialization of an empty list
+        let json = r#"[]"#;
+        let mut deserializer = serde_json::Deserializer::from_str(json);
+        let adapter = SerdeDeserializerAdapter::new(&mut deserializer);
+
+        let result: Vec<String> = adapter.read_list(&LIST_SCHEMA).unwrap();
+
+        assert_eq!(result, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_read_list_single_element() {
+        // Test deserialization of a single-element list
+        let json = r#"["only"]"#;
+        let mut deserializer = serde_json::Deserializer::from_str(json);
+        let adapter = SerdeDeserializerAdapter::new(&mut deserializer);
+
+        let result: Vec<String> = adapter.read_list(&LIST_SCHEMA).unwrap();
+
+        assert_eq!(result, vec!["only"]);
+    }
+
+    #[test]
+    fn test_serde_roundtrip_list() {
+        // Test that we can serialize with serde and then deserialize with our adapter
+        let original_list = vec!["apple", "banana", "cherry"];
+
+        // Serialize using standard serde
+        let json = serde_json::to_string(&original_list).unwrap();
+        assert_eq!(json, r#"["apple","banana","cherry"]"#);
+
+        // Deserialize using our adapter
+        let mut deserializer = serde_json::Deserializer::from_str(&json);
+        let adapter = SerdeDeserializerAdapter::new(&mut deserializer);
+        let result: Vec<String> = adapter.read_list(&LIST_SCHEMA).unwrap();
+
+        assert_eq!(result, original_list);
     }
 }

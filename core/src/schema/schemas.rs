@@ -283,6 +283,14 @@ impl Schema {
         }
     }
 
+    /// Gets the member index if schema is a member, otherwise None.
+    pub fn member_index(&self) -> Option<usize> {
+        match self {
+            Schema::Member(member) => Some(member.index),
+            _ => None,
+        }
+    }
+
     /// Get the schema for a specific member by member name
     #[must_use]
     pub fn get_member(&self, member_name: &str) -> Option<&SchemaRef> {

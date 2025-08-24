@@ -94,10 +94,7 @@ use thiserror::Error;
 use crate::{
     prelude::{LengthTrait, LengthTraitBuilder},
     schema::{Document, Schema, SchemaRef, ShapeId, ShapeType},
-    serde::{
-        se::ListSerializer,
-        shapes::{ShapeBuilder},
-    },
+    serde::{builders::ShapeBuilder, se::ListSerializer},
 };
 
 /// Validates that a shape conforms to the constraints of a Schema

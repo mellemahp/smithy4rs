@@ -2,14 +2,24 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_errors_doc)]
 
-use std::{error::Error as StdError, hash::Hash, fmt::Display};
+use std::{error::Error as StdError, fmt::Display, hash::Hash};
 
 use indexmap::IndexMap;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     schema::{Document, SchemaRef, SchemaShape},
+    serde::builders::{Builder, StructOrBuilder},
 };
+
+/// Convience method to auto-handle type
+#[inline]
+pub fn deserialize<'de, T: DeserializeWithSchema, D: Deserializer<'de>>(
+    schema: &SchemaRef,
+    deserializer: D,
+) -> Result<T, D::Error> {
+    T::deserialize_with_schema(schema, deserializer)
+}
 
 /// Deserialize a shape with its pre-defined schema.
 ///
@@ -43,16 +53,17 @@ pub trait Deserializer<'de>: Sized {
     type Error: Error;
 
     /// Begin to deserialize a variably sized structure or union.
-    fn read_struct<T: DeserializeWithSchema>(
-        self,
-        schema: &SchemaRef,
-    ) -> Result<T, Self::Error>;
+    fn read_struct<T: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<T, Self::Error>;
 
     /// Begin to deserialize a variably sized map.
-    fn read_map<K: DeserializeWithSchema, V: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<IndexMap<K, V>, Self::Error>;
+    fn read_map<K: DeserializeWithSchema, V: DeserializeWithSchema>(
+        self,
+        schema: &SchemaRef,
+    ) -> Result<IndexMap<K, V>, Self::Error>;
 
     /// Begin to deserialize a variably sized list.x
-    fn read_list<T: DeserializeWithSchema>(self, schema: &SchemaRef) -> Result<Vec<T>, Self::Error>;
+    fn read_list<T: DeserializeWithSchema>(self, schema: &SchemaRef)
+    -> Result<Vec<T>, Self::Error>;
 
     /// Deserialize a `boolean`
     fn read_boolean(self, schema: &SchemaRef) -> Result<bool, Self::Error>;
@@ -108,7 +119,8 @@ impl<T: DeserializeWithSchema> DeserializeWithSchema for Vec<T> {
         schema: &SchemaRef,
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        deserializer.read_list::<T>(schema) 
+        // TODO: size hinting?
+        deserializer.read_list::<T>(schema)
     }
 }
 
@@ -121,7 +133,8 @@ where
         schema: &SchemaRef,
         deserializer: D,
     ) -> Result<Self, D::Error> {
-        todo!()
+        // TODO: size hinting?
+        deserializer.read_map::<K, V>(schema)
     }
 }
 
@@ -233,7 +246,6 @@ impl DeserializeWithSchema for Instant {
     }
 }
 
-
 impl<T: DeserializeWithSchema> DeserializeWithSchema for Option<T> {
     fn deserialize_with_schema<'de, D: Deserializer<'de>>(
         schema: &SchemaRef,
@@ -245,5 +257,14 @@ impl<T: DeserializeWithSchema> DeserializeWithSchema for Option<T> {
         } else {
             T::deserialize_with_schema(schema, deserializer).map(Some)
         }
+    }
+}
+
+impl<S: Builder> DeserializeWithSchema for StructOrBuilder<S> {
+    fn deserialize_with_schema<'de, D: Deserializer<'de>>(
+        schema: &SchemaRef,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        deserializer.read_struct(schema)
     }
 }
