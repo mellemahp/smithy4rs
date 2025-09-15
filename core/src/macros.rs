@@ -6,7 +6,7 @@
 macro_rules! traits {
     () => { Vec::new() };
     ($($x:expr),+ $(,)?) => (
-        vec![$(Ref::new($x)),*]
+        vec![$($x.into()),*]
     );
 }
 
@@ -49,6 +49,14 @@ macro_rules! lazy_schema {
             .build()
         });
     };
+    (
+        $schema_name:ident,
+        $builder:expr
+    ) => {
+        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+            $builder
+        });
+    };
 }
 
 // Create a lazy, static ShapeId
@@ -65,6 +73,7 @@ macro_rules! static_trait_id {
     ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
         lazy_shape_id!($id_var, $id_name);
         impl StaticTraitId for $trait_struct {
+            #[inline]
             fn trait_id() -> &'static ShapeId {
                 &$id_var
             }
@@ -136,3 +145,4 @@ macro_rules! string_trait {
         }
     };
 }
+

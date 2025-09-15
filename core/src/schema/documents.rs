@@ -60,6 +60,11 @@ impl Document {
             _ => 1,
         }
     }
+
+    /// Converts a type into a document
+    pub fn from<V: Into<Document>>(value: V) -> Document {
+        value.into()
+    }
 }
 
 impl SchemaShape for Document {
