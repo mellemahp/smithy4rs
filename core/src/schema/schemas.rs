@@ -315,13 +315,13 @@ impl Schema {
     /// Returns true if the map contains a value for the specified trait ID.
     #[must_use]
     pub fn contains_trait(&self, id: &ShapeId) -> bool {
-        self.traits().contains_trait(id)
+        self.traits().contains(id)
     }
 
     /// Returns true if the map contains a trait of type `T`.
     #[must_use]
-    pub fn contains_trait_type<T: StaticTraitId>(&self) -> bool {
-        self.traits().contains_trait_type::<T>()
+    pub fn contains_type<T: StaticTraitId>(&self) -> bool {
+        self.traits().contains_type::<T>()
     }
 
     /// Gets a [`SmithyTrait`] as a specific implementation if it exists.
@@ -329,14 +329,14 @@ impl Schema {
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
     #[must_use]
     pub fn get_trait_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
-        self.traits().get_trait_as::<T>()
+        self.traits().get_as::<T>()
     }
 
     /// Get a dynamic implementation of a [`SmithyTrait`] by shape ID.
     ///
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
     #[must_use]
-    pub fn get_trait_dyn(&self, id: &ShapeId) -> Option<&TraitRef> {
+    pub fn get_trait(&self, id: &ShapeId) -> Option<&TraitRef> {
         self.traits().get(id)
     }
 }
@@ -475,7 +475,7 @@ impl<'b> SchemaBuilder<'b> {
 
     /// Adds a trait to the [`SchemaBuilder`]
     #[must_use]
-    pub fn with_trait(mut self, smithy_trait: impl SmithyTrait) -> Self {
+    pub fn with_trait(mut self, smithy_trait: impl Into<TraitRef>) -> Self {
         self.traits.insert(smithy_trait);
         self
     }
@@ -653,7 +653,7 @@ mod tests {
             ShapeId::from("api.smithy#Example"),
             traits![JsonNameTrait::new("other")],
         );
-        assert!(schema.contains_trait_type::<JsonNameTrait>());
+        assert!(schema.contains_type::<JsonNameTrait>());
         let json_name_value = schema
             .get_trait_as::<JsonNameTrait>()
             .expect("No Json Name trait present");
@@ -670,7 +670,7 @@ mod tests {
             .put_member("target_a", &target, traits![])
             .build();
         let member = schema.get_member("target_a").expect("No such member");
-        assert!(member.contains_trait_type::<JsonNameTrait>());
+        assert!(member.contains_type::<JsonNameTrait>());
         let json_name_value = member
             .get_trait_as::<JsonNameTrait>()
             .expect("No JSON name trait present");
