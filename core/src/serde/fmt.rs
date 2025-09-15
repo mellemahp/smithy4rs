@@ -20,7 +20,7 @@ use crate::{
 const REDACTED_STRING: &str = "**REDACTED**";
 macro_rules! redact {
     ($self:ident, $schema:ident, $expr:expr) => {
-        if $schema.contains_trait_type::<SensitiveTrait>() {
+        if $schema.contains_type::<SensitiveTrait>() {
             $self
                 .writer
                 .write_all(REDACTED_STRING.as_ref())
@@ -33,7 +33,7 @@ macro_rules! redact {
 
 macro_rules! redact_aggregate {
     ($self:ident, $schema:ident) => {
-        if $schema.contains_trait_type::<SensitiveTrait>() {
+        if $schema.contains_type::<SensitiveTrait>() {
             $self
                 .writer
                 .write_all(REDACTED_STRING.as_ref())
@@ -385,7 +385,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        Ref, lazy_schema,
+        lazy_schema,
         prelude::STRING,
         schema::{Schema, ShapeId},
         traits,
