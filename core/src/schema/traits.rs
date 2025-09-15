@@ -75,7 +75,7 @@
 //! can be found in [`crate::schema::prelude`].
 
 use std::{collections::HashMap, fmt::Debug, ops::Deref};
-
+use std::collections::BTreeMap;
 use downcast_rs::{DowncastSync, impl_downcast};
 
 use crate::{
@@ -188,7 +188,9 @@ impl SmithyTrait for DynamicTrait {
 /// Map used to track the traits applied to a [`Schema`].
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct TraitMap {
-    map: HashMap<ShapeId, TraitRef>,
+    // NOTE: BTreeMap is used here b/c it outperforms HashMap for access and memory usage
+    //       when the collection size is small. Schemas typically have very few traits.
+    map: BTreeMap<ShapeId, TraitRef>,
 }
 impl TraitMap {
     /// Creates a new, empty [`TraitMap`].
@@ -197,7 +199,7 @@ impl TraitMap {
     /// is first inserted into.
     pub fn new() -> TraitMap {
         TraitMap {
-            map: HashMap::new(),
+            map: BTreeMap::new(),
         }
     }
 

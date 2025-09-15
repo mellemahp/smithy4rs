@@ -19,7 +19,7 @@ use crate::schema::SchemaRef;
 /// ```<NAMESPACE>#<NAME>$<MEMBER>```
 ///
 /// The member value is optional.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ShapeId {
     id: String,
     namespace: String,
