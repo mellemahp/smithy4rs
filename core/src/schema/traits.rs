@@ -40,8 +40,8 @@
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
-//!  assert_eq!(trait_impl.min, Some(1usize));
-//!  assert_eq!(trait_impl.max, Some(4usize));
+//!  assert_eq!(*trait_impl.min(), Some(1usize));
+//!  assert_eq!(*trait_impl.max(), Some(4usize));
 //! ```
 //!
 //! ## Custom Traits
@@ -74,8 +74,8 @@
 //! Base Smithy Trait implementations such as `@sensitive` and `@default`
 //! can be found in [`crate::schema::prelude`].
 
-use std::{collections::HashMap, fmt::Debug, ops::Deref};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
+
 use downcast_rs::{DowncastSync, impl_downcast};
 
 use crate::{
