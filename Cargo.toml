@@ -41,6 +41,7 @@ bytebuffer = "2.3.0"
 thiserror = "2.0.12"
 indexmap = "2.8.0"
 downcast-rs = "2.0.1"
+regex = "1.11.2"
 
 [workspace.lints.rust]
 future-incompatible = "warn"
