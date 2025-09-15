@@ -175,7 +175,7 @@ mod tests {
         let Some(cast_value) = map.get_trait_as::<HTTPErrorTrait>() else {
             panic!("Could not find expected trait!!!")
         };
-        assert_eq!(cast_value.code, 404);
+        assert_eq!(cast_value.code(), 404);
         assert_eq!(cast_value.type_id(), TypeId::of::<HTTPErrorTrait>());
     }
 }
