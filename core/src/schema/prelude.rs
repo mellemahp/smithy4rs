@@ -187,7 +187,6 @@ impl MediaTypeTrait {
 static_trait_id!(MediaTypeTrait, MEDIA_TYPE_TRAIT_ID, "smithy.api#mediaType");
 smithy_trait_impl!(MediaTypeTrait);
 
-
 /// Allows a serialized object property name in a JSON document to differ from a structure or union member name.
 ///
 /// *See* - [JsonName Trait](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-jsonname-trait)

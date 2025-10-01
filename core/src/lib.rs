@@ -27,4 +27,4 @@ pub use bigdecimal::BigDecimal;
 pub use bytebuffer::ByteBuffer;
 use indexmap::{IndexMap, IndexSet};
 pub use num_bigint::BigInt;
-use rustc_hash::{FxBuildHasher};
+use rustc_hash::FxBuildHasher;

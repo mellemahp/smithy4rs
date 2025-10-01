@@ -2,9 +2,14 @@
 #![allow(unused_variables)]
 
 use std::{hash::Hash, sync::LazyLock};
-use indexmap::{IndexSet};
+
+use indexmap::IndexSet;
 use rustc_hash::FxBuildHasher;
-use crate::{Ref, schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef}, FxIndexMap, FxIndexSet};
+
+use crate::{
+    FxIndexMap, FxIndexSet, Ref,
+    schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
+};
 
 /// Reference to a Smithy Schema type.
 ///
@@ -491,7 +496,10 @@ impl<'b> SchemaBuilder<'b> {
 
         match self.shape_type {
             ShapeType::Structure | ShapeType::Union => {
-                let mut member_map = FxIndexMap::with_capacity_and_hasher(self.members.len(), FxBuildHasher::default());
+                let mut member_map = FxIndexMap::with_capacity_and_hasher(
+                    self.members.len(),
+                    FxBuildHasher::default(),
+                );
                 for (idx, mut member_builder) in self.members.into_iter().enumerate() {
                     member_builder.set_index(idx);
                     member_map.insert(member_builder.name.clone(), member_builder.build());
