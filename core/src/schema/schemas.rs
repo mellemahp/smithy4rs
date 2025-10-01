@@ -1,14 +1,10 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::{collections::HashSet, hash::Hash, sync::LazyLock};
-
-use indexmap::IndexMap;
-
-use crate::{
-    Ref,
-    schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
-};
+use std::{hash::Hash, sync::LazyLock};
+use indexmap::{IndexSet};
+use rustc_hash::FxBuildHasher;
+use crate::{Ref, schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef}, FxIndexMap, FxIndexSet};
 
 /// Reference to a Smithy Schema type.
 ///
@@ -46,7 +42,7 @@ pub struct ScalarSchema {
 pub struct StructSchema {
     id: ShapeId,
     shape_type: ShapeType,
-    pub members: IndexMap<String, SchemaRef>,
+    pub members: FxIndexMap<String, SchemaRef>,
     traits: TraitMap,
 }
 
@@ -71,7 +67,7 @@ pub struct MapSchema {
 #[derive(Debug, PartialEq)]
 pub struct EnumSchema<T: PartialEq + Hash + Eq> {
     id: ShapeId,
-    pub values: HashSet<T>,
+    pub values: FxIndexSet<T>,
     traits: TraitMap,
 }
 
@@ -118,12 +114,12 @@ impl Schema {
     /// Create a Schema for an [IntEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape.
     pub fn create_int_enum(
         id: impl Into<ShapeId>,
-        values: HashSet<i32>,
+        values: IndexSet<i32>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::IntEnum(EnumSchema {
             id: id.into(),
-            values,
+            values: FxIndexSet::from_iter(values),
             traits: TraitMap::of(traits),
         }))
     }
@@ -161,12 +157,12 @@ impl Schema {
     /// Create a Schema for an [Enum](https://smithy.io/2.0/spec/simple-types.html#enum) shape.
     pub fn create_enum(
         id: impl Into<ShapeId>,
-        values: HashSet<String>,
+        values: IndexSet<String>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::Enum(EnumSchema {
             id: id.into(),
-            values,
+            values: FxIndexSet::from_iter(values),
             traits: TraitMap::of(traits),
         }))
     }
@@ -229,7 +225,7 @@ impl Schema {
     }
 }
 
-static EMPTY: LazyLock<IndexMap<String, SchemaRef>> = LazyLock::new(IndexMap::new);
+static EMPTY: LazyLock<FxIndexMap<String, SchemaRef>> = LazyLock::new(FxIndexMap::default);
 
 // GETTERS
 impl Schema {
@@ -276,7 +272,7 @@ impl Schema {
     /// Get a map of all members attached to this schema.
     ///
     /// **NOTE**: Scalar schemas with no members will return an empty map.
-    pub(crate) fn members(&self) -> &IndexMap<String, SchemaRef> {
+    pub(crate) fn members(&self) -> &FxIndexMap<String, SchemaRef> {
         match self {
             Schema::Struct(StructSchema { members, .. }) => members,
             _ => &EMPTY,
@@ -495,7 +491,7 @@ impl<'b> SchemaBuilder<'b> {
 
         match self.shape_type {
             ShapeType::Structure | ShapeType::Union => {
-                let mut member_map = IndexMap::with_capacity(self.members.len());
+                let mut member_map = FxIndexMap::with_capacity_and_hasher(self.members.len(), FxBuildHasher::default());
                 for (idx, mut member_builder) in self.members.into_iter().enumerate() {
                     member_builder.set_index(idx);
                     member_map.insert(member_builder.name.clone(), member_builder.build());

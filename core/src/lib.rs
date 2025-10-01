@@ -1,6 +1,5 @@
 extern crate core;
 
-pub mod errors;
 pub mod schema;
 
 pub use schema::prelude;
@@ -15,8 +14,17 @@ use std::sync::Arc;
 /// Defined as a common type so Arc type could be swapped out.
 pub type Ref<T> = Arc<T>;
 
+/// Faster Map and Set implementations used for internal types and Schemas.
+///
+/// NOTE: These should not be used in serialized/deserialized types as they are not
+/// resistant to DOS attacks.
+pub type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
+pub type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
+
 pub use std::time::Instant;
 
 pub use bigdecimal::BigDecimal;
 pub use bytebuffer::ByteBuffer;
+use indexmap::{IndexMap, IndexSet};
 pub use num_bigint::BigInt;
+use rustc_hash::{FxBuildHasher};
