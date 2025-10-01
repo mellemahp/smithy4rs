@@ -498,7 +498,7 @@ impl<'b> SchemaBuilder<'b> {
             ShapeType::Structure | ShapeType::Union => {
                 let mut member_map = FxIndexMap::with_capacity_and_hasher(
                     self.members.len(),
-                    FxBuildHasher::default(),
+                    FxBuildHasher,
                 );
                 for (idx, mut member_builder) in self.members.into_iter().enumerate() {
                     member_builder.set_index(idx);
