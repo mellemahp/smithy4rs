@@ -17,8 +17,8 @@ proc-macro = true
 [dependencies]
 syn = {version = "2.0", features = ["full"]}
 quote = "1.0"
-proc-macro2 = "1.0.94"
-proc-macro-crate = "3.3.0"
+proc-macro2 = "1.0.101"
+proc-macro-crate = "3.4.0"
 
 [lints]
 workspace = true
