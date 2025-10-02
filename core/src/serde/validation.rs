@@ -127,7 +127,7 @@
 // }
 //
 // // TODO: could this be a serializer?
-// // TODO: How to handle max allowed errors and max depth? Dont want to allow huge reccursion
+// // TODO: How to handle max allowed errors and max depth? Dont want to allow huge recursion
 // /// NOTE: validate_struct is not needed here as that is handled by the builders.
 // pub trait Validator: Sized {
 //     type ItemValidator: ItemValidator;
