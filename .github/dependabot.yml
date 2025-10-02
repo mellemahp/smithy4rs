@@ -7,6 +7,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    groups:
+      all-actions:
+        patterns: [ "*" ]
   - package-ecosystem: "gradle"
     directory: "/"
     pull-request-branch-name:
@@ -26,4 +29,7 @@ updates:
       separator: "-"
     schedule:
       interval: "weekly"
+    groups:
+      rust:
+        patterns: [ "*" ]
     open-pull-requests-limit: 3
