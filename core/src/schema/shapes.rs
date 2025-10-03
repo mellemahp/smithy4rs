@@ -1,3 +1,10 @@
+//! # Shapes
+//! Definition of the [types](https://smithy.io/2.0/spec/simple-types.html) that
+//! compose the Smithy data model.
+//!
+//!
+//!
+
 #![allow(dead_code)]
 
 use std::fmt::Display;
@@ -12,7 +19,7 @@ use crate::schema::SchemaRef;
 /// ```<NAMESPACE>#<NAME>$<MEMBER>```
 ///
 /// The member value is optional.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ShapeId {
     id: String,
     namespace: String,
@@ -40,7 +47,7 @@ impl From<&str> for ShapeId {
 
 impl ShapeId {
     /// Creates a shape ID from parts of a shape ID.
-    pub fn from_parts<'a>(namespace: &'a str, name: &'a str, member: Option<&'a str>) -> ShapeId {
+    pub fn from_parts(namespace: &str, name: &str, member: Option<&str>) -> ShapeId {
         let mut id = namespace.to_string() + "#" + name;
         if let Some(m) = member {
             id = id + "$" + m;
@@ -112,6 +119,7 @@ pub enum ShapeType {
     Resource,
     Operation,
 }
+
 impl Display for ShapeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

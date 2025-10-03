@@ -6,7 +6,7 @@
 macro_rules! traits {
     () => { Vec::new() };
     ($($x:expr),+ $(,)?) => (
-        vec![$(Ref::new($x)),*]
+        vec![$($x.into()),*]
     );
 }
 
@@ -49,6 +49,14 @@ macro_rules! lazy_schema {
             .build()
         });
     };
+    (
+        $schema_name:ident,
+        $builder:expr
+    ) => {
+        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+            $builder
+        });
+    };
 }
 
 // Create a lazy, static ShapeId
@@ -65,6 +73,7 @@ macro_rules! static_trait_id {
     ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
         lazy_shape_id!($id_var, $id_name);
         impl StaticTraitId for $trait_struct {
+            #[inline]
             fn trait_id() -> &'static ShapeId {
                 &$id_var
             }
@@ -76,6 +85,7 @@ macro_rules! static_trait_id {
 #[macro_export]
 macro_rules! annotation_trait {
     ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
+        #[derive(Debug)]
         pub struct $trait_struct {}
         impl $trait_struct {
             #[must_use]
@@ -96,6 +106,41 @@ macro_rules! annotation_trait {
 
             fn value(&self) -> &DocumentValue {
                 &DocumentValue::Null
+            }
+        }
+    };
+}
+
+// Trait definitions that contain only a string value
+#[macro_export]
+macro_rules! string_trait {
+    ($trait_struct:ident, $id_var:ident, $value_name:ident, $id_name:literal) => {
+        #[derive(Debug)]
+        pub struct $trait_struct {
+            $value_name: String,
+            value: DocumentValue,
+        }
+        impl $trait_struct {
+            pub fn $value_name(&self) -> &str {
+                &self.$value_name
+            }
+
+            #[must_use]
+            pub fn new($value_name: &str) -> Self {
+                $trait_struct {
+                    $value_name: $value_name.to_string(),
+                    value: DocumentValue::String($value_name.to_string()),
+                }
+            }
+        }
+        static_trait_id!($trait_struct, $id_var, $id_name);
+        impl SmithyTrait for $trait_struct {
+            fn id(&self) -> &ShapeId {
+                $trait_struct::trait_id()
+            }
+
+            fn value(&self) -> &DocumentValue {
+                &self.value
             }
         }
     };
