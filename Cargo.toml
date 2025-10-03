@@ -25,6 +25,7 @@ version = "0.0.1"
 edition = "2024"
 repository = "https://github.com/mellemahp/smithy4rs"
 license-file = "LICENSE"
+license = "Apache-2.0"
 readme = "README.md"
 authors = ["Hunter Mellema <hunter@hmellema.space>"]
 keywords = ["smithy", "api"]
@@ -46,6 +47,15 @@ regex = "1.11.2"
 [workspace.lints.rust]
 future-incompatible = "warn"
 nonstandard_style = { level = "deny", priority = 1 }
+unsafe_code = "forbid"
+unused_qualifications = "warn"
+unused_extern_crates = "forbid"
+unreachable_code = "forbid"
+unreachable_patterns = "forbid"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+elided_lifetimes_in_paths = "warn"
+# missing_docs = { level = "deny" }
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = 10 }
@@ -58,3 +68,6 @@ manual_ok_or = { level = "deny" }
 manual_while_let_some = { level = "deny" }
 unnecessary_wraps = { level = "deny" }
 needless_collect = { level = "deny" }
+# documentation lints
+doc_link_with_quotes = { level = "deny" }
+doc_markdown = { level = "deny" }

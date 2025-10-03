@@ -22,7 +22,8 @@ jobs:
           profile: minimal
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --locked --all-features
+      - uses: jdx/mise-action@v2
+      - run: mise build
 
   tests:
     name: Tests
@@ -35,11 +36,14 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --locked --all-features
+      - uses: jdx/mise-action@v2
+      - run: mise test
 
-  clippy:
-    name: Clippy
+  lint:
+    name: lint
     runs-on: ubuntu-latest
 
     steps:
@@ -51,7 +55,8 @@ jobs:
           toolchain: stable
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --locked --all-features --all-targets
+      - uses: jdx/mise-action@v2
+      - run: mise lint
 
   formatting:
     name: Formatting
@@ -65,7 +70,21 @@ jobs:
           toolchain: nightly
           override: 'true'
           components: rustfmt
-      - run: cargo +nightly fmt --all -- --check
+      - uses: jdx/mise-action@v2
+      - run: mise fmt-all --check
+
+  dependencies:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - uses: jdx/mise-action@v2
+      - run: mise audit
 
   spell-check:
     name: Spell Check
