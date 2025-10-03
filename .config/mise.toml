@@ -3,7 +3,7 @@
 "cargo-binstall" = "latest"
 "cargo:cargo-nextest" = "latest"
 "cargo:cargo-deny" = "latest"
-rust = "1.90.0"
+rust = { version = "1.90.0", components="clippy,rustfmt" }
 
 [tasks.build]
 description = "Build the project"
