@@ -147,8 +147,7 @@ string_trait!(
 /// Provides a structure member with a default value.
 ///
 /// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
-#[derive(Debug)]
-pub struct DefaultTrait(DocumentValue);
+pub struct DefaultTrait(pub DocumentValue);
 static_trait_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {

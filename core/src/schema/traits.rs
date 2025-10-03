@@ -192,6 +192,7 @@ pub(crate) struct TraitMap {
     //       when the collection size is small. Schemas typically have very few traits.
     map: BTreeMap<ShapeId, TraitRef>,
 }
+impl Eq for TraitMap {}
 impl TraitMap {
     /// Creates a new, empty [`TraitMap`].
     ///

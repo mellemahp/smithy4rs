@@ -1,13 +1,19 @@
 #![allow(dead_code)]
-#![allow(unused_variables)]
 
-use std::{hash::Hash, sync::LazyLock};
+use std::{
+    cmp::Ordering,
+    fmt::{Debug, Formatter},
+    hash::Hash,
+    ops::Deref,
+    sync::{Arc, LazyLock, OnceLock, RwLock},
+};
 
 use indexmap::IndexSet;
 use rustc_hash::FxBuildHasher;
 
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
+    prelude::{DefaultTrait, RequiredTrait},
     schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
 };
 
@@ -43,12 +49,27 @@ pub struct ScalarSchema {
 
 /// Schema for a Smithy [Structure](https://smithy.io/2.0/spec/aggregate-types.html#structure)
 /// or [Union](https://smithy.io/2.0/spec/aggregate-types.html#union) data type.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct StructSchema {
     id: ShapeId,
     shape_type: ShapeType,
     pub members: FxIndexMap<String, SchemaRef>,
     traits: TraitMap,
+}
+
+impl Debug for StructSchema {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "StructSchema {{")?;
+        write!(f, "id: {:?}, ", self.id.name())?;
+        write!(f, "shape_type: {:?}, ", self.shape_type)?;
+        write!(f, "traits: {:?}, ", self.traits)?;
+        for (key, value) in &self.members {
+            if let Schema::Member(member) = &**value {
+                write!(f, "[name: {}, type: {:?}]", key, member.target.id().name())?;
+            }
+        }
+        write!(f, "}}")
+    }
 }
 
 /// Schema for a Smithy [List](https://smithy.io/2.0/spec/aggregate-types.html#list) data type.
@@ -80,10 +101,21 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
 #[derive(Debug, PartialEq)]
 pub struct MemberSchema {
     id: ShapeId,
-    pub target: SchemaRef,
+    pub target: MemberTarget,
     pub name: String,
     pub index: usize,
     traits: TraitMap,
+    flattened_traits: OnceLock<TraitMap>,
+}
+impl MemberSchema {
+    fn traits(&self) -> &TraitMap {
+        self.flattened_traits.get_or_init(|| {
+            let mut flattened = TraitMap::new();
+            flattened.extend(&self.traits);
+            flattened.extend(self.target.traits());
+            flattened
+        })
+    }
 }
 
 // =======  FACTORY METHODS ==========
@@ -207,25 +239,25 @@ impl Schema {
 impl Schema {
     /// Create a new [`SchemaBuilder`] for a [Structure](https://smithy.io/2.0/spec/aggregate-types.html#structure) shape.
     #[must_use]
-    pub fn structure_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+    pub fn structure_builder<I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder {
         SchemaBuilder::new(id, ShapeType::Structure, traits)
     }
 
     /// Create a new [`SchemaBuilder`] for a [Union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape.
     #[must_use]
-    pub fn union_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+    pub fn union_builder<I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder {
         SchemaBuilder::new(id, ShapeType::Union, traits)
     }
 
     /// Create a new [`SchemaBuilder`] for a [List](https://smithy.io/2.0/spec/aggregate-types.html#list) shape.
     #[must_use]
-    pub fn list_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+    pub fn list_builder<I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder {
         SchemaBuilder::new(id, ShapeType::List, traits)
     }
 
     /// Create a new [`SchemaBuilder`] for a [Map](https://smithy.io/2.0/spec/aggregate-types.html#map) shape.
     #[must_use]
-    pub fn map_builder<'s, I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder<'s> {
+    pub fn map_builder<I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder {
         SchemaBuilder::new(id, ShapeType::Map, traits)
     }
 }
@@ -262,15 +294,15 @@ impl Schema {
         }
     }
 
-    const fn traits(&self) -> &TraitMap {
+    fn traits(&self) -> &TraitMap {
         match self {
             Schema::Scalar(ScalarSchema { traits, .. })
             | Schema::Struct(StructSchema { traits, .. })
             | Schema::List(ListSchema { traits, .. })
             | Schema::Map(MapSchema { traits, .. })
             | Schema::Enum(EnumSchema { traits, .. })
-            | Schema::IntEnum(EnumSchema { traits, .. })
-            | Schema::Member(MemberSchema { traits, .. }) => traits,
+            | Schema::IntEnum(EnumSchema { traits, .. }) => traits,
+            Schema::Member(member) => member.traits(),
         }
     }
 
@@ -279,6 +311,7 @@ impl Schema {
     /// **NOTE**: Scalar schemas with no members will return an empty map.
     pub(crate) fn members(&self) -> &FxIndexMap<String, SchemaRef> {
         match self {
+            // TODO: Error handling
             Schema::Struct(StructSchema { members, .. }) => members,
             _ => &EMPTY,
         }
@@ -417,37 +450,55 @@ impl Schema {
 }
 
 /// Builder for aggregate [`Schema`] types.
-pub struct SchemaBuilder<'b> {
+pub struct SchemaBuilder {
     id: ShapeId,
     shape_type: ShapeType,
-    members: Vec<MemberSchemaBuilder<'b>>,
-    traits: TraitMap,
+    members: RwLock<Vec<MemberSchemaBuilder>>,
+    traits: RwLock<TraitMap>,
+    // Used for caching built value when constructing recursive shapes
+    built: OnceLock<SchemaRef>,
 }
 
-impl SchemaBuilder<'_> {
+impl SchemaBuilder {
     /// Create a new [`SchemaBuilder`] with no traits or members.
     fn new(id: impl Into<ShapeId>, shape_type: ShapeType, traits: TraitList) -> Self {
         SchemaBuilder {
             id: id.into(),
             members: match shape_type {
-                ShapeType::List => Vec::with_capacity(1),
-                ShapeType::Map => Vec::with_capacity(2),
-                _ => Vec::new(),
+                ShapeType::List => RwLock::new(Vec::with_capacity(1)),
+                ShapeType::Map => RwLock::new(Vec::with_capacity(2)),
+                _ => RwLock::new(Vec::new()),
             },
             shape_type,
-            traits: TraitMap::of(traits),
+            traits: RwLock::new(TraitMap::of(traits)),
+            built: OnceLock::new(),
         }
     }
 }
 
-impl<'b> SchemaBuilder<'b> {
+impl SchemaBuilder {
     /// Add a member to the [`SchemaBuilder`]
     #[must_use]
-    pub fn put_member<'t>(mut self, name: &str, target: &'t SchemaRef, traits: TraitList) -> Self
-    // Target reference will outlive this builder
-    where
-        't: 'b,
-    {
+    pub fn put_member<M: Into<MemberTarget>>(
+        &self,
+        name: &str,
+        target: M,
+        traits: TraitList,
+    ) -> &Self {
+        self.validate_member_name(name);
+        self.members
+            .write()
+            .expect("Eek")
+            .push(MemberSchemaBuilder::new(
+                name.into(),
+                self.id.with_member(name),
+                target.into(),
+                traits,
+            ));
+        self
+    }
+
+    fn validate_member_name(&self, name: &str) {
         // TODO: Return a result instead of panicking?
         match self.shape_type {
             ShapeType::List => {
@@ -464,95 +515,173 @@ impl<'b> SchemaBuilder<'b> {
             }
             _ => { /* fall through otherwise */ }
         }
-        self.members.push(MemberSchemaBuilder::new(
-            name.into(),
-            self.id.with_member(name),
-            target,
-            traits,
-        ));
-        self
     }
 
     /// Adds a trait to the [`SchemaBuilder`]
     #[must_use]
-    pub fn with_trait(mut self, smithy_trait: impl Into<TraitRef>) -> Self {
-        self.traits.insert(smithy_trait);
+    pub fn with_trait(&self, smithy_trait: impl SmithyTrait) -> &Self {
+        self.traits
+            .write()
+            .expect("Lock poisoned")
+            .insert(smithy_trait);
         self
-    }
-
-    const fn sort_members(&mut self) {
-        // TODO: Implement.
     }
 
     /// Build a [`Schema`] and return a [`SchemaRef`] to it.
     // TODO: Convert to `Result<SchemaRef, BuildError>
     #[must_use]
-    pub fn build(mut self) -> SchemaRef {
-        // Structure shapes need to sort members so that required members come before optional members.
-        // Union types do not need this.
-        if self.shape_type == ShapeType::Structure {
-            self.sort_members();
+    pub fn build(&self) -> SchemaRef {
+        if let Some(schema) = self.built.get() {
+            return schema.clone();
         }
 
-        match self.shape_type {
+        let mut traits = TraitMap::new();
+        traits.extend(&self.traits.read().unwrap());
+        let output = match self.shape_type {
             ShapeType::Structure | ShapeType::Union => {
-                let mut member_map =
-                    FxIndexMap::with_capacity_and_hasher(self.members.len(), FxBuildHasher);
-                for (idx, mut member_builder) in self.members.into_iter().enumerate() {
+                let mut members_mut = self.members.write().expect("Lock poisoned.");
+                members_mut.sort();
+                let mut members =
+                    FxIndexMap::with_capacity_and_hasher(members_mut.len(), FxBuildHasher);
+                for (idx, member_builder) in members_mut.iter_mut().enumerate() {
                     member_builder.set_index(idx);
-                    member_map.insert(member_builder.name.clone(), member_builder.build());
+                    members.insert(member_builder.name.clone(), member_builder.build());
                 }
                 Ref::new(Schema::Struct(StructSchema {
                     id: self.id.clone(),
                     shape_type: self.shape_type,
-                    members: member_map.clone(),
-                    traits: self.traits.clone(),
+                    members,
+                    traits,
                 }))
             }
-            ShapeType::List => Ref::new(Schema::List(ListSchema {
-                id: self.id,
-                member: self.members.remove(0).build(),
-                traits: self.traits,
-            })),
-            ShapeType::Map => Ref::new(Schema::Map(MapSchema {
-                id: self.id,
-                key: self.members.remove(0).build(),
-                value: self.members.remove(0).build(),
-                traits: self.traits,
-            })),
+            ShapeType::List => {
+                let members = self.members.read().expect("Lock poisoned.");
+                Ref::new(Schema::List(ListSchema {
+                    id: self.id.clone(),
+                    member: members
+                        .first()
+                        .expect("Expected `member` member for List Schema")
+                        .build(),
+                    traits,
+                }))
+            }
+            ShapeType::Map => {
+                let members = self.members.read().expect("Lock poisoned.");
+                Ref::new(Schema::Map(MapSchema {
+                    id: self.id.clone(),
+                    key: members
+                        .first()
+                        .expect("Expected `key` member for Map schema")
+                        .build(),
+                    value: members
+                        .get(1)
+                        .expect("Expected `value` member for Map schema")
+                        .build(),
+                    traits,
+                }))
+            }
             _ => unreachable!("Builder can only be created for aggregate types."),
+        };
+        self.built.set(output.clone()).expect("Lock poisoned");
+        output
+    }
+}
+
+// TODO: Do Member targets need to use weak ref to avoid Arc cycles?
+#[derive(Clone)]
+pub enum MemberTarget {
+    Resolved(SchemaRef),
+    Lazy {
+        builder: Arc<SchemaBuilder>,
+        value: OnceLock<SchemaRef>,
+    },
+}
+impl Deref for MemberTarget {
+    type Target = SchemaRef;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            MemberTarget::Resolved(target) => target,
+            MemberTarget::Lazy { builder, value } => value.get().map_or_else(
+                || {
+                    value.set(builder.build()).expect("Lock poisoned");
+                    value.get().unwrap()
+                },
+                |value| value,
+            ),
+        }
+    }
+}
+impl Debug for MemberTarget {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // TODO
+        writeln!(f, "Member Target")
+    }
+}
+impl PartialEq for MemberTarget {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
+    }
+}
+impl Eq for MemberTarget {}
+impl From<&SchemaRef> for MemberTarget {
+    fn from(schema: &SchemaRef) -> Self {
+        MemberTarget::Resolved(schema.clone())
+    }
+}
+impl From<&LazyLock<SchemaRef>> for MemberTarget {
+    fn from(schema: &LazyLock<SchemaRef>) -> Self {
+        MemberTarget::Resolved(schema.deref().clone())
+    }
+}
+impl From<&Arc<SchemaBuilder>> for MemberTarget {
+    fn from(builder_ref: &Arc<SchemaBuilder>) -> Self {
+        MemberTarget::Lazy {
+            builder: builder_ref.clone(),
+            value: OnceLock::new(),
         }
     }
 }
 
-struct MemberSchemaBuilder<'target> {
+#[derive(PartialEq, Eq, Debug)]
+struct MemberSchemaBuilder {
     name: String,
     id: ShapeId,
-    member_target: &'target SchemaRef,
+    member_target: MemberTarget,
+    traits: TraitMap,
     member_index: Option<usize>,
-    trait_map: TraitMap,
 }
-// TODO: Flatten target traits into the member schema
-impl<'b> MemberSchemaBuilder<'b> {
-    pub(super) fn new<'t>(
+
+impl PartialOrd<Self> for MemberSchemaBuilder {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for MemberSchemaBuilder {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Sort members to ensure that required members with no default come before other members.
+        match (
+            self.required_with_no_default(),
+            other.required_with_no_default(),
+        ) {
+            (true, false) => Ordering::Less,
+            (false, true) => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    }
+}
+impl MemberSchemaBuilder {
+    pub(super) fn new(
         name: String,
         id: ShapeId,
-        member_target: &'t SchemaRef,
+        member_target: MemberTarget,
         traits: TraitList,
-    ) -> Self
-    // Schema reference outlives this builder
-    where
-        't: 'b,
-    {
-        // Flatten all target traits into member
-        let mut trait_map = TraitMap::of(traits);
-        trait_map.extend(member_target.traits());
+    ) -> Self {
         MemberSchemaBuilder {
             name,
             id,
             member_target,
+            traits: TraitMap::of(traits),
             member_index: None,
-            trait_map,
         }
     }
 
@@ -560,13 +689,18 @@ impl<'b> MemberSchemaBuilder<'b> {
         self.member_index = Some(index);
     }
 
-    pub(super) fn build(self) -> SchemaRef {
+    fn required_with_no_default(&self) -> bool {
+        self.traits.contains_type::<RequiredTrait>() && !self.traits.contains_type::<DefaultTrait>()
+    }
+
+    pub(super) fn build(&self) -> SchemaRef {
         Ref::new(Schema::Member(MemberSchema {
-            id: self.id,
+            id: self.id.clone(),
             target: self.member_target.clone(),
-            name: self.name,
+            name: self.name.clone(),
             index: self.member_index.unwrap_or_default(),
-            traits: self.trait_map,
+            traits: self.traits.clone(),
+            flattened_traits: OnceLock::new(),
         }))
     }
 }
@@ -576,6 +710,7 @@ mod tests {
     use super::*;
     use crate::{
         prelude::{JsonNameTrait, STRING},
+        schema::DocumentValue,
         traits,
     };
 
@@ -607,7 +742,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Lists can only have members named `member`. Found `bad`")]
     fn disallowed_list_schema() {
-        let schema = Schema::list_builder(ShapeId::from("api.smithy#List"), traits![])
+        let _schema = Schema::list_builder(ShapeId::from("api.smithy#List"), traits![])
             .put_member("bad", &STRING, traits![])
             .build();
     }
@@ -675,5 +810,173 @@ mod tests {
             .get_trait_as::<JsonNameTrait>()
             .expect("No JSON name trait present");
         assert_eq!(json_name_value.name(), "other");
+    }
+
+    #[test]
+    fn self_referential_schema() {
+        let builder = Arc::new(Schema::structure_builder("api.smithy#Example", traits![]));
+        let output = builder
+            .put_member("name", &STRING, traits![])
+            .put_member("self", &builder, traits![])
+            .build();
+        assert_eq!(output.id(), &ShapeId::from("api.smithy#Example"));
+        let member = output.get_member("self").expect("No `self` member");
+        let Schema::Member(self_member) = &**member else {
+            panic!("Expected `self` member");
+        };
+        assert_eq!(
+            self_member.target.id(),
+            &ShapeId::from("api.smithy#Example")
+        );
+    }
+
+    #[test]
+    fn mutually_recursive_schemas() {
+        let builder_a = Arc::new(Schema::structure_builder("api.smithy#ExampleA", traits![]));
+        let builder_b = Arc::new(Schema::structure_builder("api.smithy#ExampleB", traits![]));
+
+        let output_a = builder_a
+            .put_member("other_b", &builder_b, traits![])
+            .build();
+        let output_b = builder_b
+            .put_member("other_a", &builder_a, traits![])
+            .build();
+
+        assert_eq!(output_a.id(), &ShapeId::from("api.smithy#ExampleA"));
+        let member_b = output_a.get_member("other_b").expect("No `other_b` member");
+        let Schema::Member(rec_member_b) = &**member_b else {
+            panic!("Expected `self` member");
+        };
+        assert_eq!(
+            rec_member_b.target.id(),
+            &ShapeId::from("api.smithy#ExampleB")
+        );
+
+        assert_eq!(output_b.id(), &ShapeId::from("api.smithy#ExampleB"));
+        let member_a = output_b.get_member("other_a").expect("No `other_a` member");
+        let Schema::Member(rec_member_a) = &**member_a else {
+            panic!("Expected `self` member");
+        };
+        assert_eq!(
+            rec_member_a.target.id(),
+            &ShapeId::from("api.smithy#ExampleA")
+        );
+    }
+
+    #[test]
+    fn recursive_via_list() {
+        let intermediate_builder = Arc::new(Schema::structure_builder(
+            "api.smithy#Intermediate",
+            traits![],
+        ));
+        let list_builder = Arc::new(Schema::list_builder("api.smithy#RecursiveList", traits![]));
+        let intermediate_struct = intermediate_builder
+            .put_member("list", &list_builder, traits![])
+            .build();
+        let recursive_list = list_builder
+            .put_member("member", &intermediate_struct, traits![])
+            .build();
+        assert_eq!(
+            intermediate_struct.id(),
+            &ShapeId::from("api.smithy#Intermediate")
+        );
+        assert_eq!(
+            recursive_list.id(),
+            &ShapeId::from("api.smithy#RecursiveList")
+        );
+
+        let list_member = intermediate_struct
+            .get_member("list")
+            .expect("No `list` member");
+        let Schema::Member(rec_list) = &**list_member else {
+            panic!("Expected `list` member");
+        };
+        assert_eq!(
+            rec_list.target.id(),
+            &ShapeId::from("api.smithy#RecursiveList")
+        );
+
+        let list_member = recursive_list.get_member("member").expect("No `member`");
+        let Schema::Member(rec_struct) = &**list_member else {
+            panic!("Expected `member` member");
+        };
+        assert_eq!(
+            rec_struct.target.id(),
+            &ShapeId::from("api.smithy#Intermediate")
+        );
+    }
+
+    #[test]
+    fn recursive_via_map() {
+        let intermediate_builder = Arc::new(Schema::structure_builder(
+            "api.smithy#Intermediate",
+            traits![],
+        ));
+        let map_builder = Arc::new(Schema::map_builder("api.smithy#RecursiveMap", traits![]));
+        let intermediate_struct = intermediate_builder
+            .put_member("map", &map_builder, traits![])
+            .build();
+        let recursive_list = map_builder
+            .put_member("key", &STRING, traits![])
+            .put_member("value", &intermediate_struct, traits![])
+            .build();
+        assert_eq!(
+            intermediate_struct.id(),
+            &ShapeId::from("api.smithy#Intermediate")
+        );
+        assert_eq!(
+            recursive_list.id(),
+            &ShapeId::from("api.smithy#RecursiveMap")
+        );
+
+        let map_member = intermediate_struct
+            .get_member("map")
+            .expect("No `map` member");
+        let Schema::Member(rec_map) = &**map_member else {
+            panic!("Expected `map` member");
+        };
+        assert_eq!(
+            rec_map.target.id(),
+            &ShapeId::from("api.smithy#RecursiveMap")
+        );
+
+        let value_member = recursive_list.get_member("value").expect("No `value`");
+        let Schema::Member(rec_struct) = &**value_member else {
+            panic!("Expected `value` member");
+        };
+        assert_eq!(
+            rec_struct.target.id(),
+            &ShapeId::from("api.smithy#Intermediate")
+        );
+    }
+
+    #[test]
+    fn sorts_members() {
+        let schema = Schema::structure_builder(ShapeId::from("api.smithy#Example"), traits![])
+            .put_member(
+                "target_b",
+                &STRING,
+                traits![
+                    RequiredTrait::new(),
+                    DefaultTrait(DocumentValue::String("Woo".into()))
+                ],
+            )
+            .put_member("target_a", &STRING, traits![RequiredTrait::new()])
+            .put_member("target_c", &STRING, traits![])
+            .put_member("target_d", &STRING, traits![RequiredTrait::new()])
+            .put_member("target_e", &STRING, traits![])
+            .build();
+        assert_eq!(schema.members().len(), 5);
+        let first = schema.members().get_index(0).unwrap().0;
+        let second = schema.members().get_index(1).unwrap().0;
+        let third = schema.members().get_index(2).unwrap().0;
+        let fourth = schema.members().get_index(3).unwrap().0;
+        let fifth = schema.members().get_index(4).unwrap().0;
+
+        assert_eq!(first, "target_a");
+        assert_eq!(second, "target_d");
+        assert_eq!(third, "target_b");
+        assert_eq!(fourth, "target_c");
+        assert_eq!(fifth, "target_e");
     }
 }
