@@ -119,6 +119,20 @@ impl SmithyTrait for DefaultTrait {
     }
 }
 
+macro_rules! smithy_trait_impl {
+    ($t:ident) => {
+        impl SmithyTrait for $t {
+            fn id(&self) -> &ShapeId {
+                $t::trait_id()
+            }
+
+            fn value(&self) -> &DocumentValue {
+                &self.value
+            }
+        }
+    };
+}
+
 /// Indicates that a structure shape represents an error.
 ///
 /// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)
@@ -136,15 +150,7 @@ impl ErrorTrait {
     }
 }
 static_trait_id!(ErrorTrait, ERROR_TRAIT_ID, "smithy.api#error");
-impl SmithyTrait for ErrorTrait {
-    fn id(&self) -> &ShapeId {
-        ErrorTrait::trait_id()
-    }
-
-    fn value(&self) -> &DocumentValue {
-        &self.value
-    }
-}
+smithy_trait_impl!(ErrorTrait);
 
 /// Indicates if the client or server is at fault for a given error.
 pub enum ErrorFault {
@@ -179,15 +185,7 @@ impl MediaTypeTrait {
     }
 }
 static_trait_id!(MediaTypeTrait, MEDIA_TYPE_TRAIT_ID, "smithy.api#mediaType");
-impl SmithyTrait for MediaTypeTrait {
-    fn id(&self) -> &ShapeId {
-        MediaTypeTrait::trait_id()
-    }
-
-    fn value(&self) -> &DocumentValue {
-        &self.value
-    }
-}
+smithy_trait_impl!(MediaTypeTrait);
 
 /// Allows a serialized object property name in a JSON document to differ from a structure or union member name.
 ///
@@ -206,15 +204,7 @@ impl JsonNameTrait {
     }
 }
 static_trait_id!(JsonNameTrait, JSON_NAME_TRAIT_ID, "smithy.api#jsonName");
-impl SmithyTrait for JsonNameTrait {
-    fn id(&self) -> &ShapeId {
-        JsonNameTrait::trait_id()
-    }
-
-    fn value(&self) -> &DocumentValue {
-        &self.value
-    }
-}
+smithy_trait_impl!(JsonNameTrait);
 
 /// Defines an HTTP response code for an operation error.
 ///
@@ -237,14 +227,7 @@ impl HTTPErrorTrait {
     }
 }
 static_trait_id!(HTTPErrorTrait, HTTP_ERROR_TRAIT_ID, "smithy.api#httpError");
-impl SmithyTrait for HTTPErrorTrait {
-    fn id(&self) -> &ShapeId {
-        HTTPErrorTrait::trait_id()
-    }
-    fn value(&self) -> &DocumentValue {
-        &self.value
-    }
-}
+smithy_trait_impl!(HTTPErrorTrait);
 
 /// Binds a structure member to an HTTP header.
 ///
@@ -258,6 +241,8 @@ static_trait_id!(
     HTTP_HEADER_TRAIT_ID,
     "smithy.api#httpHeader"
 );
+smithy_trait_impl!(HTTPHeaderTrait);
+
 impl HTTPHeaderTrait {
     #[must_use]
     pub fn new(name: &str) -> Self {
@@ -265,14 +250,6 @@ impl HTTPHeaderTrait {
             name: name.to_string(),
             value: DocumentValue::String(name.to_string()),
         }
-    }
-}
-impl SmithyTrait for HTTPHeaderTrait {
-    fn id(&self) -> &ShapeId {
-        HTTPHeaderTrait::trait_id()
-    }
-    fn value(&self) -> &DocumentValue {
-        &self.value
     }
 }
 
@@ -288,6 +265,8 @@ static_trait_id!(
     HTTP_PREFIX_HEADERS_TRAIT_ID,
     "smithy.api#httpPrefixHeaders"
 );
+smithy_trait_impl!(HTTPPrefixHeadersTrait);
+
 impl HTTPPrefixHeadersTrait {
     #[must_use]
     pub fn new(prefix: &str) -> Self {
@@ -295,15 +274,6 @@ impl HTTPPrefixHeadersTrait {
             prefix: prefix.to_string(),
             value: DocumentValue::String(prefix.to_string()),
         }
-    }
-}
-impl SmithyTrait for HTTPPrefixHeadersTrait {
-    fn id(&self) -> &ShapeId {
-        HTTPPrefixHeadersTrait::trait_id()
-    }
-
-    fn value(&self) -> &DocumentValue {
-        &self.value
     }
 }
 
@@ -315,6 +285,8 @@ struct HTTPQueryTrait {
     value: DocumentValue,
 }
 static_trait_id!(HTTPQueryTrait, HTTP_QUERY_TRAIT_ID, "smithy.api#httpQuery");
+smithy_trait_impl!(HTTPQueryTrait);
+
 impl HTTPQueryTrait {
     #[must_use]
     pub fn new(key: &str) -> Self {
@@ -322,14 +294,6 @@ impl HTTPQueryTrait {
             key: key.to_string(),
             value: DocumentValue::String(key.to_string()),
         }
-    }
-}
-impl SmithyTrait for HTTPQueryTrait {
-    fn id(&self) -> &ShapeId {
-        HTTPQueryTrait::trait_id()
-    }
-    fn value(&self) -> &DocumentValue {
-        &self.value
     }
 }
 
@@ -341,6 +305,8 @@ pub struct EndpointTrait {
     value: DocumentValue,
 }
 static_trait_id!(EndpointTrait, ENDPOINT_TRAIT_ID, "smithy.api#endpoint");
+smithy_trait_impl!(EndpointTrait);
+
 impl EndpointTrait {
     #[must_use]
     pub fn new(host_prefix: &str) -> Self {
@@ -350,20 +316,10 @@ impl EndpointTrait {
         }
     }
 }
-impl SmithyTrait for EndpointTrait {
-    fn id(&self) -> &ShapeId {
-        EndpointTrait::trait_id()
-    }
-
-    fn value(&self) -> &DocumentValue {
-        &self.value
-    }
-}
 
 /////////////////////////////////////////////////
 // Constraint Traits
 /////////////////////////////////////////////////
-// TODO: ADD ALL CONSTRAINT TRAITS WITH NICE BUILDERS
 #[derive(Debug)]
 pub struct RangeTrait {
     pub min: Option<usize>,
