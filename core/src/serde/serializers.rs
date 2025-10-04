@@ -134,7 +134,7 @@ pub trait StructSerializer {
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
-/// Basically just a clone of the serde::Error trait.
+/// Basically just a clone of the `serde::Error` trait.
 /// We use our own to ensure we don't enforce a `serde` dependency on consumers.
 pub trait Error: Sized + StdError {
     fn custom<T: Display>(msg: T) -> Self;

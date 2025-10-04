@@ -185,7 +185,7 @@ pub(crate) fn get_shape_type(schema: &Schema) -> Result<&ShapeType, Box<dyn Erro
 }
 
 pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
-    Box::new(DocumentError::DocumentConversion(expected.to_string())) as Box<dyn Error>
+    Box::new(DocumentError::DocumentConversion(expected.to_string()))
 }
 
 //////////////////////////////////////////////////////////////////

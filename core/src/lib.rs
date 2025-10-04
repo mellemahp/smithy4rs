@@ -1,5 +1,3 @@
-extern crate core;
-
 pub mod schema;
 
 pub use schema::prelude;

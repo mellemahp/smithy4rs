@@ -1,0 +1,40 @@
+[tools]
+# We need cargo-binstall so that Mise would download "cargo:" tools instead of building them.
+"cargo-binstall" = "latest"
+"cargo:cargo-nextest" = "latest"
+"cargo:cargo-deny" = "latest"
+rust = { version = "1.90.0", components="clippy,rustfmt" }
+
+[tasks.build]
+description = "Build the project"
+run = "cargo build"
+
+[tasks.fmt-all]
+wait_for = ["build", "lint", "test"]
+description = "Check the code format"
+run = "cargo +nightly fmt --all --"
+
+[tasks.lint]
+wait_for = ["test"]
+depends = ["build"]
+description = "Lint the code with Clippy"
+env = { RUST_BACKTRACE = '1' }
+run = "cargo clippy --workspace --all-targets"
+
+[tasks.audit]
+wait_for = ["build", "lint", "test", "fmt-all"]
+description = "Audit Dependencies"
+run = "cargo deny check"
+
+[tasks.test]
+wait_for = ["build"]
+description = "Tests the library"
+run = "cargo nextest run --locked"
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "cargo clean"
+
+[tasks.pre-push]
+description = "Check that project will pass CI checks"
+depends = ['build', 'lint', 'audit', 'test', 'fmt-all']
