@@ -19,10 +19,9 @@ pub type Ref<T> = Arc<T>;
 pub type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
 pub type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
 
-pub use std::time::Instant;
-
 pub use bigdecimal::BigDecimal;
 pub use bytebuffer::ByteBuffer;
 use indexmap::{IndexMap, IndexSet};
 pub use num_bigint::BigInt;
 use rustc_hash::FxBuildHasher;
+pub use temporal_rs::Instant;

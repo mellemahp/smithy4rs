@@ -2,13 +2,13 @@ use std::{
     cmp::PartialEq,
     fmt::{Display, Error},
     io,
-    time::Instant,
 };
 
+use temporal_rs::{TimeZone, UtcOffset};
 use thiserror::Error;
 
 use crate::{
-    BigDecimal, BigInt, ByteBuffer,
+    BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::SensitiveTrait,
     schema::{Document, SchemaRef},
     serde::{
@@ -238,8 +238,13 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
         redact!(
             self,
             schema,
-            self.writer
-                .write_all(value.elapsed().as_secs().to_string().as_str().as_ref())
+            self.writer.write_all(
+                value
+                    .to_zoned_date_time_iso(TimeZone::UtcOffset(UtcOffset::from_minutes(0)))
+                    .unwrap()
+                    .to_string()
+                    .as_ref()
+            )
         )
     }
 
