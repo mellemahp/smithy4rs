@@ -3,16 +3,13 @@
 use std::{
     error::Error as StdError,
     fmt::{Debug, Display, Formatter},
-    time::Instant,
 };
 
-use bigdecimal::BigDecimal;
-use bytebuffer::ByteBuffer;
-use num_bigint::BigInt;
 use serde::ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct};
 use static_str_ops::staticize;
 
 use crate::{
+    BigDecimal, BigInt, ByteBuffer, Instant,
     schema::{Document, SchemaRef},
     serde::{
         se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer},

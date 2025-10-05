@@ -1,14 +1,12 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
-use std::{collections::HashMap, fmt::Display, marker::PhantomData, time::Instant};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 
-use bigdecimal::BigDecimal;
-use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
-use num_bigint::BigInt;
 use thiserror::Error;
 
 use crate::{
+    BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE},
     schema::{
         Document, DocumentError, DocumentValue, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA,

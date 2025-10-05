@@ -9,7 +9,6 @@ use smithy4rs_core::schema::{Schema, SchemaRef};
 use smithy4rs_core::schema::documents::Document;
 use smithy4rs_core::serde::de::{Deserialize, Deserializer, MapReader};
 use smithy4rs_core::{BigDecimal, BigInt, ByteBuffer};
-use std::time::Instant;
 use smithy4rs_core::serde::deserializers::ListReader;
 
 pub struct JsonDeserializer<'de> {
