@@ -108,6 +108,7 @@ pub struct MemberSchema {
     flattened_traits: OnceLock<TraitMap>,
 }
 impl MemberSchema {
+    #[inline]
     fn traits(&self) -> &TraitMap {
         self.flattened_traits.get_or_init(|| {
             let mut flattened = TraitMap::new();
@@ -294,6 +295,7 @@ impl Schema {
         }
     }
 
+    #[inline]
     fn traits(&self) -> &TraitMap {
         match self {
             Schema::Scalar(ScalarSchema { traits, .. })
@@ -361,6 +363,7 @@ impl Schema {
     ///
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
     #[must_use]
+    #[inline]
     pub fn get_trait_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
         self.traits().get_as::<T>()
     }
@@ -369,6 +372,7 @@ impl Schema {
     ///
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
     #[must_use]
+    #[inline]
     pub fn get_trait(&self, id: &ShapeId) -> Option<&TraitRef> {
         self.traits().get(id)
     }
@@ -515,16 +519,6 @@ impl SchemaBuilder {
             }
             _ => { /* fall through otherwise */ }
         }
-    }
-
-    /// Adds a trait to the [`SchemaBuilder`]
-    #[must_use]
-    pub fn with_trait(&self, smithy_trait: impl SmithyTrait) -> &Self {
-        self.traits
-            .write()
-            .expect("Lock poisoned")
-            .insert(smithy_trait);
-        self
     }
 
     /// Build a [`Schema`] and return a [`SchemaRef`] to it.
@@ -957,13 +951,13 @@ mod tests {
                 "target_b",
                 &STRING,
                 traits![
-                    RequiredTrait::new(),
+                    RequiredTrait,
                     DefaultTrait(DocumentValue::String("Woo".into()))
                 ],
             )
-            .put_member("target_a", &STRING, traits![RequiredTrait::new()])
+            .put_member("target_a", &STRING, traits![RequiredTrait])
             .put_member("target_c", &STRING, traits![])
-            .put_member("target_d", &STRING, traits![RequiredTrait::new()])
+            .put_member("target_d", &STRING, traits![RequiredTrait])
             .put_member("target_e", &STRING, traits![])
             .build();
         assert_eq!(schema.members().len(), 5);
