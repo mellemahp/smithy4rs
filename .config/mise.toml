@@ -3,6 +3,8 @@
 "cargo-binstall" = "latest"
 "cargo:cargo-nextest" = "latest"
 "cargo:cargo-deny" = "latest"
+"cargo:cargo-criterion" = "latest"
+"cargo:cargo-sort" = "latest"
 rust = { version = "1.90.0", components="clippy,rustfmt" }
 
 [tasks.build]
@@ -10,9 +12,12 @@ description = "Build the project"
 run = "cargo build"
 
 [tasks.fmt-all]
-wait_for = ["build", "lint", "test"]
+wait_for = ["build", "lint", "test", "check-bench"]
 description = "Check the code format"
-run = "cargo +nightly fmt --all --"
+run = [
+    "cargo +nightly fmt --all --",
+    "cargo sort"
+]
 
 [tasks.lint]
 wait_for = ["test"]
@@ -22,7 +27,7 @@ env = { RUST_BACKTRACE = '1' }
 run = "cargo clippy --workspace --all-targets"
 
 [tasks.audit]
-wait_for = ["build", "lint", "test", "fmt-all"]
+wait_for = ["build", "lint", "test", "fmt-all", "check-bench"]
 description = "Audit Dependencies"
 run = "cargo deny check"
 
@@ -35,6 +40,16 @@ run = "cargo nextest run --locked"
 description = "Remove build artifacts"
 run = "cargo clean"
 
+[tasks.check-bench]
+wait_for = ["test", "lint"]
+description = "Tests the benchmarks"
+run = "cargo criterion --no-run"
+
+[tasks.bench]
+depends = ["build"]
+description = "Runs benchmarks"
+run = "cargo criterion --plotting-backend disabled --all-features"
+
 [tasks.pre-push]
 description = "Check that project will pass CI checks"
-depends = ['build', 'lint', 'audit', 'test', 'fmt-all']
+depends = ['build', 'lint', 'audit', 'test', 'fmt-all', 'check-bench']

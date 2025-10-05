@@ -86,16 +86,10 @@ macro_rules! static_trait_id {
 macro_rules! annotation_trait {
     ($trait_struct:ident, $id_var:ident, $id_name:literal) => {
         #[derive(Debug)]
-        pub struct $trait_struct {}
-        impl $trait_struct {
-            #[must_use]
-            pub const fn new() -> Self {
-                Self {}
-            }
-        }
+        pub struct $trait_struct;
         impl Default for $trait_struct {
             fn default() -> Self {
-                Self::new()
+                Self
             }
         }
         static_trait_id!($trait_struct, $id_var, $id_name);

@@ -204,33 +204,25 @@ impl TraitMap {
         }
     }
 
-    /// Inserts a [`SmithyTrait`] into the map.
-    ///
-    /// If the map did not have this key present, None is returned.
-    ///
-    /// If the map did have this key present, the value is updated,
-    /// and the previous value is returned.
-    pub fn insert(&mut self, value: impl Into<TraitRef>) -> Option<TraitRef> {
-        let trait_ref = value.into();
-        self.map.insert(trait_ref.id().clone(), trait_ref)
-    }
-
     /// Returns true if the map contains a value for the specified trait ID.
     #[must_use]
+    #[inline]
     pub fn contains(&self, id: &ShapeId) -> bool {
         self.map.contains_key(id)
     }
 
     /// Returns true if the map contains a trait of type `T`.
     #[must_use]
+    #[inline]
     pub fn contains_type<T: StaticTraitId>(&self) -> bool {
-        self.map.contains_key(T::trait_id())
+        self.contains(T::trait_id())
     }
 
     /// Returns a reference to the `SmithyTrait` corresponding to the ID.
     ///
     /// If the [`SmithyTrait`] does not exist in the map, then returns `None`.
     #[must_use]
+    #[inline]
     pub fn get(&self, id: &ShapeId) -> Option<&TraitRef> {
         self.map.get(id)
     }
@@ -239,9 +231,9 @@ impl TraitMap {
     ///
     /// If the [`SmithyTrait`] does not exist in the map, returns `None`.
     #[must_use]
+    #[inline]
     pub fn get_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
-        self.map
-            .get(T::trait_id())
+        self.get(T::trait_id())
             .and_then(|dyn_trait| dyn_trait.downcast_ref::<T>())
     }
 
@@ -274,13 +266,14 @@ mod tests {
 
     #[test]
     fn basic_map_functionality() {
-        let mut map = TraitMap::new();
-        map.insert(JsonNameTrait::new("a"));
         let dyn_id: ShapeId = "smithy.api#Dynamic".into();
-        map.insert(DynamicTrait {
-            id: dyn_id.clone(),
-            value: DocumentValue::String("b".to_string()),
-        });
+        let map = TraitMap::of(traits![
+            JsonNameTrait::new("a"),
+            DynamicTrait {
+                id: dyn_id.clone(),
+                value: DocumentValue::String("b".to_string()),
+            }
+        ]);
         assert!(map.contains(&dyn_id));
         assert!(map.contains(JsonNameTrait::trait_id()));
         assert!(map.contains_type::<JsonNameTrait>());
@@ -288,11 +281,8 @@ mod tests {
 
     #[test]
     fn map_extension() {
-        let mut map_a = TraitMap::new();
-        map_a.insert(JsonNameTrait::new("a"));
-
-        let mut map_b = TraitMap::new();
-        map_b.insert(HTTPErrorTrait::new(404));
+        let mut map_a = TraitMap::of(traits![JsonNameTrait::new("a")]);
+        let map_b = TraitMap::of(traits![HTTPErrorTrait::new(404)]);
 
         map_a.extend(&map_b);
         assert!(map_a.contains(HTTPErrorTrait::trait_id()));
@@ -302,8 +292,7 @@ mod tests {
 
     #[test]
     fn trait_conversion_to_type() {
-        let mut map = TraitMap::new();
-        map.insert(HTTPErrorTrait::new(404));
+        let map = TraitMap::of(traits![HTTPErrorTrait::new(404)]);
         let Some(cast_value) = map.get_as::<HTTPErrorTrait>() else {
             panic!("Could not find expected trait!!!")
         };

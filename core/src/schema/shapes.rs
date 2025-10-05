@@ -7,7 +7,9 @@
 
 #![allow(dead_code)]
 
-use std::fmt::Display;
+use std::{fmt::Display, hash::Hash};
+
+use fast_str::FastStr;
 
 use crate::schema::SchemaRef;
 
@@ -19,12 +21,29 @@ use crate::schema::SchemaRef;
 /// ```<NAMESPACE>#<NAME>$<MEMBER>```
 ///
 /// The member value is optional.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ShapeId {
-    id: String,
+    id: FastStr,
     namespace: String,
     name: String,
     member: Option<String>,
+}
+impl Hash for ShapeId {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+impl PartialOrd for ShapeId {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for ShapeId {
+    #[inline]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.id.cmp(&other.id)
+    }
 }
 
 impl From<&str> for ShapeId {
@@ -37,7 +56,7 @@ impl From<&str> for ShapeId {
             member = Some(split_member.to_string());
         }
         ShapeId {
-            id: value.to_string(),
+            id: FastStr::from_ref(value),
             namespace: namespace.to_string(),
             name: base_name.to_string(),
             member,
@@ -53,7 +72,7 @@ impl ShapeId {
             id = id + "$" + m;
         }
         ShapeId {
-            id,
+            id: FastStr::from(id),
             namespace: namespace.to_string(),
             name: name.to_string(),
             member: member.map(ToString::to_string),

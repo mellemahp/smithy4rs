@@ -406,7 +406,7 @@ mod tests {
         SCHEMA,
         Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
         (MEMBER_A, "a", STRING, traits![]),
-        (MEMBER_B, "b", STRING, traits![SensitiveTrait::new()]),
+        (MEMBER_B, "b", STRING, traits![SensitiveTrait]),
         (MEMBER_C, "c", STRING, traits![]),
         (MEMBER_MAP, "map", MAP_SCHEMA, traits![]),
         (MEMBER_LIST, "list", LIST_SCHEMA, traits![])
@@ -419,13 +419,13 @@ mod tests {
             MEMBER_MAP_REDACT,
             "map",
             MAP_SCHEMA,
-            traits![SensitiveTrait::new()]
+            traits![SensitiveTrait]
         ),
         (
             MEMBER_LIST_REDACT,
             "list",
             LIST_SCHEMA,
-            traits![SensitiveTrait::new()]
+            traits![SensitiveTrait]
         )
     );
 
