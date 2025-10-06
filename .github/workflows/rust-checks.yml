@@ -13,14 +13,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
       - uses: Swatinem/rust-cache@v2
       - uses: jdx/mise-action@v3
       - run: mise build
@@ -28,14 +22,8 @@ jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
@@ -45,15 +33,8 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          components: clippy
       - uses: Swatinem/rust-cache@v2
       - uses: jdx/mise-action@v3
       - run: mise lint
@@ -61,15 +42,8 @@ jobs:
   formatting:
     name: Formatting
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: 'true'
-          components: rustfmt
       - uses: jdx/mise-action@v3
       - run: mise fmt-all --check
 
@@ -78,18 +52,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
       - uses: jdx/mise-action@v3
       - run: mise audit
 
   spell-check:
     name: Spell Check
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
       - uses: crate-ci/typos@v1.37.2
