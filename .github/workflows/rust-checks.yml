@@ -22,7 +22,7 @@ jobs:
           profile: minimal
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v3
       - run: mise build
 
   tests:
@@ -39,7 +39,7 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v3
       - run: mise test
 
   lint:
@@ -55,7 +55,7 @@ jobs:
           toolchain: stable
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v3
       - run: mise lint
 
   formatting:
@@ -70,7 +70,7 @@ jobs:
           toolchain: nightly
           override: 'true'
           components: rustfmt
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v3
       - run: mise fmt-all --check
 
   dependencies:
@@ -83,7 +83,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v3
       - run: mise audit
 
   spell-check:
@@ -92,4 +92,4 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-      - uses: crate-ci/typos@v1.37.1
+      - uses: crate-ci/typos@v1.37.2
