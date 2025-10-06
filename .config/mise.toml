@@ -5,7 +5,22 @@
 "cargo:cargo-deny" = "latest"
 "cargo:cargo-criterion" = "latest"
 "cargo:cargo-sort" = "latest"
-rust = { version = "1.90.0", components="clippy, rustfmt" }
+
+[tools.rust]
+profile = "default"
+version = "1.90.0"
+components = "cargo,clippy"
+
+[tools.rust-nightly]
+profile = "minimal"
+version = "nightly"
+components = "cargo,rustfmt"
+
+[alias]
+rust-nightly = "core:rust"
+
+[settings.cargo]
+binstall = true
 
 [tasks.build]
 description = "Build the project"
