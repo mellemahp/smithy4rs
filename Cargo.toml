@@ -29,7 +29,7 @@ indexmap = "2.11.4"
 jiter = "0.9.0"
 json = "0.12.4"
 num-bigint = "0.4"
-regex = "1.11.2"
+regex = "1.12.1"
 smithy4rs-core = { version = "0.0.1", path = "core" }
 smithy4rs-core-derive = { version = "0.0.1", path = "core-derive" }
 temporal_rs = "0.1.0"
