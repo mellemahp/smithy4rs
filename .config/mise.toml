@@ -5,6 +5,7 @@
 "cargo:cargo-deny" = "latest"
 "cargo:cargo-criterion" = "latest"
 "cargo:cargo-sort" = "latest"
+"cargo:cargo-fmt" = "nightly"
 
 [tools.rust]
 profile = "default"
