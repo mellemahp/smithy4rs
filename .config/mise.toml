@@ -14,10 +14,7 @@ components = "cargo,clippy"
 [tools.rust-nightly]
 profile = "minimal"
 version = "nightly"
-components = "cargo,rustfmt"
-
-[alias]
-rust-nightly = "core:rust"
+components = "cargo,clippy"
 
 [settings.cargo]
 binstall = true
@@ -28,10 +25,9 @@ run = "cargo build"
 
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]
-tools.rust = "nightly"
 description = "Check the code format"
 run = [
-    "cargo fmt --all --",
+    "cargo +nightly fmt --all --",
     "cargo sort"
 ]
 
