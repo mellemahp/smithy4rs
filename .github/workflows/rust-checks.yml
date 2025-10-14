@@ -44,6 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
       - uses: jdx/mise-action@v3
       - run: mise fmt-all --check
 
@@ -52,6 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
       - uses: jdx/mise-action@v3
       - run: mise audit
 
@@ -60,4 +62,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
       - uses: crate-ci/typos@v1.37.2
