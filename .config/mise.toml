@@ -28,9 +28,10 @@ run = "cargo build"
 
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]
+tools.rust = "nightly"
 description = "Check the code format"
 run = [
-    "cargo +nightly fmt --all --",
+    "cargo fmt --all --",
     "cargo sort"
 ]
 
