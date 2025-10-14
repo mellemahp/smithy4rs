@@ -1,11 +1,10 @@
 [tools]
 # We need cargo-binstall so that Mise would download "cargo:" tools instead of building them.
-"cargo-binstall" = "latest"
+cargo-binstall = "latest"
 "cargo:cargo-nextest" = "latest"
 "cargo:cargo-deny" = "latest"
 "cargo:cargo-criterion" = "latest"
 "cargo:cargo-sort" = "latest"
-"cargo:cargo-fmt" = "latest"
 
 [tools.rust]
 profile = "default"
@@ -16,9 +15,6 @@ components = "cargo,clippy"
 profile = "minimal"
 version = "nightly"
 components = "cargo,clippy"
-
-[settings.cargo]
-binstall = true
 
 [tasks.build]
 description = "Build the project"
