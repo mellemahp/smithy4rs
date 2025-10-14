@@ -31,7 +31,7 @@ wait_for = ["build", "lint", "test", "check-bench"]
 tools.rust = "nightly"
 description = "Check the code format"
 run = [
-    "cargo fmt --all --",
+    "cargo +nightly fmt --all --",
     "cargo sort"
 ]
 
