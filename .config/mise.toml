@@ -1,26 +1,18 @@
+[env]
+# needed because the 2 rust versions installed by mise may be switched around
+RUSTUP_TOOLCHAIN="stable"
+
 [tools]
 # We need cargo-binstall so that Mise would download "cargo:" tools instead of building them.
-"cargo-binstall" = "latest"
+cargo-binstall = "latest"
 "cargo:cargo-nextest" = "latest"
 "cargo:cargo-deny" = "latest"
 "cargo:cargo-criterion" = "latest"
 "cargo:cargo-sort" = "latest"
-
-[tools.rust]
-profile = "default"
-version = "1.90.0"
-components = "cargo,clippy"
-
-[tools.rust-nightly]
-profile = "minimal"
-version = "nightly"
-components = "cargo,rustfmt"
-
-[alias]
-rust-nightly = "core:rust"
-
-[settings.cargo]
-binstall = true
+rust = [
+    { profile = "minimal", version = "nightly", components = "rustfmt" },
+    { profile = "default", version = "1.90.0", components = "clippy" }
+]
 
 [tasks.build]
 description = "Build the project"
@@ -28,10 +20,9 @@ run = "cargo build"
 
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]
-tools.rust = "nightly"
 description = "Check the code format"
 run = [
-    "cargo fmt --all --",
+    "cargo +nightly fmt --all --",
     "cargo sort"
 ]
 
