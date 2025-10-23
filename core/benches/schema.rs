@@ -1,6 +1,6 @@
-use std::sync::LazyLock;
+use std::{hint::black_box, sync::LazyLock};
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     lazy_schema,
     prelude::{HTTPChecksumRequiredTrait, HTTPQueryParamsTrait, HTTPQueryTrait},

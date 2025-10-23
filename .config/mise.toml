@@ -11,8 +11,8 @@ cargo-binstall = "latest"
 "cargo:cargo-sort" = "latest"
 "cargo:cargo-machete" = "latest"
 rust = [
-    { profile = "default", version = "1.90.0", components = "clippy" },
-    { profile = "minimal", version = "nightly", components = "rustfmt" }
+    { profile = "minimal", version = "nightly", components = "rustfmt" },
+    { profile = "default", version = "1.90.0", components = "clippy" }
 ]
 
 [tasks.build]
