@@ -282,8 +282,6 @@ impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::LazyLock;
-
     use indexmap::IndexMap;
     use smithy4rs_core_derive::SerializableStruct;
 
@@ -291,7 +289,7 @@ mod tests {
     use crate::{
         lazy_schema,
         prelude::*,
-        schema::{Schema, SchemaRef, SchemaShape, ShapeId},
+        schema::{Schema, SchemaShape, ShapeId},
         traits,
     };
 

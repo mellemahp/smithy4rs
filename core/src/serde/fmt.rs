@@ -383,7 +383,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::LazyLock;
 
     use indexmap::IndexMap;
     use smithy4rs_core_derive::SerializableStruct;

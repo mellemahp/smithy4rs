@@ -386,6 +386,16 @@ impl SerializeWithSchema for ByteBuffer {
     }
 }
 
+impl SerializeWithSchema for Instant {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.write_timestamp(schema, self)
+    }
+}
+
 impl SerializeWithSchema for String {
     fn serialize_with_schema<S: Serializer>(
         &self,
@@ -407,5 +417,15 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
         } else {
             serializer.skip(schema)
         }
+    }
+}
+
+impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        (**self).serialize_with_schema(schema, serializer)
     }
 }

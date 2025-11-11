@@ -20,5 +20,10 @@ quote = "1.0"
 proc-macro2 = "1.0.101"
 proc-macro-crate = "3.4.0"
 
+[dev-dependencies]
+macrotest = "1.0"
+smithy4rs-core = { path = "../core" }
+indexmap = "2.6"
+
 [lints]
 workspace = true

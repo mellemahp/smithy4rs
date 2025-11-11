@@ -23,7 +23,7 @@
 //!
 //! lazy_schema!(
 //!     EXAMPLE_SCHEMA,
-//!     Schema::create_string("com.example#Map", traits![SensitiveTrait::new(), LengthTrait::builder().max(4).min(1).build()])
+//!     Schema::create_string("com.example#Map", traits![SensitiveTrait, LengthTrait::builder().max(4).min(1).build()])
 //! );
 //!
 //! /// Checking if a trait is present on a schema

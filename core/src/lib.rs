@@ -7,6 +7,9 @@ pub mod serde;
 
 // =========== Common Types ==========
 use std::sync::Arc;
+// Re-export for use in macros
+#[doc(hidden)]
+pub use std::sync::LazyLock;
 
 /// Common cheaply-copyable reference type.
 /// Defined as a common type so Arc type could be swapped out.

@@ -315,6 +315,7 @@ impl Schema {
         match self {
             // TODO: Error handling
             Schema::Struct(StructSchema { members, .. }) => members,
+            Schema::Member(member) => member.target.members(),
             _ => &EMPTY,
         }
     }

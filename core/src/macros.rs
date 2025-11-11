@@ -23,14 +23,14 @@ macro_rules! lazy_schema {
             $member_traits:expr
         )), +
     ) => {
-        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
             $builder
             $(.put_member($member_ident, &$member_schema, $member_traits))
             *
             .build()
         });
-        $(static $member_schema_name: LazyLock<&SchemaRef> =
-            LazyLock::new(|| $schema_name.expect_member($member_ident));
+        $(static $member_schema_name: $crate::LazyLock<&$crate::schema::SchemaRef> =
+            $crate::LazyLock::new(|| $schema_name.expect_member($member_ident));
         )*
     };
     (
@@ -42,7 +42,7 @@ macro_rules! lazy_schema {
             $member_traits:expr
         )), +
     ) => {
-        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
             $builder
             $(.put_member($member_ident, &$member_schema, $member_traits))
             *
@@ -53,7 +53,7 @@ macro_rules! lazy_schema {
         $schema_name:ident,
         $builder:expr
     ) => {
-        pub static $schema_name: LazyLock<SchemaRef> = LazyLock::new(|| {
+        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
             $builder
         });
     };
