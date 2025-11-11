@@ -13,14 +13,25 @@ version.workspace = true
 
 [dependencies]
 smithy4rs-core.workspace = true
-# TODO: Eventually the smithy-core could re-export this
 indexmap.workspace = true
-
-# Used to serialize
-json.workspace = true
-# used to deserialize
-jiter.workspace = true
 thiserror.workspace = true
+itoa = "1.0"
+ryu = "1.0"
+
+[dev-dependencies]
+smithy4rs-core-derive.workspace = true
+criterion = { version = "0.5", features = ["html_reports"] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+indexmap = { version = "2.12.0", features = ["serde"] }
+
+[[bench]]
+name = "json_serialization"
+harness = false
+
+[[bench]]
+name = "comparison"
+harness = false
 
 [lints]
 workspace = true

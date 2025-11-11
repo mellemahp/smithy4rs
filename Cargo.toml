@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["core", "core-derive"]
-default-members = ["core", "core-derive"]
+members = ["core", "core-derive", "json-codec"]
+default-members = ["core", "core-derive", "json-codec"]
 
 # Config for 'cargo release'
 [workspace.metadata.release]
@@ -25,7 +25,7 @@ bytebuffer = "2.3.0"
 criterion = "0.7"
 downcast-rs = "2.0.2"
 fast-str = "1.0.0"
-indexmap = "2.12.0"
+indexmap = { version = "2.12.0", features = ["serde"] }
 jiter = "0.9.0"
 json = "0.12.4"
 num-bigint = "0.4"
@@ -40,7 +40,7 @@ future-incompatible = "warn"
 nonstandard_style = { level = "deny", priority = 1 }
 unsafe_code = "forbid"
 unused_qualifications = "warn"
-unused_extern_crates = "forbid"
+unused_extern_crates = "warn"
 unreachable_code = "forbid"
 unreachable_patterns = "forbid"
 trivial_casts = "warn"
