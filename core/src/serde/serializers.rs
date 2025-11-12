@@ -108,6 +108,22 @@ pub trait StructSerializer {
     where
         T: ?Sized + SerializeWithSchema;
 
+    /// Serialize a member on the struct with a pre-known field name.
+    /// This is an optimization to avoid extracting the name from the schema.
+    #[inline]
+    fn serialize_member_named<T>(
+        &mut self,
+        member_name: &str,
+        member_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema,
+    {
+        // Default implementation falls back to regular serialize_member
+        self.serialize_member(member_schema, value)
+    }
+
     /// Serializes an optional member.
     ///
     /// This method will call [`StructSerializer::skip`] on any optional members
@@ -119,6 +135,22 @@ pub trait StructSerializer {
     ) -> Result<(), Self::Error> {
         if let Some(value) = value {
             self.serialize_member(member_schema, value)
+        } else {
+            self.skip_member(member_schema)
+        }
+    }
+
+    /// Serializes an optional member with a pre-known field name.
+    /// This is an optimization to avoid extracting the name from the schema.
+    #[inline]
+    fn serialize_optional_member_named<T: SerializeWithSchema>(
+        &mut self,
+        member_name: &str,
+        member_schema: &SchemaRef,
+        value: &Option<T>,
+    ) -> Result<(), Self::Error> {
+        if let Some(value) = value {
+            self.serialize_member_named(member_name, member_schema, value)
         } else {
             self.skip_member(member_schema)
         }

@@ -175,6 +175,7 @@ fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
     let method = field_data.iter().map(|d| d.method_call());
     let member_schema = field_data.iter().map(|d| &d.schema);
     let member_name = field_data.iter().map(|d| &d.field_ident);
+    let member_name_str = field_data.iter().map(|d| d.field_ident.to_string());
     quote! {
         #[automatically_derived]
         impl _SerializeWithSchema for #shape_name {
@@ -184,7 +185,7 @@ fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
                 serializer: S,
             ) -> Result<S::Ok, S::Error> {
                 let mut ser = serializer.write_struct(schema, #length)?;
-                #(ser.#method(&#member_schema, &self.#member_name)?;)*
+                #(ser.#method(#member_name_str, &#member_schema, &self.#member_name)?;)*
                 ser.end(schema)
             }
         }
@@ -199,9 +200,9 @@ struct FieldData {
 impl FieldData {
     fn method_call(&self) -> Ident {
         if self.optional {
-            Ident::new("serialize_optional_member", Span::call_site())
+            Ident::new("serialize_optional_member_named", Span::call_site())
         } else {
-            Ident::new("serialize_member", Span::call_site())
+            Ident::new("serialize_member_named", Span::call_site())
         }
     }
 }

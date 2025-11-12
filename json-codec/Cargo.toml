@@ -17,6 +17,7 @@ indexmap.workspace = true
 thiserror.workspace = true
 itoa = "1.0"
 ryu = "1.0"
+jiter.workspace = true
 
 [dev-dependencies]
 smithy4rs-core-derive.workspace = true
@@ -31,6 +32,10 @@ harness = false
 
 [[bench]]
 name = "comparison"
+harness = false
+
+[[bench]]
+name = "profile_target"
 harness = false
 
 [lints]

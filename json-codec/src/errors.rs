@@ -2,6 +2,7 @@ use std::fmt::Display;
 use thiserror::Error;
 
 use smithy4rs_core::serde::serializers::Error as SerializerError;
+use smithy4rs_core::serde::deserializers::Error as DeserializerError;
 
 #[derive(Error, Debug)]
 pub enum JsonSerdeError {

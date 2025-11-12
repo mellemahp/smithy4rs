@@ -359,6 +359,32 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
     }
 
     #[inline(always)]
+    fn serialize_member_named<T>(
+        &mut self,
+        member_name: &str,
+        member_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema,
+    {
+        if !self.first {
+            write_json_comma(self.buf);
+        }
+        self.first = false;
+
+        // Write field name as JSON string (optimized: no schema lookup needed!)
+        write_json_string(self.buf, member_name);
+        write_json_colon(self.buf);
+
+        // Serialize value directly to buffer
+        let value_serializer = JsonSerializer { buf: self.buf };
+        value.serialize_with_schema(member_schema, value_serializer)?;
+
+        Ok(())
+    }
+
+    #[inline(always)]
     fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
         end_json_object(self.buf);
         Ok(())
