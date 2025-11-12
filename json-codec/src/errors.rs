@@ -21,3 +21,9 @@ impl SerializerError for JsonSerdeError {
         JsonSerdeError::SerializationError(msg.to_string())
     }
 }
+
+impl DeserializerError for JsonSerdeError {
+    fn custom<T: Display>(msg: T) -> Self {
+        JsonSerdeError::DeserializationError(msg.to_string())
+    }
+}

@@ -6,11 +6,11 @@ use smithy4rs_core::{
     lazy_schema,
     prelude::*,
     schema::{Schema, ShapeId},
-    serde::serializers::SerializeWithSchema,
+    serde::{deserializers::Deserialize, serializers::SerializeWithSchema},
     traits,
 };
-use smithy4rs_core_derive::SerializableStruct;
-use smithy4rs_json_codec::JsonSerializer;
+use smithy4rs_core_derive::{DeserializableStruct, SerializableStruct};
+use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 
 // Define structs that work with both serde and smithy4rs
 
@@ -23,7 +23,7 @@ lazy_schema!(
     (ZIP_CODE, "zip_code", STRING, traits![])
 );
 
-#[derive(SerializableStruct, Clone, serde::Serialize)]
+#[derive(SerializableStruct, DeserializableStruct, Clone, serde::Serialize, serde::Deserialize)]
 #[smithy_schema(ADDRESS_SCHEMA)]
 struct Address {
     #[smithy_schema(STREET)]
@@ -43,7 +43,7 @@ lazy_schema!(
     (EMAIL, "email", STRING, traits![])
 );
 
-#[derive(SerializableStruct, Clone, serde::Serialize)]
+#[derive(SerializableStruct, DeserializableStruct, Clone, serde::Serialize, serde::Deserialize)]
 #[smithy_schema(PERSON_SCHEMA)]
 struct Person {
     #[smithy_schema(NAME)]
@@ -275,6 +275,95 @@ fn bench_map_serialization(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_simple_struct_deser(c: &mut Criterion) {
+    let person = create_person();
+
+    // Pre-serialize to JSON
+    let json = serde_json::to_vec(&person).unwrap();
+
+    let mut group = c.benchmark_group("simple_struct_deser");
+    group.throughput(Throughput::Bytes(json.len() as u64));
+
+    group.bench_function("smithy4rs", |b| {
+        b.iter(|| {
+            let mut deserializer = JsonDeserializer::new(black_box(&json));
+            Person::deserialize(&PERSON_SCHEMA, &mut deserializer).unwrap()
+        });
+    });
+
+    group.bench_function("serde_json", |b| {
+        b.iter(|| {
+            serde_json::from_slice::<Person>(black_box(&json)).unwrap()
+        });
+    });
+
+    group.finish();
+}
+
+fn bench_vec_deserialization(c: &mut Criterion) {
+    let addresses: Vec<Address> = (0..100).map(create_address).collect();
+
+    // Pre-serialize to JSON
+    let json = serde_json::to_vec(&addresses).unwrap();
+
+    let mut group = c.benchmark_group("vec_100_items_deser");
+    group.throughput(Throughput::Bytes(json.len() as u64));
+
+    // Smithy4rs
+    let address_list_schema = Schema::list_builder(ShapeId::from("bench#AddressList"), traits![])
+        .put_member("member", &ADDRESS_SCHEMA, traits![])
+        .build();
+
+    group.bench_function("smithy4rs", |b| {
+        b.iter(|| {
+            let mut deserializer = JsonDeserializer::new(black_box(&json));
+            Vec::<Address>::deserialize(&address_list_schema, &mut deserializer).unwrap()
+        });
+    });
+
+    group.bench_function("serde_json", |b| {
+        b.iter(|| {
+            serde_json::from_slice::<Vec<Address>>(black_box(&json)).unwrap()
+        });
+    });
+
+    group.finish();
+}
+
+fn bench_map_deserialization(c: &mut Criterion) {
+    let mut map = IndexMap::new();
+    for i in 0..100 {
+        map.insert(format!("key{}", i), create_address(i));
+    }
+
+    // Pre-serialize to JSON
+    let json = serde_json::to_vec(&map).unwrap();
+
+    let mut group = c.benchmark_group("map_100_entries_deser");
+    group.throughput(Throughput::Bytes(json.len() as u64));
+
+    // Smithy4rs
+    let address_map_schema = Schema::map_builder(ShapeId::from("bench#AddressMap"), traits![])
+        .put_member("key", &STRING, traits![])
+        .put_member("value", &ADDRESS_SCHEMA, traits![])
+        .build();
+
+    group.bench_function("smithy4rs", |b| {
+        b.iter(|| {
+            let mut deserializer = JsonDeserializer::new(black_box(&json));
+            IndexMap::<String, Address>::deserialize(&address_map_schema, &mut deserializer).unwrap()
+        });
+    });
+
+    group.bench_function("serde_json", |b| {
+        b.iter(|| {
+            serde_json::from_slice::<IndexMap<String, Address>>(black_box(&json)).unwrap()
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_simple_struct,
@@ -282,5 +371,8 @@ criterion_group!(
     bench_map_serialization,
     bench_string_heavy,
     bench_numbers,
+    bench_simple_struct_deser,
+    bench_vec_deserialization,
+    bench_map_deserialization,
 );
 criterion_main!(benches);
