@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core", "core-derive", "json-codec"]
+members = ["core", "core-derive", "json-codec", "test-utils"]
 default-members = ["core", "core-derive", "json-codec"]
 
 # Config for 'cargo release'

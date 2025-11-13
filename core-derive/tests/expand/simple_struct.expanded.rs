@@ -4,17 +4,22 @@ use smithy4rs_core::{
     traits,
 };
 use smithy4rs_core_derive::{DeserializableStruct, SerializableStruct};
+pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
+    std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
+> = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
+    Schema::structure_builder(ShapeId::from("test#SimpleStruct"), Vec::new()),
+));
 pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<
     ::smithy4rs_core::schema::SchemaRef,
 > = ::smithy4rs_core::LazyLock::new(|| {
-    Schema::structure_builder(ShapeId::from("test#SimpleStruct"), Vec::new())
+    (&*SIMPLE_SCHEMA_BUILDER)
         .put_member("field_a", &STRING, Vec::new())
         .put_member("field_b", &INTEGER, Vec::new())
         .build()
 });
-static FIELD_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
+pub static FIELD_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
 SIMPLE_SCHEMA.expect_member("field_a"));
-static FIELD_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
+pub static FIELD_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
 SIMPLE_SCHEMA.expect_member("field_b"));
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
@@ -47,46 +52,52 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 2usize)?;
-            ser.serialize_member(&FIELD_A, &self.field_a)?;
-            ser.serialize_member(&FIELD_B, &self.field_b)?;
+            ser.serialize_member_named("field_a", &FIELD_A, &self.field_a)?;
+            ser.serialize_member_named("field_b", &FIELD_B, &self.field_b)?;
             ser.end(schema)
         }
     }
 };
+#[automatically_derived]
+pub struct SimpleStructBuilder {
+    field_a: Option<String>,
+    field_b: Option<i32>,
+}
+#[automatically_derived]
+impl SimpleStructBuilder {
+    pub fn new() -> Self {
+        Self {
+            field_a: None,
+            field_b: None,
+        }
+    }
+    pub fn field_a(mut self, value: String) -> Self {
+        self.field_a = Some(value);
+        self
+    }
+    pub fn field_b(mut self, value: i32) -> Self {
+        self.field_b = Some(value);
+        self
+    }
+    pub(crate) fn set_field_a(&mut self, value: String) {
+        self.field_a = Some(value);
+    }
+    pub(crate) fn set_field_b(&mut self, value: i32) {
+        self.field_b = Some(value);
+    }
+    pub fn build(self) -> Result<SimpleStruct, String> {
+        Ok(SimpleStruct {
+            field_a: self.field_a.ok_or_else(|| "field_a is required".to_string())?,
+            field_b: self.field_b.ok_or_else(|| "field_b is required".to_string())?,
+        })
+    }
+}
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
     use _smithy4rs::serde::deserializers::Deserialize as _Deserialize;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::Error as _Error;
-    #[automatically_derived]
-    pub struct SimpleStructBuilder {
-        field_a: Option<String>,
-        field_b: Option<i32>,
-    }
-    #[automatically_derived]
-    impl SimpleStructBuilder {
-        pub fn new() -> Self {
-            Self {
-                field_a: None,
-                field_b: None,
-            }
-        }
-        pub fn field_a(&mut self, value: String) -> &mut Self {
-            self.field_a = Some(value);
-            self
-        }
-        pub fn field_b(&mut self, value: i32) -> &mut Self {
-            self.field_b = Some(value);
-            self
-        }
-        pub fn build(self) -> Result<SimpleStruct, String> {
-            Ok(SimpleStruct {
-                field_a: self.field_a.ok_or_else(|| "field_a is required".to_string())?,
-                field_b: self.field_b.ok_or_else(|| "field_b is required".to_string())?,
-            })
-        }
-    }
     #[automatically_derived]
     impl<'de> _Deserialize<'de> for SimpleStruct {
         fn deserialize<D>(
@@ -107,13 +118,13 @@ const _: () = {
                                 member_schema,
                                 de,
                             )?;
-                            builder.field_a(value);
+                            builder.set_field_a(value);
                         } else if std::sync::Arc::ptr_eq(member_schema, &FIELD_B) {
                             let value = <i32 as _Deserialize>::deserialize(
                                 member_schema,
                                 de,
                             )?;
-                            builder.field_b(value);
+                            builder.set_field_b(value);
                         } else {}
                         Ok(())
                     },

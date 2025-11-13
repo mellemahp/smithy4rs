@@ -10,6 +10,8 @@ use std::sync::Arc;
 // Re-export for use in macros
 #[doc(hidden)]
 pub use std::sync::LazyLock;
+#[doc(hidden)]
+pub use paste;
 
 /// Common cheaply-copyable reference type.
 /// Defined as a common type so Arc type could be swapped out.

@@ -13,42 +13,56 @@ macro_rules! traits {
 // Create a lazy, static Schema definition
 #[macro_export]
 macro_rules! lazy_schema {
+    // Internal helper to build member chain - @self recursion case (matches (@self) as single tt)
+    (@build_chain $builder:expr, $builder_ref:expr, ($member_ident:literal, (@ self), $member_traits:expr) $(, $rest:tt)*) => {
+        $crate::lazy_schema!(@build_chain $builder.put_member($member_ident, $builder_ref, $member_traits), $builder_ref $(, $rest)*)
+    };
+    // Internal helper to build member chain - normal schema case
+    (@build_chain $builder:expr, $builder_ref:expr, ($member_ident:literal, $member_schema:tt, $member_traits:expr) $(, $rest:tt)*) => {
+        $crate::lazy_schema!(@build_chain $builder.put_member($member_ident, &$member_schema, $member_traits), $builder_ref $(, $rest)*)
+    };
+    // Internal helper to build member chain - base case (no more members)
+    (@build_chain $builder:expr, $builder_ref:expr $(,)?) => {
+        $builder.build()
+    };
+
+    // Public API: with member schema names
     (
         $schema_name:ident,
         $builder:expr,
-        $((
-            $member_schema_name:ident,
-            $member_ident:literal,
-            $member_schema:ident,
-            $member_traits:expr
-        )), +
+        $(($member_schema_name:ident, $member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
-        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
-            $builder
-            $(.put_member($member_ident, &$member_schema, $member_traits))
-            *
-            .build()
-        });
-        $(static $member_schema_name: $crate::LazyLock<&$crate::schema::SchemaRef> =
-            $crate::LazyLock::new(|| $schema_name.expect_member($member_ident));
-        )*
+        $crate::paste::paste! {
+            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
+                $crate::LazyLock::new(|| std::sync::Arc::new($builder));
+
+            pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+                $crate::lazy_schema!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
+            });
+
+            $(pub static $member_schema_name: $crate::LazyLock<&$crate::schema::SchemaRef> =
+                $crate::LazyLock::new(|| $schema_name.expect_member($member_ident));
+            )*
+        }
     };
+
+    // Public API: without member schema names
     (
         $schema_name:ident,
         $builder:expr,
-        $((
-            $member_ident:literal,
-            $member_schema:ident,
-            $member_traits:expr
-        )), +
+        $(($member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
-        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
-            $builder
-            $(.put_member($member_ident, &$member_schema, $member_traits))
-            *
-            .build()
-        });
+        $crate::paste::paste! {
+            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
+                $crate::LazyLock::new(|| std::sync::Arc::new($builder));
+
+            pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+                $crate::lazy_schema!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
+            });
+        }
     };
+
+    // Public API: no-op (just wraps the builder expression directly, no members)
     (
         $schema_name:ident,
         $builder:expr

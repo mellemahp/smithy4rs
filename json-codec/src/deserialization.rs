@@ -188,7 +188,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
 
         // Process all keys (first and subsequent)
         while let Some(key) = maybe_key {
-            if let Some(member_schema) = schema.get_member(&key) {
+            if let Some(member_schema) = schema.get_member(key) {
                 consumer(builder, member_schema, self)?;
             } else {
                 // Unknown field - skip it

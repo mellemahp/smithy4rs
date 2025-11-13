@@ -110,12 +110,13 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
     };
 
     quote! {
+        // Builder is generated outside the const block to make it publicly accessible
+        #builder
+
         // #[doc(hidden)]
         // #[allow(non_upper_case_globals, unused_attributes, unused_qualifications, clippy::absolute_paths)]
         const _: () = {
             #imports
-
-            #builder
 
             #deserialization
         };
@@ -281,26 +282,28 @@ fn builder_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
         quote! { #field_name: None }
     });
 
-    // Generate setter methods
+    // Generate setter methods - consuming for chaining
     let setters = field_data.iter().map(|d| {
         let field_name = &d.field_ident;
         let setter_ty = &d.setter_ty;
 
-        if d.optional {
-            // For Option<T> fields, setter takes T and wraps in Some
-            quote! {
-                pub fn #field_name(&mut self, value: #setter_ty) -> &mut Self {
-                    self.#field_name = Some(value);
-                    self
-                }
+        quote! {
+            pub fn #field_name(mut self, value: #setter_ty) -> Self {
+                self.#field_name = Some(value);
+                self
             }
-        } else {
-            // For non-optional fields, setter takes T and wraps in Some
-            quote! {
-                pub fn #field_name(&mut self, value: #setter_ty) -> &mut Self {
-                    self.#field_name = Some(value);
-                    self
-                }
+        }
+    });
+
+    // Generate internal set methods for deserializer - taking &mut self
+    let set_methods = field_data.iter().map(|d| {
+        let field_name = &d.field_ident;
+        let set_method_name = Ident::new(&format!("set_{}", field_name), Span::call_site());
+        let setter_ty = &d.setter_ty;
+
+        quote! {
+            pub(crate) fn #set_method_name(&mut self, value: #setter_ty) {
+                self.#field_name = Some(value);
             }
         }
     });
@@ -337,6 +340,8 @@ fn builder_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
             }
 
             #(#setters)*
+
+            #(#set_methods)*
 
             pub fn build(self) -> Result<#shape_name, String> {
                 Ok(#shape_name {
@@ -385,13 +390,15 @@ fn deserialization_impl(
     let match_arms = field_data
         .iter()
         .map(|(_index, schema, field_ident, inner_ty, optional)| {
+            let set_method_name = Ident::new(&format!("set_{}", field_ident), Span::call_site());
+
             if *optional {
                 // For optional fields, deserialize as Option<T>
                 quote! {
                     if std::sync::Arc::ptr_eq(member_schema, &#schema) {
                         let value = Option::<#inner_ty>::deserialize(member_schema, de)?;
                         if let Some(v) = value {
-                            builder.#field_ident(v);
+                            builder.#set_method_name(v);
                         }
                     }
                 }
@@ -400,7 +407,7 @@ fn deserialization_impl(
                 quote! {
                     if std::sync::Arc::ptr_eq(member_schema, &#schema) {
                         let value = <#inner_ty as _Deserialize>::deserialize(member_schema, de)?;
-                        builder.#field_ident(value);
+                        builder.#set_method_name(value);
                     }
                 }
             }
