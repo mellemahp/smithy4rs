@@ -1,6 +1,39 @@
 //! Macros shared
 //! Primarily these macros are used to construct schemas and traits.
 
+/// Helper macro for deserializing required struct members in generated code.
+///
+/// This macro simplifies the pattern of checking if a member schema matches
+/// and deserializing its value into the builder.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! deserialize_member {
+    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
+        if std::sync::Arc::ptr_eq($member, $schema) {
+            let value = <$ty as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
+            return Ok($builder.$method(value));
+        }
+    };
+}
+
+/// Helper macro for deserializing optional struct members in generated code.
+///
+/// This macro handles optional fields by deserializing as Option<T> and only
+/// calling the builder method if Some.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! deserialize_optional_member {
+    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
+        if std::sync::Arc::ptr_eq($member, $schema) {
+            let value = <Option::<$ty> as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
+            if let Some(v) = value {
+                return Ok($builder.$method(v));
+            }
+            return Ok($builder);
+        }
+    };
+}
+
 // Create a list of traits for use in Schema builders
 #[macro_export]
 macro_rules! traits {

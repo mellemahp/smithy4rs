@@ -3,16 +3,16 @@
 //! This crate provides reusable test shapes and schemas following Smithy protocol test
 //! conventions. Shape names are self-describing to clearly indicate what they test.
 
+use std::sync::LazyLock;
+
 use indexmap::IndexMap;
 use smithy4rs_core::{
-    lazy_schema,
+    ByteBuffer, Instant, lazy_schema,
     prelude::*,
-    schema::{Schema, ShapeId},
+    schema::{Schema, SchemaRef, ShapeId},
     traits,
-    ByteBuffer,
-    Instant,
 };
-use smithy4rs_core_derive::{DeserializableStruct, SerializableStruct};
+use smithy4rs_core_derive::{DeserializableStruct, SchemaShape, SerializableStruct, SmithyStruct};
 
 // ============================================================================
 // Basic Collection Types
@@ -54,10 +54,15 @@ lazy_schema!(
     (ALL_PRIMITIVES_DOUBLE, "double_field", DOUBLE, traits![]),
     (ALL_PRIMITIVES_BOOLEAN, "boolean_field", BOOLEAN, traits![]),
     (ALL_PRIMITIVES_BLOB, "blob_field", BLOB, traits![]),
-    (ALL_PRIMITIVES_TIMESTAMP, "timestamp_field", TIMESTAMP, traits![])
+    (
+        ALL_PRIMITIVES_TIMESTAMP,
+        "timestamp_field",
+        TIMESTAMP,
+        traits![]
+    )
 );
 
-#[derive(SerializableStruct, DeserializableStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
     #[smithy_schema(ALL_PRIMITIVES_STRING)]
@@ -90,7 +95,7 @@ lazy_schema!(
     (OPTIONAL_OPTIONAL, "optional_field", STRING, traits![])
 );
 
-#[derive(Debug, PartialEq, SerializableStruct, DeserializableStruct)]
+#[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
 pub struct OptionalFieldsStruct {
     #[smithy_schema(OPTIONAL_REQUIRED)]
@@ -111,7 +116,7 @@ lazy_schema!(
     (NUMERIC_DOUBLE, "double_val", DOUBLE, traits![])
 );
 
-#[derive(Debug, PartialEq, SerializableStruct, DeserializableStruct)]
+#[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
 pub struct NumericTypesStruct {
     #[smithy_schema(NUMERIC_BYTE)]
@@ -136,7 +141,7 @@ lazy_schema!(
     (SIMPLE_FIELD_B, "field_b", INTEGER, traits![])
 );
 
-#[derive(SerializableStruct, DeserializableStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(SIMPLE_FIELD_A)]
@@ -161,7 +166,7 @@ lazy_schema!(
     (RECURSIVE_SHAPES_NEXT, "next", (@self), traits![])
 );
 
-#[derive(SerializableStruct, DeserializableStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
     #[smithy_schema(RECURSIVE_SHAPES_STRING)]
@@ -176,4 +181,85 @@ pub struct RecursiveShapesStruct {
     pub optional_field: Option<String>,
     #[smithy_schema(RECURSIVE_SHAPES_NEXT)]
     pub next: Option<Box<RecursiveShapesStruct>>,
+}
+
+// ============================================================================
+// Nested Collections Test
+// ============================================================================
+
+/// Inner struct for testing nested structures
+lazy_schema!(
+    INNER_STRUCT_SCHEMA,
+    Schema::structure_builder(ShapeId::from("test#InnerStruct"), traits![]),
+    (INNER_FIELD_A, "field_a", STRING, traits![]),
+    (INNER_FIELD_B, "field_b", STRING, traits![]),
+    (INNER_FIELD_C, "field_c", STRING, traits![])
+);
+
+#[derive(SmithyStruct, Debug, PartialEq)]
+#[smithy_schema(INNER_STRUCT_SCHEMA)]
+pub struct InnerStruct {
+    #[smithy_schema(INNER_FIELD_A)]
+    pub field_a: String,
+    #[smithy_schema(INNER_FIELD_B)]
+    pub field_b: String,
+    #[smithy_schema(INNER_FIELD_C)]
+    pub field_c: String,
+}
+
+pub static INNER_STRUCT_LIST_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+    Schema::list_builder(ShapeId::from("test#InnerStructList"), traits![])
+        .put_member("member", &INNER_STRUCT_SCHEMA, traits![])
+        .build()
+});
+
+pub static INNER_STRUCT_MAP_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+    Schema::map_builder(ShapeId::from("test#InnerStructMap"), traits![])
+        .put_member("key", &STRING, traits![])
+        .put_member("value", &INNER_STRUCT_SCHEMA, traits![])
+        .build()
+});
+
+/// Tests nested structures in various collection types
+lazy_schema!(
+    NESTED_COLLECTIONS_STRUCT_SCHEMA,
+    Schema::structure_builder(ShapeId::from("test#NestedCollectionsStruct"), traits![]),
+    (NESTED_NAME, "name", STRING, traits![]),
+    (NESTED_COUNT, "count", INTEGER, traits![]),
+    (
+        NESTED_SINGLE,
+        "single_nested",
+        INNER_STRUCT_SCHEMA,
+        traits![]
+    ),
+    (
+        NESTED_OPTIONAL,
+        "optional_nested",
+        INNER_STRUCT_SCHEMA,
+        traits![]
+    ),
+    (
+        NESTED_LIST,
+        "list_nested",
+        INNER_STRUCT_LIST_SCHEMA,
+        traits![]
+    ),
+    (NESTED_MAP, "map_nested", INNER_STRUCT_MAP_SCHEMA, traits![])
+);
+
+#[derive(SmithyStruct, Debug, PartialEq)]
+#[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]
+pub struct NestedCollectionsStruct {
+    #[smithy_schema(NESTED_NAME)]
+    pub name: String,
+    #[smithy_schema(NESTED_COUNT)]
+    pub count: i32,
+    #[smithy_schema(NESTED_SINGLE)]
+    pub single_nested: InnerStruct,
+    #[smithy_schema(NESTED_OPTIONAL)]
+    pub optional_nested: Option<InnerStruct>,
+    #[smithy_schema(NESTED_LIST)]
+    pub list_nested: Vec<InnerStruct>,
+    #[smithy_schema(NESTED_MAP)]
+    pub map_nested: IndexMap<String, InnerStruct>,
 }

@@ -6,17 +6,57 @@ use syn::{Attribute, Data, DeriveInput, Type, parse_macro_input};
 // TODO: Enable feature to generate serde adapters
 // TODO: Add some unit tests!
 // TODO: Make error handling use: `syn::Error::into_compile_error`
-#[proc_macro_derive(SerializableStruct, attributes(smithy_schema))]
-pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Construct a representation of Rust code as a syntax tree
-    // that we can manipulate
+
+/// Derives `StaticSchemaShape` for a struct
+#[proc_macro_derive(SchemaShape, attributes(smithy_schema))]
+pub fn schema_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let schema_ident = parse_schema(&input.attrs);
     let shape_name = &input.ident;
+
+    let found_crate =
+        crate_name("smithy4rs-core").expect("smithy4rs-core is present in `Cargo.toml`");
+    let extern_import = match &found_crate {
+        FoundCrate::Itself => quote!(),
+        FoundCrate::Name(name) => {
+            let ident = Ident::new(name, Span::call_site());
+            quote! {
+                extern crate #ident as _smithy4rs;
+            }
+        }
+    };
+    let crate_ident = match &found_crate {
+        FoundCrate::Itself => quote!(crate),
+        FoundCrate::Name(_) => {
+            let ident = Ident::new("_smithy4rs", Span::call_site());
+            quote!( #ident )
+        }
+    };
+
+    let imports = quote! {
+        #extern_import
+        use #crate_ident::schema::SchemaRef as _SchemaRef;
+        use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+    };
+
+    let schema_trait = schema_impl(shape_name, &schema_ident);
+
+    quote! {
+        const _: () = {
+            #imports
+            #schema_trait
+        };
+    }
+    .into()
+}
+
+/// Derives `SerializableStruct` (SerializeWithSchema only, no schema)
+#[proc_macro_derive(SerializableStruct, attributes(smithy_schema))]
+pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let shape_name = &input.ident;
     // Add the base SerializableShape trait
     let base_trait = base_trait_impl(shape_name);
-    // Now add the SchemaShape trait that returns the base schema
-    let schema_trait = schema_impl(shape_name, &schema_ident);
     // And now the serializer implementation
     let serialization = serialization_impl(shape_name, &input);
 
@@ -47,20 +87,15 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
         #extern_import
         use #crate_ident::schema::SchemaRef as _SchemaRef;
         use #crate_ident::serde::documents::SerializableShape as _SerializableShape;
-        use #crate_ident::schema::SchemaShape as _SchemaShape;
         use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
         use #crate_ident::serde::serializers::Serializer as _Serializer;
         use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
     };
     quote! {
-        // #[doc(hidden)]
-        // #[allow(non_upper_case_globals, unused_attributes, unused_qualifications, clippy::absolute_paths)]
         const _: () = {
             #imports
 
             #base_trait
-
-            #schema_trait
 
             #serialization
         };
@@ -77,12 +112,20 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
     // Generate builder struct and impl
     let builder = builder_impl(shape_name, &input);
 
-    // Generate Deserialize impl
-    let deserialization = deserialization_impl(shape_name, &schema_ident, &input);
-
     // Get crate reference
     let found_crate =
         crate_name("smithy4rs-core").expect("smithy4rs-core is present in `Cargo.toml`");
+    let crate_ident = match &found_crate {
+        FoundCrate::Itself => quote!(crate),
+        FoundCrate::Name(_) => {
+            let ident = Ident::new("_smithy4rs", Span::call_site());
+            quote!( #ident )
+        }
+    };
+
+    // Generate Deserialize impl
+    let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
+
     let extern_import = match &found_crate {
         FoundCrate::Itself => quote!(),
         FoundCrate::Name(name) => {
@@ -93,18 +136,12 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
             }
         }
     };
-    let crate_ident = match &found_crate {
-        FoundCrate::Itself => quote!(crate),
-        FoundCrate::Name(_) => {
-            let ident = Ident::new("_smithy4rs", Span::call_site());
-            quote!( #ident )
-        }
-    };
 
     let imports = quote! {
         #extern_import
         use #crate_ident::schema::SchemaRef as _SchemaRef;
-        use #crate_ident::serde::deserializers::Deserialize as _Deserialize;
+        use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+        use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
         use #crate_ident::serde::deserializers::Deserializer as _Deserializer;
         use #crate_ident::serde::deserializers::Error as _Error;
     };
@@ -113,13 +150,35 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
         // Builder is generated outside the const block to make it publicly accessible
         #builder
 
-        // #[doc(hidden)]
-        // #[allow(non_upper_case_globals, unused_attributes, unused_qualifications, clippy::absolute_paths)]
         const _: () = {
             #imports
 
             #deserialization
         };
+    }
+    .into()
+}
+
+/// Convenience derive that combines SchemaShape, SerializableStruct, and DeserializableStruct
+#[proc_macro_derive(SmithyStruct, attributes(smithy_schema))]
+pub fn smithy_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input_clone = input.clone();
+    let input = parse_macro_input!(input as DeriveInput);
+
+    // Generate all three derive expansions
+    let schema = schema_shape_derive(input_clone.clone().into());
+    let serializable = serializable_struct_derive(input_clone.clone().into());
+    let deserializable = deserializable_struct_derive(input_clone.into());
+
+    // Combine all outputs
+    let schema_tokens = proc_macro2::TokenStream::from(schema);
+    let serializable_tokens = proc_macro2::TokenStream::from(serializable);
+    let deserializable_tokens = proc_macro2::TokenStream::from(deserializable);
+
+    quote! {
+        #schema_tokens
+        #serializable_tokens
+        #deserializable_tokens
     }
     .into()
 }
@@ -147,8 +206,8 @@ fn base_trait_impl(shape_name: &Ident) -> TokenStream {
 fn schema_impl(shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
-        impl _SchemaShape for #shape_name {
-            fn schema(&self) -> &_SchemaRef {
+        impl _StaticSchemaShape for #shape_name {
+            fn schema() -> &'static _SchemaRef {
                 &#schema_ident
             }
         }
@@ -295,19 +354,6 @@ fn builder_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
         }
     });
 
-    // Generate internal set methods for deserializer - taking &mut self
-    let set_methods = field_data.iter().map(|d| {
-        let field_name = &d.field_ident;
-        let set_method_name = Ident::new(&format!("set_{}", field_name), Span::call_site());
-        let setter_ty = &d.setter_ty;
-
-        quote! {
-            pub(crate) fn #set_method_name(&mut self, value: #setter_ty) {
-                self.#field_name = Some(value);
-            }
-        }
-    });
-
     // Generate build() method
     let build_fields = field_data.iter().map(|d| {
         let field_name = &d.field_ident;
@@ -341,8 +387,6 @@ fn builder_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
 
             #(#setters)*
 
-            #(#set_methods)*
-
             pub fn build(self) -> Result<#shape_name, String> {
                 Ok(#shape_name {
                     #(#build_fields,)*
@@ -362,6 +406,7 @@ fn deserialization_impl(
     shape_name: &Ident,
     _schema_ident: &Ident,
     input: &DeriveInput,
+    crate_ident: &TokenStream,
 ) -> TokenStream {
     let fields = match &input.data {
         Data::Struct(data) => &data.fields,
@@ -386,45 +431,34 @@ fn deserialization_impl(
         field_data.push((index, schema, field_ident, inner_ty.clone(), optional));
     }
 
-    // Generate if-else chain for each field, comparing member_schema Arc pointer
+    // Generate deserialize_member! or deserialize_optional_member! macro calls for each field
     let match_arms = field_data
         .iter()
         .map(|(_index, schema, field_ident, inner_ty, optional)| {
-            let set_method_name = Ident::new(&format!("set_{}", field_ident), Span::call_site());
-
             if *optional {
-                // For optional fields, deserialize as Option<T>
+                // For optional fields, use deserialize_optional_member! with inner type
                 quote! {
-                    if std::sync::Arc::ptr_eq(member_schema, &#schema) {
-                        let value = Option::<#inner_ty>::deserialize(member_schema, de)?;
-                        if let Some(v) = value {
-                            builder.#set_method_name(v);
-                        }
-                    }
+                    #crate_ident::deserialize_optional_member!(member_schema, &#schema, de, builder, #field_ident, #inner_ty);
                 }
             } else {
-                // For required fields, deserialize as T
+                // For required fields, use deserialize_member!
                 quote! {
-                    if std::sync::Arc::ptr_eq(member_schema, &#schema) {
-                        let value = <#inner_ty as _Deserialize>::deserialize(member_schema, de)?;
-                        builder.#set_method_name(value);
-                    }
+                    #crate_ident::deserialize_member!(member_schema, &#schema, de, builder, #field_ident, #inner_ty);
                 }
             }
         });
 
     quote! {
         #[automatically_derived]
-        impl<'de> _Deserialize<'de> for #shape_name {
-            fn deserialize<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+        impl<'de> _DeserializeWithSchema<'de> for #shape_name {
+            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
-                let mut builder = #builder_name::new();
-                deserializer.read_struct(schema, &mut builder, |builder, member_schema, de| {
-                    #(#match_arms else)*
-                    { /* field not recognized */ }
-                    Ok(())
+                let builder = #builder_name::new();
+                let builder = deserializer.read_struct(schema, builder, |builder, member_schema, de| {
+                    #(#match_arms)*
+                    Ok(builder) // Unknown field
                 })?;
                 builder.build().map_err(_Error::custom)
             }

@@ -371,7 +371,7 @@ impl StructSerializer for Document {
 // Deserialization
 /////////////////////////////////////////////////////////////////////////////////
 
-use crate::serde::de::{Deserialize, Deserializer};
+use crate::serde::de::{DeserializeWithSchema, Deserializer};
 
 /// A deserializer that reads from a `Document`.
 pub struct DocumentDeserializer<'a> {
@@ -467,11 +467,11 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
     fn read_struct<B, F>(
         &mut self,
         schema: &SchemaRef,
-        builder: &mut B,
+        mut builder: B,
         mut consumer: F,
-    ) -> Result<(), Self::Error>
+    ) -> Result<B, Self::Error>
     where
-        F: FnMut(&mut B, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
     {
         let map = self.document.as_map().ok_or_else(|| {
             DocumentError::DocumentConversion("Expected map document for struct".to_string())
@@ -482,13 +482,13 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
             // Look up the field in the document map
             if let Some(field_doc) = map.get(member_name) {
                 let mut field_deser = DocumentDeserializer::new(field_doc);
-                consumer(builder, member_schema, &mut field_deser)?;
+                builder = consumer(builder, member_schema, &mut field_deser)?;
             }
             // If field is missing, consumer won't be called (handles optional fields)
             // TODO: consume unknown member?
         }
 
-        Ok(())
+        Ok(builder)
     }
 
     fn read_list<T, F>(
@@ -554,8 +554,11 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
     }
 }
 
-impl<'de> Deserialize<'de> for Document {
-    fn deserialize<D>(schema: &SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+impl<'de> DeserializeWithSchema<'de> for Document {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -669,7 +672,7 @@ impl<'de> Deserialize<'de> for Document {
                     .ok_or_else(|| Error::custom("List schema missing member"))?;
 
                 deserializer.read_list(schema, &mut list, |list, _elem_schema, de| {
-                    let elem_doc = Document::deserialize(member_schema, de)?;
+                    let elem_doc = Document::deserialize_with_schema(member_schema, de)?;
                     list.push(elem_doc);
                     Ok(())
                 })?;
@@ -688,7 +691,7 @@ impl<'de> Deserialize<'de> for Document {
 
                 deserializer.read_map(schema, &mut map, |map, key, de| {
                     // Key is already a String, deserialize the value
-                    let value_doc = Document::deserialize(value_schema, de)?;
+                    let value_doc = Document::deserialize_with_schema(value_schema, de)?;
                     map.insert(key, value_doc);
                     Ok(())
                 })?;
@@ -700,16 +703,16 @@ impl<'de> Deserialize<'de> for Document {
                 })
             }
             ShapeType::Structure | ShapeType::Union => {
-                let mut map = IndexMap::new();
+                let map = IndexMap::new();
                 let discriminator = schema.id().clone();
 
-                deserializer.read_struct(schema, &mut map, |map, member_schema, de| {
+                let map = deserializer.read_struct(schema, map, |mut map, member_schema, de| {
                     let member = member_schema
                         .as_member()
                         .ok_or_else(|| Error::custom("Expected member schema"))?;
-                    let member_doc = Document::deserialize(member_schema, de)?;
+                    let member_doc = Document::deserialize_with_schema(member_schema, de)?;
                     map.insert(member.name.clone(), member_doc);
-                    Ok(())
+                    Ok(map)
                 })?;
 
                 Ok(Document {
@@ -727,7 +730,7 @@ impl<'de> Deserialize<'de> for Document {
 mod tests {
     use std::{str::FromStr, sync::LazyLock};
 
-    use smithy4rs_core_derive::SerializableStruct;
+    use smithy4rs_core_derive::SmithyStruct;
 
     use super::*;
     use crate::{
@@ -758,7 +761,7 @@ mod tests {
         (MEMBER_MAP, "map", MAP_SCHEMA, traits![])
     );
 
-    #[derive(SerializableStruct)]
+    #[derive(SmithyStruct)]
     #[smithy_schema(SCHEMA)]
     pub(crate) struct SerializeMe {
         #[smithy_schema(MEMBER_A)]
@@ -836,7 +839,7 @@ mod tests {
             .serialize_with_schema(&BOOLEAN, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = bool::deserialize(&BOOLEAN, &mut deser).unwrap();
+        let result = bool::deserialize_with_schema(&BOOLEAN, &mut deser).unwrap();
         assert_eq!(original, result);
     }
 
@@ -847,7 +850,7 @@ mod tests {
             .serialize_with_schema(&STRING, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = String::deserialize(&STRING, &mut deser).unwrap();
+        let result = String::deserialize_with_schema(&STRING, &mut deser).unwrap();
         assert_eq!(original, result);
     }
 
@@ -859,7 +862,7 @@ mod tests {
             .serialize_with_schema(&BYTE, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = i8::deserialize(&BYTE, &mut deser).unwrap();
+        let result = i8::deserialize_with_schema(&BYTE, &mut deser).unwrap();
         assert_eq!(original_byte, result);
 
         // Short
@@ -868,7 +871,7 @@ mod tests {
             .serialize_with_schema(&SHORT, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = i16::deserialize(&SHORT, &mut deser).unwrap();
+        let result = i16::deserialize_with_schema(&SHORT, &mut deser).unwrap();
         assert_eq!(original_short, result);
 
         // Integer
@@ -877,7 +880,7 @@ mod tests {
             .serialize_with_schema(&INTEGER, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = i32::deserialize(&INTEGER, &mut deser).unwrap();
+        let result = i32::deserialize_with_schema(&INTEGER, &mut deser).unwrap();
         assert_eq!(original_int, result);
 
         // Long
@@ -886,7 +889,7 @@ mod tests {
             .serialize_with_schema(&LONG, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = i64::deserialize(&LONG, &mut deser).unwrap();
+        let result = i64::deserialize_with_schema(&LONG, &mut deser).unwrap();
         assert_eq!(original_long, result);
     }
 
@@ -898,7 +901,7 @@ mod tests {
             .serialize_with_schema(&FLOAT, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = f32::deserialize(&FLOAT, &mut deser).unwrap();
+        let result = f32::deserialize_with_schema(&FLOAT, &mut deser).unwrap();
         assert_eq!(original_float, result);
 
         // Double
@@ -907,7 +910,7 @@ mod tests {
             .serialize_with_schema(&DOUBLE, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = f64::deserialize(&DOUBLE, &mut deser).unwrap();
+        let result = f64::deserialize_with_schema(&DOUBLE, &mut deser).unwrap();
         assert_eq!(original_double, result);
     }
 
@@ -920,7 +923,7 @@ mod tests {
             .serialize_with_schema(&BIG_INTEGER, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = BigInt::deserialize(&BIG_INTEGER, &mut deser).unwrap();
+        let result = BigInt::deserialize_with_schema(&BIG_INTEGER, &mut deser).unwrap();
         assert_eq!(original_big_int, result);
 
         // BigDecimal
@@ -929,7 +932,7 @@ mod tests {
             .serialize_with_schema(&BIG_DECIMAL, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = BigDecimal::deserialize(&BIG_DECIMAL, &mut deser).unwrap();
+        let result = BigDecimal::deserialize_with_schema(&BIG_DECIMAL, &mut deser).unwrap();
         assert_eq!(original_big_dec, result);
     }
 
@@ -944,7 +947,7 @@ mod tests {
             .serialize_with_schema(&LIST_SCHEMA, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = Vec::<String>::deserialize(&LIST_SCHEMA, &mut deser).unwrap();
+        let result = Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser).unwrap();
         assert_eq!(original, result);
     }
 
@@ -959,7 +962,8 @@ mod tests {
             .serialize_with_schema(&MAP_SCHEMA, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = IndexMap::<String, String>::deserialize(&MAP_SCHEMA, &mut deser).unwrap();
+        let result =
+            IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser).unwrap();
         assert_eq!(original, result);
     }
 
@@ -992,32 +996,34 @@ mod tests {
         // Check member_a
         let member_a_doc = doc_map.get("a").expect("Should have member a");
         let mut deser_a = DocumentDeserializer::new(member_a_doc);
-        let a_value = String::deserialize(&STRING, &mut deser_a).unwrap();
+        let a_value = String::deserialize_with_schema(&STRING, &mut deser_a).unwrap();
         assert_eq!(a_value, "value_a");
 
         // Check member_b
         let member_b_doc = doc_map.get("b").expect("Should have member b");
         let mut deser_b = DocumentDeserializer::new(member_b_doc);
-        let b_value = String::deserialize(&STRING, &mut deser_b).unwrap();
+        let b_value = String::deserialize_with_schema(&STRING, &mut deser_b).unwrap();
         assert_eq!(b_value, "value_b");
 
         // Check member_optional
         let member_c_doc = doc_map.get("c").expect("Should have member c");
         let mut deser_c = DocumentDeserializer::new(member_c_doc);
-        let c_value = String::deserialize(&STRING, &mut deser_c).unwrap();
+        let c_value = String::deserialize_with_schema(&STRING, &mut deser_c).unwrap();
         assert_eq!(c_value, "value_c");
 
         // Check list
         let list_doc = doc_map.get("list").expect("Should have list");
         let mut deser_list = DocumentDeserializer::new(list_doc);
-        let list_value = Vec::<String>::deserialize(&LIST_SCHEMA, &mut deser_list).unwrap();
+        let list_value =
+            Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser_list).unwrap();
         assert_eq!(list_value, original_list);
 
         // Check map
         let map_doc = doc_map.get("map").expect("Should have map");
         let mut deser_map = DocumentDeserializer::new(map_doc);
         let map_value =
-            IndexMap::<String, String>::deserialize(&MAP_SCHEMA, &mut deser_map).unwrap();
+            IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser_map)
+                .unwrap();
         assert_eq!(map_value, original_map);
     }
 
@@ -1029,7 +1035,7 @@ mod tests {
             .serialize_with_schema(&STRING, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = Option::<String>::deserialize(&STRING, &mut deser).unwrap();
+        let result = Option::<String>::deserialize_with_schema(&STRING, &mut deser).unwrap();
         assert_eq!(original_some, result);
 
         // None value
@@ -1038,7 +1044,7 @@ mod tests {
             .serialize_with_schema(&STRING, DocumentParser)
             .unwrap();
         let mut deser = DocumentDeserializer::new(&doc);
-        let result = Option::<String>::deserialize(&STRING, &mut deser).unwrap();
+        let result = Option::<String>::deserialize_with_schema(&STRING, &mut deser).unwrap();
         assert_eq!(original_none, result);
     }
 }

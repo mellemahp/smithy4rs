@@ -1,8 +1,9 @@
 use std::fmt::Display;
-use thiserror::Error;
 
-use smithy4rs_core::serde::serializers::Error as SerializerError;
-use smithy4rs_core::serde::deserializers::Error as DeserializerError;
+use smithy4rs_core::serde::{
+    deserializers::Error as DeserializerError, serializers::Error as SerializerError,
+};
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JsonSerdeError {

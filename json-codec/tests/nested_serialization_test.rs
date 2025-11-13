@@ -1,224 +1,138 @@
 use indexmap::IndexMap;
-use smithy4rs_core::{
-    lazy_schema,
-    prelude::*,
-    schema::{Schema, SchemaBuilder, SchemaRef, ShapeId},
-    serde::serializers::SerializeWithSchema,
-    traits,
-};
-use smithy4rs_core_derive::SerializableStruct;
+use smithy4rs_core::serde::serializers::SerializeWithSchema;
 use smithy4rs_json_codec::JsonSerializer;
-use std::sync::{Arc, LazyLock};
-
-// Inner struct schema
-lazy_schema!(
-    ADDRESS_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#Address"), traits![]),
-    (STREET, "street", STRING, traits![]),
-    (CITY, "city", STRING, traits![]),
-    (ZIP_CODE, "zip_code", STRING, traits![])
-);
-
-#[derive(SerializableStruct)]
-#[smithy_schema(ADDRESS_SCHEMA)]
-struct Address {
-    #[smithy_schema(STREET)]
-    street: String,
-    #[smithy_schema(CITY)]
-    city: String,
-    #[smithy_schema(ZIP_CODE)]
-    zip_code: String,
-}
-
-// List of addresses
-pub static ADDRESS_LIST_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::list_builder(ShapeId::from("test#AddressList"), traits![])
-        .put_member("member", &ADDRESS_SCHEMA, traits![])
-        .build()
-});
-
-// Map with address values
-pub static ADDRESS_MAP_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::map_builder(ShapeId::from("test#AddressMap"), traits![])
-        .put_member("key", &STRING, traits![])
-        .put_member("value", &ADDRESS_SCHEMA, traits![])
-        .build()
-});
-
-// Person struct with nested fields
-lazy_schema!(
-    PERSON_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#Person"), traits![]),
-    (NAME, "name", STRING, traits![]),
-    (AGE, "age", INTEGER, traits![]),
-    (PRIMARY_ADDRESS, "primary_address", ADDRESS_SCHEMA, traits![]),
-    (SECONDARY_ADDRESS, "secondary_address", ADDRESS_SCHEMA, traits![]),
-    (ALL_ADDRESSES, "all_addresses", ADDRESS_LIST_SCHEMA, traits![]),
-    (NAMED_ADDRESSES, "named_addresses", ADDRESS_MAP_SCHEMA, traits![])
-);
-
-#[derive(SerializableStruct)]
-#[smithy_schema(PERSON_SCHEMA)]
-struct Person {
-    #[smithy_schema(NAME)]
-    name: String,
-    #[smithy_schema(AGE)]
-    age: i32,
-    #[smithy_schema(PRIMARY_ADDRESS)]
-    primary_address: Address,
-    #[smithy_schema(SECONDARY_ADDRESS)]
-    secondary_address: Option<Address>,
-    #[smithy_schema(ALL_ADDRESSES)]
-    all_addresses: Vec<Address>,
-    #[smithy_schema(NAMED_ADDRESSES)]
-    named_addresses: IndexMap<String, Address>,
-}
-
-// Recursive organization structure
-pub static ORG_BUILDER: LazyLock<Arc<SchemaBuilder>> = LazyLock::new(|| {
-    Arc::new(Schema::structure_builder(ShapeId::from("test#Organization"), traits![]))
-});
-
-pub static ORG_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    ORG_BUILDER
-        .put_member("name", &STRING, traits![])
-        .put_member("department", &STRING, traits![])
-        .put_member("parent", &*ORG_BUILDER, traits![])
-        .build()
-});
-
-static ORG_NAME: LazyLock<&SchemaRef> = LazyLock::new(|| ORG_SCHEMA.expect_member("name"));
-static ORG_DEPARTMENT: LazyLock<&SchemaRef> = LazyLock::new(|| ORG_SCHEMA.expect_member("department"));
-static ORG_PARENT: LazyLock<&SchemaRef> = LazyLock::new(|| ORG_SCHEMA.expect_member("parent"));
-
-#[derive(SerializableStruct)]
-#[smithy_schema(ORG_SCHEMA)]
-struct Organization {
-    #[smithy_schema(ORG_NAME)]
-    name: String,
-    #[smithy_schema(ORG_DEPARTMENT)]
-    department: String,
-    #[smithy_schema(ORG_PARENT)]
-    parent: Option<Box<Organization>>,
-}
+use smithy4rs_test_utils::*;
 
 #[test]
 fn test_nested_struct_serialization() {
-    let primary = Address {
-        street: "123 Main St".to_string(),
-        city: "Springfield".to_string(),
-        zip_code: "12345".to_string(),
+    let single = InnerStruct {
+        field_a: "alpha".to_string(),
+        field_b: "beta".to_string(),
+        field_c: "gamma".to_string(),
     };
 
-    let secondary = Address {
-        street: "456 Oak Ave".to_string(),
-        city: "Shelbyville".to_string(),
-        zip_code: "67890".to_string(),
+    let optional = InnerStruct {
+        field_a: "delta".to_string(),
+        field_b: "epsilon".to_string(),
+        field_c: "zeta".to_string(),
     };
 
-    let mut all_addresses = Vec::new();
-    all_addresses.push(Address {
-        street: "789 Elm St".to_string(),
-        city: "Capital City".to_string(),
-        zip_code: "11111".to_string(),
+    let mut list_nested = Vec::new();
+    list_nested.push(InnerStruct {
+        field_a: "item1-a".to_string(),
+        field_b: "item1-b".to_string(),
+        field_c: "item1-c".to_string(),
     });
-    all_addresses.push(Address {
-        street: "321 Pine Rd".to_string(),
-        city: "Ogdenville".to_string(),
-        zip_code: "22222".to_string(),
+    list_nested.push(InnerStruct {
+        field_a: "item2-a".to_string(),
+        field_b: "item2-b".to_string(),
+        field_c: "item2-c".to_string(),
     });
 
-    let mut named_addresses = IndexMap::new();
-    named_addresses.insert(
-        "vacation".to_string(),
-        Address {
-            street: "999 Beach Blvd".to_string(),
-            city: "Coastal Town".to_string(),
-            zip_code: "33333".to_string(),
+    let mut map_nested = IndexMap::new();
+    map_nested.insert(
+        "key1".to_string(),
+        InnerStruct {
+            field_a: "value1-a".to_string(),
+            field_b: "value1-b".to_string(),
+            field_c: "value1-c".to_string(),
         },
     );
-    named_addresses.insert(
-        "office".to_string(),
-        Address {
-            street: "111 Business Park".to_string(),
-            city: "Downtown".to_string(),
-            zip_code: "44444".to_string(),
+    map_nested.insert(
+        "key2".to_string(),
+        InnerStruct {
+            field_a: "value2-a".to_string(),
+            field_b: "value2-b".to_string(),
+            field_c: "value2-c".to_string(),
         },
     );
 
-    let person = Person {
-        name: "John Doe".to_string(),
-        age: 35,
-        primary_address: primary,
-        secondary_address: Some(secondary),
-        all_addresses,
-        named_addresses,
-    };
+    let nested = NestedCollectionsStructBuilder::new()
+        .name("test_object".to_string())
+        .count(42)
+        .single_nested(single)
+        .optional_nested(optional)
+        .list_nested(list_nested)
+        .map_nested(map_nested)
+        .build()
+        .unwrap();
 
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
-    person
-        .serialize_with_schema(&PERSON_SCHEMA, serializer)
+    nested
+        .serialize_with_schema(&NESTED_COLLECTIONS_STRUCT_SCHEMA, serializer)
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
-    println!("Serialized nested person JSON:\n{}", json);
+    println!("Serialized nested struct JSON:\n{}", json);
 
     // Verify structure
-    assert!(json.contains("\"name\":\"John Doe\""));
-    assert!(json.contains("\"age\":35"));
-    assert!(json.contains("\"primary_address\""));
-    assert!(json.contains("\"123 Main St\""));
-    assert!(json.contains("\"Springfield\""));
-    assert!(json.contains("\"secondary_address\""));
-    assert!(json.contains("\"456 Oak Ave\""));
-    assert!(json.contains("\"all_addresses\""));
-    assert!(json.contains("\"789 Elm St\""));
-    assert!(json.contains("\"named_addresses\""));
-    assert!(json.contains("\"vacation\""));
-    assert!(json.contains("\"999 Beach Blvd\""));
+    assert!(json.contains("\"name\":\"test_object\""));
+    assert!(json.contains("\"count\":42"));
+    assert!(json.contains("\"single_nested\""));
+    assert!(json.contains("\"alpha\""));
+    assert!(json.contains("\"beta\""));
+    assert!(json.contains("\"optional_nested\""));
+    assert!(json.contains("\"delta\""));
+    assert!(json.contains("\"list_nested\""));
+    assert!(json.contains("\"item1-a\""));
+    assert!(json.contains("\"map_nested\""));
+    assert!(json.contains("\"key1\""));
+    assert!(json.contains("\"value1-a\""));
 }
 
 #[test]
 fn test_recursive_struct_serialization() {
-    let grandparent = Organization {
-        name: "Acme Corp".to_string(),
-        department: "Executive".to_string(),
-        parent: None,
+    let grandparent = RecursiveShapesStruct {
+        string_field: "level_3".to_string(),
+        integer_field: 3,
+        list_field: vec![],
+        map_field: IndexMap::new(),
+        optional_field: Some("deepest".to_string()),
+        next: None,
     };
 
-    let parent = Organization {
-        name: "Engineering Division".to_string(),
-        department: "Technology".to_string(),
-        parent: Some(Box::new(grandparent)),
+    let parent = RecursiveShapesStruct {
+        string_field: "level_2".to_string(),
+        integer_field: 2,
+        list_field: vec![],
+        map_field: IndexMap::new(),
+        optional_field: Some("middle".to_string()),
+        next: Some(Box::new(grandparent)),
     };
 
-    let child = Organization {
-        name: "Backend Team".to_string(),
-        department: "Software Engineering".to_string(),
-        parent: Some(Box::new(parent)),
+    let child = RecursiveShapesStruct {
+        string_field: "level_1".to_string(),
+        integer_field: 1,
+        list_field: vec![],
+        map_field: IndexMap::new(),
+        optional_field: Some("top".to_string()),
+        next: Some(Box::new(parent)),
     };
 
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
     child
-        .serialize_with_schema(&ORG_SCHEMA, serializer)
+        .serialize_with_schema(&RECURSIVE_SHAPES_STRUCT_SCHEMA, serializer)
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
-    println!("Serialized recursive organization JSON:\n{}", json);
+    println!("Serialized recursive struct JSON:\n{}", json);
 
     // Verify recursive structure
-    assert!(json.contains("\"Backend Team\""));
-    assert!(json.contains("\"Software Engineering\""));
-    assert!(json.contains("\"Engineering Division\""));
-    assert!(json.contains("\"Technology\""));
-    assert!(json.contains("\"Acme Corp\""));
-    assert!(json.contains("\"Executive\""));
+    assert!(json.contains("\"level_1\""));
+    assert!(json.contains("\"top\""));
+    assert!(json.contains("\"level_2\""));
+    assert!(json.contains("\"middle\""));
+    assert!(json.contains("\"level_3\""));
+    assert!(json.contains("\"deepest\""));
 
-    // Count the nesting levels by counting "parent" occurrences
-    let parent_count = json.matches("\"parent\"").count();
-    assert_eq!(parent_count, 2, "Should have 2 parent references (child->parent->grandparent)");
+    // Count the nesting levels by counting "next" occurrences
+    let next_count = json.matches("\"next\"").count();
+    assert_eq!(
+        next_count, 2,
+        "Should have 2 next references (child->parent->grandparent)"
+    );
 }
 
 #[test]
@@ -226,52 +140,52 @@ fn test_deeply_nested_without_recursion() {
     // Create a structure with many levels of nesting using different types
     let mut inner_map = IndexMap::new();
     inner_map.insert(
-        "inner_key".to_string(),
-        Address {
-            street: "Deep Street".to_string(),
-            city: "Nested City".to_string(),
-            zip_code: "99999".to_string(),
+        "map_key".to_string(),
+        InnerStruct {
+            field_a: "map_val_a".to_string(),
+            field_b: "map_val_b".to_string(),
+            field_c: "map_val_c".to_string(),
         },
     );
 
-    let person = Person {
-        name: "Deeply Nested".to_string(),
-        age: 42,
-        primary_address: Address {
-            street: "Level 1".to_string(),
-            city: "L1 City".to_string(),
-            zip_code: "11111".to_string(),
+    let nested = NestedCollectionsStruct {
+        name: "complex_object".to_string(),
+        count: 100,
+        single_nested: InnerStruct {
+            field_a: "single_a".to_string(),
+            field_b: "single_b".to_string(),
+            field_c: "single_c".to_string(),
         },
-        secondary_address: None,
-        all_addresses: vec![
-            Address {
-                street: "Level 2 Array Item 1".to_string(),
-                city: "L2 City".to_string(),
-                zip_code: "22222".to_string(),
+        optional_nested: None,
+        list_nested: vec![
+            InnerStruct {
+                field_a: "list_item_0_a".to_string(),
+                field_b: "list_item_0_b".to_string(),
+                field_c: "list_item_0_c".to_string(),
             },
-            Address {
-                street: "Level 2 Array Item 2".to_string(),
-                city: "L2 City".to_string(),
-                zip_code: "22223".to_string(),
+            InnerStruct {
+                field_a: "list_item_1_a".to_string(),
+                field_b: "list_item_1_b".to_string(),
+                field_c: "list_item_1_c".to_string(),
             },
         ],
-        named_addresses: inner_map,
+        map_nested: inner_map,
     };
 
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
-    person
-        .serialize_with_schema(&PERSON_SCHEMA, serializer)
+    nested
+        .serialize_with_schema(&NESTED_COLLECTIONS_STRUCT_SCHEMA, serializer)
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
     println!("Serialized deeply nested JSON:\n{}", json);
 
     // Verify all levels are present
-    assert!(json.contains("\"Deeply Nested\""));
-    assert!(json.contains("\"Level 1\""));
-    assert!(json.contains("\"Level 2 Array Item 1\""));
-    assert!(json.contains("\"Level 2 Array Item 2\""));
-    assert!(json.contains("\"inner_key\""));
-    assert!(json.contains("\"Deep Street\""));
+    assert!(json.contains("\"complex_object\""));
+    assert!(json.contains("\"single_a\""));
+    assert!(json.contains("\"list_item_0_a\""));
+    assert!(json.contains("\"list_item_1_a\""));
+    assert!(json.contains("\"map_key\""));
+    assert!(json.contains("\"map_val_a\""));
 }

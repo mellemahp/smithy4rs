@@ -1,6 +1,6 @@
 use smithy4rs_core::{
     schema::SchemaRef,
-    serde::{deserializers::Deserialize, serializers::SerializeWithSchema},
+    serde::{deserializers::DeserializeWithSchema, serializers::SerializeWithSchema},
 };
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 use smithy4rs_test_utils::*;
@@ -16,14 +16,17 @@ fn serialize_to_json<T: SerializeWithSchema>(value: &T, schema: &SchemaRef) -> V
     buf
 }
 
-fn deserialize_from_json<'de, T: Deserialize<'de>>(data: &'de [u8], schema: &SchemaRef) -> T {
+fn deserialize_from_json<'de, T: DeserializeWithSchema<'de>>(
+    data: &'de [u8],
+    schema: &SchemaRef,
+) -> T {
     let mut deserializer = JsonDeserializer::new(data);
-    T::deserialize(schema, &mut deserializer).unwrap()
+    T::deserialize_with_schema(schema, &mut deserializer).unwrap()
 }
 
 fn roundtrip<T>(value: &T, schema: &SchemaRef) -> T
 where
-    T: SerializeWithSchema + for<'de> Deserialize<'de>,
+    T: SerializeWithSchema + for<'de> DeserializeWithSchema<'de>,
 {
     let json = serialize_to_json(value, schema);
     println!("Serialized JSON: {}", String::from_utf8_lossy(&json));

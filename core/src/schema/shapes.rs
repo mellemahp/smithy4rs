@@ -169,12 +169,30 @@ impl Display for ShapeType {
     }
 }
 
-/// Returns the schema for a shape
+/// Returns the schema for a shape (instance-level).
 ///
-/// This schema is typically statically defined in generate code.
+/// This trait allows both static and dynamic schemas. For static schemas,
+/// prefer implementing `StaticSchemaShape` which provides this automatically.
 pub trait SchemaShape {
-    /// Get a reference to the Schema of this shape.
+    /// Get a reference to the Schema of this shape instance.
     fn schema(&self) -> &SchemaRef;
+}
+
+/// Returns a static schema for a shape (type-level).
+///
+/// This trait is for shapes with statically-defined schemas, typically
+/// generated Smithy models. Types implementing this trait automatically
+/// implement `SchemaShape` via a blanket implementation.
+pub trait StaticSchemaShape {
+    /// Get a reference to the static Schema for this type.
+    fn schema() -> &'static SchemaRef;
+}
+
+// Blanket implementation: types with static schemas automatically get instance-level access
+impl<T: StaticSchemaShape> SchemaShape for T {
+    fn schema(&self) -> &SchemaRef {
+        Self::schema()
+    }
 }
 
 #[cfg(test)]
