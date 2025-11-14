@@ -1,4 +1,5 @@
 mod adapter;
+mod de_adapter;
 pub mod deserializers;
 pub mod documents;
 mod fmt;

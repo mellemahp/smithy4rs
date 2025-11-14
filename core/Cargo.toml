@@ -30,6 +30,7 @@ rustc-hash = "2.1.1"
 [dev-dependencies]
 serde_json = "1.0.145"
 smithy4rs-core-derive.workspace = true
+smithy4rs-test-utils.workspace = true
 criterion.workspace = true
 
 [lints]

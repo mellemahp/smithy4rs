@@ -1024,6 +1024,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smithy4rs-core-derive",
+ "smithy4rs-test-utils",
  "static_str_ops",
  "temporal_rs",
  "thiserror",
