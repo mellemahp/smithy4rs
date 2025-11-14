@@ -15,13 +15,13 @@ use crate::{
 ///
 /// This trait provides an automatic, blanket implementation for all shapes
 /// with both a [`SchemaShape`], and [`SerializeWithSchema`] implementation.
-pub trait Serialize: SchemaShape + SerializeWithSchema {
+pub trait SerializableShape: SchemaShape + SerializeWithSchema {
     /// Serialize a shape with its pre-defined schema
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
 }
 
 // Blanket implementation of serialization for all Implement
-impl<T: SchemaShape + SerializeWithSchema> Serialize for T {
+impl<T: SchemaShape + SerializeWithSchema> SerializableShape for T {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.serialize_with_schema(self.schema(), serializer)
     }

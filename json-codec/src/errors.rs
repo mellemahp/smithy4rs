@@ -5,6 +5,7 @@ use smithy4rs_core::serde::{
 };
 use thiserror::Error;
 
+// TODO(errors): Better errors
 #[derive(Error, Debug)]
 pub enum JsonSerdeError {
     #[error("Failed to serialize: {0}")]

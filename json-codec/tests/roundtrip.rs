@@ -68,8 +68,8 @@ fn test_numbers_roundtrip() {
         .short_val(1000)
         .int_val(100000)
         .long_val(1000000000000)
-        .float_val(3.14)
-        .double_val(2.718281828)
+        .float_val(1.234)
+        .double_val(1.23456789)
         .build()
         .unwrap();
 
@@ -84,8 +84,8 @@ fn test_numbers_negative_values() {
         .short_val(-1000)
         .int_val(-100000)
         .long_val(-1000000000000)
-        .float_val(-3.14)
-        .double_val(-2.718281828)
+        .float_val(-1.234)
+        .double_val(-1.23456789)
         .build()
         .unwrap();
 

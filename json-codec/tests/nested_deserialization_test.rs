@@ -4,7 +4,6 @@ use smithy4rs_test_utils::*;
 
 #[test]
 fn test_nested_struct_deserialization() {
-    // JSON matching the exact same structure as the serialization test
     let json = r#"{
         "name": "test_object",
         "count": 42,
@@ -44,7 +43,7 @@ fn test_nested_struct_deserialization() {
         }
     }"#;
 
-    let mut deserializer = JsonDeserializer::from_str(json);
+    let mut deserializer = JsonDeserializer::new(json.as_bytes());
     let nested = NestedCollectionsStruct::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
         &mut deserializer,
@@ -53,7 +52,6 @@ fn test_nested_struct_deserialization() {
 
     println!("Deserialized nested struct: {:?}", nested);
 
-    // Verify structure - matching the serialization test assertions
     assert_eq!(nested.name, "test_object");
     assert_eq!(nested.count, 42);
 
@@ -92,7 +90,6 @@ fn test_nested_struct_deserialization() {
 
 #[test]
 fn test_recursive_struct_deserialization() {
-    // JSON matching the exact recursive structure from serialization test
     let json = r#"{
         "string_field": "level_1",
         "integer_field": 1,
@@ -116,34 +113,34 @@ fn test_recursive_struct_deserialization() {
         }
     }"#;
 
-    let mut deserializer = JsonDeserializer::from_str(json);
-    let child = RecursiveShapesStruct::deserialize_with_schema(
+    let mut deserializer = JsonDeserializer::new(json.as_bytes());
+    let top = RecursiveShapesStruct::deserialize_with_schema(
         &RECURSIVE_SHAPES_STRUCT_SCHEMA,
         &mut deserializer,
     )
     .unwrap();
 
-    println!("Deserialized recursive struct: {:?}", child);
+    println!("Deserialized recursive struct: {:?}", top);
 
-    // Verify recursive structure - matching the serialization test assertions
-    assert_eq!(child.string_field, "level_1");
-    assert_eq!(child.integer_field, 1);
-    assert_eq!(child.optional_field, Some("top".to_string()));
+    // Top
+    assert_eq!(top.string_field, "level_1");
+    assert_eq!(top.integer_field, 1);
+    assert_eq!(top.optional_field, Some("top".to_string()));
 
-    // Parent level
-    assert!(child.next.is_some());
-    let parent = child.next.as_ref().unwrap();
-    assert_eq!(parent.string_field, "level_2");
-    assert_eq!(parent.integer_field, 2);
-    assert_eq!(parent.optional_field, Some("middle".to_string()));
+    // Mid
+    assert!(top.next.is_some());
+    let mid = top.next.as_ref().unwrap();
+    assert_eq!(mid.string_field, "level_2");
+    assert_eq!(mid.integer_field, 2);
+    assert_eq!(mid.optional_field, Some("middle".to_string()));
 
-    // Grandparent level
-    assert!(parent.next.is_some());
-    let grandparent = parent.next.as_ref().unwrap();
-    assert_eq!(grandparent.string_field, "level_3");
-    assert_eq!(grandparent.integer_field, 3);
-    assert_eq!(grandparent.optional_field, Some("deepest".to_string()));
-    assert!(grandparent.next.is_none());
+    // Bottom
+    assert!(mid.next.is_some());
+    let bottom = mid.next.as_ref().unwrap();
+    assert_eq!(bottom.string_field, "level_3");
+    assert_eq!(bottom.integer_field, 3);
+    assert_eq!(bottom.optional_field, Some("deepest".to_string()));
+    assert!(bottom.next.is_none());
 }
 
 #[test]
@@ -179,7 +176,7 @@ fn test_deeply_nested_without_recursion() {
         }
     }"#;
 
-    let mut deserializer = JsonDeserializer::from_str(json);
+    let mut deserializer = JsonDeserializer::new(json.as_bytes());
     let nested = NestedCollectionsStruct::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
         &mut deserializer,
@@ -188,15 +185,12 @@ fn test_deeply_nested_without_recursion() {
 
     println!("Deserialized deeply nested struct: {:?}", nested);
 
-    // Verify all levels are present - matching the serialization test assertions
     assert_eq!(nested.name, "complex_object");
     assert_eq!(nested.count, 100);
     assert_eq!(nested.single_nested.field_a, "single_a");
     assert_eq!(nested.single_nested.field_b, "single_b");
     assert_eq!(nested.single_nested.field_c, "single_c");
-
     assert!(nested.optional_nested.is_none());
-
     assert_eq!(nested.list_nested.len(), 2);
     assert_eq!(nested.list_nested[0].field_a, "list_item_0_a");
     assert_eq!(nested.list_nested[0].field_b, "list_item_0_b");
@@ -204,7 +198,6 @@ fn test_deeply_nested_without_recursion() {
     assert_eq!(nested.list_nested[1].field_a, "list_item_1_a");
     assert_eq!(nested.list_nested[1].field_b, "list_item_1_b");
     assert_eq!(nested.list_nested[1].field_c, "list_item_1_c");
-
     assert_eq!(nested.map_nested.len(), 1);
     let map_val = nested.map_nested.get("map_key").unwrap();
     assert_eq!(map_val.field_a, "map_val_a");

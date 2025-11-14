@@ -7,7 +7,7 @@ use syn::{Attribute, Data, DeriveInput, Type, parse_macro_input};
 // TODO: Add some unit tests!
 // TODO: Make error handling use: `syn::Error::into_compile_error`
 
-/// Derives `StaticSchemaShape` for a struct
+/// Derives `SchemaShape` for a struct, backed by a static schema (`StaticSchemaShape`)
 #[proc_macro_derive(SchemaShape, attributes(smithy_schema))]
 pub fn schema_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -50,17 +50,14 @@ pub fn schema_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     .into()
 }
 
-/// Derives `SerializableStruct` (SerializeWithSchema only, no schema)
+/// Derives `SerializableStruct` (`SerializeWithSchema` only, no schema)
 #[proc_macro_derive(SerializableStruct, attributes(smithy_schema))]
 pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let shape_name = &input.ident;
-    // Add the base SerializableShape trait
-    let base_trait = base_trait_impl(shape_name);
-    // And now the serializer implementation
+    // `Deserialize` is implemented implicitly
+    // Generate the  SerializeWithSchema implementation
     let serialization = serialization_impl(shape_name, &input);
-
-    // TODO: Deserialization impl
 
     // Allows us to use these within the smithy4rs tests
     let found_crate =
@@ -86,16 +83,13 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
     let imports = quote! {
         #extern_import
         use #crate_ident::schema::SchemaRef as _SchemaRef;
-        use #crate_ident::serde::documents::SerializableShape as _SerializableShape;
-        use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
         use #crate_ident::serde::serializers::Serializer as _Serializer;
+        use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
         use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
     };
     quote! {
         const _: () = {
             #imports
-
-            #base_trait
 
             #serialization
         };
@@ -122,8 +116,8 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
             quote!( #ident )
         }
     };
-
-    // Generate Deserialize impl
+    // `Deserialize` is implemented implicitly
+    // Generate DeserializeWithSchema impl
     let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
 
     let extern_import = match &found_crate {
@@ -141,8 +135,8 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
         #extern_import
         use #crate_ident::schema::SchemaRef as _SchemaRef;
         use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
-        use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
         use #crate_ident::serde::deserializers::Deserializer as _Deserializer;
+        use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
         use #crate_ident::serde::deserializers::Error as _Error;
     };
 
@@ -159,21 +153,18 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
     .into()
 }
 
-/// Convenience derive that combines SchemaShape, SerializableStruct, and DeserializableStruct
+/// Convenience derive that combines `SchemaShape`, `SerializableStruct`, and `DeserializableStruct`
 #[proc_macro_derive(SmithyStruct, attributes(smithy_schema))]
 pub fn smithy_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input_clone = input.clone();
-    let input = parse_macro_input!(input as DeriveInput);
-
     // Generate all three derive expansions
-    let schema = schema_shape_derive(input_clone.clone().into());
-    let serializable = serializable_struct_derive(input_clone.clone().into());
-    let deserializable = deserializable_struct_derive(input_clone.into());
+    let schema = schema_shape_derive(input.clone());
+    let serializable = serializable_struct_derive(input.clone());
+    let deserializable = deserializable_struct_derive(input);
 
     // Combine all outputs
-    let schema_tokens = proc_macro2::TokenStream::from(schema);
-    let serializable_tokens = proc_macro2::TokenStream::from(serializable);
-    let deserializable_tokens = proc_macro2::TokenStream::from(deserializable);
+    let schema_tokens = TokenStream::from(schema);
+    let serializable_tokens = TokenStream::from(serializable);
+    let deserializable_tokens = TokenStream::from(deserializable);
 
     quote! {
         #schema_tokens
@@ -194,13 +185,6 @@ fn parse_schema(attrs: &[Attribute]) -> Ident {
         }
     }
     target_schema.expect("Could not find `smithy_schema` attribute")
-}
-
-fn base_trait_impl(shape_name: &Ident) -> TokenStream {
-    quote! {
-        #[automatically_derived]
-        impl _SerializableShape for #shape_name {}
-    }
 }
 
 fn schema_impl(shape_name: &Ident, schema_ident: &Ident) -> TokenStream {

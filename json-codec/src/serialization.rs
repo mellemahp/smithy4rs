@@ -30,14 +30,9 @@ static ESCAPE: [u8; 256] = {
     table
 };
 
-/// High-performance JSON serializer that writes directly to a Vec<u8>.
-///
-/// This serializer is optimized for maximum throughput:
-/// - Zero intermediate allocations
-/// - Direct buffer manipulation
-/// - Fast number formatting with itoa/ryu
-/// - Optimized string escaping
-#[repr(align(64))] // Cache-line aligned for better performance
+// TODO: Add pretty printing, will need some refactoring of the writing code to add some formatter/writer abstraction
+/// JSON serializer that writes directly to a Vec<u8>.
+#[repr(C, align(64))]
 pub struct JsonSerializer<'a> {
     buf: &'a mut Vec<u8>,
 }
@@ -46,7 +41,7 @@ impl<'a> JsonSerializer<'a> {
     /// Create a new JSON serializer that writes to the given buffer.
     ///
     /// The buffer will be cleared before use.
-    #[inline(always)]
+    #[inline]
     pub fn new(buf: &'a mut Vec<u8>) -> Self {
         buf.clear();
         Self { buf }
@@ -55,7 +50,7 @@ impl<'a> JsonSerializer<'a> {
     /// Create a new JSON serializer with a capacity hint.
     ///
     /// The buffer will be cleared and reserved to at least `capacity` bytes.
-    #[inline(always)]
+    #[inline]
     pub fn with_capacity(buf: &'a mut Vec<u8>, capacity: usize) -> Self {
         buf.clear();
         buf.reserve(capacity);
@@ -63,20 +58,20 @@ impl<'a> JsonSerializer<'a> {
     }
 
     /// Get the serialized JSON as a string slice.
-    #[inline(always)]
+    #[inline]
     pub fn as_str(&self) -> &str {
         // We only write valid UTF-8 to the buffer
         std::str::from_utf8(self.buf).expect("JSON is always valid UTF-8")
     }
 
     /// Get the serialized JSON as bytes.
-    #[inline(always)]
+    #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         self.buf
     }
 
-    /// Push bytes to buffer (safe version with capacity check).
-    #[inline(always)]
+    /// Push bytes to buffer.
+    #[inline]
     fn push_bytes(&mut self, bytes: &[u8]) {
         self.buf.extend_from_slice(bytes);
     }
@@ -89,7 +84,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     type SerializeMap = JsonMapSerializer<'a>;
     type SerializeStruct = JsonStructSerializer<'a>;
 
-    #[inline(always)]
+    #[inline]
     fn write_struct(
         self,
         _schema: &SchemaRef,
@@ -102,7 +97,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
         })
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_map(
         self,
         _schema: &SchemaRef,
@@ -115,7 +110,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
         })
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_list(
         self,
         _schema: &SchemaRef,
@@ -128,73 +123,74 @@ impl<'a> Serializer for JsonSerializer<'a> {
         })
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_boolean(self, _schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
         self.buf
             .extend_from_slice(if value { b"true" } else { b"false" });
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_float(self, _schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
         write_json_float(self.buf, value);
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_double(self, _schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
         write_json_double(self.buf, value);
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_big_integer(
         self,
         _schema: &SchemaRef,
         value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
-        // BigInt Display is reasonably fast
+        // TODO(optimization): probably a better way
         use std::fmt::Write;
         write!(StringWriter(self.buf), "{value}").map_err(JsonSerdeError::from)?;
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_big_decimal(
         self,
         _schema: &SchemaRef,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
+        // TODO(optimization): probably a better way
         use std::fmt::Write;
         write!(StringWriter(self.buf), "{value}").map_err(JsonSerdeError::from)?;
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
         write_json_string(self.buf, value);
         Ok(())
@@ -223,13 +219,13 @@ impl<'a> Serializer for JsonSerializer<'a> {
         todo!("Document serialization not yet implemented")
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_null(mut self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.push_bytes(b"null");
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         // Skip does nothing for JSON
         Ok(())
@@ -245,7 +241,7 @@ impl<'a> ListSerializer for JsonListSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
 
-    #[inline(always)]
+    #[inline]
     fn serialize_element<T>(
         &mut self,
         element_schema: &SchemaRef,
@@ -259,14 +255,13 @@ impl<'a> ListSerializer for JsonListSerializer<'a> {
         }
         self.first = false;
 
-        // Direct serialization - no intermediate buffer!
         let serializer = JsonSerializer { buf: self.buf };
         value.serialize_with_schema(element_schema, serializer)?;
 
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
         end_json_array(self.buf);
         Ok(())
@@ -282,7 +277,7 @@ impl<'a> MapSerializer for JsonMapSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
 
-    #[inline(always)]
+    #[inline]
     fn serialize_entry<K, V>(
         &mut self,
         key_schema: &SchemaRef,
@@ -299,20 +294,18 @@ impl<'a> MapSerializer for JsonMapSerializer<'a> {
         }
         self.first = false;
 
-        // Serialize key directly to buffer
         let key_serializer = JsonSerializer { buf: self.buf };
         key.serialize_with_schema(key_schema, key_serializer)?;
 
         write_json_colon(self.buf);
 
-        // Serialize value directly to buffer
         let value_serializer = JsonSerializer { buf: self.buf };
         value.serialize_with_schema(value_schema, value_serializer)?;
 
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
         end_json_object(self.buf);
         Ok(())
@@ -328,7 +321,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
 
-    #[inline(always)]
+    #[inline]
     fn serialize_member<T>(
         &mut self,
         member_schema: &SchemaRef,
@@ -347,18 +340,16 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
             JsonSerdeError::SerializationError("Expected member schema".to_string())
         })?;
 
-        // Write field name as JSON string
         write_json_string(self.buf, &member.name);
         write_json_colon(self.buf);
 
-        // Serialize value directly to buffer
         let value_serializer = JsonSerializer { buf: self.buf };
         value.serialize_with_schema(member_schema, value_serializer)?;
 
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn serialize_member_named<T>(
         &mut self,
         member_name: &str,
@@ -373,64 +364,60 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
         }
         self.first = false;
 
-        // Write field name as JSON string (optimized: no schema lookup needed!)
         write_json_string(self.buf, member_name);
         write_json_colon(self.buf);
 
-        // Serialize value directly to buffer
         let value_serializer = JsonSerializer { buf: self.buf };
         value.serialize_with_schema(member_schema, value_serializer)?;
 
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
         end_json_object(self.buf);
         Ok(())
     }
 }
 
-// Helper functions for writing JSON primitives
-
 /// Start a JSON object.
-#[inline(always)]
+#[inline]
 fn start_json_object(buf: &mut Vec<u8>) {
     buf.push(b'{');
 }
 
 /// End a JSON object.
-#[inline(always)]
+#[inline]
 fn end_json_object(buf: &mut Vec<u8>) {
     buf.push(b'}');
 }
 
 /// Start a JSON array.
-#[inline(always)]
+#[inline]
 fn start_json_array(buf: &mut Vec<u8>) {
     buf.push(b'[');
 }
 
 /// End a JSON array.
-#[inline(always)]
+#[inline]
 fn end_json_array(buf: &mut Vec<u8>) {
     buf.push(b']');
 }
 
 /// Write a JSON field separator (comma).
-#[inline(always)]
+#[inline]
 fn write_json_comma(buf: &mut Vec<u8>) {
     buf.push(b',');
 }
 
 /// Write a JSON key-value separator (colon).
-#[inline(always)]
+#[inline]
 fn write_json_colon(buf: &mut Vec<u8>) {
     buf.push(b':');
 }
 
 /// Fast integer serialization using itoa.
-#[inline(always)]
+#[inline]
 fn write_json_integer<T: itoa::Integer>(buf: &mut Vec<u8>, value: T) {
     buf.extend_from_slice(itoa::Buffer::new().format(value).as_bytes());
 }
@@ -491,11 +478,10 @@ fn write_json_string(buf: &mut Vec<u8>, s: &str) {
 
 const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
 
-/// Fast float serialization with special value handling.
-#[inline(always)]
+/// Fast float serialization (using ryu) with special value handling.
+#[inline]
 fn write_json_float(buf: &mut Vec<u8>, value: f32) {
     if value.is_finite() {
-        // ryu is 2-5x faster than standard formatting
         buf.extend_from_slice(ryu::Buffer::new().format_finite(value).as_bytes());
     } else if value.is_nan() {
         buf.extend_from_slice(b"\"NaN\"");
@@ -506,11 +492,10 @@ fn write_json_float(buf: &mut Vec<u8>, value: f32) {
     }
 }
 
-/// Fast double serialization with special value handling.
-#[inline(always)]
+/// Fast double serialization (using ryu) with special value handling.
+#[inline]
 fn write_json_double(buf: &mut Vec<u8>, value: f64) {
     if value.is_finite() {
-        // ryu is 2-5x faster than standard formatting
         buf.extend_from_slice(ryu::Buffer::new().format_finite(value).as_bytes());
     } else if value.is_nan() {
         buf.extend_from_slice(b"\"NaN\"");
@@ -525,9 +510,14 @@ fn write_json_double(buf: &mut Vec<u8>, value: f64) {
 struct StringWriter<'a>(&'a mut Vec<u8>);
 
 impl std::fmt::Write for StringWriter<'_> {
-    #[inline(always)]
+    #[inline]
     fn write_str(&mut self, s: &str) -> std::fmt::Result {
         self.0.extend_from_slice(s.as_bytes());
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod tests {    
+    // TODO(test): Add comprehensive suite here
 }

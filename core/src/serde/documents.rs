@@ -11,23 +11,17 @@ use crate::{
     schema::{
         Document, DocumentError, DocumentValue, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA,
         NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId,
-        ShapeType, TraitList, get_shape_type,
+        ShapeType, StaticSchemaShape, TraitList, get_shape_type,
     },
     serde::{
-        se::{ListSerializer, MapSerializer, Serialize, Serializer, StructSerializer},
-        serializers::{Error, SerializeWithSchema},
+        se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
+        serializers::{Error, SerializableShape, SerializeWithSchema},
     },
 };
 
 /////////////////////////////////////////////////////////////////////////////////
 // Serialization
 /////////////////////////////////////////////////////////////////////////////////
-
-/// Marker Trait used to differentiate between generated shapes and Documents for
-/// some blanket implementations.
-///
-/// NOTE: In general you should not need to implement this yourself
-pub trait SerializableShape: Serialize {}
 
 impl SerializeWithSchema for Document {
     fn serialize_with_schema<S: Serializer>(
@@ -87,10 +81,27 @@ impl SerializeWithSchema for Document {
     }
 }
 
-impl<T: SerializableShape> From<T> for Document {
+impl<T> From<T> for Document
+where
+    T: StaticSchemaShape + SerializeWithSchema,
+{
     fn from(shape: T) -> Self {
-        // TODO: should this be fallible?
-        shape.serialize(DocumentParser).unwrap()
+        shape
+            .serialize_with_schema(T::schema(), DocumentParser)
+            .expect("Infallible conversion from StaticSchemaShape to Document failed - this is a bug")
+    }
+}
+
+impl Document {
+    /// Convert any serializable (schema-based) shape to a Document.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DocumentError` if the shape cannot be serialized to a document,
+    /// typically due to schema mismatches or validation failures.
+    /// ```
+    pub fn from<T: SchemaShape + SerializeWithSchema>(shape: T) -> Result<Self, DocumentError> {
+        shape.serialize_with_schema(shape.schema(), DocumentParser)
     }
 }
 
@@ -726,6 +737,7 @@ impl<'de> DeserializeWithSchema<'de> for Document {
     }
 }
 
+// TODO(test): overhaul these to be use test shapes
 #[cfg(test)]
 mod tests {
     use std::{str::FromStr, sync::LazyLock};

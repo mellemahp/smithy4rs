@@ -4,10 +4,10 @@ use smithy4rs_core::{
 
 use crate::errors::JsonSerdeError;
 
-/// A JSON deserializer that uses jiter for high-performance JSON parsing.
+/// A JSON deserializer that uses jiter.
 ///
-/// This deserializer reads JSON data from a byte slice and uses Smithy schemas
-/// to guide the deserialization process.
+/// This deserializer reads JSON data from a byte slice and uses schemas
+/// to guide the deserialization.
 pub struct JsonDeserializer<'de> {
     parser: jiter::Jiter<'de>,
 }
@@ -18,11 +18,6 @@ impl<'de> JsonDeserializer<'de> {
         Self {
             parser: jiter::Jiter::new(data),
         }
-    }
-
-    /// Create a new JSON deserializer from a string.
-    pub fn from_str(data: &'de str) -> Self {
-        Self::new(data.as_bytes())
     }
 }
 
@@ -165,23 +160,22 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
     }
 
     fn read_blob(&mut self, _schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
-        // Blobs in JSON are typically base64-encoded strings
+        // Blobs in JSON are base64-encoded strings
         let s = self.parser.next_str().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read blob string: {}", e))
         })?;
 
         // For now, just convert the string to bytes
-        // TODO: Add proper base64 decoding
+        // TODO: Add base64 decoding
         Ok(ByteBuffer::from(s.as_bytes()))
     }
 
     fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<Instant, Self::Error> {
-        // Timestamps in JSON are typically ISO 8601 strings or epoch seconds
         let s = self.parser.next_str().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read timestamp string: {}", e))
         })?;
 
-        // Try parsing using from_utf8
+        // TODO: timestampFormat handling
         Instant::from_utf8(s.as_bytes()).map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to parse timestamp: {}", e))
         })
@@ -191,11 +185,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         &mut self,
         _schema: &SchemaRef,
     ) -> Result<smithy4rs_core::schema::Document, Self::Error> {
-        // For documents, we need to parse arbitrary JSON values
-        // This is a simplified implementation - a full version would recursively parse
-        Err(JsonSerdeError::DeserializationError(
-            "Document deserialization not yet implemented".to_string(),
-        ))
+        todo!("Support deserialization of documents")
     }
 
     fn read_struct<B, F>(
@@ -311,34 +301,32 @@ mod tests {
 
     use super::*;
 
+    // TODO(test): Add comprehensive suite here
+
     #[test]
     fn test_read_primitives() {
-        // Test bool
-        let mut de = JsonDeserializer::from_str("true");
-        assert_eq!(de.read_bool(&BOOLEAN).unwrap(), true);
+        let mut de = JsonDeserializer::new("true".as_bytes());
+        assert!(de.read_bool(&BOOLEAN).unwrap());
 
-        // Test integer
-        let mut de = JsonDeserializer::from_str("42");
+        let mut de = JsonDeserializer::new("42".as_bytes());
         assert_eq!(de.read_integer(&INTEGER).unwrap(), 42);
 
-        // Test float
-        let mut de = JsonDeserializer::from_str("3.14");
-        assert!((de.read_float(&FLOAT).unwrap() - 3.14).abs() < 0.001);
+        let mut de = JsonDeserializer::new("1.234".as_bytes());
+        assert!((de.read_float(&FLOAT).unwrap() - 1.234).abs() < 0.001);
 
-        // Test string
-        let mut de = JsonDeserializer::from_str("\"hello\"");
+        let mut de = JsonDeserializer::new("\"hello\"".as_bytes());
         assert_eq!(de.read_string(&STRING).unwrap(), "hello");
     }
 
     #[test]
     fn test_is_null() {
-        let mut de = JsonDeserializer::from_str("null");
+        let mut de = JsonDeserializer::new("null".as_bytes());
         assert!(de.is_null());
 
-        let mut de = JsonDeserializer::from_str("42");
+        let mut de = JsonDeserializer::new("42".as_bytes());
         assert!(!de.is_null());
 
-        let mut de = JsonDeserializer::from_str("\"string\"");
+        let mut de = JsonDeserializer::new("\"string\"".as_bytes());
         assert!(!de.is_null());
     }
 }

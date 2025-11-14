@@ -1,7 +1,7 @@
-//! Test utilities and common test shapes for smithy4rs
-//!
-//! This crate provides reusable test shapes and schemas following Smithy protocol test
-//! conventions. Shape names are self-describing to clearly indicate what they test.
+//! Test utilities and common test schemas + shapes
+
+// TODO(verify): We don't add required to anything yet
+// TODO(test): Add constraint test shapes once we have validation
 
 use std::sync::LazyLock;
 
@@ -12,11 +12,7 @@ use smithy4rs_core::{
     schema::{Schema, SchemaRef, ShapeId},
     traits,
 };
-use smithy4rs_core_derive::{DeserializableStruct, SchemaShape, SerializableStruct, SmithyStruct};
-
-// ============================================================================
-// Basic Collection Types
-// ============================================================================
+use smithy4rs_core_derive::SmithyStruct;
 
 lazy_schema!(
     STRING_LIST_SCHEMA,
@@ -37,11 +33,6 @@ lazy_schema!(
     ("member", INTEGER, traits![])
 );
 
-// ============================================================================
-// Primitive Type Test Structures
-// ============================================================================
-
-/// Tests all Smithy primitive types in a single structure
 lazy_schema!(
     ALL_PRIMITIVES_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#AllPrimitivesStruct"), traits![]),
@@ -87,7 +78,6 @@ pub struct AllPrimitivesStruct {
     pub timestamp_field: Instant,
 }
 
-/// Tests optional field handling
 lazy_schema!(
     OPTIONAL_FIELDS_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#OptionalFieldsStruct"), traits![]),
@@ -104,7 +94,6 @@ pub struct OptionalFieldsStruct {
     pub optional_field: Option<String>,
 }
 
-/// Tests numeric type handling across all integer and floating point types
 lazy_schema!(
     NUMERIC_TYPES_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#NumericTypesStruct"), traits![]),
@@ -133,7 +122,6 @@ pub struct NumericTypesStruct {
     pub double_val: f64,
 }
 
-/// Simple two-field structure for basic macro expansion tests
 lazy_schema!(
     SIMPLE_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#SimpleStruct"), traits![]),
@@ -150,11 +138,6 @@ pub struct SimpleStruct {
     pub field_b: i32,
 }
 
-// ============================================================================
-// Recursive Structure Test Types
-// ============================================================================
-
-/// Tests recursive self-reference using the (@self) syntax in lazy_schema
 lazy_schema!(
     RECURSIVE_SHAPES_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#RecursiveShapesStruct"), traits![]),
@@ -183,11 +166,6 @@ pub struct RecursiveShapesStruct {
     pub next: Option<Box<RecursiveShapesStruct>>,
 }
 
-// ============================================================================
-// Nested Collections Test
-// ============================================================================
-
-/// Inner struct for testing nested structures
 lazy_schema!(
     INNER_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#InnerStruct"), traits![]),
@@ -220,7 +198,6 @@ pub static INNER_STRUCT_MAP_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         .build()
 });
 
-/// Tests nested structures in various collection types
 lazy_schema!(
     NESTED_COLLECTIONS_STRUCT_SCHEMA,
     Schema::structure_builder(ShapeId::from("test#NestedCollectionsStruct"), traits![]),

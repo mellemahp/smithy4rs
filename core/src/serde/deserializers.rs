@@ -174,13 +174,12 @@ pub trait Deserializer<'de>: Sized {
     fn read_null(&mut self) -> Result<(), Self::Error>;
 }
 
-// TODO: I think we should rename this to DeserializableShape (and SerializableShape for Serialize)
-pub trait Deserialize<'de>: SchemaShape + DeserializeWithSchema<'de> {
+pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
     /// Deserialize a shape with its pre-defined schema
     fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error>;
 }
 
-impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> Deserialize<'de> for T {
+impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape<'de> for T {
     fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error> {
         Self::deserialize_with_schema(Self::schema(), deserializer)
     }

@@ -3,7 +3,7 @@ use smithy4rs_core::{
     schema::{Schema, ShapeId},
     traits,
 };
-use smithy4rs_core_derive::{DeserializableStruct, SerializableStruct};
+use smithy4rs_core_derive::SmithyStruct;
 pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
     std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
 > = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
@@ -31,12 +31,20 @@ pub struct SimpleStruct {
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
-    use _smithy4rs::serde::documents::SerializableShape as _SerializableShape;
-    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::Serializer as _Serializer;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
-    impl _SerializableShape for SimpleStruct {}
+    impl _StaticSchemaShape for SimpleStruct {
+        fn schema() -> &'static _SchemaRef {
+            &SIMPLE_SCHEMA
+        }
+    }
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::serde::serializers::Serializer as _Serializer;
+    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     #[automatically_derived]
     impl _SerializeWithSchema for SimpleStruct {
         fn serialize_with_schema<S: _Serializer>(
@@ -83,8 +91,8 @@ const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
-    use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
+    use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _Error;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for SimpleStruct {

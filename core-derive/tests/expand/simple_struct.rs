@@ -4,7 +4,7 @@ use smithy4rs_core::{
     schema::{Schema, ShapeId},
     traits,
 };
-use smithy4rs_core_derive::{DeserializableStruct, SerializableStruct};
+use smithy4rs_core_derive::SmithyStruct;
 
 lazy_schema!(
     SIMPLE_SCHEMA,
@@ -13,7 +13,7 @@ lazy_schema!(
     (FIELD_B, "field_b", INTEGER, traits![])
 );
 
-#[derive(SerializableStruct, DeserializableStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(FIELD_A)]
