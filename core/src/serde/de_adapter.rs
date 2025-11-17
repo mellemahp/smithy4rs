@@ -81,6 +81,13 @@ where
                     _phantom: PhantomData,
                 })
             }
+            ShapeType::Map => {
+                // Tell serde we expect a map
+                deserializer.deserialize_map(MapVisitor {
+                    schema: self.schema,
+                    _phantom: PhantomData,
+                })
+            }
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
                 get_shape_type(self.schema)
@@ -275,14 +282,24 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
 
     fn read_struct<B, F2>(
         &mut self,
-        _schema: &SchemaRef,
+        schema: &SchemaRef,
         _builder: B,
         _consumer: F2,
     ) -> Result<B, Self::Error>
     where
+        B: DeserializeWithSchema<'de>,
         F2: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
     {
-        Err(Self::Error::custom("Nested structs not yet supported"))
+        // When deserializing a nested struct in a list, use next_element_seed
+        // to delegate to the underlying serde deserializer
+        let seed = SchemaSeed::<B>::new(schema);
+        match self.seq_access.next_element_seed(seed)? {
+            Some(value) => Ok(value),
+            None => {
+                self.end_of_sequence = true;
+                Err(Self::Error::custom("End of sequence"))
+            }
+        }
     }
 
     fn read_map<T2, F2>(
@@ -312,6 +329,12 @@ struct StructVisitor<'a, T> {
     _phantom: PhantomData<T>,
 }
 
+// Visitor for maps (IndexMap, etc) - receives MapAccess and creates adapter
+struct MapVisitor<'a, T> {
+    schema: &'a SchemaRef,
+    _phantom: PhantomData<T>,
+}
+
 impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for StructVisitor<'a, T> {
     type Value = T;
 
@@ -326,6 +349,31 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for StructVisitor<'a, 
         // Create adapter from MapAccess
         let mut adapter = MapAccessAdapter {
             map_access: map,
+            is_top_level: true,
+            _phantom: PhantomData,
+        };
+
+        // Call our deserialization
+        T::deserialize_with_schema(self.schema, &mut adapter)
+            .map_err(|e| A::Error::custom(format!("Deserialization error: {}", e)))
+    }
+}
+
+impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> {
+    type Value = T;
+
+    fn expecting(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "a map")
+    }
+
+    fn visit_map<A>(self, map: A) -> Result<T, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        // Create adapter from MapAccess
+        let mut adapter = MapAccessAdapter {
+            map_access: map,
+            is_top_level: true,
             _phantom: PhantomData,
         };
 
@@ -338,6 +386,9 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for StructVisitor<'a, 
 // MapAccessAdapter wraps serde's MapAccess and implements our Deserializer trait
 struct MapAccessAdapter<'de, M: MapAccess<'de>> {
     map_access: M,
+    /// Track if we're currently in the top-level iteration
+    /// When false, we're deserializing a nested value and should use next_value_seed
+    is_top_level: bool,
     _phantom: PhantomData<&'de ()>,
 }
 
@@ -354,7 +405,18 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
     ) -> Result<B, Self::Error>
     where
         F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        B: DeserializeWithSchema<'de>,
     {
+        // If we're not at the top level, we're deserializing a nested struct
+        // Use next_value_seed to delegate to serde
+        if !self.is_top_level {
+            let seed = SchemaSeed::<B>::new(schema);
+            return Ok(self.map_access.next_value_seed(seed)?);
+        }
+
+        // Mark that we're now in nested context for any further calls
+        self.is_top_level = false;
+
         // Iterate through all map entries
         while let Some(key) = self.map_access.next_key::<String>()? {
             // Look up the member schema by field name
@@ -429,30 +491,58 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
 
     fn read_list<T, F>(
         &mut self,
-        _schema: &SchemaRef,
-        _state: &mut T,
+        schema: &SchemaRef,
+        state: &mut T,
         _consumer: F,
     ) -> Result<(), Self::Error>
     where
         F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        T: DeserializeWithSchema<'de>,
     {
-        // When deserializing a struct field that is a list, we need to use next_value_seed
-        // to get a proper list deserializer
-        Err(Self::Error::custom(
-            "Nested lists not yet supported in struct fields",
-        ))
+        // When deserializing a nested list in a struct field, we use next_value_seed
+        // to delegate to the underlying serde deserializer (e.g., serde_json).
+        //
+        // This tells serde_json to deserialize the array value, which will:
+        // 1. Create a SeqAccess for the array
+        // 2. Call our ListVisitor with it
+        // 3. Wrap it in SeqAccessAdapter
+        // 4. Call Vec::deserialize_with_schema with the SeqAccessAdapter
+        // 5. Which can properly iterate through elements using read_list
+        //
+        // The result is a fully deserialized T (e.g., Vec<String>) which we assign to state.
+        let seed = SchemaSeed::<T>::new(schema);
+        let result = self.map_access.next_value_seed(seed)?;
+        *state = result;
+        Ok(())
     }
 
     fn read_map<T2, F2>(
         &mut self,
-        _schema: &SchemaRef,
-        _state: &mut T2,
-        _consumer: F2,
+        schema: &SchemaRef,
+        state: &mut T2,
+        mut consumer: F2,
     ) -> Result<(), Self::Error>
     where
         F2: FnMut(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
+        T2: DeserializeWithSchema<'de>,
     {
-        Err(Self::Error::custom("Nested maps not yet supported"))
+        // If we're not at the top level, we're deserializing a nested map
+        // Use next_value_seed to delegate to serde
+        if !self.is_top_level {
+            let seed = SchemaSeed::<T2>::new(schema);
+            let result = self.map_access.next_value_seed(seed)?;
+            *state = result;
+            return Ok(());
+        }
+
+        // Iterate through all map entries
+        while let Some(key) = self.map_access.next_key::<String>()? {
+            // Call the consumer with the key
+            // The consumer will call back into our read_* methods to deserialize the value
+            consumer(state, key, self)?;
+        }
+
+        Ok(())
     }
 
     fn is_null(&mut self) -> bool {
@@ -468,6 +558,7 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
 mod tests {
     use super::*;
     use smithy4rs_core_derive::{DeserializableStruct, SchemaShape};
+    use indexmap::IndexMap;
 
     use crate::{
         lazy_schema,
@@ -828,5 +919,314 @@ mod tests {
 
         assert_eq!(result.required_field, "hello");
         assert_eq!(result.optional_field, Some("world".to_string()));
+    }
+
+    // Test nested list in struct
+    lazy_schema!(
+        STRUCT_WITH_LIST_SCHEMA,
+        Schema::structure_builder(ShapeId::from("test#StructWithList"), traits![]),
+        (SWL_NAME, "name", STRING, traits![]),
+        (SWL_TAGS, "tags", STRING_LIST_SCHEMA, traits![])
+    );
+
+    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[smithy_schema(STRUCT_WITH_LIST_SCHEMA)]
+    struct StructWithList {
+        #[smithy_schema(SWL_NAME)]
+        name: String,
+        #[smithy_schema(SWL_TAGS)]
+        tags: Vec<String>,
+    }
+
+    impl<'de> serde::Deserialize<'de> for StructWithList {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let seed = SchemaSeed::<StructWithList>::new(StructWithList::schema());
+            seed.deserialize(deserializer)
+        }
+    }
+
+    #[test]
+    fn test_struct_with_nested_list() {
+        let json = r#"{
+            "name": "test",
+            "tags": ["a", "b", "c"]
+        }"#;
+
+        let result: StructWithList = serde_json::from_str(json).unwrap();
+
+        assert_eq!(result.name, "test");
+        assert_eq!(result.tags, vec!["a", "b", "c"]);
+    }
+
+    // Comprehensive deep nesting test
+    lazy_schema!(
+        ADDRESS_SCHEMA,
+        Schema::structure_builder(ShapeId::from("test#Address"), traits![]),
+        (ADDR_STREET, "street", STRING, traits![]),
+        (ADDR_CITY, "city", STRING, traits![]),
+        (ADDR_ZIP, "zipCode", INTEGER, traits![])
+    );
+
+    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[smithy_schema(ADDRESS_SCHEMA)]
+    struct Address {
+        #[smithy_schema(ADDR_STREET)]
+        street: String,
+        #[smithy_schema(ADDR_CITY)]
+        city: String,
+        #[smithy_schema(ADDR_ZIP)]
+        zip_code: i32,
+    }
+
+    impl<'de> serde::Deserialize<'de> for Address {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let seed = SchemaSeed::<Address>::new(Address::schema());
+            seed.deserialize(deserializer)
+        }
+    }
+
+    lazy_schema!(
+        PHONE_LIST_SCHEMA,
+        Schema::list_builder(ShapeId::from("test#PhoneList"), traits![]),
+        ("member", STRING, traits![])
+    );
+
+    lazy_schema!(
+        CONTACT_SCHEMA,
+        Schema::structure_builder(ShapeId::from("test#Contact"), traits![]),
+        (CONTACT_EMAIL, "email", STRING, traits![]),
+        (CONTACT_PHONES, "phones", PHONE_LIST_SCHEMA, traits![]),
+        (CONTACT_ADDRESS, "address", ADDRESS_SCHEMA, traits![]),
+        (CONTACT_BACKUP, "backupAddress", ADDRESS_SCHEMA, traits![])
+    );
+
+    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[smithy_schema(CONTACT_SCHEMA)]
+    struct Contact {
+        #[smithy_schema(CONTACT_EMAIL)]
+        email: String,
+        #[smithy_schema(CONTACT_PHONES)]
+        phones: Vec<String>,
+        #[smithy_schema(CONTACT_ADDRESS)]
+        address: Address,
+        #[smithy_schema(CONTACT_BACKUP)]
+        backup_address: Option<Address>,
+    }
+
+    impl<'de> serde::Deserialize<'de> for Contact {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let seed = SchemaSeed::<Contact>::new(Contact::schema());
+            seed.deserialize(deserializer)
+        }
+    }
+
+    lazy_schema!(
+        HOBBY_SCHEMA,
+        Schema::structure_builder(ShapeId::from("test#Hobby"), traits![]),
+        (HOBBY_NAME, "name", STRING, traits![]),
+        (HOBBY_YEARS, "yearsOfExperience", INTEGER, traits![])
+    );
+
+    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[smithy_schema(HOBBY_SCHEMA)]
+    struct Hobby {
+        #[smithy_schema(HOBBY_NAME)]
+        name: String,
+        #[smithy_schema(HOBBY_YEARS)]
+        years_of_experience: i32,
+    }
+
+    impl<'de> serde::Deserialize<'de> for Hobby {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let seed = SchemaSeed::<Hobby>::new(Hobby::schema());
+            seed.deserialize(deserializer)
+        }
+    }
+
+    lazy_schema!(
+        HOBBY_LIST_SCHEMA,
+        Schema::list_builder(ShapeId::from("test#HobbyList"), traits![]),
+        ("member", HOBBY_SCHEMA, traits![])
+    );
+
+    lazy_schema!(
+        STRING_MAP_SCHEMA,
+        Schema::map_builder(ShapeId::from("test#StringMap"), traits![]),
+        ("key", STRING, traits![]),
+        ("value", STRING, traits![])
+    );
+
+    lazy_schema!(
+        PERSON_SCHEMA,
+        Schema::structure_builder(ShapeId::from("test#Person"), traits![]),
+        (PERSON_NAME, "name", STRING, traits![]),
+        (PERSON_AGE, "age", INTEGER, traits![]),
+        (PERSON_ACTIVE, "isActive", BOOLEAN, traits![]),
+        (PERSON_SCORE, "score", FLOAT, traits![]),
+        (PERSON_CONTACT, "contact", CONTACT_SCHEMA, traits![]),
+        (PERSON_HOBBIES, "hobbies", HOBBY_LIST_SCHEMA, traits![]),
+        (PERSON_METADATA, "metadata", STRING_MAP_SCHEMA, traits![]),
+        (PERSON_NOTES, "notes", STRING, traits![])
+    );
+
+    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[smithy_schema(PERSON_SCHEMA)]
+    struct Person {
+        #[smithy_schema(PERSON_NAME)]
+        name: String,
+        #[smithy_schema(PERSON_AGE)]
+        age: i32,
+        #[smithy_schema(PERSON_ACTIVE)]
+        is_active: bool,
+        #[smithy_schema(PERSON_SCORE)]
+        score: f32,
+        #[smithy_schema(PERSON_CONTACT)]
+        contact: Contact,
+        #[smithy_schema(PERSON_HOBBIES)]
+        hobbies: Vec<Hobby>,
+        #[smithy_schema(PERSON_METADATA)]
+        metadata: IndexMap<String, String>,
+        #[smithy_schema(PERSON_NOTES)]
+        notes: Option<String>,
+    }
+
+    impl<'de> serde::Deserialize<'de> for Person {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let seed = SchemaSeed::<Person>::new(Person::schema());
+            seed.deserialize(deserializer)
+        }
+    }
+
+    #[test]
+    fn test_comprehensive_nested_structures() {
+        let json = r#"{
+            "name": "Alice Johnson",
+            "age": 32,
+            "isActive": true,
+            "score": 95.5,
+            "contact": {
+                "email": "alice@example.com",
+                "phones": ["+1-555-0100", "+1-555-0101"],
+                "address": {
+                    "street": "123 Main St",
+                    "city": "Springfield",
+                    "zipCode": 12345
+                },
+                "backupAddress": {
+                    "street": "456 Oak Ave",
+                    "city": "Shelbyville",
+                    "zipCode": 67890
+                }
+            },
+            "hobbies": [
+                {
+                    "name": "Photography",
+                    "yearsOfExperience": 5
+                },
+                {
+                    "name": "Rock Climbing",
+                    "yearsOfExperience": 3
+                }
+            ],
+            "metadata": {
+                "department": "Engineering",
+                "team": "Backend",
+                "location": "Remote"
+            },
+            "notes": "Excellent performance",
+            "unknownField": "should be ignored"
+        }"#;
+
+        let result: Person = serde_json::from_str(json).unwrap();
+
+        // Verify top-level fields
+        assert_eq!(result.name, "Alice Johnson");
+        assert_eq!(result.age, 32);
+        assert_eq!(result.is_active, true);
+        assert_eq!(result.score, 95.5);
+
+        // Verify nested contact
+        assert_eq!(result.contact.email, "alice@example.com");
+        assert_eq!(
+            result.contact.phones,
+            vec!["+1-555-0100", "+1-555-0101"]
+        );
+
+        // Verify nested address
+        assert_eq!(result.contact.address.street, "123 Main St");
+        assert_eq!(result.contact.address.city, "Springfield");
+        assert_eq!(result.contact.address.zip_code, 12345);
+
+        // Verify optional nested address
+        assert!(result.contact.backup_address.is_some());
+        let backup = result.contact.backup_address.unwrap();
+        assert_eq!(backup.street, "456 Oak Ave");
+        assert_eq!(backup.city, "Shelbyville");
+        assert_eq!(backup.zip_code, 67890);
+
+        // Verify list of structs
+        assert_eq!(result.hobbies.len(), 2);
+        assert_eq!(result.hobbies[0].name, "Photography");
+        assert_eq!(result.hobbies[0].years_of_experience, 5);
+        assert_eq!(result.hobbies[1].name, "Rock Climbing");
+        assert_eq!(result.hobbies[1].years_of_experience, 3);
+
+        // Verify map
+        assert_eq!(result.metadata.len(), 3);
+        assert_eq!(result.metadata.get("department"), Some(&"Engineering".to_string()));
+        assert_eq!(result.metadata.get("team"), Some(&"Backend".to_string()));
+        assert_eq!(result.metadata.get("location"), Some(&"Remote".to_string()));
+
+        // Verify optional field
+        assert_eq!(result.notes, Some("Excellent performance".to_string()));
+    }
+
+    #[test]
+    fn test_comprehensive_with_missing_optional_fields() {
+        let json = r#"{
+            "name": "Bob Smith",
+            "age": 28,
+            "isActive": false,
+            "score": 87.3,
+            "contact": {
+                "email": "bob@example.com",
+                "phones": [],
+                "address": {
+                    "street": "789 Elm St",
+                    "city": "Capital City",
+                    "zipCode": 54321
+                }
+            },
+            "hobbies": [],
+            "metadata": {}
+        }"#;
+
+        let result: Person = serde_json::from_str(json).unwrap();
+
+        assert_eq!(result.name, "Bob Smith");
+        assert_eq!(result.age, 28);
+        assert_eq!(result.is_active, false);
+        assert_eq!(result.score, 87.3);
+        assert_eq!(result.contact.email, "bob@example.com");
+        assert_eq!(result.contact.phones, Vec::<String>::new());
+        assert!(result.contact.backup_address.is_none());
+        assert_eq!(result.hobbies, Vec::<Hobby>::new());
+        assert_eq!(result.metadata, IndexMap::<String, String>::new());
+        assert!(result.notes.is_none());
     }
 }
