@@ -10,6 +10,7 @@ cargo-binstall = "latest"
 "cargo:cargo-criterion" = "latest"
 "cargo:cargo-sort" = "latest"
 "cargo:cargo-machete" = "latest"
+"cargo:cargo-expand" = "latest"
 rust = [
   { profile = "minimal", version = "nightly", components = "rustfmt" },
   { profile = "default", version = "1.90.0", components = "clippy" },
