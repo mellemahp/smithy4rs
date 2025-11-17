@@ -88,7 +88,10 @@ where
                     _phantom: PhantomData,
                 })
             }
+<<<<<<< HEAD
             // TODO(adapter): We probably need a primitiveVistor to handle root json primitives
+=======
+>>>>>>> d91b0c1 (checkpoint: adapter full worky!!)
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
                 get_shape_type(self.schema)
@@ -560,6 +563,7 @@ mod tests {
     use super::*;
     use indexmap::IndexMap;
     use smithy4rs_core_derive::{DeserializableStruct, SchemaShape};
+    use indexmap::IndexMap;
 
     use crate::{
         lazy_schema,
