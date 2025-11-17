@@ -1,0 +1,18 @@
+[package]
+name = "smithy4rs-test-utils"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+smithy4rs-core.workspace = true
+smithy4rs-core-derive.workspace = true
+indexmap.workspace = true
+
+[lints]
+workspace = true

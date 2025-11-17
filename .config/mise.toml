@@ -1,6 +1,6 @@
 [env]
 # needed because the 2 rust versions installed by mise may be switched around
-RUSTUP_TOOLCHAIN="stable"
+RUSTUP_TOOLCHAIN = "stable"
 
 [tools]
 # We need cargo-binstall so that Mise would download "cargo:" tools instead of building them.
@@ -10,10 +10,14 @@ cargo-binstall = "latest"
 "cargo:cargo-criterion" = "latest"
 "cargo:cargo-sort" = "latest"
 "cargo:cargo-machete" = "latest"
+"cargo:cargo-expand" = "latest"
 rust = [
-    { profile = "minimal", version = "nightly", components = "rustfmt" },
-    { profile = "default", version = "1.90.0", components = "clippy" }
+  { profile = "minimal", version = "nightly", components = "rustfmt" },
+  { profile = "default", version = "1.90.0", components = "clippy" },
 ]
+
+[tasks.dev]
+depends = ["build", "test", "fmt-all"]
 
 [tasks.build]
 description = "Build the project"
@@ -22,25 +26,24 @@ run = "cargo build"
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]
 description = "Check the code format"
-run = [
-    "cargo +nightly fmt --all --",
-    "cargo sort"
-]
+run = ["cargo +nightly fmt --all --", "cargo sort"]
+
+[tasks.fix]
+description = "Fix the code with Cargo, Clippy, etc."
+run = "cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features"
+
 
 [tasks.lint]
 wait_for = ["test"]
 depends = ["build"]
 description = "Lint the code with Clippy"
 env = { RUST_BACKTRACE = '1' }
-run = "cargo clippy --workspace --all-targets"
+run = "cargo clippy --workspace --all-targets --all-features"
 
 [tasks.audit]
 wait_for = ["build", "lint", "test", "fmt-all", "check-bench"]
 description = "Audit Dependencies"
-run = [
-    "cargo deny check",
-    "cargo machete"
-]
+run = ["cargo deny check", "cargo machete"]
 
 [tasks.test]
 wait_for = ["build"]

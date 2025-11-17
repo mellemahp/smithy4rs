@@ -13,14 +13,16 @@ version.workspace = true
 
 [dependencies]
 smithy4rs-core.workspace = true
-# TODO: Eventually the smithy-core could re-export this
 indexmap.workspace = true
-
-# Used to serialize
-json.workspace = true
-# used to deserialize
-jiter.workspace = true
 thiserror.workspace = true
+itoa = "1.0"
+ryu = "1.0"
+jiter.workspace = true
+
+[dev-dependencies]
+smithy4rs-core-derive.workspace = true
+smithy4rs-test-utils = { path = "../test-utils" }
+indexmap = { workspace = true, features = ["serde"] }
 
 [lints]
 workspace = true

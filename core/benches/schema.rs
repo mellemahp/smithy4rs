@@ -1,10 +1,10 @@
-use std::{hint::black_box, sync::LazyLock};
+use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     lazy_schema,
     prelude::{HTTPChecksumRequiredTrait, HTTPQueryParamsTrait, HTTPQueryTrait},
-    schema::{Schema, SchemaRef, StaticTraitId},
+    schema::{Schema, StaticTraitId},
     traits,
 };
 

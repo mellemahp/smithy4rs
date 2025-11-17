@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{error::Error, sync::LazyLock};
+use std::error::Error;
 
 use indexmap::IndexMap;
 use thiserror::Error;
@@ -59,11 +59,6 @@ impl Document {
             DocumentValue::Null => 0,
             _ => 1,
         }
-    }
-
-    /// Converts a type into a document
-    pub fn from<V: Into<Document>>(value: V) -> Document {
-        value.into()
     }
 }
 
@@ -167,6 +162,12 @@ pub enum DocumentError {
     Default,
 }
 
+impl crate::serde::de::Error for DocumentError {
+    fn custom<T: std::fmt::Display>(msg: T) -> Self {
+        DocumentError::CustomError(msg.to_string())
+    }
+}
+
 /// Get the shape type of the Document
 ///
 /// If the Document is a member, then returns the type of the member target.
@@ -234,7 +235,10 @@ impl Document {
     /// Get the timestamp value of the Document if it is a timestamp.
     #[must_use]
     pub fn as_timestamp(&self) -> Option<&Instant> {
-        todo!()
+        match &self.value {
+            DocumentValue::Timestamp(t) => Some(t),
+            _ => None,
+        }
     }
 
     /// Get the byte value of the Document if it is a byte or can be converted into one.

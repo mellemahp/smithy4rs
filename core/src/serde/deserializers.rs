@@ -1,485 +1,451 @@
-// // #![allow(dead_code)]
-// //
-// // use crate::schema::documents::Document;
-// // use crate::schema::{Schema, SchemaRef};
-// // use bigdecimal::BigDecimal;
-// // use bytebuffer::ByteBuffer;
-// // use num_bigint::BigInt;
-// // use std::error::Error;
-// // use std::hash::Hash;
-// // use std::io::Read;
-// // use std::time::Instant;
-// // use indexmap::IndexMap;
-// // use crate::serde::builders::ShapeBuilder;
-// // use crate::serde::se::{Serializer};
-//
-//
-//
-// /// A shape that can be deserialized with a schema.
-// pub(crate) trait DeserializeWithSchema {
-//     fn deserialize_with_schema<D: Deserializer>(schema: &SchemaRef, deserializer: D) -> Self;
-// }
-//
-//
-// use std::fmt;
-// use bigdecimal::BigDecimal;
-// use num_bigint::BigInt;
-// use serde::de::{EnumAccess, Error, MapAccess, SeqAccess, Unexpected};
-// // TODO: Get member by schema?
-// use crate::schema::{SchemaRef, SchemaShape};
-// use crate::serde::se::Serialize;
-//
-// /// Smithy Deserializer
-// ///
-// /// NOTE: Based on `serde::Deserializer` to try to allow for compatibility.
-// pub trait Deserializer<'de>: Sized {
-//     /// The error type that can be returned if some error occurs during
-//     /// deserialization.
-//     type Error: Error;
-//
-//     /// Hint that the `Deserialize` type is expecting a `bool` value.
-//     fn deserialize_bool<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `byte` value.
-//     fn deserialize_byte<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `short` value.
-//     fn deserialize_short<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `integer` value.
-//     fn deserialize_integer<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `long` value.
-//     fn deserialize_long<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `float` value.
-//     fn deserialize_float<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `double` value.
-//     fn deserialize_double<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `BigInt` value.
-//     fn deserialize_big_integer<V: Visitor<'de>>(self, schema: &SchemaRef, value: &BigInt) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `BigDecimal` value.
-//     fn deserialize_big_decimal<V: Visitor<'de>>(
-//         self,
-//         schema: &SchemaRef,
-//         value: &BigDecimal,
-//     ) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `String` value.
-//     fn deserialize_string<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     // TODO: How to handle data streams?
-//     /// Hint that the `Deserialize` type is expecting a `blob` value.
-//     fn deserialize_blob<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `time` value.
-//     fn deserialize_timestamp<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a `document` value.
-//     fn deserialize_document<V: Visitor<'de>>(self, schema: &SchemaRef, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a map of key-value pairs.
-//     fn deserialize_map<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>;
-//
-//     /// Hint that the `Deserialize` type is expecting a struct with a particular
-//     /// name and fields.
-//     fn deserialize_struct<V: Visitor<'de>>(
-//         self,
-//         schema: &SchemaRef,
-//         visitor: V
-//     ) -> Result<V::Value, Self::Error>;
-// }
-//
-// pub trait Visitor<'de>: Sized {
-//     /// The value produced by this visitor.
-//     type Value;
-//
-//     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result;
-//
-//     fn visit_member<D: Deserializer>(
-//         self,
-//         member_schema: &SchemaRef,
-//         deserializer: D,
-//     ) -> Result<(), D::Error> {
-//         Err(Error::invalid_type(Unexpected::StructVariant, &format!("{:?}", member_schema)))
-//     }
-//
-//     /// The input contains a boolean.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_boolean<E>(self, v: bool) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Bool(v), &self))
-//     }
-//
-//     /// The input contains an `i8`.
-//     ///
-//     /// The default implementation forwards to [`visit_i64`].
-//     ///
-//     /// [`visit_i64`]: #method.visit_i64
-//     fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_i64(v as i64)
-//     }
-//
-//     /// The input contains an `i16`.
-//     ///
-//     /// The default implementation forwards to [`visit_i64`].
-//     ///
-//     /// [`visit_i64`]: #method.visit_i64
-//     fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_i64(v as i64)
-//     }
-//
-//     /// The input contains an `i32`.
-//     ///
-//     /// The default implementation forwards to [`visit_i64`].
-//     ///
-//     /// [`visit_i64`]: #method.visit_i64
-//     fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_i64(v as i64)
-//     }
-//
-//     /// The input contains an `i64`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Signed(v), &self))
-//     }
-//
-//     /// The input contains a `i128`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         let mut buf = [0u8; 58];
-//         let mut writer = crate::format::Buf::new(&mut buf);
-//         fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
-//         Err(Error::invalid_type(
-//             Unexpected::Other(writer.as_str()),
-//             &self,
-//         ))
-//     }
-//
-//     /// The input contains a `u8`.
-//     ///
-//     /// The default implementation forwards to [`visit_u64`].
-//     ///
-//     /// [`visit_u64`]: #method.visit_u64
-//     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_u64(v as u64)
-//     }
-//
-//     /// The input contains a `u16`.
-//     ///
-//     /// The default implementation forwards to [`visit_u64`].
-//     ///
-//     /// [`visit_u64`]: #method.visit_u64
-//     fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_u64(v as u64)
-//     }
-//
-//     /// The input contains a `u32`.
-//     ///
-//     /// The default implementation forwards to [`visit_u64`].
-//     ///
-//     /// [`visit_u64`]: #method.visit_u64
-//     fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_u64(v as u64)
-//     }
-//
-//     /// The input contains a `u64`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Unsigned(v), &self))
-//     }
-//
-//     /// The input contains a `u128`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         let mut buf = [0u8; 57];
-//         let mut writer = crate::Buf::new(&mut buf);
-//         fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
-//         Err(Error::invalid_type(
-//             Unexpected::Other(writer.as_str()),
-//             &self,
-//         ))
-//     }
-//
-//     /// The input contains an `f32`.
-//     ///
-//     /// The default implementation forwards to [`visit_f64`].
-//     ///
-//     /// [`visit_f64`]: #method.visit_f64
-//     fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_f64(v as f64)
-//     }
-//
-//     /// The input contains an `f64`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Float(v), &self))
-//     }
-//
-//     /// The input contains a `char`.
-//     ///
-//     /// The default implementation forwards to [`visit_str`] as a one-character
-//     /// string.
-//     ///
-//     /// [`visit_str`]: #method.visit_str
-//     #[inline]
-//     fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_str(v.encode_utf8(&mut [0u8; 4]))
-//     }
-//
-//     /// The input contains a string. The lifetime of the string is ephemeral and
-//     /// it may be destroyed after this method returns.
-//     ///
-//     /// This method allows the `Deserializer` to avoid a copy by retaining
-//     /// ownership of any buffered data. `Deserialize` implementations that do
-//     /// not benefit from taking ownership of `String` data should indicate that
-//     /// to the deserializer by using `Deserializer::deserialize_str` rather than
-//     /// `Deserializer::deserialize_string`.
-//     ///
-//     /// It is never correct to implement `visit_string` without implementing
-//     /// `visit_str`. Implement neither, both, or just `visit_str`.
-//     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Str(v), &self))
-//     }
-//
-//     /// The input contains a string that lives at least as long as the
-//     /// `Deserializer`.
-//     ///
-//     /// This enables zero-copy deserialization of strings in some formats. For
-//     /// example JSON input containing the JSON string `"borrowed"` can be
-//     /// deserialized with zero copying into a `&'a str` as long as the input
-//     /// data outlives `'a`.
-//     ///
-//     /// The default implementation forwards to `visit_str`.
-//     #[inline]
-//     fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_str(v)
-//     }
-//
-//     /// The input contains a string and ownership of the string is being given
-//     /// to the `Visitor`.
-//     ///
-//     /// This method allows the `Visitor` to avoid a copy by taking ownership of
-//     /// a string created by the `Deserializer`. `Deserialize` implementations
-//     /// that benefit from taking ownership of `String` data should indicate that
-//     /// to the deserializer by using `Deserializer::deserialize_string` rather
-//     /// than `Deserializer::deserialize_str`, although not every deserializer
-//     /// will honor such a request.
-//     ///
-//     /// It is never correct to implement `visit_string` without implementing
-//     /// `visit_str`. Implement neither, both, or just `visit_str`.
-//     ///
-//     /// The default implementation forwards to `visit_str` and then drops the
-//     /// `String`.
-//     #[inline]
-//     #[cfg(any(feature = "std", feature = "alloc"))]
-//     #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
-//     fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_str(&v)
-//     }
-//
-//     /// The input contains a byte array. The lifetime of the byte array is
-//     /// ephemeral and it may be destroyed after this method returns.
-//     ///
-//     /// This method allows the `Deserializer` to avoid a copy by retaining
-//     /// ownership of any buffered data. `Deserialize` implementations that do
-//     /// not benefit from taking ownership of `Vec<u8>` data should indicate that
-//     /// to the deserializer by using `Deserializer::deserialize_bytes` rather
-//     /// than `Deserializer::deserialize_byte_buf`.
-//     ///
-//     /// It is never correct to implement `visit_byte_buf` without implementing
-//     /// `visit_bytes`. Implement neither, both, or just `visit_bytes`.
-//     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Bytes(v), &self))
-//     }
-//
-//     /// The input contains a byte array that lives at least as long as the
-//     /// `Deserializer`.
-//     ///
-//     /// This enables zero-copy deserialization of bytes in some formats. For
-//     /// example Postcard data containing bytes can be deserialized with zero
-//     /// copying into a `&'a [u8]` as long as the input data outlives `'a`.
-//     ///
-//     /// The default implementation forwards to `visit_bytes`.
-//     #[inline]
-//     fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_bytes(v)
-//     }
-//
-//     /// The input contains a byte array and ownership of the byte array is being
-//     /// given to the `Visitor`.
-//     ///
-//     /// This method allows the `Visitor` to avoid a copy by taking ownership of
-//     /// a byte buffer created by the `Deserializer`. `Deserialize`
-//     /// implementations that benefit from taking ownership of `Vec<u8>` data
-//     /// should indicate that to the deserializer by using
-//     /// `Deserializer::deserialize_byte_buf` rather than
-//     /// `Deserializer::deserialize_bytes`, although not every deserializer will
-//     /// honor such a request.
-//     ///
-//     /// It is never correct to implement `visit_byte_buf` without implementing
-//     /// `visit_bytes`. Implement neither, both, or just `visit_bytes`.
-//     ///
-//     /// The default implementation forwards to `visit_bytes` and then drops the
-//     /// `Vec<u8>`.
-//     #[cfg(any(feature = "std", feature = "alloc"))]
-//     #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
-//     fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         self.visit_bytes(&v)
-//     }
-//
-//     /// The input contains an optional that is absent.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_none<E>(self) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Option, &self))
-//     }
-//
-//     /// The input contains an optional that is present.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         let _ = deserializer;
-//         Err(Error::invalid_type(Unexpected::Option, &self))
-//     }
-//
-//     /// The input contains a unit `()`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_unit<E>(self) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         Err(Error::invalid_type(Unexpected::Unit, &self))
-//     }
-//
-//     /// The input contains a newtype struct.
-//     ///
-//     /// The content of the newtype struct may be read from the given
-//     /// `Deserializer`.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         let _ = deserializer;
-//         Err(Error::invalid_type(Unexpected::NewtypeStruct, &self))
-//     }
-//
-//     /// The input contains a sequence of elements.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
-//     where
-//         A: SeqAccess<'de>,
-//     {
-//         let _ = seq;
-//         Err(Error::invalid_type(Unexpected::Seq, &self))
-//     }
-//
-//     /// The input contains a key-value map.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
-//     where
-//         A: MapAccess<'de>,
-//     {
-//         let _ = map;
-//         Err(Error::invalid_type(Unexpected::Map, &self))
-//     }
-//
-//     /// The input contains an enum.
-//     ///
-//     /// The default implementation fails with a type error.
-//     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
-//     where
-//         A: EnumAccess<'de>,
-//     {
-//         let _ = data;
-//         Err(Error::invalid_type(Unexpected::Enum, &self))
-//     }
-//
-//     // Used when deserializing a flattened Option field. Not public API.
-//     #[doc(hidden)]
-//     fn __private_visit_untagged_option<D>(self, _: D) -> Result<Self::Value, ()>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         Err(())
-//     }
-// }
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
+use std::{error::Error as StdError, fmt::Display};
+
+use indexmap::IndexMap;
+
+use crate::{
+    BigDecimal, BigInt, ByteBuffer, Instant,
+    schema::{Document, SchemaRef, SchemaShape, StaticSchemaShape},
+};
+
+// ============================================================================
+// Error Trait
+// ============================================================================
+
+/// Error trait for deserialization errors.
+pub trait Error: Sized + StdError {
+    /// Create a custom error message
+    fn custom<T: Display>(msg: T) -> Self;
+}
+
+// ============================================================================
+// Core Deserializer Trait
+// ============================================================================
+
+/// A **Deserializer** reads data from an input source, guided by Smithy schemas.
+///
+/// This trait mirrors the `Serializer` trait, providing schema-guided deserialization
+/// for all Smithy data types. It uses a consumer pattern for compound types (structs,
+/// lists, maps) where the deserializer iterates and "pushes" values to consumer functions.
+///
+/// The deserializer is stateful and methods take `&mut self` to advance through the input.
+pub trait Deserializer<'de>: Sized {
+    /// The error type that can be returned if deserialization fails.
+    type Error: Error;
+
+    // === Primitive deserialization ===
+
+    /// Read a boolean value
+    fn read_bool(&mut self, schema: &SchemaRef) -> Result<bool, Self::Error>;
+
+    /// Read a byte (i8)
+    fn read_byte(&mut self, schema: &SchemaRef) -> Result<i8, Self::Error>;
+
+    /// Read a short (i16)
+    fn read_short(&mut self, schema: &SchemaRef) -> Result<i16, Self::Error>;
+
+    /// Read an integer (i32)
+    fn read_integer(&mut self, schema: &SchemaRef) -> Result<i32, Self::Error>;
+
+    /// Read a long (i64)
+    fn read_long(&mut self, schema: &SchemaRef) -> Result<i64, Self::Error>;
+
+    /// Read a float (f32)
+    fn read_float(&mut self, schema: &SchemaRef) -> Result<f32, Self::Error>;
+
+    /// Read a double (f64)
+    fn read_double(&mut self, schema: &SchemaRef) -> Result<f64, Self::Error>;
+
+    /// Read a big integer
+    fn read_big_integer(&mut self, schema: &SchemaRef) -> Result<BigInt, Self::Error>;
+
+    /// Read a big decimal
+    fn read_big_decimal(&mut self, schema: &SchemaRef) -> Result<BigDecimal, Self::Error>;
+
+    /// Read a string
+    fn read_string(&mut self, schema: &SchemaRef) -> Result<String, Self::Error>;
+
+    /// Read a blob
+    fn read_blob(&mut self, schema: &SchemaRef) -> Result<ByteBuffer, Self::Error>;
+
+    /// Read a timestamp
+    fn read_timestamp(&mut self, schema: &SchemaRef) -> Result<Instant, Self::Error>;
+
+    /// Read a document
+    fn read_document(&mut self, schema: &SchemaRef) -> Result<Document, Self::Error>;
+
+    // === Compound types (consumer pattern) ===
+
+    /// Read a struct by calling a consumer function for each member.
+    ///
+    /// The deserializer iterates through struct members and calls the consumer
+    /// for each one. The consumer receives the builder, member schema, and a
+    /// mutable reference to the deserializer to read the member value.
+    ///
+    /// # Example (generated code)
+    ///
+    /// ```ignore
+    /// impl<'de> DeserializeWithSchema<'de> for CitySummary {
+    ///     fn deserialize<D: Deserializer<'de>>(
+    ///         schema: &SchemaRef,
+    ///         deserializer: &mut D
+    ///     ) -> Result<Self, D::Error> {
+    ///         let builder = Builder::new();
+    ///         let builder = deserializer.read_struct(schema, builder, |builder, member, de| {
+    ///             if member.member_index() == 0 {
+    ///                 return Ok(builder.city_id(de.read_string(member)?));
+    ///             }
+    ///             if member.member_index() == 1 {
+    ///                 return Ok(builder.name(de.read_string(member)?));
+    ///             }
+    ///             Ok(builder) // Unknown field
+    ///         })?;
+    ///         builder.build()
+    ///     }
+    /// }
+    /// ```
+    fn read_struct<B, F>(
+        &mut self,
+        schema: &SchemaRef,
+        builder: B,
+        consumer: F,
+    ) -> Result<B, Self::Error>
+    where
+        F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>;
+
+    /// Read a list by calling a consumer function for each element.
+    ///
+    /// The deserializer iterates through list elements and calls the consumer
+    /// for each one. The consumer receives the element schema and a mutable
+    /// reference to the deserializer to read the element value.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let mut vec = Vec::new();
+    /// deserializer.read_list(schema, &mut vec, |vec, element_schema, de| {
+    ///     let elem = T::deserialize(element_schema, de)?;
+    ///     vec.push(elem);
+    ///     Ok(())
+    /// })?;
+    /// ```
+    fn read_list<T, F>(
+        &mut self,
+        schema: &SchemaRef,
+        state: &mut T,
+        consumer: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>;
+
+    /// Read a map by calling a consumer function for each entry.
+    ///
+    /// The deserializer iterates through map entries and calls the consumer
+    /// for each one. The consumer receives the key (as a String) and a
+    /// mutable reference to the deserializer positioned at the value.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let mut map = IndexMap::new();
+    /// deserializer.read_map(schema, &mut map, |map, key, de| {
+    ///     let value = V::deserialize(value_schema, de)?;
+    ///     map.insert(key, value);
+    ///     Ok(())
+    /// })?;
+    /// ```
+    fn read_map<T, F>(
+        &mut self,
+        schema: &SchemaRef,
+        state: &mut T,
+        consumer: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnMut(&mut T, String, &mut Self) -> Result<(), Self::Error>;
+
+    // === Null handling ===
+
+    /// Check if the next value is null without consuming it.
+    fn is_null(&mut self) -> bool;
+
+    /// Read a null value.
+    fn read_null(&mut self) -> Result<(), Self::Error>;
+}
+
+pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
+    /// Deserialize a shape with its pre-defined schema
+    fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error>;
+}
+
+impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape<'de> for T {
+    fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error> {
+        Self::deserialize_with_schema(Self::schema(), deserializer)
+    }
+}
+
+// ============================================================================
+// DeserializeWithSchema Trait
+// ============================================================================
+
+/// A data structure that can be deserialized from any data format supported
+/// by smithy4rs, guided by a schema.
+///
+/// This trait mirrors `SerializeWithSchema` on the serialization side.
+pub trait DeserializeWithSchema<'de>: Sized {
+    /// Deserialize this value from the given deserializer using the provided schema.
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>;
+}
+
+// ============================================================================
+// Implementations for standard types
+// ============================================================================
+
+// === Primitives ===
+
+impl<'de> DeserializeWithSchema<'de> for bool {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_bool(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for i8 {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_byte(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for i16 {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_short(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for i32 {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_integer(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for i64 {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_long(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for f32 {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_float(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for f64 {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_double(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for BigInt {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_big_integer(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for BigDecimal {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_big_decimal(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for String {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_string(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for ByteBuffer {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_blob(schema)
+    }
+}
+
+impl<'de> DeserializeWithSchema<'de> for Instant {
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_timestamp(schema)
+    }
+}
+
+// === Vec<T> (list) ===
+
+impl<'de, T> DeserializeWithSchema<'de> for Vec<T>
+where
+    T: DeserializeWithSchema<'de>,
+{
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut vec = Vec::new();
+
+        // Get member schema for list elements
+        let member_schema = schema
+            .get_member("member")
+            .ok_or_else(|| Error::custom("list schema missing member"))?;
+
+        deserializer.read_list(schema, &mut vec, |vec, element_schema, de| {
+            let elem = T::deserialize_with_schema(element_schema, de)?;
+            vec.push(elem);
+            Ok(())
+        })?;
+
+        Ok(vec)
+    }
+}
+
+// === IndexMap<K, V> (map) ===
+
+impl<'de, V> DeserializeWithSchema<'de> for IndexMap<String, V>
+where
+    V: DeserializeWithSchema<'de>,
+{
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut map = IndexMap::new();
+
+        // Get value schema
+        let value_schema = schema
+            .get_member("value")
+            .ok_or_else(|| Error::custom("map schema missing value"))?;
+
+        deserializer.read_map(schema, &mut map, |map, key, de| {
+            let value = V::deserialize_with_schema(value_schema, de)?;
+            map.insert(key, value);
+            Ok(())
+        })?;
+
+        Ok(map)
+    }
+}
+
+// === Option<T> ===
+
+impl<'de, T> DeserializeWithSchema<'de> for Option<T>
+where
+    T: DeserializeWithSchema<'de>,
+{
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_null() {
+            deserializer.read_null()?;
+            Ok(None)
+        } else {
+            T::deserialize_with_schema(schema, deserializer).map(Some)
+        }
+    }
+}
+
+impl<'de, T> DeserializeWithSchema<'de> for Box<T>
+where
+    T: DeserializeWithSchema<'de>,
+{
+    fn deserialize_with_schema<D>(
+        schema: &SchemaRef,
+        deserializer: &mut D,
+    ) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize_with_schema(schema, deserializer).map(Box::new)
+    }
+}

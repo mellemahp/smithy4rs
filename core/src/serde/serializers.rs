@@ -15,13 +15,13 @@ use crate::{
 ///
 /// This trait provides an automatic, blanket implementation for all shapes
 /// with both a [`SchemaShape`], and [`SerializeWithSchema`] implementation.
-pub trait Serialize: SchemaShape + SerializeWithSchema {
+pub trait SerializableShape: SchemaShape + SerializeWithSchema {
     /// Serialize a shape with its pre-defined schema
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
 }
 
 // Blanket implementation of serialization for all Implement
-impl<T: SchemaShape + SerializeWithSchema> Serialize for T {
+impl<T: SchemaShape + SerializeWithSchema> SerializableShape for T {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.serialize_with_schema(self.schema(), serializer)
     }
@@ -108,6 +108,22 @@ pub trait StructSerializer {
     where
         T: ?Sized + SerializeWithSchema;
 
+    /// Serialize a member on the struct with a pre-known field name.
+    /// This is an optimization to avoid extracting the name from the schema.
+    #[inline]
+    fn serialize_member_named<T>(
+        &mut self,
+        member_name: &str,
+        member_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema,
+    {
+        // Default implementation falls back to regular serialize_member
+        self.serialize_member(member_schema, value)
+    }
+
     /// Serializes an optional member.
     ///
     /// This method will call [`StructSerializer::skip`] on any optional members
@@ -119,6 +135,22 @@ pub trait StructSerializer {
     ) -> Result<(), Self::Error> {
         if let Some(value) = value {
             self.serialize_member(member_schema, value)
+        } else {
+            self.skip_member(member_schema)
+        }
+    }
+
+    /// Serializes an optional member with a pre-known field name.
+    /// This is an optimization to avoid extracting the name from the schema.
+    #[inline]
+    fn serialize_optional_member_named<T: SerializeWithSchema>(
+        &mut self,
+        member_name: &str,
+        member_schema: &SchemaRef,
+        value: &Option<T>,
+    ) -> Result<(), Self::Error> {
+        if let Some(value) = value {
+            self.serialize_member_named(member_name, member_schema, value)
         } else {
             self.skip_member(member_schema)
         }
@@ -386,6 +418,16 @@ impl SerializeWithSchema for ByteBuffer {
     }
 }
 
+impl SerializeWithSchema for Instant {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.write_timestamp(schema, self)
+    }
+}
+
 impl SerializeWithSchema for String {
     fn serialize_with_schema<S: Serializer>(
         &self,
@@ -407,5 +449,15 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
         } else {
             serializer.skip(schema)
         }
+    }
+}
+
+impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        (**self).serialize_with_schema(schema, serializer)
     }
 }
