@@ -518,6 +518,6 @@ impl std::fmt::Write for StringWriter<'_> {
 }
 
 #[cfg(test)]
-mod tests {    
+mod tests {
     // TODO(test): Add comprehensive suite here
 }

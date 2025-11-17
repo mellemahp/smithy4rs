@@ -3,9 +3,10 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput, Type, parse_macro_input};
 
-// TODO: Enable feature to generate serde adapters
+// TODO: Enable feature to generate serde adapters (maybe not needed?)
 // TODO: Add some unit tests!
 // TODO: Make error handling use: `syn::Error::into_compile_error`
+// TODO(macro): Add debug impl using fmt serializer
 
 /// Derives `SchemaShape` for a struct, backed by a static schema (`StaticSchemaShape`)
 #[proc_macro_derive(SchemaShape, attributes(smithy_schema))]
@@ -67,7 +68,6 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
         FoundCrate::Name(name) => {
             let ident = Ident::new(name, Span::call_site());
             quote! {
-                // #[allow(unused_extern_crates, clippy::useless_attribute)]
                 extern crate #ident as _smithy4rs;
             }
         }
@@ -125,7 +125,6 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
         FoundCrate::Name(name) => {
             let ident = Ident::new(name, Span::call_site());
             quote! {
-                // #[allow(unused_extern_crates, clippy::useless_attribute)]
                 extern crate #ident as _smithy4rs;
             }
         }

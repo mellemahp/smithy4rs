@@ -88,7 +88,9 @@ where
     fn from(shape: T) -> Self {
         shape
             .serialize_with_schema(T::schema(), DocumentParser)
-            .expect("Infallible conversion from StaticSchemaShape to Document failed - this is a bug")
+            .expect(
+                "Infallible conversion from StaticSchemaShape to Document failed - this is a bug",
+            )
     }
 }
 

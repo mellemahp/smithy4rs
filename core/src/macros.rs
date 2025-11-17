@@ -65,7 +65,7 @@ macro_rules! lazy_schema {
         $builder:expr,
         $(($member_schema_name:ident, $member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
-        $crate::paste::paste! {
+        $crate::pastey::paste! {
             pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
                 $crate::LazyLock::new(|| std::sync::Arc::new($builder));
 
@@ -85,7 +85,7 @@ macro_rules! lazy_schema {
         $builder:expr,
         $(($member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
-        $crate::paste::paste! {
+        $crate::pastey::paste! {
             pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
                 $crate::LazyLock::new(|| std::sync::Arc::new($builder));
 

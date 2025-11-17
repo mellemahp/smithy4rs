@@ -22,7 +22,7 @@ jiter.workspace = true
 [dev-dependencies]
 smithy4rs-core-derive.workspace = true
 smithy4rs-test-utils = { path = "../test-utils" }
-indexmap = { version = "2.12.0", features = ["serde"] }
+indexmap = { workspace = true, features = ["serde"] }
 
 [lints]
 workspace = true

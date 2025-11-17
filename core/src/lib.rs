@@ -5,14 +5,14 @@ pub use schema::prelude;
 pub mod macros;
 pub mod serde;
 
-// =========== Common Types ==========
 use std::sync::Arc;
+// =========== Common Types ==========
 // Re-export for use in macros
 #[doc(hidden)]
 pub use std::sync::LazyLock;
 
 #[doc(hidden)]
-pub use paste;
+pub use pastey;
 
 /// Common cheaply-copyable reference type.
 /// Defined as a common type so Arc type could be swapped out.

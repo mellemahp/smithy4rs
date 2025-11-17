@@ -24,7 +24,6 @@ proc-macro-crate = "3.4.0"
 macrotest = "1.0"
 smithy4rs-core = { path = "../core" }
 smithy4rs-test-utils = { path = "../test-utils" }
-indexmap = "2.6"
 
 [lints]
 workspace = true
