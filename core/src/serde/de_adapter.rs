@@ -88,6 +88,7 @@ where
                     _phantom: PhantomData,
                 })
             }
+            // TODO(adapter): We probably need a primitiveVistor to handle root json primitives
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
                 get_shape_type(self.schema)
@@ -96,7 +97,7 @@ where
     }
 }
 
-// Visitor for lists - receives SeqAccess and creates adapter
+// Visitor for lists - receives a SeqAccess and creates adapter
 struct ListVisitor<'a, T> {
     schema: &'a SchemaRef,
     _phantom: PhantomData<T>,
@@ -557,8 +558,8 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use smithy4rs_core_derive::{DeserializableStruct, SchemaShape};
     use indexmap::IndexMap;
+    use smithy4rs_core_derive::{DeserializableStruct, SchemaShape};
 
     use crate::{
         lazy_schema,
@@ -697,165 +698,6 @@ mod tests {
         #[smithy_schema(PARENT_TAGS)]
         tags: Vec<String>,
     }
-
-    // TODO: This is a future API pattern using deserialize_field which doesn't exist yet
-    // Commenting out for now to focus on getting basic list deserialization working
-    /*
-    impl<'de> DeserializeWithSchema<'de> for ParentStruct {
-        fn deserialize_with_schema<D>(
-            schema: &SchemaRef,
-            deserializer: &mut D,
-        ) -> Result<Self, D::Error>
-        where
-            D: crate::serde::deserializers::Deserializer<'de>,
-        {
-            struct Builder {
-                name: Option<String>,
-                nested: Option<NestedStruct>,
-                optional_nested: Option<Option<NestedStruct>>,
-                tags: Option<Vec<String>>,
-            }
-
-            impl Builder {
-                fn new() -> Self {
-                    Self {
-                        name: None,
-                        nested: None,
-                        optional_nested: None,
-                        tags: None,
-                    }
-                }
-
-                fn name(mut self, value: String) -> Self {
-                    self.name = Some(value);
-                    self
-                }
-
-                fn nested(mut self, value: NestedStruct) -> Self {
-                    self.nested = Some(value);
-                    self
-                }
-
-                fn optional_nested(mut self, value: NestedStruct) -> Self {
-                    self.optional_nested = Some(Some(value));
-                    self
-                }
-
-                fn tags(mut self, value: Vec<String>) -> Self {
-                    self.tags = Some(value);
-                    self
-                }
-
-                fn build(self) -> Result<ParentStruct, String> {
-                    Ok(ParentStruct {
-                        name: self.name.ok_or_else(|| "name is required".to_string())?,
-                        nested: self
-                            .nested
-                            .ok_or_else(|| "nested is required".to_string())?,
-                        optional_nested: self.optional_nested.unwrap_or(None),
-                        tags: self.tags.ok_or_else(|| "tags is required".to_string())?,
-                    })
-                }
-            }
-
-            let builder = Builder::new();
-
-            // NEW PATTERN: Use deserialize_field for ALL field types (primitives AND nested structs AND lists)
-            let builder =
-                deserializer.read_struct(schema, builder, |builder, member_schema, de| {
-                    // Primitive field - use deserialize_field
-                    if std::sync::Arc::ptr_eq(member_schema, &PARENT_NAME) {
-                        let value = de.deserialize_field::<String>(member_schema)?;
-                        return Ok(builder.name(value));
-                    }
-
-                    // Nested struct field - ALSO use deserialize_field!
-                    if std::sync::Arc::ptr_eq(member_schema, &PARENT_NESTED) {
-                        let value = de.deserialize_field::<NestedStruct>(member_schema)?;
-                        return Ok(builder.nested(value));
-                    }
-
-                    // Optional nested struct - ALSO use deserialize_field!
-                    if std::sync::Arc::ptr_eq(member_schema, &PARENT_OPTIONAL_NESTED) {
-                        let value = de.deserialize_field::<Option<NestedStruct>>(member_schema)?;
-                        if let Some(v) = value {
-                            return Ok(builder.optional_nested(v));
-                        }
-                    }
-
-                    // List field - ALSO use deserialize_field!
-                    if std::sync::Arc::ptr_eq(member_schema, &PARENT_TAGS) {
-                        let value = de.deserialize_field::<Vec<String>>(member_schema)?;
-                        return Ok(builder.tags(value));
-                    }
-
-                    Ok(builder)
-                })?;
-
-            builder.build().map_err(DeserError::custom)
-        }
-    }
-    */
-
-    // TODO: Re-enable when ParentStruct has proper implementation
-    /*
-    impl<'de> serde::Deserialize<'de> for ParentStruct {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            let seed = SchemaSeed::<ParentStruct>::new(ParentStruct::schema());
-            seed.deserialize(deserializer)
-        }
-    }
-
-    #[test]
-    fn test_nested_struct() {
-        let json = r#"{
-            "name": "parent",
-            "nested": {
-                "field_a": "value_a",
-                "field_b": "value_b"
-            },
-            "optional_nested": {
-                "field_a": "optional_a",
-                "field_b": "optional_b"
-            },
-            "tags": ["tag1", "tag2", "tag3"]
-        }"#;
-
-        let result: ParentStruct = serde_json::from_str(json).unwrap();
-
-        assert_eq!(result.name, "parent");
-        assert_eq!(result.nested.field_a, "value_a");
-        assert_eq!(result.nested.field_b, "value_b");
-        assert!(result.optional_nested.is_some());
-        let optional = result.optional_nested.unwrap();
-        assert_eq!(optional.field_a, "optional_a");
-        assert_eq!(optional.field_b, "optional_b");
-        assert_eq!(result.tags, vec!["tag1", "tag2", "tag3"]);
-    }
-
-    #[test]
-    fn test_nested_struct_with_optional_none() {
-        let json = r#"{
-            "name": "parent",
-            "nested": {
-                "field_a": "value_a",
-                "field_b": "value_b"
-            },
-            "tags": ["tag1", "tag2"]
-        }"#;
-
-        let result: ParentStruct = serde_json::from_str(json).unwrap();
-
-        assert_eq!(result.name, "parent");
-        assert_eq!(result.nested.field_a, "value_a");
-        assert_eq!(result.nested.field_b, "value_b");
-        assert!(result.optional_nested.is_none());
-        assert_eq!(result.tags, vec!["tag1", "tag2"]);
-    }
-    */
 
     #[test]
     fn test_multiple_primitives() {
@@ -1162,10 +1004,7 @@ mod tests {
 
         // Verify nested contact
         assert_eq!(result.contact.email, "alice@example.com");
-        assert_eq!(
-            result.contact.phones,
-            vec!["+1-555-0100", "+1-555-0101"]
-        );
+        assert_eq!(result.contact.phones, vec!["+1-555-0100", "+1-555-0101"]);
 
         // Verify nested address
         assert_eq!(result.contact.address.street, "123 Main St");
@@ -1188,7 +1027,10 @@ mod tests {
 
         // Verify map
         assert_eq!(result.metadata.len(), 3);
-        assert_eq!(result.metadata.get("department"), Some(&"Engineering".to_string()));
+        assert_eq!(
+            result.metadata.get("department"),
+            Some(&"Engineering".to_string())
+        );
         assert_eq!(result.metadata.get("team"), Some(&"Backend".to_string()));
         assert_eq!(result.metadata.get("location"), Some(&"Remote".to_string()));
 
