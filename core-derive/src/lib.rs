@@ -432,17 +432,43 @@ fn deserialization_impl(
         });
 
     quote! {
+       // Builder implements DeserializeWithSchema
+        #[automatically_derived]
+        impl<'de> _DeserializeWithSchema<'de> for #builder_name {
+            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+            where
+                D: _Deserializer<'de>,
+            {
+                let builder = #builder_name::new();
+                deserializer.read_struct(schema, builder, |builder, member_schema, de| {
+                    #(#match_arms)*
+                    Ok(builder) // Unknown field
+                })
+            }
+        }
+
+        // Builder implements ShapeBuilder
+        #[automatically_derived]
+        impl<'de> #crate_ident::serde::ShapeBuilder<'de, #shape_name> for #builder_name {
+            type Error = String;
+
+            fn new() -> Self {
+                Self::new()
+            }
+
+            fn build(self) -> Result<#shape_name, Self::Error> {
+                self.build()
+            }
+        }
+
+        // Shape implements DeserializeWithSchema by delegating to builder
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
             fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
-                let builder = #builder_name::new();
-                let builder = deserializer.read_struct(schema, builder, |builder, member_schema, de| {
-                    #(#match_arms)*
-                    Ok(builder) // Unknown field
-                })?;
+                let builder = #builder_name::deserialize_with_schema(schema, deserializer)?;
                 builder.build().map_err(_Error::custom)
             }
         }

@@ -3,8 +3,9 @@ pub mod deserializers;
 pub mod documents;
 mod fmt;
 pub mod serializers;
-mod shapes;
+pub mod shapes;
 pub mod validation;
 
 pub use deserializers as de;
 pub use serializers as se;
+pub use shapes::{Buildable, ShapeBuilder};
