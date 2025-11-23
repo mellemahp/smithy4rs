@@ -95,7 +95,7 @@ const _: () = {
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _Error;
     #[automatically_derived]
-    impl<'de> _DeserializeWithSchema<'de> for SimpleStruct {
+    impl<'de> _DeserializeWithSchema<'de> for SimpleStructBuilder {
         fn deserialize_with_schema<D>(
             schema: &_SchemaRef,
             deserializer: &mut D,
@@ -104,7 +104,7 @@ const _: () = {
             D: _Deserializer<'de>,
         {
             let builder = SimpleStructBuilder::new();
-            let builder = deserializer
+            deserializer
                 .read_struct(
                     schema,
                     builder,
@@ -125,7 +125,33 @@ const _: () = {
                         }
                         Ok(builder)
                     },
-                )?;
+                )
+        }
+    }
+    #[automatically_derived]
+    impl<'de> _smithy4rs::serde::ShapeBuilder<'de, SimpleStruct>
+    for SimpleStructBuilder {
+        type Error = String;
+        fn new() -> Self {
+            Self::new()
+        }
+        fn build(self) -> Result<SimpleStruct, Self::Error> {
+            self.build()
+        }
+    }
+    #[automatically_derived]
+    impl<'de> _DeserializeWithSchema<'de> for SimpleStruct {
+        fn deserialize_with_schema<D>(
+            schema: &_SchemaRef,
+            deserializer: &mut D,
+        ) -> Result<Self, D::Error>
+        where
+            D: _Deserializer<'de>,
+        {
+            let builder = SimpleStructBuilder::deserialize_with_schema(
+                schema,
+                deserializer,
+            )?;
             builder.build().map_err(_Error::custom)
         }
     }
