@@ -8,8 +8,6 @@ use crate::schema::{SchemaRef, ShapeType};
 // ERRORS
 //////////////////////////////////////////////////////////////////////////////
 
-
-
 /// Aggregated list of all validation errors encountered while building a shape.
 ///
 /// When executing validation of a Builder, more than one field could be invalid.
