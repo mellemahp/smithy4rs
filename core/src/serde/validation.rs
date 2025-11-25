@@ -1,12 +1,16 @@
+use std::alloc::System;
+use std::collections::{BTreeMap, HashSet};
 use std::error::Error;
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use bigdecimal::{BigDecimal, Zero};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
+use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 use thiserror::Error;
 use crate::schema::{Document, DocumentValue, SchemaRef, ShapeType};
 use crate::Instant;
-use crate::prelude::{LengthTrait, PatternTrait};
+use crate::prelude::{LengthTrait, PatternTrait, UniqueItemsTrait};
 
 //////////////////////////////////////////////////////////////////////////////
 // Traits
@@ -44,11 +48,14 @@ use crate::prelude::{LengthTrait, PatternTrait};
 /// IMPL NOTE: Implementations must still return a default value even if the
 /// required value is missing. Otherwise, we would be unable to accumulate values
 /// from nested shapes with required fields.
-pub fn validate_required<S: Validator, V: Validate>(
+pub fn validate_required<S: Validator, V: Validate>
+(
     mut validator: S,
     schema: &SchemaRef,
     value: Option<V>,
-) -> Result<V::Value, ValidationErrors> {
+) -> Result<V::Value, ValidationErrors>
+where V::Value: ErrorCorrection
+{
     if let Some(v) = value {
         v.validate(schema, validator)
     } else {
@@ -80,20 +87,20 @@ pub fn validate_optional<S: Validator, V: Validate>(
 /// NOTE: Smithy error correction is not implemented directly.
 pub trait Validator {
     /// Validates list items
-    // type ItemValidator: ListValidator;
-    //
+    type ItemValidator: ListValidator;
+
     // /// Validates map entries
     // type EntryValidator: MapValidator;
 
     /// Validates structure builders
     // type BuilderValidator: Validator;
 
-    // fn validate_list(
-    //     self,
-    //     schema: &SchemaRef,
-    //     size: usize,
-    // ) -> Result<Self::ItemValidator, ValidationErrors>;
-    //
+    fn validate_list(
+        self,
+        schema: &SchemaRef,
+        size: usize,
+    ) -> Result<Self::ItemValidator, ValidationErrors>;
+
     // fn validate_map(
     //     self,
     //     schema: &SchemaRef,
@@ -118,7 +125,6 @@ pub trait Validator {
     /// existing validation errors list plus an extra appended error
     /// to indicate the error limit was reached.
     fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors>;
-
 
     /// Return all collected validation errors
     ///
@@ -223,30 +229,30 @@ pub trait Validator {
 
 }
 
+/// List Serializer that can be called in a loop to serialize list values
+pub trait ListValidator {
+    /// Validate a sequence element in place.
+    ///
+    /// Values must be hashable so that unique items can be tracked.
+    fn validate_in_place<T>(
+        &mut self,
+        element_schema: &SchemaRef,
+        value: &T,
+    ) -> Result<(), ValidationErrors>
+    where
+        for<'a> &'a T: Validate,
+        T: Hash;
 
-// /// List Serializer that can be called in a loop to serialize list values
-// pub trait ListValidator {
-//     type Value;
-//
-//     /// Validate a sequence element in place.
-//     fn validate_in_place<T>(
-//         &mut self,
-//         element_schema: &SchemaRef,
-//         value: &T,
-//     ) -> Result<(), ValidationErrors>
-//     where
-//         T: ?Sized + Validate;
-//
-//     /// Validates and moves an element
-//     /// NOTE: This is primarily intended to support builder conversions
-//     fn validate_and_move<T>(
-//         &mut self,
-//         element_schema: &SchemaRef,
-//         value: T
-//     ) -> Result<T::Value, ValidationErrors>
-//     where
-//         T: ?Sized + Validate;
-// }
+    /// Validates and moves an element
+    /// NOTE: This is primarily intended to support builder conversions
+    fn validate_and_move<T>(
+        &mut self,
+        element_schema: &SchemaRef,
+        value: T
+    ) -> Result<T::Value, ValidationErrors>
+    where
+        T: Validate;
+}
 
 // trait MapValidator {
 //     /// Validate a single map entry
@@ -279,7 +285,7 @@ pub trait Validator {
 /// default value through error correction.
 pub trait Validate {
     /// Output type
-    type Value: ErrorCorrection;
+    type Value;
 
     /// Validate a shape given its schema and a validator.
     ///
@@ -348,6 +354,37 @@ impl Validate for String {
         validator: V
     ) -> Result<Self::Value, ValidationErrors> {
         validator.validate_string(schema, &self)?;
+        Ok(self)
+    }
+}
+
+impl Validate for &String {
+    type Value = Self;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V
+    ) -> Result<Self::Value, ValidationErrors> {
+        validator.validate_string(schema, &self)?;
+        Ok(self)
+    }
+}
+
+impl Validate for Vec<String> {
+    type Value = Self;
+
+    fn validate<V: Validator>(
+        self,
+        schema: &SchemaRef,
+        validator: V
+    ) -> Result<Self::Value, ValidationErrors> {
+        let mut list = validator.validate_list(schema, self.len())?;
+        // TODO(errors): Should this short circuit to a validation error?
+        let member_schema = schema.expect_member("member");
+        for item in &self {
+            list.validate_in_place(member_schema, item)?;
+        }
         Ok(self)
     }
 }
@@ -447,7 +484,34 @@ impl DefaultValidator {
         }
     }
 }
-impl Validator for &mut DefaultValidator {
+impl <'a> Validator for &'a mut DefaultValidator {
+    type ItemValidator = DefaultListValidator<'a>;
+
+    fn validate_list(
+        mut self,
+        schema: &SchemaRef,
+        size: usize
+    ) -> Result<Self::ItemValidator, ValidationErrors> {
+        // Short circuit if the list is larger than the allowed depth.
+        // TODO(extensibility): Make this separately configurable property?
+        if size > self.max_depth {
+            self.emit_error(schema, ValidationFailure::ListTooLarge(self.max_depth))?;
+            return Err(self.errors.take().unwrap());
+        }
+
+        // Check that list does not exceed length constraint
+        if let Some(length) = schema.get_trait_as::<LengthTrait>() {
+            if size < length.min() || size > length.max() {
+                self.emit_error(schema, SmithyConstraints::Length(size, length.min(), length.max()))?;
+            }
+        }
+        Ok(DefaultListValidator {
+            root: self,
+            unique: schema.contains_type::<UniqueItemsTrait>(),
+            lookup: UniqueTracker::new()
+        })
+    }
+
     fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
         let errors = self.errors.get_or_insert(ValidationErrors::new());
         errors.add(path, err);
@@ -472,7 +536,7 @@ impl Validator for &mut DefaultValidator {
             self.emit_error(schema, ValidationFailure::InvalidType(schema.shape_type().clone(), ShapeType::String))?;
         }
 
-        // TODO: Move into a "ValidationRule"
+        // TODO(extensibility): Move into a "ValidationRule"?
         // Check pattern
         if let Some(pattern) = schema.get_trait_as::<PatternTrait>() {
             match pattern.pattern().find(value) {
@@ -493,6 +557,50 @@ impl Validator for &mut DefaultValidator {
 
     fn validate_integer(&mut self, _schema: &SchemaRef, _value: &i32) -> Result<(), ValidationErrors> {
         todo!()
+    }
+}
+
+pub struct DefaultListValidator<'a> {
+    root: &'a mut DefaultValidator,
+    unique: bool,
+    lookup: UniqueTracker
+}
+impl ListValidator for DefaultListValidator<'_> {
+    fn validate_in_place<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), ValidationErrors>
+    where
+        for<'a> &'a T: Validate,
+        T: Hash
+    {
+        if self.unique && self.lookup.add(value) {
+            self.root.emit_error(element_schema, SmithyConstraints::UniqueItems)?;
+        }
+        let _ = value.validate(element_schema, &mut *self.root)?;
+        Ok(())
+    }
+
+    fn validate_and_move<T>(&mut self, element_schema: &SchemaRef, value: T) -> Result<T::Value, ValidationErrors>
+    where
+        T: Validate
+    {
+        todo!()
+    }
+}
+
+/// Tracker for unique items using a hash lookup directly
+struct UniqueTracker {
+    lookup: BTreeMap<u64, ()>,
+}
+impl UniqueTracker {
+    fn new() -> Self {
+        UniqueTracker {
+            lookup: BTreeMap::new()
+        }
+    }
+
+    fn add<T: Hash>(&mut self, value: T) -> bool {
+        let mut hasher = FxHasher::default();
+        value.hash(&mut hasher);
+        self.lookup.insert(hasher.finish(), ()).is_some()
     }
 }
 
@@ -545,10 +653,6 @@ impl ValidationErrors {
         self.errors.push(ValidationErrorWrapper::new(path.clone(), error.into()));
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.errors.is_empty()
-    }
-
     pub fn len(&self) -> usize {
         self.errors.len()
     }
@@ -567,7 +671,7 @@ impl ValidationErrorWrapper {
 }
 impl Display for ValidationErrorWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}:{:#?}", self.path.id(), self.error)
+        write!(f, "{:?}:{:?}", self.path.id().name(), self.error)
     }
 }
 
@@ -576,6 +680,7 @@ pub trait ValidationError: Error {}
 
 // Implement conversion for any Error enums implementing Validation error
 impl <T: ValidationError + 'static> From<T> for Box<dyn ValidationError> {
+    #[inline]
     fn from(value: T) -> Self {
         Box::new(value)
     }
@@ -598,12 +703,14 @@ pub enum ValidationFailure {
     MaximumDepthExceeded(usize),
     #[error("Maximum Number of errors ({0}) reached")]
     MaxErrorsReached(usize),
+    #[error("List exceeds maximum validation size ({0})")]
+    ListTooLarge(usize),
     #[error("Unsupported validation operation.")]
     Unsupported,
 }
 impl ValidationError for ValidationFailure {}
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum SmithyConstraints {
     /// [@required](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-required-trait)
     #[error("Field is Required.")]
@@ -612,7 +719,7 @@ pub enum SmithyConstraints {
     #[error("Size: {0} does not conform to @length constraint. Expected between {1} and {2}.")]
     Length(usize, usize, usize),
     /// [@pattern](https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait)
-    #[error("Value {0} did not conform to expected pattern {1}")]
+    #[error("Value `{0}` did not conform to expected pattern `{1}`")]
     Pattern(String, String),
     /// [@range](https://smithy.io/2.0/spec/constraint-traits.html#range-trait)
     #[error("Size: {0} does not conform to @range constraint. Expected between {1} and {2}.")]
@@ -627,6 +734,7 @@ impl ValidationError for SmithyConstraints {}
 #[cfg(test)]
 mod tests {
     use std::sync::LazyLock;
+    use crate::{lazy_schema, traits};
     use crate::prelude::{INTEGER, STRING};
     use crate::schema::{Schema, ShapeId};
     use crate::serde::de::Deserializer;
@@ -645,32 +753,35 @@ mod tests {
         assert_eq!(&errors.errors[2].error.to_string(), "Field is Required.");
     }
 
+    static LIST_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#List"), traits![LengthTrait::builder().max(3).build(), UniqueItemsTrait])
+            .put_member("member", &STRING, traits![LengthTrait::builder().max(4).build()])
+            .build()
+    });
+
     static VALIDATION_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
-            .put_member("field_a", &STRING, Vec::new())
+            .put_member("field_a", &STRING, traits![PatternTrait::new("^[a-zA-Z]*$")])
             .put_member("field_b", &INTEGER, Vec::new())
+            .put_member("field_list", &LIST_SCHEMA, Vec::new())
             .build()
     });
     static FIELD_A: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_a"));
     static FIELD_B: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_b"));
+    static FIELD_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_list"));
 
     pub struct SimpleStruct {
         field_a: String,
-        field_b: Option<i32>
+        field_b: Option<i32>,
+        field_list: Option<Vec<String>>
     }
 
     pub struct SimpleStructBuilder {
         field_a: Option<String>,
         field_b: Option<i32>,
+        field_list: Option<Vec<String>>
     }
     impl SimpleStructBuilder {
-        pub fn new() -> Self {
-            Self {
-                field_a: None,
-                field_b: None,
-            }
-        }
-
         pub fn field_a(mut self, value: String) -> Self {
             self.field_a = Some(value);
             self
@@ -680,6 +791,11 @@ mod tests {
             self.field_b = Some(value);
             self
         }
+
+        pub fn field_list(mut self, value: Vec<String>) -> Self {
+            self.field_list = Some(value);
+            self
+        }
     }
 
     impl <'de> ShapeBuilder<'de, SimpleStruct> for SimpleStructBuilder {
@@ -687,6 +803,7 @@ mod tests {
             Self {
                 field_a: None,
                 field_b: None,
+                field_list: None
             }
         }
 
@@ -695,7 +812,8 @@ mod tests {
         {
             let result = SimpleStruct {
                 field_a: validate_required(&mut validator, &FIELD_A, self.field_a)?,
-                field_b: validate_optional(&mut validator, &FIELD_B, self.field_b)?
+                field_b: validate_optional(&mut validator, &FIELD_B, self.field_b)?,
+                field_list: validate_optional(&mut validator, &FIELD_LIST, self.field_list)?
             };
             validator.results()?;
             Ok(result)
@@ -711,9 +829,58 @@ mod tests {
     }
 
     #[test]
-    fn required_string_field_is_validated() {
+    fn builds_if_no_errors() {
+        let output = SimpleStructBuilder::new()
+            .field_a("fieldA".to_string())
+            .build()
+            .expect("Failed to build SimpleStruct");
+        assert_eq!(output.field_a, "fieldA".to_string());
+    }
+
+    #[test]
+    fn required_field_is_validated() {
         let builder = SimpleStructBuilder::new();
-        // EXPECTED TO IMPLODE!
-        let output = builder.build().unwrap();
+        let Err(err) = builder.build() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 1);
+        let error_wrapper = err.errors.iter().next().unwrap();
+        assert_eq!(error_wrapper.path, **FIELD_A);
+        assert_eq!(error_wrapper.error.to_string(), "Field is Required.".to_string());
+    }
+
+    #[test]
+    fn basic_string_validations_are_performed() {
+        let builder = SimpleStructBuilder::new();
+        let inner_vec = vec!["too long of a string".to_string()];
+        let Some(err) = builder.field_list(inner_vec).field_a("field-a".to_string()).build().err() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 2);
+        let error_pattern = err.errors.get(0).unwrap();
+        let error_length = err.errors.get(1).unwrap();
+        assert_eq!(error_pattern.path, **FIELD_A);
+        assert_eq!(error_pattern.error.to_string(), "Value `field-a` did not conform to expected pattern `^[a-zA-Z]*$`".to_string());
+
+        assert_eq!(error_length.path, *LIST_SCHEMA.expect_member("member"));
+        assert_eq!(error_length.error.to_string(), "Size: 20 does not conform to @length constraint. Expected between 0 and 4.".to_string());
+    }
+
+    #[test]
+    fn list_constraints_checked() {
+        let builder = SimpleStructBuilder::new();
+        let inner_vec = vec!["a".to_string(), "b".to_string(), "c".to_string(), "a".to_string(), "d".to_string()];
+        let Some(err) = builder.field_list(inner_vec).field_a("fieldA".to_string()).build().err() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 2);
+        let error_length = err.errors.get(0).unwrap();
+        let error_unique = err.errors.get(1).unwrap();
+
+        assert_eq!(error_length.path, **FIELD_LIST);
+        assert_eq!(error_length.error.to_string(), "Size: 5 does not conform to @length constraint. Expected between 0 and 3.".to_string());
+
+        assert_eq!(error_unique.path, *LIST_SCHEMA.expect_member("member"));
+        assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
     }
 }
