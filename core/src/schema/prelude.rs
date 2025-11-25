@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 
 use std::fmt::Display;
-
+use bigdecimal::Zero;
 use indexmap::IndexMap;
 use regex::Regex;
 
 use crate::{
+    BigDecimal, LazyLock,
     annotation_trait,
     schema::{DocumentValue, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId},
     smithy, static_trait_id, string_trait,
@@ -168,21 +169,26 @@ smithy_trait_impl!(HTTPErrorTrait);
 /////////////////////////////////////////////////
 #[derive(Debug)]
 pub struct RangeTrait {
-    min: Option<usize>,
-    max: Option<usize>,
+    min: Option<BigDecimal>,
+    max: Option<BigDecimal>,
     value: DocumentValue,
 }
 static_trait_id!(RangeTrait, "smithy.api#range");
 smithy_trait_impl!(RangeTrait);
 
-/// Builder for the [`RangeTrait`]
+
+static ZERO: LazyLock<BigDecimal> = LazyLock::new(BigDecimal::zero);
+static MAX: LazyLock<BigDecimal> = LazyLock::new(|| BigDecimal::from(u64::MAX));
+
 impl RangeTrait {
-    pub fn min(&self) -> &Option<usize> {
-        &self.min
+    #[inline]
+    pub fn min(&self) -> &BigDecimal {
+        self.min.as_ref().unwrap_or_else(|| &ZERO)
     }
 
-    pub fn max(&self) -> &Option<usize> {
-        &self.max
+    #[inline]
+    pub fn max(&self) -> &BigDecimal {
+        self.max.as_ref().unwrap_or_else(|| &MAX)
     }
 
     #[must_use]
@@ -191,10 +197,11 @@ impl RangeTrait {
     }
 }
 
+/// Builder for the [`RangeTrait`]
 #[derive(Debug)]
 pub struct RangeTraitBuilder {
-    min: Option<usize>,
-    max: Option<usize>,
+    min: Option<BigDecimal>,
+    max: Option<BigDecimal>,
 }
 impl RangeTraitBuilder {
     pub(super) const fn new() -> Self {
@@ -204,23 +211,23 @@ impl RangeTraitBuilder {
         }
     }
 
-    pub fn min(mut self, min: usize) -> Self {
+    pub fn min(mut self, min: BigDecimal) -> Self {
         self.min = Some(min);
         self
     }
 
-    pub fn max(mut self, max: usize) -> Self {
+    pub fn max(mut self, max: BigDecimal) -> Self {
         self.max = Some(max);
         self
     }
 
     pub fn build(self) -> RangeTrait {
         let mut value_map = IndexMap::new();
-        if let Some(min) = self.min {
-            value_map.insert("min".to_string(), (min as i32).into());
+        if let Some(min) = &self.min {
+            value_map.insert("min".to_string(), min.clone().into());
         }
-        if let Some(max) = self.max {
-            value_map.insert("min".to_string(), (max as i32).into());
+        if let Some(max) = &self.max {
+            value_map.insert("min".to_string(), max.clone().into());
         }
         RangeTrait {
             min: self.min,
@@ -240,12 +247,12 @@ static_trait_id!(LengthTrait, "smithy.api#length");
 smithy_trait_impl!(LengthTrait);
 
 impl LengthTrait {
-    pub fn min(&self) -> &Option<usize> {
-        &self.min
+    pub fn min(&self) -> usize {
+        self.min.unwrap_or(0)
     }
 
-    pub fn max(&self) -> &Option<usize> {
-        &self.max
+    pub fn max(&self) -> usize {
+        self.max.unwrap_or(usize::MAX)
     }
 
     #[must_use]
