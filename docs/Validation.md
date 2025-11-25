@@ -51,48 +51,91 @@ More nesting than that is unlikely to be necesssary.
  clearly understand _where_ in the request/response pipeline an error occured.
 
  Ok... more examples. As with Smithy-java we want to be able to
- ```rust,ignore
+ ```rust
  use std::fmt::Error;
  use smithy4rs_core::errors;
  use smithy4rs_core::schema::SchemaRef;
  use smithy4rs_core::serde::validation::*;
 
-  /// Example type
- struct Test {
-     a: Option<String>,
-     nest: Nested
- }
-
- struct TestBuilder {
-     a: Option<String>,
-     b: Option<Nested>
- }
-
- struct Nested {
-     c: String
- }
-
- struct NestedBuilder {
-     c: Option<String>
- }
- static MEMBER_A: &SchemaRef = todo!();
- static MEMBER_B: &SchemaRef = todo!();
- /// NOTE: Consumes self
- impl TestBuilder {
- fn build_impl(self, validator: &mut impl Validator) -> Result<Self, ValidationErrors> {
-     let errors = ValidationErrors::new();
-     let value = Self {
-         a: validator.validate_optional_and_extend(&MEMBER_A, self.a, errors).map_err(errors::extend),
-         b: validator.validate_required_and_extend(&MEMBER_B, self.b).map_err(errors::extend)
-     };
-     if errors.is_empty() {
-         Ok(value)
-     } else {
-         Err(errors)
-     }
-  }
- }
+pub struct SimpleStructBuilder {
+    // This field is required.
+    field_a: Option<String>,
+    field_b: Option<i32>,
+}
+impl SimpleStructBuilder {
+    pub fn new() -> Self {
+        Self {
+            field_a: None,
+            field_b: None,
+        }
+    }
+    pub fn field_a(mut self, value: String) -> Self {
+        self.field_a = Some(value);
+        self
+    }
+    pub fn field_b(mut self, value: i32) -> Self {
+        self.field_b = Some(value);
+        self
+    }
+    pub fn build(self) -> Result<SimpleStruct, ValidationErrors> {
+        let validator = MyValidator::new();
+        let instance = Example {
+            field_a: validator.validate_required(self.field_a)?, // -> Returns a string even if no string present.
+            field_b: validate.validate_optional(field_b)?,
+        };
+        // If the validator encountered any errors, raise those.
+        validator.results()?;
+        instance
+    }
+}
  ```
 
-### A note on defaults
+The validator here _consumes_ the builder fields and returns an owned value. 
+If the field is required and the builder does not have a value set for that field we still return 
+a default value (`""`) from the `validate_required` method so that we can aggregate _all_ validation 
+errors for a stucture. Consider, for example, the line with `field_b`. How would we validate that 
+as well as `field_a` if `field_a` couldn't be set?
+
+
+## Discussion
+### Nested Shapes in builders
+When constructing a shape with a nested shape member, a user should be able to pass in an already-constructed
+shape as the input: 
+
+```rust
+fn example() {
+    let nested = Nested::builder().field_a("A string field").build()?; // Raise any errors
+    let myShape = MyShape::builder().nested(nested).build()?;
+}
+```
+
+
+## What if two different validators are used?
+What happens though if the `myShape` builder uses a _different_ validator? For example: 
+```rust
+fn example() {
+    let nested = Nested::builder().field_a("A string field").build()?; // Raise any errors
+    let myShape = MyShape::builder().nested(nested).build<MyCustomValidator>()?;
+}
+```
+
+With the new constraints of the `MyCustomValidator`, the nested shape may no longer be considered valid!
+
+We will not try to solve this generally as this is a pretty niche use case. Instead, to support this 
+users can manually use the `Into<BuilderType>` implementation that will be generated for 
+all `Buildable` shapes. The `Into` implementation is also just generally useful for updating/modifying Shapes.
+
+## Okay, but doest that mean that we need to support both builders and built shapes?
+Yeah
+
+## List assembly?
+How will we allow users to build vectors of shapes?
+
+## In-place validation
+Consider, for a moment, the case of a list of integers.
+
+
+
+
+
 

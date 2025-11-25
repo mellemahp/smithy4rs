@@ -307,10 +307,8 @@ where
     ) -> Result<S::Ok, S::Error> {
         let mut map = serializer.write_map(schema, self.len())?;
         // TODO: is there a more efficient way to store/get these schemas?
-        let key_schema = schema.get_member("key").expect("Should have key schema");
-        let value_schema = schema
-            .get_member("value")
-            .expect("Should have value schema");
+        let key_schema = schema.expect_member("key");
+        let value_schema = schema.expect_member("value");
         for (k, v) in self {
             map.serialize_entry(key_schema, value_schema, k, v)?;
         }
