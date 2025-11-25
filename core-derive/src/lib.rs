@@ -139,7 +139,10 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
         use #crate_ident::serde::deserializers::Error as _Error;
     };
 
+    // TODO: Correct this a bit
     quote! {
+        use #crate_ident::serde::validate::ValidationErrors as _ValidationErrors;
+
         // Builder is generated outside the const block to make it publicly accessible
         #builder
 
@@ -370,7 +373,7 @@ fn builder_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
 
             #(#setters)*
 
-            pub fn build(self) -> Result<#shape_name, String> {
+            pub fn build(self) -> Result<#shape_name, _ValidationErrors> {
                 Ok(#shape_name {
                     #(#build_fields,)*
                 })
@@ -450,13 +453,11 @@ fn deserialization_impl(
         // Builder implements ShapeBuilder
         #[automatically_derived]
         impl<'de> #crate_ident::serde::ShapeBuilder<'de, #shape_name> for #builder_name {
-            type Error = String;
-
             fn new() -> Self {
                 Self::new()
             }
 
-            fn build(self) -> Result<#shape_name, Self::Error> {
+            fn build(self) -> Result<#shape_name, #crate_ident::serde::validate::ValidationErrors> {
                 self.build()
             }
         }
@@ -469,7 +470,7 @@ fn deserialization_impl(
                 D: _Deserializer<'de>,
             {
                 let builder = #builder_name::deserialize_with_schema(schema, deserializer)?;
-                builder.build().map_err(_Error::custom)
+                todo!()
             }
         }
     }

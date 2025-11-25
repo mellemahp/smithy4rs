@@ -30,9 +30,55 @@ use crate::prelude::{LengthTrait, PatternTrait};
 //     };
 // }
 
+
+/// Validates a required field, returning a non-optional value.
+///
+/// By default, on a missing value a [`SmithyConstraints::Required`] validation
+/// error is emitted.
+///
+/// Validation errors are _only_ raised from this method if the validator hits
+/// a max depth or maximum number of errors. This allows the validator to short-circuit
+/// in those cases. Otherwise, users should use the [`results()?`] method to raise any
+/// validation errors _after_ all fields have been validated.
+///
+/// IMPL NOTE: Implementations must still return a default value even if the
+/// required value is missing. Otherwise, we would be unable to accumulate values
+/// from nested shapes with required fields.
+pub fn validate_required<S: Validator, V: Validate>(
+    mut validator: S,
+    schema: &SchemaRef,
+    value: Option<V>,
+) -> Result<V::Value, ValidationErrors> {
+    if let Some(v) = value {
+        v.validate(schema, validator)
+    } else {
+        validator.emit_error(schema, SmithyConstraints::Required)?;
+        Ok(V::Value::default(schema))
+    }
+}
+
+/// Validate an optional Field
+///
+/// Validation errors are _only_ raised from this method if the validator hits
+/// a max depth or maximum number of errors. This allows the validator to short-circuit
+/// in those cases. Otherwise, users should use the [`results()?`] method to raise any
+/// validation errors _after_ all fields have been validated.
+pub fn validate_optional<S: Validator, V: Validate>(
+    validator: S,
+    schema: &SchemaRef,
+    value: Option<V>,
+) -> Result<Option<V::Value>, ValidationErrors> {
+    if let Some(v) = value {
+        let result = v.validate(schema, validator)?;
+        Ok(Some(result))
+    } else {
+        Ok(None)
+    }
+}
+
 // TODO: Update docs to be a bit less clunky
 /// NOTE: Smithy error correction is not implemented directly.
-pub trait Validator: Sized {
+pub trait Validator {
     /// Validates list items
     // type ItemValidator: ListValidator;
     //
@@ -41,64 +87,6 @@ pub trait Validator: Sized {
 
     /// Validates structure builders
     // type BuilderValidator: Validator;
-
-    /// Validates a required field, returning a non-optional value.
-    ///
-    /// By default, on a missing value a [`SmithyConstraints::Required`] validation
-    /// error is emitted.
-    ///
-    /// Validation errors are _only_ raised from this method if the validator hits
-    /// a max depth or maximum number of errors. This allows the validator to short-circuit
-    /// in those cases. Otherwise, users should use the [`results()?`] method to raise any
-    /// validation errors _after_ all fields have been validated.
-    ///
-    /// IMPL NOTE: Implementations must still return a default value even if the
-    /// required value is missing. Otherwise, we would be unable to accumulate values
-    /// from nested shapes with required fields.
-    fn validate_required<V: Validate>(
-        mut self,
-        schema: &SchemaRef,
-        value: Option<V>,
-    ) -> Result<V::Value, ValidationErrors> {
-        if let Some(v) = value {
-            v.validate(schema, self)
-        } else {
-            &mut self.emit_error(schema, SmithyConstraints::Required)?;
-            Ok(V::Value::default(schema))
-        }
-    }
-
-    /// Validate an optional Field
-    ///
-    /// Validation errors are _only_ raised from this method if the validator hits
-    /// a max depth or maximum number of errors. This allows the validator to short-circuit
-    /// in those cases. Otherwise, users should use the [`results()?`] method to raise any
-    /// validation errors _after_ all fields have been validated.
-    fn validate_optional<V: Validate>(
-        self,
-        schema: &SchemaRef,
-        value: Option<V>,
-    ) -> Result<Option<V::Value>, ValidationErrors> {
-        if let Some(v) = value {
-            let result = v.validate(schema, self)?;
-            Ok(Some(result))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Emit an error for accumulation.
-    ///
-    /// This method should only emit an error when the maximum number
-    /// of errors is hit. At that point it should simply raise all the
-    /// existing validation errors list plus an extra appended error
-    /// to indicate the error limit was reached.
-    fn emit_error<E: ValidationError>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors>;
-
-    /// Return all collected validation errors
-    ///
-    /// This returns a `Result` type to allow `?` raising.
-    fn results(self) -> Result<(), ValidationErrors>;
 
     // fn validate_list(
     //     self,
@@ -123,6 +111,27 @@ pub trait Validator: Sized {
     //     Ok(())
     // }
 
+    /// Emit an error for accumulation.
+    ///
+    /// This method should only emit an error when the maximum number
+    /// of errors is hit. At that point it should simply raise all the
+    /// existing validation errors list plus an extra appended error
+    /// to indicate the error limit was reached.
+    fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors>;
+
+
+    /// Return all collected validation errors
+    ///
+    /// This returns a `Result` type to allow `?` raising.
+    fn results(self) -> Result<(), ValidationErrors>;
+
+    /// Validate a `String` in place
+    fn validate_string(
+        self,
+        schema: &SchemaRef,
+        value: &String,
+    ) -> Result<(), ValidationErrors>;
+
     /// Validate a byte (`i8`) in place
     // fn validate_byte(&mut self, schema: &SchemaRef, byte: &i8) -> Result<(), ValidationErrors> {
     //     // check_type!(self, schema, ShapeType::Byte);
@@ -138,13 +147,13 @@ pub trait Validator: Sized {
     // }
 
     /// Validate an integer (`i32`) in place
-    fn validate_integer(&mut self, _schema: &SchemaRef, _integer: &i32) -> Result<(), ValidationErrors>{
-        //check_type!(self, schema, ShapeType::Integer);
-        //check_range!(self, schema, integer);
-        Ok(())
-    }
+    fn validate_integer(
+        &mut self,
+        schema: &SchemaRef,
+        value: &i32
+    ) -> Result<(), ValidationErrors>;
 
-    /// Validate a long (`i64`) in place
+    ///// Validate a long (`i64`) in place
     // fn validate_long(&mut self, schema: &SchemaRef, long: &i64) -> Result<(), ValidationErrors> {
     //     check_type!(self, schema, ShapeType::Long);
     //     //check_range!(self, schema, long);
@@ -211,34 +220,7 @@ pub trait Validator: Sized {
     // }
 
 
-    /// Validate a `String` in place
-    fn validate_string(
-        mut self,
-        schema: &SchemaRef,
-        string: &String,
-    ) -> Result<(), ValidationErrors> {
-        if *schema.shape_type() != ShapeType::String {
-            self.emit_error(schema, ValidationFailure::InvalidType(schema.shape_type().clone(), ShapeType::String))?;
-        }
 
-        // TODO: Move into a "ValidationRule"
-        // Check pattern
-        if let Some(pattern) = schema.get_trait_as::<PatternTrait>() {
-            match pattern.pattern().find(string) {
-                Some(_) => Ok(()),
-                _ => self.emit_error(schema, SmithyConstraints::Pattern(string.clone(), pattern.pattern().to_string()))
-            }?;
-        }
-
-        // Check length
-        if let Some(length) = schema.get_trait_as::<LengthTrait>() {
-            if string.len() < length.min() || string.len() > length.max() {
-                self.emit_error(schema, SmithyConstraints::Length(string.len(), length.min(), length.max()))?
-            }
-        }
-
-        Ok(())
-    }
 }
 
 
@@ -376,7 +358,7 @@ impl Validate for i32 {
     fn validate<V: Validator>(
         self,
         schema: &SchemaRef,
-        mut validator: V
+        mut validator: V,
     ) -> Result<Self::Value, ValidationErrors> {
         validator.validate_integer(schema, &self)?;
         Ok(self)
@@ -448,28 +430,25 @@ impl <E: ErrorCorrection> ErrorCorrection for IndexMap<String, E> {
 // TODO: ENUM AND INT ENUM IMPLS + Byte buffer impls
 
 
-
 /// Default validator implementation
 ///
 /// TODO: Maybe use const generics for sizing?
-pub struct Validator2<V: ValidationStrategy> {
+pub struct DefaultValidator {
     errors: Option<ValidationErrors>,
     max_depth: usize,
     max_errors: usize,
 }
-pub trait  {}
-
 impl DefaultValidator {
     pub const fn new() -> Self {
         DefaultValidator {
             errors: None,
             max_depth: 50,
-            max_errors: 20
+            max_errors: 20,
         }
     }
 }
 impl Validator for &mut DefaultValidator {
-    fn emit_error<E: ValidationError>(self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
+    fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
         let errors = self.errors.get_or_insert(ValidationErrors::new());
         errors.add(path, err);
         if errors.len() >= self.max_errors {
@@ -487,6 +466,34 @@ impl Validator for &mut DefaultValidator {
         }
         Ok(())
     }
+
+    fn validate_string(mut self, schema: &SchemaRef, value: &String) -> Result<(), ValidationErrors> {
+        if *schema.shape_type() != ShapeType::String {
+            self.emit_error(schema, ValidationFailure::InvalidType(schema.shape_type().clone(), ShapeType::String))?;
+        }
+
+        // TODO: Move into a "ValidationRule"
+        // Check pattern
+        if let Some(pattern) = schema.get_trait_as::<PatternTrait>() {
+            match pattern.pattern().find(value) {
+                Some(_) => Ok(()),
+                _ => self.emit_error(schema, SmithyConstraints::Pattern(value.clone(), pattern.pattern().to_string()))
+            }?;
+        }
+
+        // Check length
+        if let Some(length) = schema.get_trait_as::<LengthTrait>() {
+            if value.len() < length.min() || value.len() > length.max() {
+                self.emit_error(schema, SmithyConstraints::Length(value.len(), length.min(), length.max()))?
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_integer(&mut self, _schema: &SchemaRef, _value: &i32) -> Result<(), ValidationErrors> {
+        todo!()
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -501,6 +508,13 @@ impl Validator for &mut DefaultValidator {
 #[derive(Error, Debug)]
 pub struct ValidationErrors {
     errors: Vec<ValidationErrorWrapper>
+}
+
+// TODO: REMOVE AT SOME POINT
+impl From<String> for ValidationErrors {
+    fn from(value: String) -> Self {
+        todo!()
+    }
 }
 
 impl Display for ValidationErrors {
@@ -676,11 +690,12 @@ mod tests {
             }
         }
 
-        fn build_with_validator<V>(self, validator: &mut V) -> Result<SimpleStruct, ValidationErrors>
-        where &mut V: Validator{
+        fn build_with_validator<V>(self, mut validator: V) -> Result<SimpleStruct, ValidationErrors>
+            where for<'a> &'a mut V: Validator
+        {
             let result = SimpleStruct {
-                field_a: validator.validate_required(&FIELD_A, self.field_a)?,
-                field_b: validator.validate_optional(&FIELD_B, self.field_b)?
+                field_a: validate_required(&mut validator, &FIELD_A, self.field_a)?,
+                field_b: validate_optional(&mut validator, &FIELD_B, self.field_b)?
             };
             validator.results()?;
             Ok(result)
@@ -698,7 +713,7 @@ mod tests {
     #[test]
     fn required_string_field_is_validated() {
         let builder = SimpleStructBuilder::new();
-        builder.field_a("a".to_string());
-        let value = builder.build();
+        // EXPECTED TO IMPLODE!
+        let output = builder.build().unwrap();
     }
 }
