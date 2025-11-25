@@ -268,7 +268,7 @@ static EMPTY: LazyLock<FxIndexMap<String, SchemaRef>> = LazyLock::new(FxIndexMap
 impl Schema {
     /// Get the [`ShapeType`] of the schema.
     #[must_use]
-    pub const fn shape_type(&self) -> &ShapeType {
+    pub fn shape_type(&self) -> &ShapeType {
         match self {
             Schema::Scalar(ScalarSchema { shape_type, .. })
             | Schema::Struct(StructSchema { shape_type, .. }) => shape_type,
@@ -276,7 +276,7 @@ impl Schema {
             Schema::IntEnum(_) => &ShapeType::IntEnum,
             Schema::List(_) => &ShapeType::List,
             Schema::Map(_) => &ShapeType::Map,
-            Schema::Member(_) => &ShapeType::Member,
+            Schema::Member(member) => member.target.shape_type(),
         }
     }
 
