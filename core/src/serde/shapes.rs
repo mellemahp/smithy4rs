@@ -15,17 +15,17 @@ pub trait ShapeBuilder<'de, S>: Sized + DeserializeWithSchema<'de> {
     /// Builds shape with the default validator if required fields
     /// are missing or validation fails
     fn build(self) -> Result<S, ValidationErrors> {
-        let mut validator= DefaultValidator::new();
-        let result = self.build_with_validator(&mut validator)?;
-        validator.results()?;
-        Ok(result)
+        self.build_with_validator(DefaultValidator::new())
     }
 
     /// Build the final shape from the builder, checking fields using a
     /// custom [`Validator`] implementation.
     ///
     /// To build a shape using the default validator use [`ShapeBuilder::build`]
-    fn build_with_validator<V: Validator>(self, validator: V) -> Result<S, ValidationErrors>;
+    fn build_with_validator<V>(self, validator: V) -> Result<S, ValidationErrors>
+    where for<'a> &'a mut V: Validator {
+        todo!()
+    }
 }
 
 /// Shape that can create a builder for deserialization

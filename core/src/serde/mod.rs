@@ -8,4 +8,5 @@ pub mod validation;
 
 pub use deserializers as de;
 pub use serializers as se;
+pub use validation as validate;
 pub use shapes::{Buildable, ShapeBuilder};
