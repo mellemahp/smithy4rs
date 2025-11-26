@@ -42,8 +42,8 @@ pub trait Validator {
     /// Validates list items
     type ItemValidator: ListValidator;
 
-    // /// Validates map entries
-    // type EntryValidator: MapValidator;
+    /// Validates map entries
+    type EntryValidator: MapValidator;
 
     /// Validates structure builders
     type StructureValidator: StructureValidator;
@@ -61,20 +61,21 @@ pub trait Validator {
     /// This returns a `Result` type to allow `?` raising.
     fn results(self) -> Result<(), ValidationErrors>;
 
-    /// Checks list validations and returns a validator used validate list items
+    /// Checks top-level list constraints and returns a validator used validate list items
     fn validate_list(
         self,
         schema: &SchemaRef,
         size: usize,
     ) -> Result<Self::ItemValidator, ValidationErrors>;
 
-    // fn validate_map(
-    //     self,
-    //     schema: &SchemaRef,
-    //     size: usize,
-    // ) -> Result<Self::EntryValidator, ValidationErrors>;
+    /// Checks top-level map constraints and returns a validator used validate map entries
+    fn validate_map(
+        self,
+        schema: &SchemaRef,
+        size: usize,
+    ) -> Result<Self::EntryValidator, ValidationErrors>;
 
-    /// Validator for a structure or builder
+    /// Checks top-level structure constraints and returns a validator used to validate structure members
     fn validate_struct(
         self,
         schema: &SchemaRef,
@@ -184,31 +185,60 @@ pub trait Validator {
 
 }
 
-/// List Serializer that can be called in a loop to serialize list values
+/// List Validator that can be called in a loop to validate list items
 pub trait ListValidator {
     /// Validate a sequence element in place.
     ///
     /// Values must be hashable so that unique items can be tracked.
-    fn validate_in_place<T>(
+    fn validate_in_place<I>(
         &mut self,
         element_schema: &SchemaRef,
-        value: &T,
+        value: &I,
     ) -> Result<(), ValidationErrors>
     where
-        for<'a> &'a T: Validate,
-        T: Hash;
+        for<'a> &'a I: Validate,
+        I: Hash;
 
-    /// Validates and moves an element
+    /// Validates an element and
     /// NOTE: This is primarily intended to support builder conversions
-    fn validate_and_move<T: Validate>(
+    fn validate_and_move<I: Validate>(
         &mut self,
         element_schema: &SchemaRef,
-        value: T
-    ) -> Result<T::Value, ValidationErrors>
+        value: I
+    ) -> Result<I::Value, ValidationErrors>
     where
-        T::Value: Hash;
+        I::Value: Hash;
 
+    /// Checks if an item was already seen by this validator.
+    ///
+    /// This is used to support `@uniqueItems` constraint.
+    /// **Impl Note**: the value tracker used by implementations is
+    /// expected to only store hashes, not the actual value of items.
     fn check_uniqueness<T: Hash>(&mut self, element_schema: &SchemaRef, value: T) -> Result<(), ValidationErrors>;
+}
+
+/// Map Validator that can be called in a loop to validate map entries
+pub trait MapValidator {
+    /// Validate a single map entry in place
+    fn validate_entry_in_place<K, V>(
+        &mut self,
+        key_schema: &SchemaRef,
+        value_schema: &SchemaRef,
+        key: &K,
+        value: &V,
+    ) -> Result<(), ValidationErrors>
+    where
+        for<'a> &'a K: Validate,
+        for<'a> &'a V: Validate;
+
+    /// Validates an entry and returns a new, owned value for it.
+    fn validate_entry_and_move<K: Validate, V: Validate>(
+        &mut self,
+        key_schema: &SchemaRef,
+        value_schema: &SchemaRef,
+        key: K,
+        value: V,
+    ) -> Result<(K::Value, V::Value), ValidationErrors>;
 }
 
 pub trait StructureValidator {
@@ -247,29 +277,7 @@ pub trait StructureValidator {
     ) -> Result<Option<V::Value>, ValidationErrors>;
 }
 
-// trait MapValidator {
-//     /// Validate a single map entry
-//     fn validate_entry_in_place<V>(
-//         &mut self,
-//         key_schema: &SchemaRef,
-//         value_schema: &SchemaRef,
-//         key: &String,
-//         value: &V,
-//     ) -> Result<(), ValidationErrors>
-//     where
-//         V: ?Sized + SerializeWithSchema;
-//
-//     /// Validates an entry and returns a new owned value for it.
-//     fn validate_entry_and_move<V>(
-//         &mut self,
-//         key_schema: &SchemaRef,
-//         value_schema: &SchemaRef,
-//         key: String,
-//         value: V,
-//     ) -> Result<(String, V::Value), ValidationErrors>
-//     where
-//         V: ?Sized + Validate;
-// }
+
 
 /// Indicates that a type can be validated by a [`Validator`] implementation.
 ///
@@ -358,7 +366,22 @@ impl Validate for &String {
         schema: &SchemaRef,
         validator: V
     ) -> Result<Self::Value, ValidationErrors> {
-        validator.validate_string(schema, &self)?;
+        validator.validate_string(schema, self)?;
+        Ok(self)
+    }
+}
+
+impl Validate for IndexMap<String, String> {
+    type Value = Self;
+
+    fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+        let mut map = validator.validate_map(schema, self.len())?;
+        // TODO(errors): Should this short circuit to a validation error?
+        let key_schema = schema.expect_member("key");
+        let value_schema = schema.expect_member("value");
+        for (k, v) in &self {
+            map.validate_entry_in_place(key_schema, value_schema, k, v)?;
+        }
         Ok(self)
     }
 }
@@ -459,8 +482,15 @@ impl <E: ErrorCorrection> ErrorCorrection for IndexMap<String, E> {
 // TODO: ENUM AND INT ENUM IMPLS + Byte buffer impls
 
 
-/// Default validator implementation
+//////////////////////////////////////////////////////////////////////////////
+// Default Validator Implementation
+//////////////////////////////////////////////////////////////////////////////
+
+/// Default validator that ensures shapes conform to base Smithy constraints.
 ///
+/// For more info on built-in Smithy constraints see: [Smithy Documentation](https://smithy.io/2.0/spec/constraint-traits.html)
+///
+/// TODO: How to support custom validations?
 /// TODO: Maybe use const generics for sizing?
 pub struct DefaultValidator {
     errors: Option<ValidationErrors>,
@@ -478,6 +508,7 @@ impl DefaultValidator {
 }
 impl <'a> Validator for &'a mut DefaultValidator {
     type ItemValidator = DefaultListValidator<'a>;
+    type EntryValidator = DefaultMapValidator<'a>;
     type StructureValidator = DefaultStructValidator<'a>;
 
     fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
@@ -524,6 +555,22 @@ impl <'a> Validator for &'a mut DefaultValidator {
         })
     }
 
+    fn validate_map(mut self, schema: &SchemaRef, size: usize) -> Result<Self::EntryValidator, ValidationErrors> {
+        if size > self.max_depth {
+            self.emit_error(schema, ValidationFailure::MapTooLarge(self.max_depth))?;
+            return Err(self.errors.take().unwrap());
+        }
+
+        // Check length
+        if let Some(length) = schema.get_trait_as::<LengthTrait>() {
+            if size < length.min() || size > length.max() {
+                self.emit_error(schema, SmithyConstraints::Length(size, length.min(), length.max()))?
+            }
+        }
+
+        Ok(DefaultMapValidator { root: self })
+    }
+
     fn validate_struct(mut self, schema: &SchemaRef) -> Result<Self::StructureValidator, ValidationErrors> {
         // TODO(completeness): check that schema is struct.
         // TODO(completeness): ADD DEPTH CHECKS
@@ -555,33 +602,6 @@ impl <'a> Validator for &'a mut DefaultValidator {
 
     fn validate_integer(&mut self, _schema: &SchemaRef, _value: &i32) -> Result<(), ValidationErrors> {
         todo!()
-    }
-}
-
-#[doc(hidden)]
-pub struct DefaultStructValidator<'a> {
-    root: &'a mut DefaultValidator,
-}
-impl StructureValidator for DefaultStructValidator<'_> {
-    fn validate_required<V: Validate>(&mut self, schema: &SchemaRef, value: Option<V>) -> Result<V::Value, ValidationErrors>
-    where
-        V::Value: ErrorCorrection
-    {
-        if let Some(v) = value {
-            v.validate(schema, &mut *self.root)
-        } else {
-            self.root.emit_error(schema, SmithyConstraints::Required)?;
-            Ok(V::Value::default(schema))
-        }
-    }
-
-    fn validate_optional<V: Validate>(&mut self, schema: &SchemaRef, value: Option<V>) -> Result<Option<V::Value>, ValidationErrors> {
-        if let Some(v) = value {
-            let result = v.validate(schema, &mut *self.root)?;
-            Ok(Some(result))
-        } else {
-            Ok(None)
-        }
     }
 }
 
@@ -639,6 +659,62 @@ impl UniquenessTracker {
         self.lookup.insert(hasher.finish(), ()).is_some()
     }
 }
+
+#[doc(hidden)]
+pub struct DefaultMapValidator<'a> {
+    root: &'a mut DefaultValidator,
+}
+impl MapValidator for DefaultMapValidator<'_> {
+    fn validate_entry_in_place<K, V>(&mut self, key_schema: &SchemaRef, value_schema: &SchemaRef, key: &K, value: &V) -> Result<(), ValidationErrors>
+    where
+            for<'a> &'a K: Validate,
+            for<'a> &'a V: Validate
+    {
+        let _key = key.validate(key_schema, &mut *self.root)?;
+        let _value = value.validate(value_schema, &mut *self.root)?;
+        Ok(())
+    }
+
+    fn validate_entry_and_move<K:Validate, V: Validate>(
+        &mut self,
+        key_schema: &SchemaRef,
+        value_schema: &SchemaRef,
+        key: K,
+        value: V
+    ) -> Result<(K::Value, V::Value), ValidationErrors> {
+        let key = key.validate(key_schema, &mut *self.root)?;
+        let value = value.validate(value_schema, &mut *self.root)?;
+        Ok((key, value))
+    }
+}
+
+#[doc(hidden)]
+pub struct DefaultStructValidator<'a> {
+    root: &'a mut DefaultValidator,
+}
+impl StructureValidator for DefaultStructValidator<'_> {
+    fn validate_required<V: Validate>(&mut self, schema: &SchemaRef, value: Option<V>) -> Result<V::Value, ValidationErrors>
+    where
+        V::Value: ErrorCorrection
+    {
+        if let Some(v) = value {
+            v.validate(schema, &mut *self.root)
+        } else {
+            self.root.emit_error(schema, SmithyConstraints::Required)?;
+            Ok(V::Value::default(schema))
+        }
+    }
+
+    fn validate_optional<V: Validate>(&mut self, schema: &SchemaRef, value: Option<V>) -> Result<Option<V::Value>, ValidationErrors> {
+        if let Some(v) = value {
+            let result = v.validate(schema, &mut *self.root)?;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 // ERRORS
@@ -741,6 +817,8 @@ pub enum ValidationFailure {
     MaxErrorsReached(usize),
     #[error("List exceeds maximum validation size ({0})")]
     ListTooLarge(usize),
+    #[error("Map exceeds maximum validation size ({0})")]
+    MapTooLarge(usize),
     #[error("Unsupported validation operation.")]
     Unsupported,
 }
@@ -769,6 +847,7 @@ impl ValidationError for SmithyConstraints {}
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::LazyLock;
     use crate::traits;
     use crate::prelude::{INTEGER, STRING};
@@ -801,11 +880,19 @@ mod tests {
             .build()
     });
 
+    static MAP_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::map_builder(ShapeId::from("com.example#Map"), traits![LengthTrait::builder().max(2).build(), UniqueItemsTrait])
+            .put_member("key", &STRING, traits![PatternTrait::new("^[a-zA-Z]*$")])
+            .put_member("value", &STRING, traits![LengthTrait::builder().max(4).build()])
+            .build()
+    });
+
     static VALIDATION_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
             .put_member("field_a", &STRING, traits![PatternTrait::new("^[a-zA-Z]*$")])
             .put_member("field_b", &INTEGER, traits![])
             .put_member("field_list", &LIST_SCHEMA, traits![])
+            .put_member("field_map", &MAP_SCHEMA, traits![])
             .put_member("field_nested", &NESTED_SCHEMA, traits![])
             .put_member("field_nested_list", &LIST_OF_NESTED_SCHEMA, traits![])
             .build()
@@ -813,6 +900,7 @@ mod tests {
     static FIELD_A: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_a"));
     static FIELD_B: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_b"));
     static FIELD_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_list"));
+    static FIELD_MAP: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_map"));
     static FIELD_NESTED: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_nested"));
     static FIELD_NESTED_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_nested_list"));
     static NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
@@ -826,6 +914,7 @@ mod tests {
         field_a: String,
         field_b: Option<i32>,
         field_list: Option<Vec<String>>,
+        field_map: Option<IndexMap<String, String>>,
         field_nested: Option<NestedStruct>,
         field_nested_list: Option<Vec<NestedStruct>>
     }
@@ -839,6 +928,7 @@ mod tests {
         field_a: Option<String>,
         field_b: Option<i32>,
         field_list: Option<Vec<String>>,
+        field_map: Option<IndexMap<String, String>>,
         field_nested: Option<StructOrBuilder<NestedStruct, NestedStructBuilder>>,
         field_nested_list: Option<VecOfStructsOrBuilders<NestedStruct, NestedStructBuilder>>
     }
@@ -855,6 +945,11 @@ mod tests {
 
         pub fn field_list(mut self, value: Vec<String>) -> Self {
             self.field_list = Some(value);
+            self
+        }
+
+        pub fn field_map(mut self, value: IndexMap<String, String>) -> Self {
+            self.field_map = Some(value);
             self
         }
 
@@ -884,6 +979,7 @@ mod tests {
                 field_a: None,
                 field_b: None,
                 field_list: None,
+                field_map: None,
                 field_nested: None,
                 field_nested_list: None
             }
@@ -898,6 +994,7 @@ mod tests {
                 field_a: struct_validator.validate_required(&FIELD_A, self.field_a)?,
                 field_b: struct_validator.validate_optional(&FIELD_B, self.field_b)?,
                 field_list: struct_validator.validate_optional(&FIELD_LIST, self.field_list)?,
+                field_map: struct_validator.validate_optional(&FIELD_MAP, self.field_map)?,
                 field_nested: struct_validator.validate_optional(&FIELD_NESTED, self.field_nested)?,
                 field_nested_list: struct_validator.validate_optional(&FIELD_NESTED_LIST, self.field_nested_list)?,
             };
@@ -1001,6 +1098,23 @@ mod tests {
     }
 
     #[test]
+    fn required_field_does_not_short_circuit_validation() {
+        let inner_vec = vec!["too long of a string".to_string()];
+        let Err(err) = SimpleStructBuilder::new().field_list(inner_vec).build() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 2);
+        let error_required = err.errors.get(0).unwrap();
+        let error_length = err.errors.get(1).unwrap();
+
+        assert_eq!(error_required.path, **FIELD_A);
+        assert_eq!(error_required.error.to_string(), "Field is Required.".to_string());
+
+        assert_eq!(error_length.path, *LIST_SCHEMA.expect_member("member"));
+        assert_eq!(error_length.error.to_string(), "Size: 20 does not conform to @length constraint. Expected between 0 and 4.".to_string());
+    }
+
+    #[test]
     fn list_constraints_checked() {
         let builder = SimpleStructBuilder::new();
         let inner_vec = vec!["a".to_string(), "b".to_string(), "c".to_string(), "a".to_string(), "d".to_string()];
@@ -1016,6 +1130,29 @@ mod tests {
 
         assert_eq!(error_unique.path, *LIST_SCHEMA.expect_member("member"));
         assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
+    }
+
+    #[test]
+    fn map_constraints_checked() {
+        let builder = SimpleStructBuilder::new();
+        let mut inner_map = IndexMap::<String, String>::new();
+        inner_map.insert("bad-key".to_string(), "a".to_string());
+        inner_map.insert("a".to_string(), "value is too long!".to_string());
+        inner_map.insert("b".to_string(), "a".to_string());
+        let Some(err) = builder.field_map(inner_map).field_a("fieldA".to_string()).build().err() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 3);
+        let error_length = err.errors.get(0).unwrap();
+        let error_key = err.errors.get(1).unwrap();
+        let error_value = err.errors.get(2).unwrap();
+
+        assert_eq!(error_length.path, **FIELD_MAP);
+        assert_eq!(error_length.error.to_string(), "Size: 3 does not conform to @length constraint. Expected between 0 and 2.".to_string());
+        assert_eq!(error_key.path, *MAP_SCHEMA.expect_member("key"));
+        assert_eq!(error_key.error.to_string(), "Value `bad-key` did not conform to expected pattern `^[a-zA-Z]*$`".to_string());
+        assert_eq!(error_value.path, *MAP_SCHEMA.expect_member("value"));
+        assert_eq!(error_value.error.to_string(), "Size: 18 does not conform to @length constraint. Expected between 0 and 4.".to_string());
     }
 
     #[test]
