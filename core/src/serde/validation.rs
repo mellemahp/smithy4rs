@@ -593,13 +593,6 @@ pub struct DefaultListValidator<'a> {
 }
 
 impl ListValidator for DefaultListValidator<'_> {
-    fn check_uniqueness<T: Hash>(&mut self, element_schema: &SchemaRef, value: T) -> Result<(), ValidationErrors> {
-        if self.unique && self.lookup.add(value) {
-            self.root.emit_error(element_schema, SmithyConstraints::UniqueItems)?;
-        }
-        Ok(())
-    }
-
     fn validate_in_place<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), ValidationErrors>
     where
         for<'a> &'a T: Validate,
@@ -616,6 +609,13 @@ impl ListValidator for DefaultListValidator<'_> {
         let output= value.validate(element_schema, &mut *self.root)?;
         self.check_uniqueness(element_schema, &output)?;
         Ok(output)
+    }
+
+    fn check_uniqueness<T: Hash>(&mut self, element_schema: &SchemaRef, value: T) -> Result<(), ValidationErrors> {
+        if self.unique && self.lookup.add(value) {
+            self.root.emit_error(element_schema, SmithyConstraints::UniqueItems)?;
+        }
+        Ok(())
     }
 }
 
@@ -776,7 +776,7 @@ mod tests {
     use crate::serde::de::Deserializer;
     use crate::serde::deserializers::DeserializeWithSchema;
     use crate::serde::ShapeBuilder;
-    use crate::serde::shapes::StructOrBuilder;
+    use crate::serde::shapes::{StructOrBuilder, VecOfStructsOrBuilders};
     use super::*;
 
     #[test]
@@ -795,6 +795,11 @@ mod tests {
             .put_member("member", &STRING, traits![LengthTrait::builder().max(4).build()])
             .build()
     });
+    static LIST_OF_NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#ListOfNested"), traits![LengthTrait::builder().max(3).build(), UniqueItemsTrait])
+            .put_member("member", &NESTED_SCHEMA, traits![])
+            .build()
+    });
 
     static VALIDATION_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
@@ -802,13 +807,14 @@ mod tests {
             .put_member("field_b", &INTEGER, traits![])
             .put_member("field_list", &LIST_SCHEMA, traits![])
             .put_member("field_nested", &NESTED_SCHEMA, traits![])
+            .put_member("field_nested_list", &LIST_OF_NESTED_SCHEMA, traits![])
             .build()
     });
     static FIELD_A: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_a"));
     static FIELD_B: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_b"));
     static FIELD_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_list"));
     static FIELD_NESTED: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_nested"));
-
+    static FIELD_NESTED_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_nested_list"));
     static NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
             .put_member("field_c", &STRING, traits![PatternTrait::new("^[a-z]*$")])
@@ -820,7 +826,8 @@ mod tests {
         field_a: String,
         field_b: Option<i32>,
         field_list: Option<Vec<String>>,
-        field_nested: Option<NestedStruct>
+        field_nested: Option<NestedStruct>,
+        field_nested_list: Option<Vec<NestedStruct>>
     }
     impl StaticSchemaShape for SimpleStruct {
         fn schema() -> &'static SchemaRef {
@@ -832,7 +839,8 @@ mod tests {
         field_a: Option<String>,
         field_b: Option<i32>,
         field_list: Option<Vec<String>>,
-        field_nested: Option<StructOrBuilder<NestedStruct, NestedStructBuilder>>
+        field_nested: Option<StructOrBuilder<NestedStruct, NestedStructBuilder>>,
+        field_nested_list: Option<VecOfStructsOrBuilders<NestedStruct, NestedStructBuilder>>
     }
     impl SimpleStructBuilder {
         pub fn field_a(mut self, value: String) -> Self {
@@ -859,6 +867,16 @@ mod tests {
             self.field_nested = Some(StructOrBuilder::Builder(value));
             self
         }
+
+        pub fn field_nested_list(mut self, values: Vec<NestedStruct>) -> Self {
+            self.field_nested_list = Some(VecOfStructsOrBuilders::Structs(values));
+            self
+        }
+
+        pub fn field_nested_list_builder(mut self, values: Vec<NestedStructBuilder>) -> Self {
+            self.field_nested_list = Some(VecOfStructsOrBuilders::Builders(values));
+            self
+        }
     }
     impl <'de> ShapeBuilder<'de, SimpleStruct> for SimpleStructBuilder {
         fn new() -> Self {
@@ -866,7 +884,8 @@ mod tests {
                 field_a: None,
                 field_b: None,
                 field_list: None,
-                field_nested: None
+                field_nested: None,
+                field_nested_list: None
             }
         }
     }
@@ -880,6 +899,7 @@ mod tests {
                 field_b: struct_validator.validate_optional(&FIELD_B, self.field_b)?,
                 field_list: struct_validator.validate_optional(&FIELD_LIST, self.field_list)?,
                 field_nested: struct_validator.validate_optional(&FIELD_NESTED, self.field_nested)?,
+                field_nested_list: struct_validator.validate_optional(&FIELD_NESTED_LIST, self.field_nested_list)?,
             };
             Ok(result)
         }
@@ -893,6 +913,7 @@ mod tests {
         }
     }
 
+    #[derive(Hash)]
     pub struct NestedStruct {
         field_c: String,
     }
@@ -1024,5 +1045,53 @@ mod tests {
         let error_pattern = err.errors.get(0).unwrap();
         assert_eq!(error_pattern.path, **FIELD_C);
         assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
+    }
+
+    #[test]
+    fn nested_struct_list_build_if_no_errors() {
+        let nested_list = vec![NestedStructBuilder::new().field_c("data".to_string())];
+        let builder = SimpleStructBuilder::new();
+        builder.field_a("fieldA".to_string()).field_nested_list_builder(nested_list).build()
+            .expect("Failed to build SimpleStruct");
+    }
+
+    #[test]
+    fn nested_struct_list_fields_build_with_pre_built_shapes() {
+        let nested_list = vec![
+            NestedStructBuilder::new().field_c("a".to_string()).build().expect("Failed to build NestedStruct"),
+            NestedStructBuilder::new().field_c("b".to_string()).build().expect("Failed to build NestedStruct")
+        ];
+        let builder = SimpleStructBuilder::new();
+        let value = builder.field_a("fieldA".to_string())
+            .field_nested_list(nested_list).build()
+            .expect("Failed to build SimpleStruct");
+    }
+
+    #[test]
+    fn nested_struct_list_checked() {
+        let nested_list = vec![
+            NestedStructBuilder::new().field_c("a".to_string()),
+            NestedStructBuilder::new().field_c("b".to_string()),
+            NestedStructBuilder::new().field_c("dataWithCaps".to_string()),
+            NestedStructBuilder::new().field_c("b".to_string())
+        ];
+        let builder = SimpleStructBuilder::new();
+        let Some(err) = builder.field_a("fieldA".to_string()).field_nested_list_builder(nested_list).build().err() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 3);
+
+        let error_length = err.errors.get(0).unwrap();
+        let error_pattern = err.errors.get(1).unwrap();
+        let error_unique = err.errors.get(2).unwrap();
+
+        assert_eq!(error_length.path, **FIELD_NESTED_LIST);
+        assert_eq!(error_length.error.to_string(), "Size: 4 does not conform to @length constraint. Expected between 0 and 3.".to_string());
+
+        assert_eq!(error_pattern.path, **FIELD_C);
+        assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
+
+        assert_eq!(error_unique.path, *LIST_OF_NESTED_SCHEMA.expect_member("member"));
+        assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
     }
 }
