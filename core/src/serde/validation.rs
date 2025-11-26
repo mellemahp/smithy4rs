@@ -5,6 +5,7 @@ use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 use bigdecimal::{BigDecimal, Zero};
+use bigdecimal::num_traits::Float;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use rustc_hash::FxHasher;
@@ -17,26 +18,8 @@ use crate::prelude::{LengthTrait, PatternTrait, UniqueItemsTrait};
 // Traits
 //////////////////////////////////////////////////////////////////////////////
 
-// macro_rules! check_type {
-//     ($self:ident, $schema:ident, $expected:expr) => {
-//         if *$schema.shape_type() != $expected {
-//             $self.emitError($schema, ValidationFailure::InvalidType($schema.shape_type().clone(), $expected))?;
-//         }
-//     };
-// }
-
-// macro_rules! check_range {
-//     ($self:ident, $schema:ident, $value:ident) => {
-//         if let Some(range) = &$schema.get_trait_as::<RangeTrait>() {
-//             if ($value < range.min() || $value > range.max()) {
-//                 $self.emit_error($schema, SmithyConstraints::Range($value.into(), range.min(), range.max()))?;
-//             }
-//         }
-//     };
-// }
-
-
 // TODO: Update docs to be a bit less clunky
+// TODO: Support enum validation?
 /// NOTE: Smithy error correction is not implemented directly.
 pub trait Validator {
     /// Validates list items
@@ -81,11 +64,12 @@ pub trait Validator {
         schema: &SchemaRef,
     ) -> Result<Self::StructureValidator, ValidationErrors>;
 
-    // /// Validate a `boolean` in place
-    // fn validate_boolean(&mut self, schema: &SchemaRef, _bool: &bool) -> Result<(), ValidationErrors> {
-    //     //check_type!(self, schema, ShapeType::Boolean);
-    //     Ok(())
-    // }
+    /// Validate a boolean (`bool`) in place
+    fn validate_boolean(
+        self,
+        schema: &SchemaRef,
+        bool: &bool
+    ) -> Result<(), ValidationErrors>;
 
     /// Validate a `String` in place
     fn validate_string(
@@ -95,18 +79,18 @@ pub trait Validator {
     ) -> Result<(), ValidationErrors>;
 
     /// Validate a byte (`i8`) in place
-    // fn validate_byte(&mut self, schema: &SchemaRef, byte: &i8) -> Result<(), ValidationErrors> {
-    //     // check_type!(self, schema, ShapeType::Byte);
-    //     //check_range!(self, schema, byte);
-    //     Ok(())
-    // }
-    //
-    // /// Validate a short (`i16`) in place
-    // fn validate_short(&mut self, schema: &SchemaRef, short: &i16) -> Result<(), ValidationErrors> {
-    //     check_type!(self, schema, ShapeType::Short);
-    //     //check_range!(self, schema, short);
-    //     Ok(())
-    // }
+    fn validate_byte(
+        self,
+        schema: &SchemaRef,
+        byte: &i8
+    ) -> Result<(), ValidationErrors>;
+
+    /// Validate a short (`i16`) in place
+    fn validate_short(
+        self,
+        schema: &SchemaRef,
+        short: &i16
+    ) -> Result<(), ValidationErrors>;
 
     /// Validate an integer (`i32`) in place
     fn validate_integer(
@@ -115,74 +99,54 @@ pub trait Validator {
         value: &i32
     ) -> Result<(), ValidationErrors>;
 
-    ///// Validate a long (`i64`) in place
-    // fn validate_long(&mut self, schema: &SchemaRef, long: &i64) -> Result<(), ValidationErrors> {
-    //     check_type!(self, schema, ShapeType::Long);
-    //     //check_range!(self, schema, long);
-    //     Ok(())
-    // }
-    //
-    // /// Validate a float (`f32`) in place
-    // fn validate_float(&mut self, schema: &SchemaRef, float: &f32) -> Result<(), ValidationErrors> {
-    //     check_type!(self, schema, ShapeType::Float);
-    //     //check_range!(self, schema, float);
-    //     Ok(())
-    // }
+    /// Validate a long (`i64`) in place
+    fn validate_long(
+        self,
+        schema: &SchemaRef,
+        long: &i64
+    ) -> Result<(), ValidationErrors>;
 
-    // /// Validate a double (`f64`) in place
-    // fn validate_double(&mut self, schema: &SchemaRef, double: &f64) -> Result<(), ValidationErrors> {
-    //     check_type!(self, schema, ShapeType::Float);
-    //     //check_range!(self, schema, double);
-    //     Ok(())
-    // }
+    /// Validate a float (`f32`) in place
+    fn validate_float(
+        self,
+        schema: &SchemaRef,
+        float: &f32
+    ) -> Result<(), ValidationErrors>;
 
-    // /// Validate a Big Integer (`BigInt`) in place
-    // fn validate_big_integer(
-    //     &mut self,
-    //     schema: &SchemaRef,
-    //     _big_int: &BigInt,
-    // ) -> Result<(), ValidationErrors> {
-    //     check_type!(self, schema, ShapeType::BigInteger);
-    //     // TODO: Check range
-    //     Ok(())
-    // }
-    //
-    // /// Validate a `BigDecimal` in place
-    // fn validate_big_decimal(
-    //     self,
-    //     schema: &SchemaRef,
-    //     _big_decimal: BigDecimal,
-    // ) -> Result<(), ValidationErrors> {
-    //     check_type!(self, schema, ShapeType::BigDecimal);
-    //     // TODO: Check range
-    //     Ok(())
-    // }
+    /// Validate a double (`f64`) in place
+    fn validate_double(
+        self,
+        schema: &SchemaRef,
+        double: &f64
+    ) -> Result<(), ValidationErrors>;
 
-    // /// Validate a document in place
-    // fn validate_document(
-    //     self,
-    //     schema: &SchemaRef,
-    //     _document: &Document,
-    // ) -> Result<(), ValidationErrors> {
-    //     // check_type!(self, schema, ShapeType::Document);
-    //     todo!("Should this check nested types against schema?");
-    // }
-    //
-    // // TODO: Should the enums check if the value is out of expected for validation? Could just check if
-    // //       the value is ::__Unknown?
-    // /// TODO: Should these check string validation?
-    // fn validate_enum<E>(&mut self, schema: &SchemaRef, value: E) {
-    //     check_type!(self, schema, ShapeType::Enum);
-    //     todo!()
-    // }
-    //
-    // fn validate_int_enum<E>(&mut self, schema: &SchemaRef, value: E) {
-    //     check_type!(self, schema, ShapeType::IntEnum);
-    //     todo!()
-    // }
+    /// Validate a Big Integer (`BigInt`) in place
+    fn validate_big_integer(
+        &mut self,
+        schema: &SchemaRef,
+        big_int: &BigInt,
+    ) -> Result<(), ValidationErrors>;
 
+    /// Validate a `BigDecimal` in place
+    fn validate_big_decimal(
+        self,
+        schema: &SchemaRef,
+        big_decimal: &BigDecimal,
+    ) -> Result<(), ValidationErrors>;
 
+    /// Validate a [`crate::schema::Document`] in place
+    fn validate_document(
+        self,
+        schema: &SchemaRef,
+        document: &Document,
+    ) -> Result<(), ValidationErrors>;
 
+    /// Validate a Timestamp ([`crate::Instant`]) in place
+    fn validate_timestamp(
+        self,
+        schema: &SchemaRef,
+        timestamp: &Instant,
+    ) -> Result<(), ValidationErrors>;
 }
 
 /// List Validator that can be called in a loop to validate list items
@@ -199,7 +163,22 @@ pub trait ListValidator {
         for<'a> &'a I: Validate,
         I: Hash;
 
-    /// Validates an element and
+    /// Validate a sequence element that cannot be hashed (i.e. floats).
+    ///
+    /// **WARNING**: Only for validating floats.
+    ///
+    /// **Impl Note**: Floats can NEVER have a unique items check so they
+    /// shouldn't need to be hashed anyway.
+    #[doc(hidden)]
+    fn validate_in_place_float<I: Float>(
+        &mut self,
+        element_schema: &SchemaRef,
+        value: &I,
+    ) -> Result<(), ValidationErrors>
+    where
+        for<'a> &'a I: Validate;
+
+    /// Validates an element and returns a new, owned value for that item.
     /// NOTE: This is primarily intended to support builder conversions
     fn validate_and_move<I: Validate>(
         &mut self,
@@ -301,92 +280,116 @@ pub trait Validate {
 // Validate Implementations
 //////////////////////////////////////////////////////////////////////////////
 
-//
-// impl Validate for IndexMap<String, String> {
-//     type Value = Self;
-//
-//     fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
-//         let mut map = validator.validate_map(schema, self.len())?;
-//         let key_schema = schema.expect_member("key");
-//         let value_schema = schema.expect_member("value");
-//         for (k, v) in &self {
-//             map.validate_entry_in_place(key_schema, value_schema, k, v)?;
-//         }
-//         Ok(self)
-//     }
-// }
-// impl <'de, S, B: ShapeBuilder<'de, S>> Validate for Vec<B> {
-//     type Value = Vec<S>;
-//
-//     fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
-//         let mut list = validator.validate_list(schema, self.len())?;
-//         let member_schema = schema.expect_member("member");
-//         let mut result_list = Vec::with_capacity(self.len());
-//         for item in self {
-//             result_list.push(list.validate_and_move(member_schema, item)?);
-//         }
-//         Ok(result_list)
-//     }
-// }
+// TODO: Add docs
+macro_rules! base_validate_impl {
+    ($ty:ty, $method:ident) => {
+        impl Validate for $ty {
+            type Value = Self;
 
-// impl Validate for Vec<String> {
-//     type Value = Vec<String>;
-//     fn validate<V: Validator>(
-//         self,
-//         schema: &SchemaRef,
-//         validator: V
-//     ) -> Result<Self::Value, ValidationErrors> {
-//         let mut list = validator.validate_list(schema, self.len())?;
-//         let member_schema = schema.expect_member("member");
-//         for item in &self {
-//             list.validate_in_place(member_schema, item)?;
-//         }
-//         Ok(self)
-//     }
-// }
-
-impl Validate for String {
-    type Value = Self;
-
-    fn validate<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        validator: V
-    ) -> Result<Self::Value, ValidationErrors> {
-        validator.validate_string(schema, &self)?;
-        Ok(self)
-    }
-}
-
-impl Validate for &String {
-    type Value = Self;
-
-    fn validate<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        validator: V
-    ) -> Result<Self::Value, ValidationErrors> {
-        validator.validate_string(schema, self)?;
-        Ok(self)
-    }
-}
-
-impl Validate for IndexMap<String, String> {
-    type Value = Self;
-
-    fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
-        let mut map = validator.validate_map(schema, self.len())?;
-        // TODO(errors): Should this short circuit to a validation error?
-        let key_schema = schema.expect_member("key");
-        let value_schema = schema.expect_member("value");
-        for (k, v) in &self {
-            map.validate_entry_in_place(key_schema, value_schema, k, v)?;
+            fn validate<V: Validator>(
+                self,
+                schema: &SchemaRef,
+                mut validator: V
+            ) -> Result<Self::Value, ValidationErrors> {
+                validator.$method(schema, &self)?;
+                Ok(self)
+            }
         }
-        Ok(self)
-    }
-}
 
-impl Validate for Vec<String> {
+        impl Validate for &$ty {
+            type Value = ();
+
+            fn validate<V: Validator>(
+                self,
+                schema: &SchemaRef,
+                mut validator: V
+            ) -> Result<Self::Value, ValidationErrors> {
+                validator.$method(schema, self)?;
+                Ok(())
+            }
+        }
+
+        impl Validate for IndexMap<String, $ty> {
+            type Value = Self;
+
+            fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+                let mut map = validator.validate_map(schema, self.len())?;
+                // TODO(errors): Should this short circuit to a validation error?
+                let key_schema = schema.expect_member("key");
+                let value_schema = schema.expect_member("value");
+                for (k, v) in &self {
+                    map.validate_entry_in_place(key_schema, value_schema, k, v)?;
+                }
+                Ok(self)
+            }
+        }
+    };
+}
+macro_rules! list_validate_impl {
+    ($ty:ty, hashable) => {
+        impl Validate for Vec<$ty> {
+            type Value = Self;
+
+            fn validate<V: Validator>(
+                self,
+                schema: &SchemaRef,
+                validator: V
+            ) -> Result<Self::Value, ValidationErrors> {
+                let mut list = validator.validate_list(schema, self.len())?;
+                // TODO(errors): Should this short circuit to a validation error?
+                let member_schema = schema.expect_member("member");
+                for item in &self {
+                    list.validate_in_place(member_schema, item)?;
+                }
+                Ok(self)
+            }
+        }
+    };
+    ($ty:ty, unhashable) => {
+       impl Validate for Vec<$ty> {
+            type Value = Self;
+
+            fn validate<V: Validator>(
+                self,
+                schema: &SchemaRef,
+                validator: V
+            ) -> Result<Self::Value, ValidationErrors> {
+                let mut list = validator.validate_list(schema, self.len())?;
+                // TODO(errors): Should this short circuit to a validation error?
+                let member_schema = schema.expect_member("member");
+                for item in &self {
+                    list.validate_in_place_float(member_schema, item)?;
+                }
+                Ok(self)
+            }
+        }
+    };
+}
+base_validate_impl!(String, validate_string);
+list_validate_impl!(String, hashable);
+base_validate_impl!(bool, validate_boolean);
+list_validate_impl!(bool, hashable);
+base_validate_impl!(i8, validate_byte);
+list_validate_impl!(i8, hashable);
+base_validate_impl!(i16, validate_short);
+list_validate_impl!(i16, hashable);
+base_validate_impl!(i32, validate_integer);
+list_validate_impl!(i32, hashable);
+base_validate_impl!(i64, validate_long);
+list_validate_impl!(i64, hashable);
+base_validate_impl!(BigInt, validate_big_integer);
+list_validate_impl!(BigInt, hashable);
+base_validate_impl!(BigDecimal, validate_big_decimal);
+list_validate_impl!(BigDecimal, hashable);
+base_validate_impl!(f32, validate_float);
+list_validate_impl!(f32, unhashable);
+base_validate_impl!(f64, validate_double);
+list_validate_impl!(f64, unhashable);
+
+// We have to wrap passed instants in a hashable wrapper to allow for unique-item comparisons
+// as the `Instant` we are using from `temporal_rs` doesn't implement hash at this time.
+base_validate_impl!(Instant, validate_timestamp);
+impl Validate for Vec<Instant> {
     type Value = Self;
 
     fn validate<V: Validator>(
@@ -398,24 +401,33 @@ impl Validate for Vec<String> {
         // TODO(errors): Should this short circuit to a validation error?
         let member_schema = schema.expect_member("member");
         for item in &self {
-            list.validate_in_place(member_schema, item)?;
+            list.validate_in_place(member_schema, &TimeStampHashWrapper(item))?;
         }
         Ok(self)
     }
 }
 
-impl Validate for i32 {
-    type Value = Self;
+/// This thin wrapper simply allows us to implement [`Hash`] for
+/// so lists of timestamp values can support `@uniqueItem` constraint.
+#[repr(transparent)]
+struct TimeStampHashWrapper<'a>(&'a Instant);
+impl <'a> Validate for &'a TimeStampHashWrapper<'_> {
+    type Value = ();
 
-    fn validate<V: Validator>(
-        self,
-        schema: &SchemaRef,
-        mut validator: V,
-    ) -> Result<Self::Value, ValidationErrors> {
-        validator.validate_integer(schema, &self)?;
-        Ok(self)
+    #[inline]
+    fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+         self.0.validate(schema, validator)
     }
 }
+impl <'a> Hash for TimeStampHashWrapper<'a> {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.epoch_nanoseconds().0.hash(state);
+    }
+}
+
+// ==== Nested Collections ====
+// TODO
 
 //////////////////////////////////////////////////////////////////////////////
 // ERROR CORRECTION
@@ -485,6 +497,24 @@ impl <E: ErrorCorrection> ErrorCorrection for IndexMap<String, E> {
 //////////////////////////////////////////////////////////////////////////////
 // Default Validator Implementation
 //////////////////////////////////////////////////////////////////////////////
+
+// macro_rules! check_type {
+//     ($self:ident, $schema:ident, $expected:expr) => {
+//         if *$schema.shape_type() != $expected {
+//             $self.emitError($schema, ValidationFailure::InvalidType($schema.shape_type().clone(), $expected))?;
+//         }
+//     };
+// }
+
+// macro_rules! check_range {
+//     ($self:ident, $schema:ident, $value:ident) => {
+//         if let Some(range) = &$schema.get_trait_as::<RangeTrait>() {
+//             if ($value < range.min() || $value > range.max()) {
+//                 $self.emit_error($schema, SmithyConstraints::Range($value.into(), range.min(), range.max()))?;
+//             }
+//         }
+//     };
+// }
 
 /// Default validator that ensures shapes conform to base Smithy constraints.
 ///
@@ -577,6 +607,10 @@ impl <'a> Validator for &'a mut DefaultValidator {
         Ok(DefaultStructValidator { root: self })
     }
 
+    fn validate_boolean(self, schema: &SchemaRef, bool: &bool) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
     fn validate_string(mut self, schema: &SchemaRef, value: &String) -> Result<(), ValidationErrors> {
         if *schema.shape_type() != ShapeType::String {
             self.emit_error(schema, ValidationFailure::InvalidType(schema.shape_type().clone(), ShapeType::String))?;
@@ -600,7 +634,43 @@ impl <'a> Validator for &'a mut DefaultValidator {
         Ok(())
     }
 
+    fn validate_byte(self, schema: &SchemaRef, byte: &i8) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_short(self, schema: &SchemaRef, short: &i16) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
     fn validate_integer(&mut self, _schema: &SchemaRef, _value: &i32) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_long(self, schema: &SchemaRef, long: &i64) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_float(self, schema: &SchemaRef, float: &f32) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_double(self, schema: &SchemaRef, double: &f64) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_big_integer(&mut self, schema: &SchemaRef, big_int: &BigInt) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_big_decimal(self, schema: &SchemaRef, big_decimal: &BigDecimal) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_document(self, schema: &SchemaRef, document: &Document) -> Result<(), ValidationErrors> {
+        todo!()
+    }
+
+    fn validate_timestamp(self, schema: &SchemaRef, timestamp: &Instant) -> Result<(), ValidationErrors> {
         todo!()
     }
 }
@@ -620,6 +690,14 @@ impl ListValidator for DefaultListValidator<'_> {
     {
         let _ = value.validate(element_schema, &mut *self.root)?;
         self.check_uniqueness(element_schema, &value)
+    }
+
+    fn validate_in_place_float<I: Float>(&mut self, element_schema: &SchemaRef, value: &I) -> Result<(), ValidationErrors>
+    where
+            for<'a> &'a I: Validate
+    {
+        let _ = value.validate(element_schema, &mut *self.root)?;
+        Ok(())
     }
 
     fn validate_and_move<T: Validate>(&mut self, element_schema: &SchemaRef, value: T) -> Result<T::Value, ValidationErrors>
