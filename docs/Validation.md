@@ -134,7 +134,19 @@ How will we allow users to build vectors of shapes?
 ## In-place validation
 Consider, for a moment, the case of a list of integers.
 
+## Why do this all at once? 
+Wouldnt this all be a lot easier if we just validated fully-built shapes? We could
+have the deserializer always return a built shape filled with default values for
+required fields.
 
+The problem here is after deserializing into a fully built shape we dont have any 
+way to track if a default was set by the user or by the deserializer in order to prevent
+any sort of require setter issues. It also creates 
+a) Return back "required" field validations in the deserialization stage. A
+
+I suppose we could have `set` and `unset` wrapper types around required field but
+that seems to make it harder on downstream consumers of the built types and doesnt 
+feel correct to me.
 
 
 
