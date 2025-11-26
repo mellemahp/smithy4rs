@@ -207,6 +207,8 @@ pub trait ListValidator {
     ) -> Result<T::Value, ValidationErrors>
     where
         T::Value: Hash;
+
+    fn check_uniqueness<T: Hash>(&mut self, element_schema: &SchemaRef, value: T) -> Result<(), ValidationErrors>;
 }
 
 pub trait StructureValidator {
@@ -268,7 +270,6 @@ pub trait StructureValidator {
 //     where
 //         V: ?Sized + Validate;
 // }
-
 
 /// Indicates that a type can be validated by a [`Validator`] implementation.
 ///
@@ -590,15 +591,15 @@ pub struct DefaultListValidator<'a> {
     unique: bool,
     lookup: UniquenessTracker
 }
-impl DefaultListValidator<'_> {
+
+impl ListValidator for DefaultListValidator<'_> {
     fn check_uniqueness<T: Hash>(&mut self, element_schema: &SchemaRef, value: T) -> Result<(), ValidationErrors> {
         if self.unique && self.lookup.add(value) {
             self.root.emit_error(element_schema, SmithyConstraints::UniqueItems)?;
         }
         Ok(())
     }
-}
-impl ListValidator for DefaultListValidator<'_> {
+
     fn validate_in_place<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), ValidationErrors>
     where
         for<'a> &'a T: Validate,
@@ -1011,7 +1012,7 @@ mod tests {
         let value = builder.field_a("fieldA".to_string()).field_nested(builder_nested).build()
             .expect("Failed to build SimpleStruct");
     }
-    
+
     #[test]
     fn nested_struct_fields_checked() {
         let builder_nested = NestedStructBuilder::new().field_c("dataWithCaps".to_string());

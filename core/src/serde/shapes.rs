@@ -1,8 +1,10 @@
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use serde::Deserialize;
 use crate::{serde::deserializers::DeserializeWithSchema};
 use crate::schema::{SchemaRef, StaticSchemaShape};
-use crate::serde::validate::Validate;
+use crate::serde::validate::{ListValidator, Validate};
 use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
 
 /// Builder for a Smithy Shape
@@ -63,6 +65,39 @@ impl <S, B: Validate<Value=S>> Validate for StructOrBuilder<S, B> {
             // Do not re-validate already built shapes.
             StructOrBuilder::Struct(s) => Ok(s),
             StructOrBuilder::Builder(b) => b.validate(schema, validator)
+        }
+    }
+}
+
+/// A vector of either structs or builders.
+pub enum VecOfStructsOrBuilders<S: Hash, B: Validate<Value=S>> {
+    Structs(Vec<S>),
+    Builders(Vec<B>),
+}
+impl <S: Hash, B: Validate<Value=S>> Validate for VecOfStructsOrBuilders<S, B> {
+    type Value = Vec<S>;
+
+    fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+        let element_schema = schema.expect_member("member");
+        match self {
+            // We do not re-validate already built shapes. However, we still need to
+            // execute a number of top-level checks and check uniqueness.
+            VecOfStructsOrBuilders::Structs(s) => {
+                let mut list_validator = validator.validate_list(schema, s.len())?;
+                // TODO: Do we need to ever check any other member-level constraints against a built struct?
+                for item in &s {
+                    list_validator.check_uniqueness(element_schema, item)?
+                }
+                Ok(s)
+            }
+            VecOfStructsOrBuilders::Builders(b) => {
+                let mut list_validator = validator.validate_list(schema, b.len())?;
+                let mut results = Vec::with_capacity(b.len());
+                for item in b {
+                    results.push(list_validator.validate_and_move(element_schema, item)?);
+                }
+                Ok(results)
+            }
         }
     }
 }
