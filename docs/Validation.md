@@ -142,11 +142,17 @@ required fields.
 The problem here is after deserializing into a fully built shape we dont have any 
 way to track if a default was set by the user or by the deserializer in order to prevent
 any sort of require setter issues. It also creates 
-a) Return back "required" field validations in the deserialization stage. A
+a) Return back "required" field validations in the deserialization stage. This would prevent us
+from aggregating all the validation errors together easily.
+b) Have some kind of wrapper struct added to the shape definitions to mark field as unset while 
+still having a value.
 
-I suppose we could have `set` and `unset` wrapper types around required field but
-that seems to make it harder on downstream consumers of the built types and doesnt 
-feel correct to me.
+I dont really like B because: 
+1) it pollutes the output type that users will be looking at.
+2) makes it hard to manually write structs and just apply the smithy-derive to it.
+3) Adds an extra layer of indirection within built shapes. I would prefer to keep all indirection
+   in the builders and such.
+
 
 
 
