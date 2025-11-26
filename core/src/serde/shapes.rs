@@ -1,4 +1,8 @@
-use crate::{schema::SchemaShape, serde::deserializers::DeserializeWithSchema};
+use std::marker::PhantomData;
+use std::ops::Deref;
+use crate::{serde::deserializers::DeserializeWithSchema};
+use crate::schema::{SchemaRef, StaticSchemaShape};
+use crate::serde::validate::Validate;
 use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
 
 /// Builder for a Smithy Shape
@@ -6,7 +10,7 @@ use crate::serde::validation::{DefaultValidator, ValidationErrors, Validator};
 /// Used during deserialization to accumulate field values
 /// before constructing the final shape. Builders implement
 /// [`DeserializeWithSchema`] to handle the actual deserialization logic.
-pub trait ShapeBuilder<'de, S>: Sized + DeserializeWithSchema<'de> {
+pub trait ShapeBuilder<'de, S: StaticSchemaShape>: Sized + DeserializeWithSchema<'de> + Validate<Value=S> {
     /// Create a new builder with all fields unset
     fn new() -> Self;
 
@@ -21,17 +25,22 @@ pub trait ShapeBuilder<'de, S>: Sized + DeserializeWithSchema<'de> {
     /// Build the final shape from the builder, checking fields using a
     /// custom [`Validator`] implementation.
     ///
-    /// To build a shape using the default validator use [`ShapeBuilder::build`]
-    fn build_with_validator<V>(self, validator: V) -> Result<S, ValidationErrors>
+    /// To build a shape using the default validator use [`ShapeBuilder::build`].
+    ///
+    /// NOTE: Actual validation and build logic is implementated in builder [`Validate`]
+    /// implementation.
+    fn build_with_validator<V>(self, mut validator: V) -> Result<S, ValidationErrors>
     where for<'a> &'a mut V: Validator {
-        todo!()
+        let result = self.validate(S::schema(), &mut validator)?;
+        validator.results()?;
+        Ok(result)
     }
 }
 
 /// Shape that can create a builder for deserialization
 pub trait Buildable<'de, B>
 where
-    Self: Sized + SchemaShape,
+    Self: Sized + StaticSchemaShape,
     B: ShapeBuilder<'de, Self>,
 {
     /// Get a new builder for this shape
@@ -39,3 +48,44 @@ where
         B::new()
     }
 }
+
+/// Simple wrapper type to allow a builder to store _either_ a pre-built
+/// struct or a struct builder.
+pub enum StructOrBuilder<S, B: Validate<Value=S>> {
+    Struct(S),
+    Builder(B),
+}
+impl <S, B: Validate<Value=S>> Validate for StructOrBuilder<S, B> {
+    type Value = S;
+
+    fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+        match self {
+            // Do not re-validate already built shapes.
+            StructOrBuilder::Struct(s) => Ok(s),
+            StructOrBuilder::Builder(b) => b.validate(schema, validator)
+        }
+    }
+}
+
+// impl <'de, S: StaticSchemaShape, B: ShapeBuilder<'de, S>> Validate for StructOrBuilder<'de, S, B> {
+//     type Value = S;
+//
+//     fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+//         match self {
+//             // Do not re-validate already built struct
+//             StructOrBuilder::Struct(s) => s,
+//             StructOrBuilder::Builder(b, _) => b.validate(schema, validator)
+//         }
+//     }
+// }
+//
+// impl <'de, S: StaticSchemaShape + BuildMarker<false>, B: ShapeBuilder<'de, S>> From<S> for StructOrBuilder<'de, S, B> {
+//     fn from(shape: S) -> Self {
+//         StructOrBuilder::Struct(shape)
+//     }
+// }
+// impl <'de, S: StaticSchemaShape, B: ShapeBuilder<'de, S>> From<B> for StructOrBuilder<'de, S, B> {
+//     fn from(builder: B) -> Self {
+//         StructOrBuilder::Builder(builder, PhantomData)
+//     }
+// }

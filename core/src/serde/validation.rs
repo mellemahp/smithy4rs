@@ -1,12 +1,13 @@
-use std::alloc::System;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
+use std::convert::Into;
 use std::error::Error;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 use bigdecimal::{BigDecimal, Zero};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
+use rustc_hash::FxHasher;
 use thiserror::Error;
 use crate::schema::{Document, DocumentValue, SchemaRef, ShapeType};
 use crate::Instant;
@@ -35,54 +36,6 @@ use crate::prelude::{LengthTrait, PatternTrait, UniqueItemsTrait};
 // }
 
 
-/// Validates a required field, returning a non-optional value.
-///
-/// By default, on a missing value a [`SmithyConstraints::Required`] validation
-/// error is emitted.
-///
-/// Validation errors are _only_ raised from this method if the validator hits
-/// a max depth or maximum number of errors. This allows the validator to short-circuit
-/// in those cases. Otherwise, users should use the [`results()?`] method to raise any
-/// validation errors _after_ all fields have been validated.
-///
-/// IMPL NOTE: Implementations must still return a default value even if the
-/// required value is missing. Otherwise, we would be unable to accumulate values
-/// from nested shapes with required fields.
-pub fn validate_required<S: Validator, V: Validate>
-(
-    mut validator: S,
-    schema: &SchemaRef,
-    value: Option<V>,
-) -> Result<V::Value, ValidationErrors>
-where V::Value: ErrorCorrection
-{
-    if let Some(v) = value {
-        v.validate(schema, validator)
-    } else {
-        validator.emit_error(schema, SmithyConstraints::Required)?;
-        Ok(V::Value::default(schema))
-    }
-}
-
-/// Validate an optional Field
-///
-/// Validation errors are _only_ raised from this method if the validator hits
-/// a max depth or maximum number of errors. This allows the validator to short-circuit
-/// in those cases. Otherwise, users should use the [`results()?`] method to raise any
-/// validation errors _after_ all fields have been validated.
-pub fn validate_optional<S: Validator, V: Validate>(
-    validator: S,
-    schema: &SchemaRef,
-    value: Option<V>,
-) -> Result<Option<V::Value>, ValidationErrors> {
-    if let Some(v) = value {
-        let result = v.validate(schema, validator)?;
-        Ok(Some(result))
-    } else {
-        Ok(None)
-    }
-}
-
 // TODO: Update docs to be a bit less clunky
 /// NOTE: Smithy error correction is not implemented directly.
 pub trait Validator {
@@ -93,30 +46,7 @@ pub trait Validator {
     // type EntryValidator: MapValidator;
 
     /// Validates structure builders
-    // type BuilderValidator: Validator;
-
-    fn validate_list(
-        self,
-        schema: &SchemaRef,
-        size: usize,
-    ) -> Result<Self::ItemValidator, ValidationErrors>;
-
-    // fn validate_map(
-    //     self,
-    //     schema: &SchemaRef,
-    //     size: usize,
-    // ) -> Result<Self::EntryValidator, ValidationErrors>;
-    //
-    // fn validate_struct<V: Validate>(
-    //     &mut self,
-    //     schema: &SchemaRef,
-    // ) -> Result<Self::BuilderValidator, ValidationErrors>;
-
-    // /// Validate a `boolean` in place
-    // fn validate_boolean(&mut self, schema: &SchemaRef, _bool: &bool) -> Result<(), ValidationErrors> {
-    //     //check_type!(self, schema, ShapeType::Boolean);
-    //     Ok(())
-    // }
+    type StructureValidator: StructureValidator;
 
     /// Emit an error for accumulation.
     ///
@@ -130,6 +60,31 @@ pub trait Validator {
     ///
     /// This returns a `Result` type to allow `?` raising.
     fn results(self) -> Result<(), ValidationErrors>;
+
+    /// Checks list validations and returns a validator used validate list items
+    fn validate_list(
+        self,
+        schema: &SchemaRef,
+        size: usize,
+    ) -> Result<Self::ItemValidator, ValidationErrors>;
+
+    // fn validate_map(
+    //     self,
+    //     schema: &SchemaRef,
+    //     size: usize,
+    // ) -> Result<Self::EntryValidator, ValidationErrors>;
+
+    /// Validator for a structure or builder
+    fn validate_struct(
+        self,
+        schema: &SchemaRef,
+    ) -> Result<Self::StructureValidator, ValidationErrors>;
+
+    // /// Validate a `boolean` in place
+    // fn validate_boolean(&mut self, schema: &SchemaRef, _bool: &bool) -> Result<(), ValidationErrors> {
+    //     //check_type!(self, schema, ShapeType::Boolean);
+    //     Ok(())
+    // }
 
     /// Validate a `String` in place
     fn validate_string(
@@ -245,13 +200,49 @@ pub trait ListValidator {
 
     /// Validates and moves an element
     /// NOTE: This is primarily intended to support builder conversions
-    fn validate_and_move<T>(
+    fn validate_and_move<T: Validate>(
         &mut self,
         element_schema: &SchemaRef,
         value: T
     ) -> Result<T::Value, ValidationErrors>
     where
-        T: Validate;
+        T::Value: Hash;
+}
+
+pub trait StructureValidator {
+
+    /// Validates a required field, returning a non-optional value.
+    ///
+    /// By default, on a missing value a [`SmithyConstraints::Required`] validation
+    /// error is emitted.
+    ///
+    /// Validation errors are _only_ raised from this method if the validator hits
+    /// a max depth or maximum number of errors. This allows the validator to short-circuit
+    /// in those cases. Otherwise, users should use the [`results()?`] method to raise any
+    /// validation errors _after_ all fields have been validated.
+    ///
+    /// IMPL NOTE: Implementations must still return a default value even if the
+    /// required value is missing. Otherwise, we would be unable to accumulate values
+    /// from nested shapes with required fields.
+    fn validate_required<V: Validate>
+    (
+        &mut self,
+        schema: &SchemaRef,
+        value: Option<V>,
+    ) -> Result<V::Value, ValidationErrors>
+    where V::Value: ErrorCorrection;
+
+    /// Validate an optional Field
+    ///
+    /// Validation errors are _only_ raised from this method if the validator hits
+    /// a max depth or maximum number of errors. This allows the validator to short-circuit
+    /// in those cases. Otherwise, users should use the [`results()?`] method to raise any
+    /// validation errors _after_ all fields have been validated.
+    fn validate_optional<V: Validate>(
+        &mut self,
+        schema: &SchemaRef,
+        value: Option<V>,
+    ) -> Result<Option<V::Value>, ValidationErrors>;
 }
 
 // trait MapValidator {
@@ -486,6 +477,26 @@ impl DefaultValidator {
 }
 impl <'a> Validator for &'a mut DefaultValidator {
     type ItemValidator = DefaultListValidator<'a>;
+    type StructureValidator = DefaultStructValidator<'a>;
+
+    fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
+        let errors = self.errors.get_or_insert(ValidationErrors::new());
+        errors.add(path, err);
+        if errors.len() >= self.max_errors {
+            errors.add(path, ValidationFailure::MaxErrorsReached(self.max_errors));
+            // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
+            // TODO(code quality): maybe use a lazy initializer struct.
+            return Err(self.errors.take().unwrap());
+        }
+        Ok(())
+    }
+
+    fn results(self) -> Result<(), ValidationErrors> {
+        if let Some(errors) = self.errors.take() {
+            return Err(errors);
+        }
+        Ok(())
+    }
 
     fn validate_list(
         mut self,
@@ -508,27 +519,14 @@ impl <'a> Validator for &'a mut DefaultValidator {
         Ok(DefaultListValidator {
             root: self,
             unique: schema.contains_type::<UniqueItemsTrait>(),
-            lookup: UniqueTracker::new()
+            lookup: UniquenessTracker::new()
         })
     }
 
-    fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
-        let errors = self.errors.get_or_insert(ValidationErrors::new());
-        errors.add(path, err);
-        if errors.len() >= self.max_errors {
-            errors.add(path, ValidationFailure::MaxErrorsReached(self.max_errors));
-            // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
-            // TODO(code quality): maybe use a lazy initializer struct.
-            return Err(self.errors.take().unwrap());
-        }
-        Ok(())
-    }
-
-    fn results(self) -> Result<(), ValidationErrors> {
-        if let Some(errors) = self.errors.take() {
-            return Err(errors);
-        }
-        Ok(())
+    fn validate_struct(mut self, schema: &SchemaRef) -> Result<Self::StructureValidator, ValidationErrors> {
+        // TODO(completeness): check that schema is struct.
+        // TODO(completeness): ADD DEPTH CHECKS
+        Ok(DefaultStructValidator { root: self })
     }
 
     fn validate_string(mut self, schema: &SchemaRef, value: &String) -> Result<(), ValidationErrors> {
@@ -551,7 +549,6 @@ impl <'a> Validator for &'a mut DefaultValidator {
                 self.emit_error(schema, SmithyConstraints::Length(value.len(), length.min(), length.max()))?
             }
         }
-
         Ok(())
     }
 
@@ -560,10 +557,46 @@ impl <'a> Validator for &'a mut DefaultValidator {
     }
 }
 
+#[doc(hidden)]
+pub struct DefaultStructValidator<'a> {
+    root: &'a mut DefaultValidator,
+}
+impl StructureValidator for DefaultStructValidator<'_> {
+    fn validate_required<V: Validate>(&mut self, schema: &SchemaRef, value: Option<V>) -> Result<V::Value, ValidationErrors>
+    where
+        V::Value: ErrorCorrection
+    {
+        if let Some(v) = value {
+            v.validate(schema, &mut *self.root)
+        } else {
+            self.root.emit_error(schema, SmithyConstraints::Required)?;
+            Ok(V::Value::default(schema))
+        }
+    }
+
+    fn validate_optional<V: Validate>(&mut self, schema: &SchemaRef, value: Option<V>) -> Result<Option<V::Value>, ValidationErrors> {
+        if let Some(v) = value {
+            let result = v.validate(schema, &mut *self.root)?;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[doc(hidden)]
 pub struct DefaultListValidator<'a> {
     root: &'a mut DefaultValidator,
     unique: bool,
-    lookup: UniqueTracker
+    lookup: UniquenessTracker
+}
+impl DefaultListValidator<'_> {
+    fn check_uniqueness<T: Hash>(&mut self, element_schema: &SchemaRef, value: T) -> Result<(), ValidationErrors> {
+        if self.unique && self.lookup.add(value) {
+            self.root.emit_error(element_schema, SmithyConstraints::UniqueItems)?;
+        }
+        Ok(())
+    }
 }
 impl ListValidator for DefaultListValidator<'_> {
     fn validate_in_place<T>(&mut self, element_schema: &SchemaRef, value: &T) -> Result<(), ValidationErrors>
@@ -571,28 +604,30 @@ impl ListValidator for DefaultListValidator<'_> {
         for<'a> &'a T: Validate,
         T: Hash
     {
-        if self.unique && self.lookup.add(value) {
-            self.root.emit_error(element_schema, SmithyConstraints::UniqueItems)?;
-        }
         let _ = value.validate(element_schema, &mut *self.root)?;
-        Ok(())
+        self.check_uniqueness(element_schema, &value)
     }
 
-    fn validate_and_move<T>(&mut self, element_schema: &SchemaRef, value: T) -> Result<T::Value, ValidationErrors>
+    fn validate_and_move<T: Validate>(&mut self, element_schema: &SchemaRef, value: T) -> Result<T::Value, ValidationErrors>
     where
-        T: Validate
+        T::Value: Hash
     {
-        todo!()
+        let output= value.validate(element_schema, &mut *self.root)?;
+        self.check_uniqueness(element_schema, &output)?;
+        Ok(output)
     }
 }
 
 /// Tracker for unique items using a hash lookup directly
-struct UniqueTracker {
+struct UniquenessTracker {
+    // A b-tree is used here as it should be faster for
+    // search for a relatively small number of numeric
+    // values than a hashmap
     lookup: BTreeMap<u64, ()>,
 }
-impl UniqueTracker {
+impl UniquenessTracker {
     fn new() -> Self {
-        UniqueTracker {
+        UniquenessTracker {
             lookup: BTreeMap::new()
         }
     }
@@ -620,7 +655,7 @@ pub struct ValidationErrors {
 
 // TODO: REMOVE AT SOME POINT
 impl From<String> for ValidationErrors {
-    fn from(value: String) -> Self {
+    fn from(_value: String) -> Self {
         todo!()
     }
 }
@@ -734,12 +769,13 @@ impl ValidationError for SmithyConstraints {}
 #[cfg(test)]
 mod tests {
     use std::sync::LazyLock;
-    use crate::{lazy_schema, traits};
+    use crate::traits;
     use crate::prelude::{INTEGER, STRING};
-    use crate::schema::{Schema, ShapeId};
+    use crate::schema::{Schema, ShapeId, StaticSchemaShape};
     use crate::serde::de::Deserializer;
     use crate::serde::deserializers::DeserializeWithSchema;
     use crate::serde::ShapeBuilder;
+    use crate::serde::shapes::StructOrBuilder;
     use super::*;
 
     #[test]
@@ -762,24 +798,40 @@ mod tests {
     static VALIDATION_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
             .put_member("field_a", &STRING, traits![PatternTrait::new("^[a-zA-Z]*$")])
-            .put_member("field_b", &INTEGER, Vec::new())
-            .put_member("field_list", &LIST_SCHEMA, Vec::new())
+            .put_member("field_b", &INTEGER, traits![])
+            .put_member("field_list", &LIST_SCHEMA, traits![])
+            .put_member("field_nested", &NESTED_SCHEMA, traits![])
             .build()
     });
     static FIELD_A: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_a"));
     static FIELD_B: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_b"));
     static FIELD_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_list"));
+    static FIELD_NESTED: LazyLock<&SchemaRef> = LazyLock::new(|| VALIDATION_SCHEMA.expect_member("field_nested"));
+
+    static NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
+            .put_member("field_c", &STRING, traits![PatternTrait::new("^[a-z]*$")])
+            .build()
+    });
+    static FIELD_C: LazyLock<&SchemaRef> = LazyLock::new(|| { NESTED_SCHEMA.expect_member("field_c") });
 
     pub struct SimpleStruct {
         field_a: String,
         field_b: Option<i32>,
-        field_list: Option<Vec<String>>
+        field_list: Option<Vec<String>>,
+        field_nested: Option<NestedStruct>
+    }
+    impl StaticSchemaShape for SimpleStruct {
+        fn schema() -> &'static SchemaRef {
+            &VALIDATION_SCHEMA
+        }
     }
 
     pub struct SimpleStructBuilder {
         field_a: Option<String>,
         field_b: Option<i32>,
-        field_list: Option<Vec<String>>
+        field_list: Option<Vec<String>>,
+        field_nested: Option<StructOrBuilder<NestedStruct, NestedStructBuilder>>
     }
     impl SimpleStructBuilder {
         pub fn field_a(mut self, value: String) -> Self {
@@ -796,26 +848,38 @@ mod tests {
             self.field_list = Some(value);
             self
         }
-    }
 
+        pub fn field_nested(mut self, value: NestedStruct) -> Self {
+            self.field_nested = Some(StructOrBuilder::Struct(value));
+            self
+        }
+
+        pub fn field_nested_builder(mut self, value: NestedStructBuilder) -> Self {
+            self.field_nested = Some(StructOrBuilder::Builder(value));
+            self
+        }
+    }
     impl <'de> ShapeBuilder<'de, SimpleStruct> for SimpleStructBuilder {
         fn new() -> Self {
             Self {
                 field_a: None,
                 field_b: None,
-                field_list: None
+                field_list: None,
+                field_nested: None
             }
         }
+    }
+    impl Validate for SimpleStructBuilder {
+        type Value = SimpleStruct;
 
-        fn build_with_validator<V>(self, mut validator: V) -> Result<SimpleStruct, ValidationErrors>
-            where for<'a> &'a mut V: Validator
-        {
+        fn validate<V: Validator>(self, schema: &SchemaRef, mut validator: V) -> Result<Self::Value, ValidationErrors> {
+            let mut struct_validator = validator.validate_struct(schema)?;
             let result = SimpleStruct {
-                field_a: validate_required(&mut validator, &FIELD_A, self.field_a)?,
-                field_b: validate_optional(&mut validator, &FIELD_B, self.field_b)?,
-                field_list: validate_optional(&mut validator, &FIELD_LIST, self.field_list)?
+                field_a: struct_validator.validate_required(&FIELD_A, self.field_a)?,
+                field_b: struct_validator.validate_optional(&FIELD_B, self.field_b)?,
+                field_list: struct_validator.validate_optional(&FIELD_LIST, self.field_list)?,
+                field_nested: struct_validator.validate_optional(&FIELD_NESTED, self.field_nested)?,
             };
-            validator.results()?;
             Ok(result)
         }
     }
@@ -825,6 +889,54 @@ mod tests {
             D: Deserializer<'de>
         {
             unimplemented!("We dont need to deserialize to test.")
+        }
+    }
+
+    pub struct NestedStruct {
+        field_c: String,
+    }
+    impl StaticSchemaShape for NestedStruct {
+        fn schema() -> &'static SchemaRef {
+            &NESTED_SCHEMA
+        }
+    }
+
+    pub struct NestedStructBuilder {
+        field_c: Option<String>,
+    }
+    impl NestedStructBuilder {
+        pub fn field_c(mut self, value: String) -> Self {
+            self.field_c = Some(value);
+            self
+        }
+    }
+
+    impl <'de> DeserializeWithSchema<'de> for NestedStructBuilder {
+        fn deserialize_with_schema<D>(schema: &SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>
+        {
+            unimplemented!("We dont need to deserialize to test.")
+        }
+    }
+
+    impl Validate for NestedStructBuilder {
+        type Value = NestedStruct;
+
+        fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
+            let mut struct_validator = validator.validate_struct(schema)?;
+            let result = NestedStruct {
+                field_c: struct_validator.validate_required(&FIELD_C, self.field_c)?,
+            };
+            Ok(result)
+        }
+    }
+
+    impl <'de> ShapeBuilder<'de, NestedStruct> for NestedStructBuilder {
+        fn new() -> Self {
+            Self {
+                field_c: None,
+            }
         }
     }
 
@@ -882,5 +994,34 @@ mod tests {
 
         assert_eq!(error_unique.path, *LIST_SCHEMA.expect_member("member"));
         assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
+    }
+
+    #[test]
+    fn nested_struct_fields_build_if_no_errors() {
+        let builder_nested = NestedStructBuilder::new().field_c("field".to_string());
+        let builder = SimpleStructBuilder::new();
+        let value = builder.field_a("fieldA".to_string()).field_nested_builder(builder_nested).build()
+            .expect("Failed to build SimpleStruct");
+    }
+
+    #[test]
+    fn nested_struct_fields_build_with_pre_built_shape() {
+        let builder_nested = NestedStructBuilder::new().field_c("field".to_string()).build().expect("Failed to build NestedStruct");
+        let builder = SimpleStructBuilder::new();
+        let value = builder.field_a("fieldA".to_string()).field_nested(builder_nested).build()
+            .expect("Failed to build SimpleStruct");
+    }
+    
+    #[test]
+    fn nested_struct_fields_checked() {
+        let builder_nested = NestedStructBuilder::new().field_c("dataWithCaps".to_string());
+        let builder = SimpleStructBuilder::new();
+        let Some(err) = builder.field_a("fieldA".to_string()).field_nested_builder(builder_nested).build().err() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 1);
+        let error_pattern = err.errors.get(0).unwrap();
+        assert_eq!(error_pattern.path, **FIELD_C);
+        assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
     }
 }
