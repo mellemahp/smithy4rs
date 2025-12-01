@@ -397,67 +397,6 @@ impl <S: SerializeWithSchema> Validate for S {
 // TODO
 
 //////////////////////////////////////////////////////////////////////////////
-// ERROR CORRECTION
-//////////////////////////////////////////////////////////////////////////////
-
-/// Implements Smithy [Error Correction](https://smithy.io/2.0/spec/aggregate-types.html#client-error-correction) for a type.
-///
-/// Error correction fills missing required values to allow invalid shapes to still be correctly
-/// constructed. This is primarily useful for validation and to avoid deserialization issues in
-/// some clients.
-pub trait ErrorCorrection {
-    /// Returns a default value for the type in case of errors
-    fn default() -> Self;
-}
-
-macro_rules! correction_impl {
-    ($t:ty, $v:expr) => {
-        impl ErrorCorrection for $t {
-            #[inline(always)]
-            fn default() -> $t {
-                $v
-            }
-        }
-    };
-}
-correction_impl!(bool, true);
-correction_impl!(i8, 0i8);
-correction_impl!(i16, 0i16);
-correction_impl!(i32, 0i32);
-correction_impl!(i64, 0i64);
-correction_impl!(f32, 0f32);
-correction_impl!(f64, 0f64);
-// SAFETY: Unwrap will never fail
-correction_impl!(Instant, Instant::from_epoch_milliseconds(0).unwrap());
-correction_impl!(String, String::new());
-correction_impl!(BigDecimal, BigDecimal::zero());
-correction_impl!(BigInt, BigInt::zero());
-
-impl ErrorCorrection for Document {
-    fn default() -> Self {
-        Document {
-            schema: DOCUMENT.clone(),
-            value: DocumentValue::Null,
-            discriminator: None,
-        }
-    }
-}
-
-impl <E: ErrorCorrection> ErrorCorrection for Vec<E> {
-    fn default() -> Self {
-        Vec::new()
-    }
-}
-
-impl <E: ErrorCorrection> ErrorCorrection for IndexMap<String, E> {
-    fn default() -> Self {
-        IndexMap::new()
-    }
-}
-
-// TODO: ENUM AND INT ENUM IMPLS + Byte buffer impls
-
-//////////////////////////////////////////////////////////////////////////////
 // ERRORS
 //////////////////////////////////////////////////////////////////////////////
 
@@ -606,7 +545,8 @@ mod tests {
     use crate::traits;
     use crate::prelude::{INTEGER, STRING};
     use crate::schema::{Schema, ShapeId, StaticSchemaShape};
-    use crate::serde::builders::{BuildWithCorrection, Required, MaybeBuilt};
+    use crate::serde::builders::{Required, MaybeBuilt};
+    use crate::serde::correction::{ErrorCorrection, ErrorCorrectionDefault};
     use crate::serde::de::Deserializer;
     use crate::serde::deserializers::DeserializeWithSchema;
     use crate::serde::ShapeBuilder;
@@ -696,10 +636,12 @@ mod tests {
             }
         }
     }
-    impl BuildWithCorrection<SimpleStruct> for SimpleStructBuilder {
-        fn build_with_correction(self) -> SimpleStruct {
+    impl ErrorCorrection for SimpleStructBuilder {
+        type Value = SimpleStruct;
+
+        fn correct(self) -> Self::Value {
             SimpleStruct {
-                field_a: self.field_a.get_or_resolve(),
+                field_a: self.field_a.get(),
                 field_b: self.field_b,
                 field_list: self.field_list,
                 field_map: self.field_map
@@ -874,9 +816,10 @@ mod tests {
             unimplemented!("We dont need to deserialize to test.")
         }
     }
-    impl ErrorCorrection for NestedStruct {
+    // TODO: This could be a blanket impl for `Buildable` shapes
+    impl ErrorCorrectionDefault for NestedStruct {
         fn default() -> Self {
-            NestedStructBuilder::new().build_with_correction()
+            NestedStructBuilder::new().correct()
         }
     }
     impl SerializeWithSchema for NestedStructBuilder {
@@ -893,10 +836,12 @@ mod tests {
             }
         }
     }
-    impl BuildWithCorrection<NestedStruct> for NestedStructBuilder {
-        fn build_with_correction(self) -> NestedStruct {
+    impl ErrorCorrection for NestedStructBuilder {
+        type Value = NestedStruct;
+
+        fn correct(self) -> Self::Value {
             NestedStruct {
-                field_c: self.field_c.get_or_resolve(),
+                field_c: self.field_c.get(),
             }
         }
     }
@@ -932,11 +877,13 @@ mod tests {
             unimplemented!("We dont need to deserialize to test.")
         }
     }
-    impl BuildWithCorrection<StructWithNested> for StructWithNestedBuilder {
-        fn build_with_correction(self) -> StructWithNested {
+    impl ErrorCorrection for StructWithNestedBuilder {
+        type Value = StructWithNested;
+
+        fn correct(self) -> Self::Value {
             StructWithNested {
-                field_nested: self.field_nested.build_with_correction(),
-                field_required_nested: self.field_required_nested.get_or_resolve().build_with_correction(),
+                field_nested: self.field_nested.correct(),
+                field_required_nested: self.field_required_nested.get().correct(),
             }
         }
     }
@@ -1072,12 +1019,14 @@ mod tests {
             ser.end(schema)
         }
     }
-    impl BuildWithCorrection<StructWithNestedLists> for StructWithNestedListsBuilder {
-        fn build_with_correction(self) -> StructWithNestedLists {
+    impl ErrorCorrection for StructWithNestedListsBuilder {
+        type Value = StructWithNestedLists;
+
+        fn correct(self) -> Self::Value {
             StructWithNestedLists {
-                field_nested_list: self.field_nested_list.build_with_correction(),
-                field_required_nested_list: self.field_required_nested_list.get_or_resolve().build_with_correction(),
-                field_deeply_nested_list: self.field_deeply_nested_list.build_with_correction(),
+                field_nested_list: self.field_nested_list.correct(),
+                field_required_nested_list: self.field_required_nested_list.get().correct(),
+                field_deeply_nested_list: self.field_deeply_nested_list.correct(),
             }
         }
     }
@@ -1265,12 +1214,14 @@ mod tests {
             ser.end(schema)
         }
     }
-    impl BuildWithCorrection<StructWithNestedMaps> for StructWithNestedMapsBuilder {
-        fn build_with_correction(self) -> StructWithNestedMaps {
+    impl ErrorCorrection for StructWithNestedMapsBuilder {
+        type Value = StructWithNestedMaps;
+
+        fn correct(self) -> Self::Value {
             StructWithNestedMaps {
-                field_nested_map: self.field_nested_map.build_with_correction(),
-                field_nested_map_required: self.field_nested_map_required.get_or_resolve().build_with_correction(),
-                field_deeply_nested_map: self.field_deeply_nested_map.build_with_correction(),
+                field_nested_map: self.field_nested_map.correct(),
+                field_nested_map_required: self.field_nested_map_required.get().correct(),
+                field_deeply_nested_map: self.field_deeply_nested_map.correct(),
             }
         }
     }
