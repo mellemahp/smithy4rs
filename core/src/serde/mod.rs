@@ -5,6 +5,7 @@ mod fmt;
 pub mod serializers;
 pub mod builders;
 pub mod validation;
+mod correction;
 
 pub use deserializers as de;
 pub use serializers as se;
