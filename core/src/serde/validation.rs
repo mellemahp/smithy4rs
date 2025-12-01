@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
+use std::path::Path;
 use std::sync::Arc;
 use bigdecimal::{BigDecimal, Zero};
 use bigdecimal::num_traits::Float;
@@ -408,8 +409,48 @@ impl <S: SerializeWithSchema> Validate for S {
 // TODO: Could this be a trie? Would that actually be faster?
 #[derive(Error, Debug)]
 pub struct ValidationErrors {
+    children: IndexMap<PathElement, ValidationErrors>,
     errors: Vec<ValidationErrorWrapper>
 }
+
+/// Represents a [JsonPointer](https://datatracker.ietf.org/doc/html/rfc6901) path element.
+///
+/// For example, the JsonPointer `/myschema/1/fielda` would be represented as:
+/// ```rust,ignore
+/// use smithy4rs_core::serde::validate::{Path, PathItem};
+/// let pointer = vec![
+///     Path::Schema(MYSCHEMA.clone()),
+///     Path::Index(1),
+///     Path::Schema(FIELD_A.clone())
+/// ];
+/// ```
+pub enum PathElement {
+    Schema(SchemaRef),
+    Index(usize)
+}
+impl Hash for PathElement {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            // Use the pointer itself as the hash. We don't need to deref to build the path.
+            PathElement::Schema(schema) => Arc::as_ptr(schema).hash(state),
+            PathElement::Index(index) => index.hash(state)
+        }
+        .hash(state)
+    }
+}
+impl PartialEq for PathElement {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (PathElement::Schema(self_schema), PathElement::Schema(other_schema)) => {
+                Arc::ptr_eq(self_schema, other_schema)
+            }
+            (PathElement::Index(self_index), PathElement::Index(other_index)) => self_index.eq(other_index),
+            _ => false
+        }
+    }
+}
+impl Eq for PathElement {}
+
 
 impl serializers::Error for ValidationErrors {
     fn custom<T: Display>(msg: T) -> Self {
