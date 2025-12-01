@@ -1024,6 +1024,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+ "smallvec",
  "smithy4rs-core-derive",
  "static_str_ops",
  "temporal_rs",

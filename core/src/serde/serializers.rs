@@ -3,9 +3,9 @@
 #![allow(clippy::missing_errors_doc)]
 
 use std::{error::Error as StdError, fmt::Display};
-
+use std::hash::{Hash, Hasher};
 use indexmap::IndexMap;
-
+use rustc_hash::FxHasher;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     schema::{Document, SchemaRef, SchemaShape, ShapeId},
@@ -46,6 +46,12 @@ pub trait ListSerializer {
     type Ok;
 
     /// Serialize a sequence element.
+    ///
+    /// UniqueHash must be implemented on all list item types
+    /// to allow for uniqueness checking.
+    ///
+    /// NOTE: Float types aren't actually supported for uniqueness
+    /// checks, but we must implement anyway to satisfy the type system.
     fn serialize_element<T>(
         &mut self,
         element_schema: &SchemaRef,
@@ -268,6 +274,13 @@ pub trait Serializer: Sized {
 
     /// Serialize a `null` value
     fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
+
+    /// Write a missing expected value.
+    ///
+    /// Default implementation simply `skip()`s the missing value.
+    fn write_missing(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        self.skip(schema)
+    }
 
     /// Skip the serialization of a value.
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
