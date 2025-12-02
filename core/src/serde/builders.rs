@@ -1,6 +1,3 @@
-use std::hash::Hash;
-use indexmap::IndexMap;
-use serde::Serialize;
 use crate::{serde::deserializers::DeserializeWithSchema};
 use crate::schema::{SchemaRef, StaticSchemaShape};
 use crate::serde::correction::{ErrorCorrection, ErrorCorrectionDefault};
@@ -92,5 +89,3 @@ impl <E: ErrorCorrectionDefault + SerializeWithSchema, B: ErrorCorrection<Value=
         }
     }
 }
-
-

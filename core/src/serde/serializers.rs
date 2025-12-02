@@ -2,10 +2,8 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_errors_doc)]
 
+use crate::IndexMap;
 use std::{error::Error as StdError, fmt::Display};
-use std::hash::{Hash, Hasher};
-use indexmap::IndexMap;
-use rustc_hash::FxHasher;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     schema::{Document, SchemaRef, SchemaShape, ShapeId},
@@ -46,12 +44,6 @@ pub trait ListSerializer {
     type Ok;
 
     /// Serialize a sequence element.
-    ///
-    /// UniqueHash must be implemented on all list item types
-    /// to allow for uniqueness checking.
-    ///
-    /// NOTE: Float types aren't actually supported for uniqueness
-    /// checks, but we must implement anyway to satisfy the type system.
     fn serialize_element<T>(
         &mut self,
         element_schema: &SchemaRef,
