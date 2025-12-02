@@ -1,23 +1,18 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::convert::Into;
 use std::error::Error;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
-use std::ops::{Deref, DerefMut};
-use std::path::Path;
-use std::sync::Arc;
-use bigdecimal::{BigDecimal, Zero};
-use bigdecimal::num_traits::Float;
+use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use rustc_hash::FxHasher;
-use smallvec::SmallVec;
 use thiserror::Error;
-use crate::schema::{Document, DocumentValue, Schema, SchemaRef, ShapeType};
+use crate::schema::{Document, SchemaRef, ShapeType};
 use crate::Instant;
-use crate::prelude::{LengthTrait, PatternTrait, UniqueItemsTrait, DOCUMENT};
-use crate::serde::se::{SerializableShape, SerializeWithSchema, Serializer};
+use crate::prelude::{LengthTrait, PatternTrait, UniqueItemsTrait};
+use crate::serde::se::{SerializeWithSchema, Serializer};
 use crate::serde::serializers;
 use crate::serde::serializers::{ListSerializer, MapSerializer, StructSerializer};
 
@@ -42,7 +37,7 @@ use crate::serde::serializers::{ListSerializer, MapSerializer, StructSerializer}
 pub struct Validator {
     errors: Option<ValidationErrors>,
     // TODO(optimization): Should this use smallvec?
-    path_stack: Vec<SchemaRef>,
+    path_stack: Vec<PathElement>,
     max_depth: usize,
     max_errors: usize,
 }
@@ -75,15 +70,13 @@ impl Validator {
     /// This method should _only_ returns an error response when the maximum number
     /// of errors is hit. At that point it returns a list of all previously encountered
     /// validation errors plus an extra appended error to indicate the error limit was reached.
-    pub fn emit_error<E: ValidationError + 'static>(&mut self, path: &SchemaRef, err: E) -> Result<(), ValidationErrors> {
+    pub fn emit_error<E: ValidationError + 'static>(&mut self, err: E) -> Result<(), ValidationErrors> {
         let errors = self.errors.get_or_insert(ValidationErrors::new());
         if errors.len() >= self.max_errors {
             errors.add(&self.path_stack, ValidationFailure::MaxErrorsReached(self.max_errors));
-            // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
-            // TODO(code quality): maybe use a lazy initializer struct.
             return Err(self.errors.take().unwrap());
         }
-        errors.add_with_path(&self.path_stack, path, err);
+        errors.add(&self.path_stack, err);
         Ok(())
     }
 
@@ -97,25 +90,26 @@ impl Validator {
         Ok(())
     }
 
-    fn push_path(&mut self, path: &SchemaRef) -> Result<(), ValidationErrors> {
+    fn push_path(&mut self, path: impl Into<PathElement>) -> Result<(), ValidationErrors> {
         if self.path_stack.len() + 1 > self.max_depth {
-            self.emit_error(path, ValidationFailure::MaximumDepthExceeded(self.max_depth))?;
-            // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
-            // TODO(code quality): maybe use a lazy initializer struct.
-            return Err(self.errors.take().unwrap());
+            return self.short_circuit(ValidationFailure::MaximumDepthExceeded(self.max_depth))
         }
-        self.path_stack.push(path.clone());
+        self.path_stack.push(path.into());
         Ok(())
     }
 
-    fn pop_path(&mut self, schema: &SchemaRef) -> Result<(), ValidationErrors> {
+    /// Short circuit validation, returning this error and any others collected up to this point.
+    fn short_circuit<E: ValidationError + 'static>(&mut self, error: E) -> Result<(), ValidationErrors> {
+        self.emit_error(error)?;
+        // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
+        Err(self.errors.take().unwrap())
+    }
+
+    fn pop_path(&mut self) -> Result<(), ValidationErrors> {
         if let None = self.path_stack.pop() {
             // If we have reached the base path something went wrong and there
             // was an unbalanced validator call somewhere.
-            self.emit_error(schema, ValidationFailure::PopFromEmptyValidator)?;
-            // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
-            // TODO(code quality): maybe use a lazy initializer struct.
-            return Err(self.errors.take().unwrap());
+            return self.short_circuit(ValidationFailure::PopFromEmptyValidator);
         }
         Ok(())
     }
@@ -130,11 +124,8 @@ impl <'a> Serializer for &'a mut Validator {
     type SerializeMap = MapValidator<'a>;
     type SerializeStruct = StructValidator<'a>;
 
-    fn write_struct(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, _schema: &SchemaRef, _len: usize) -> Result<Self::SerializeStruct, Self::Error> {
         // TODO(completeness): check that schema is struct.
-        // TODO(completeness): ADD DEPTH CHECKS
-        // Push to stack
-        self.push_path(schema)?;
         Ok(StructValidator { root: self })
     }
 
@@ -142,10 +133,10 @@ impl <'a> Serializer for &'a mut Validator {
         // Check that list does not exceed length constraint
         if let Some(length) = schema.get_trait_as::<LengthTrait>() {
             if len < length.min() || len > length.max() {
-                self.emit_error(schema, SmithyConstraints::Length(len, length.min(), length.max()))?;
+                self.emit_error(SmithyConstraints::Length(len, length.min(), length.max()))?;
             }
         }
-        self.push_path(schema)?;
+
         Ok(MapValidator { root: self })
     }
 
@@ -153,100 +144,103 @@ impl <'a> Serializer for &'a mut Validator {
         // Short circuit if the list is larger than the allowed depth.
         // TODO(extensibility): Make this separately configurable property?
         if len > self.max_depth {
-            self.emit_error(schema, ValidationFailure::ListTooLarge(self.max_depth))?;
+            self.emit_error(ValidationFailure::ListTooLarge(self.max_depth))?;
             return Err(self.errors.take().unwrap());
         }
 
         // Check that list does not exceed length constraint
         if let Some(length) = schema.get_trait_as::<LengthTrait>() {
             if len < length.min() || len > length.max() {
-                self.emit_error(schema, SmithyConstraints::Length(len, length.min(), length.max()))?;
+                self.emit_error(SmithyConstraints::Length(len, length.min(), length.max()))?;
             }
         }
-        self.push_path(schema)?;
+
+
         Ok(ListValidator {
             root: self,
             unique: schema.contains_type::<UniqueItemsTrait>(),
-            lookup: UniquenessTracker::new()
+            lookup: UniquenessTracker::new(),
+            index: 0,
         })
     }
 
-    fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, _schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, _schema: &SchemaRef, _value: i8) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, _schema: &SchemaRef, _value: i16) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, _schema: &SchemaRef, _value: i32) -> Result<Self::Ok, Self::Error> {
+        // TODO: Add type check
+        Ok(())
+    }
+
+    fn write_long(self, _schema: &SchemaRef, _value: i64) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, _schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, _schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &SchemaRef, _value: &BigInt) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_big_integer(self, schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error> {
-        todo!()
-    }
-
-    fn write_big_decimal(self, schema: &SchemaRef, value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
+    fn write_big_decimal(self, _schema: &SchemaRef, _value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
     fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
         if *schema.shape_type() != ShapeType::String {
-            self.emit_error(schema, ValidationFailure::InvalidType(schema.shape_type().clone(), ShapeType::String))?;
+            self.emit_error(ValidationFailure::InvalidType(schema.shape_type().clone(), ShapeType::String))?;
         }
 
         // TODO(extensibility): Move into a "ValidationRule"?
         // Check pattern
         if let Some(pattern) = schema.get_trait_as::<PatternTrait>() {
             if let None = pattern.pattern().find(value) {
-                self.emit_error(schema, SmithyConstraints::Pattern(value.to_string(), pattern.pattern().to_string()))?;
+                self.emit_error(SmithyConstraints::Pattern(value.to_string(), pattern.pattern().to_string()))?;
             }
         }
 
         // Check length
         if let Some(length) = schema.get_trait_as::<LengthTrait>() {
             if value.len() < length.min() || value.len() > length.max() {
-                self.emit_error(schema, SmithyConstraints::Length(value.len(), length.min(), length.max()))?
+                self.emit_error(SmithyConstraints::Length(value.len(), length.min(), length.max()))?
             }
         }
         Ok(())
     }
 
-    fn write_blob(self, schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, _schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &SchemaRef, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_document(self, schema: &SchemaRef, value: &Document) -> Result<Self::Ok, Self::Error> {
+    fn write_document(self, _schema: &SchemaRef, _value: &Document) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         todo!()
     }
 
-    fn write_missing(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        self.emit_error(schema, SmithyConstraints::Required)
+    fn write_missing(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        self.emit_error(SmithyConstraints::Required)
     }
 
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
@@ -259,7 +253,8 @@ impl <'a> Serializer for &'a mut Validator {
 pub struct ListValidator<'a> {
     root: &'a mut Validator,
     unique: bool,
-    lookup: UniquenessTracker
+    lookup: UniquenessTracker,
+    index: usize,
 }
 
 impl ListSerializer for ListValidator<'_> {
@@ -270,12 +265,23 @@ impl ListSerializer for ListValidator<'_> {
     where
         T: ?Sized + SerializeWithSchema
     {
-        value.serialize_with_schema(element_schema, &mut *self.root)
-        //     self.check_uniqueness(element_schema, &value)
+        self.root.push_path(PathElement::Index(self.index))?;
+        if self.unique {
+            match self.lookup.add(element_schema, value) {
+                Ok(true) => self.root.emit_error(SmithyConstraints::UniqueItems),
+                // Return early on this error. Something is wrong with the schema.
+                Err(err) => return self.root.short_circuit(err),
+                _ => Ok(())
+            }?
+        }
+        value.serialize_with_schema(element_schema, &mut *self.root)?;
+        self.root.pop_path()?;
+        self.index += 1;
+        Ok(())
     }
 
-    fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        self.root.pop_path(schema)
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(())
     }
 }
 
@@ -284,7 +290,7 @@ struct UniquenessTracker {
     // A b-tree is used here as it should be faster for
     // search for a relatively small number of numeric
     // values than a hashmap
-    lookup: BTreeSet<u64>,
+    lookup: BTreeSet<u64>
 }
 impl UniquenessTracker {
     fn new() -> Self {
@@ -294,10 +300,187 @@ impl UniquenessTracker {
     }
 
     /// Add an item to the set.
-    fn add<T: Hash>(&mut self, value: T) -> bool {
-        let mut hasher = FxHasher::default();
-        value.hash(&mut hasher);
-        !self.lookup.insert(hasher.finish())
+    ///
+    /// Returns true if the item was already in the set.
+    fn add<T: ?Sized + SerializeWithSchema>(&mut self, schema: &SchemaRef, value: &T) -> Result<bool, ValidationFailure> {
+        Ok(!self.lookup.insert(value.serialize_with_schema(schema, &mut HashingSerializer)?))
+    }
+}
+
+/// This type generates a unique hash for all items if possible.
+struct HashingSerializer;
+impl <'a> Serializer for &'a mut HashingSerializer {
+    type Error = ValidationFailure;
+
+    type Ok = u64;
+    type SerializeList = InnerHasher<'a>;
+    type SerializeMap = InnerHasher<'a>;
+    type SerializeStruct = InnerHasher<'a>;
+
+    fn write_struct(self, _schema: &SchemaRef, _len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+        Ok(InnerHasher { hasher: FxHasher::default(), root: self })
+    }
+
+    fn write_map(self, _schema: &SchemaRef, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
+        Ok(InnerHasher { hasher: FxHasher::default(), root: self })
+    }
+
+    fn write_list(self, _schema: &SchemaRef, _len: usize) -> Result<Self::SerializeList, Self::Error> {
+        Ok(InnerHasher { hasher: FxHasher::default(), root: self })
+    }
+
+    #[inline]
+    fn write_boolean(self, _schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_float(self, _schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::UniqueItemOnFloat)
+    }
+
+    #[inline]
+    fn write_double(self, _schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::UniqueItemOnFloat)
+    }
+
+    #[inline]
+    fn write_big_integer(self, _schema: &SchemaRef, value: &BigInt) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_big_decimal(self, _schema: &SchemaRef, value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_blob(self, _schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value))
+    }
+
+    #[inline]
+    fn write_timestamp(self, _schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
+        Ok(hash(value.epoch_nanoseconds().0))
+    }
+
+    fn write_document(self, _schema: &SchemaRef, _value: &Document) -> Result<Self::Ok, Self::Error> {
+        todo!()
+    }
+
+    #[inline]
+    fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        // TODO(question): Is this correct?
+        Ok(0u64)
+    }
+
+    #[inline]
+    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(0u64)
+    }
+}
+
+/// Utility function to compute `Hash` for types when possible.
+#[inline]
+fn hash<T: Hash>(value: T) -> u64 {
+    let mut hasher = FxHasher::default();
+    value.hash(&mut hasher);
+    hasher.finish()
+}
+
+struct InnerHasher<'a> {
+    hasher: FxHasher,
+    root: &'a mut HashingSerializer
+}
+impl ListSerializer for InnerHasher<'_> {
+    type Error = ValidationFailure;
+    type Ok = u64;
+
+    fn serialize_element<T>(
+        &mut self,
+        element_schema: &SchemaRef,
+        value: &T
+    ) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        self.hasher.write_u64(value.serialize_with_schema(element_schema, &mut *self.root)?);
+        Ok(())
+    }
+
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(self.hasher.finish())
+    }
+}
+impl MapSerializer for InnerHasher<'_> {
+    type Error = ValidationFailure;
+    type Ok = u64;
+
+    fn serialize_entry<K, V>(&mut self, key_schema: &SchemaRef, value_schema: &SchemaRef, key: &K, value: &V) -> Result<(), Self::Error>
+    where
+        K: ?Sized + SerializeWithSchema,
+        V: ?Sized + SerializeWithSchema
+    {
+        self.hasher.write_u64(key.serialize_with_schema(key_schema, &mut *self.root)?);
+        self.hasher.write_u64(value.serialize_with_schema(value_schema, &mut *self.root)?);
+        Ok(())
+    }
+
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(self.hasher.finish())
+    }
+}
+impl StructSerializer for InnerHasher<'_> {
+    type Error = ValidationFailure;
+    type Ok = u64;
+
+    fn serialize_member<T>(&mut self, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        let Some(member_name) = member_schema.id().member() else {
+            return Err(ValidationFailure::ExpectedMember(member_schema.id().name().into()))
+        };
+        self.serialize_member_named(member_name, member_schema, value)?;
+        Ok(())
+    }
+
+    fn serialize_member_named<T>(&mut self, member_name: &str, member_schema: &SchemaRef, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        self.hasher.write_u64(hash(member_name));
+        self.hasher.write_u64(value.serialize_with_schema(member_schema, &mut *self.root)?);
+        Ok(())
+    }
+
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(self.hasher.finish())
     }
 }
 
@@ -314,15 +497,152 @@ impl MapSerializer for MapValidator<'_> {
         K: ?Sized + SerializeWithSchema,
         V: ?Sized + SerializeWithSchema
     {
+        match key.serialize_with_schema(key_schema, &mut KeySerializer) {
+            Ok(val) => self.root.push_path(PathElement::Key(val))?,
+            // Return early on this error. Something is wrong with the schema.
+            Err(err) => return self.root.short_circuit(err),
+        };
         let _key = key.serialize_with_schema(key_schema, &mut *self.root)?;
         let _value = value.serialize_with_schema(value_schema, &mut *self.root)?;
-        Ok(())
+        self.root.pop_path()
     }
 
-    fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        self.root.pop_path(schema)
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(())
     }
 }
+
+// Converts a key value to a String so Keys can be represented as a path element.
+struct KeySerializer;
+impl <'a> Serializer for &'a mut KeySerializer {
+    type Error = ValidationFailure;
+    type Ok = String;
+    type SerializeList = NoOpSerializer;
+    type SerializeMap = NoOpSerializer;
+    type SerializeStruct = NoOpSerializer;
+
+    fn write_struct(self, schema: &SchemaRef, _len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_map(self, schema: &SchemaRef, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_list(self, schema: &SchemaRef, _len: usize) -> Result<Self::SerializeList, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_boolean(self, schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+        Ok(value.to_string())
+    }
+
+    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+        Ok(value.to_string())
+    }
+
+    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+        Ok(value.to_string())
+    }
+
+    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+        Ok(value.to_string())
+    }
+
+    fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_big_integer(self, schema: &SchemaRef, _value: &BigInt) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_big_decimal(self, schema: &SchemaRef, _value: &BigDecimal) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    #[inline]
+    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+        Ok(value.to_string())
+    }
+
+    fn write_blob(self, schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_timestamp(self, schema: &SchemaRef, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_document(self, schema: &SchemaRef, _value: &Document) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+
+    fn skip(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Err(ValidationFailure::InvalidKeyType(schema.shape_type().clone()))
+    }
+}
+// Structures, maps, and lists cannot be used as map keys so these implementations will never actually be called.
+struct NoOpSerializer;
+impl ListSerializer for NoOpSerializer {
+    type Error = ValidationFailure;
+    type Ok = String;
+
+    fn serialize_element<T>(&mut self, _element_schema: &SchemaRef, _value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        unimplemented!()
+    }
+
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        unimplemented!()
+    }
+}
+impl MapSerializer for NoOpSerializer {
+    type Error = ValidationFailure;
+    type Ok = String;
+
+    fn serialize_entry<K, V>(&mut self, _key_schema: &SchemaRef, _value_schema: &SchemaRef, _key: &K, _value: &V) -> Result<(), Self::Error>
+    where
+        K: ?Sized + SerializeWithSchema,
+        V: ?Sized + SerializeWithSchema
+    {
+        unimplemented!()
+    }
+
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        unimplemented!()
+    }
+}
+impl StructSerializer for NoOpSerializer {
+    type Error = ValidationFailure;
+    type Ok = String;
+
+    fn serialize_member<T>(&mut self, _member_schema: &SchemaRef, _value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + SerializeWithSchema
+    {
+        unimplemented!()
+    }
+
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        unimplemented!()
+    }
+}
+
 
 #[doc(hidden)]
 pub struct StructValidator<'a> {
@@ -336,11 +656,13 @@ impl StructSerializer for StructValidator<'_> {
     where
         T: ?Sized + SerializeWithSchema
     {
-        value.serialize_with_schema(member_schema, &mut *self.root)
+        self.root.push_path(member_schema)?;
+        value.serialize_with_schema(member_schema, &mut *self.root)?;
+        self.root.pop_path()
     }
 
-    fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        self.root.pop_path(schema)
+    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        Ok(())
     }
 }
 
@@ -374,29 +696,6 @@ impl <S: SerializeWithSchema> Validate for S {
     }
 }
 
-//
-// /// This thin wrapper simply allows us to implement [`Hash`] for
-// /// so lists of timestamp values can support `@uniqueItem` constraint.
-// #[repr(transparent)]
-// struct TimeStampHashWrapper<'a>(&'a Instant);
-// impl <'a> Validate for &'a TimeStampHashWrapper<'_> {
-//     type Value = ();
-//
-//     #[inline]
-//     fn validate<V: Validator>(self, schema: &SchemaRef, validator: V) -> Result<Self::Value, ValidationErrors> {
-//          self.0.validate(schema, validator)
-//     }
-// }
-// impl <'a> Hash for TimeStampHashWrapper<'a> {
-//     #[inline]
-//     fn hash<H: Hasher>(&self, state: &mut H) {
-//         self.0.epoch_nanoseconds().0.hash(state);
-//     }
-// }
-
-// ==== Nested Collections ====
-// TODO
-
 //////////////////////////////////////////////////////////////////////////////
 // ERRORS
 //////////////////////////////////////////////////////////////////////////////
@@ -404,64 +703,11 @@ impl <S: SerializeWithSchema> Validate for S {
 /// Aggregated list of all validation errors encountered while building a shape.
 ///
 /// When executing validation of a Builder, more than one field could be invalid.
-/// All of these [`ValidationError`]'s are aggregated together into a list on this
+/// All of these [`ValidationErrorField`]'s are aggregated together into a list on this
 /// aggregate error type.
-// TODO: Could this be a trie? Would that actually be faster?
 #[derive(Error, Debug)]
 pub struct ValidationErrors {
-    children: IndexMap<PathElement, ValidationErrors>,
-    errors: Vec<ValidationErrorWrapper>
-}
-
-/// Represents a [JsonPointer](https://datatracker.ietf.org/doc/html/rfc6901) path element.
-///
-/// For example, the JsonPointer `/myschema/1/fielda` would be represented as:
-/// ```rust,ignore
-/// use smithy4rs_core::serde::validate::{Path, PathItem};
-/// let pointer = vec![
-///     Path::Schema(MYSCHEMA.clone()),
-///     Path::Index(1),
-///     Path::Schema(FIELD_A.clone())
-/// ];
-/// ```
-pub enum PathElement {
-    Schema(SchemaRef),
-    Index(usize)
-}
-impl Hash for PathElement {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            // Use the pointer itself as the hash. We don't need to deref to build the path.
-            PathElement::Schema(schema) => Arc::as_ptr(schema).hash(state),
-            PathElement::Index(index) => index.hash(state)
-        }
-        .hash(state)
-    }
-}
-impl PartialEq for PathElement {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (PathElement::Schema(self_schema), PathElement::Schema(other_schema)) => {
-                Arc::ptr_eq(self_schema, other_schema)
-            }
-            (PathElement::Index(self_index), PathElement::Index(other_index)) => self_index.eq(other_index),
-            _ => false
-        }
-    }
-}
-impl Eq for PathElement {}
-
-
-impl serializers::Error for ValidationErrors {
-    fn custom<T: Display>(msg: T) -> Self {
-        todo!()
-    }
-}
-
-impl Display for ValidationErrors {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{:#?}", self.errors)
-    }
+    errors: Vec<ValidationErrorField>
 }
 
 impl ValidationErrors {
@@ -482,41 +728,61 @@ impl ValidationErrors {
     }
 
     /// Add a new validation error to the list of errors.
-    pub(super) fn add(&mut self, path: &Vec<SchemaRef>, error: impl Into<Box<dyn ValidationError>>) {
-        self.errors.push(ValidationErrorWrapper::new(path.clone(), error.into()));
-    }
-
-    pub(super) fn add_with_path(
-        &mut self,
-        path_stack: &Vec<SchemaRef>,
-        path: &SchemaRef,
-        error: impl Into<Box<dyn ValidationError>>
-    ) {
-        let mut new: Vec<SchemaRef> = Vec::with_capacity(path_stack.len() + 1);
-        new.extend(path_stack.iter().cloned());
-        new.push(path.clone());
-        self.errors.push(ValidationErrorWrapper::new(new, error.into()));
+    pub(super) fn add(&mut self, path: &[PathElement], error: impl Into<Box<dyn ValidationError>>) {
+        self.errors.push(ValidationErrorField::new(path, error));
     }
 
     pub fn len(&self) -> usize {
         self.errors.len()
     }
 }
-
-/// Wrapper that groups a validation error with the schema location at which it occured.
-#[derive(Error, Debug)]
-pub struct ValidationErrorWrapper {
-    paths: Vec<SchemaRef>,
-    error: Box<dyn ValidationError>
-}
-impl ValidationErrorWrapper {
-    pub fn new(paths: Vec<SchemaRef>, error: Box<dyn ValidationError>) -> Self {
-        Self { paths, error }
+impl serializers::Error for ValidationErrors {
+    fn custom<T: Display>(_msg: T) -> Self {
+        todo!()
     }
 }
-impl Display for ValidationErrorWrapper {
+
+impl Display for ValidationErrors {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}:{:?}", self.paths, self.error)
+        writeln!(f, "{:#?}", self.errors)
+    }
+}
+
+/// Describes one specific validation failure and it's location.
+#[derive(Debug)]
+pub struct ValidationErrorField {
+    paths: Vec<PathElement>,
+    error: Box<dyn ValidationError>
+}
+impl ValidationErrorField {
+    pub fn new(paths: &[PathElement], error: impl Into<Box<dyn ValidationError>>) -> Self {
+        Self {
+            paths: Vec::from(paths),
+            error: error.into()
+        }
+    }
+}
+
+/// Represents a [JsonPointer](https://datatracker.ietf.org/doc/html/rfc6901) path element.
+///
+/// For example, the JsonPointer `/field_a/1/field_b` would be represented as:
+/// ```rust,ignore
+/// use smithy4rs_core::serde::validate::{Path, PathItem};
+/// let paths = vec![
+///     Path::Schema(FIELD_A.clone()),
+///     Path::Index(1),
+///     Path::Schema(FIELD_B.clone())
+/// ];
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub enum PathElement {
+    Schema(SchemaRef),
+    Index(usize),
+    Key(String),
+}
+impl From<&SchemaRef> for PathElement {
+    fn from(schema_ref: &SchemaRef) -> Self {
+        PathElement::Schema(schema_ref.clone())
     }
 }
 
@@ -554,8 +820,19 @@ pub enum ValidationFailure {
     MapTooLarge(usize),
     #[error("Tried to pop from an empty path stack. This is a bug.")]
     PopFromEmptyValidator,
+    #[error("Attempted to perform `@uniqueItem` check on float. This is invalid")]
+    UniqueItemOnFloat,
+    #[error("{0}")]
+    Custom(String),
+    #[error("Type: {0} is not a valid map key")]
+    InvalidKeyType(ShapeType),
     #[error("Unsupported validation operation.")]
     Unsupported,
+}
+impl serializers::Error for ValidationFailure {
+    fn custom<T: Display>(msg: T) -> Self {
+        ValidationFailure::Custom(msg.to_string())
+    }
 }
 impl ValidationError for ValidationFailure {}
 
@@ -596,9 +873,9 @@ mod tests {
     #[test]
     fn test_validation_errors_aggregate() {
         let mut errors = ValidationErrors::new();
-        errors.add(&vec![STRING.clone()], SmithyConstraints::Required);
-        errors.add(&vec![STRING.clone()], SmithyConstraints::Length(1,2,3));
-        errors.add(&vec![STRING.clone()], SmithyConstraints::Required);
+        errors.add(&vec![PathElement::Schema(STRING.clone())], SmithyConstraints::Required);
+        errors.add(&vec![PathElement::Schema(STRING.clone())], SmithyConstraints::Length(1,2,3));
+        errors.add(&vec![PathElement::Schema(STRING.clone())], SmithyConstraints::Required);
         assert_eq!(errors.errors.len(), 3);
         assert_eq!(&errors.errors[0].error.to_string(), "Field is Required.");
         assert_eq!(&errors.errors[2].error.to_string(), "Field is Required.");
@@ -629,6 +906,7 @@ mod tests {
     static FIELD_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| BASIC_VALIDATION_SCHEMA.expect_member("field_list"));
     static FIELD_MAP: LazyLock<&SchemaRef> = LazyLock::new(|| BASIC_VALIDATION_SCHEMA.expect_member("field_map"));
 
+    #[allow(dead_code)]
     pub struct SimpleStruct {
         field_a: String,
         field_b: Option<i32>,
@@ -644,11 +922,6 @@ mod tests {
     impl SimpleStructBuilder {
         pub fn field_a(mut self, value: String) -> Self {
             self.field_a = Required::Set(value);
-            self
-        }
-
-        pub fn field_b(mut self, value: i32) -> Self {
-            self.field_b = Some(value);
             self
         }
 
@@ -726,7 +999,7 @@ mod tests {
         assert_eq!(err.errors.len(), 1);
 
         let error_field_a = err.errors.get(0).unwrap();
-        assert_eq!(error_field_a.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_A.clone()]);
+        assert_eq!(error_field_a.paths, vec![PathElement::Schema(FIELD_A.clone())]);
         assert_eq!(error_field_a.error.to_string(), "Field is Required.".to_string());
     }
 
@@ -741,11 +1014,11 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 2);
         let error_pattern = err.errors.get(0).unwrap();
-        assert_eq!(error_pattern.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_A.clone()]);
+        assert_eq!(error_pattern.paths, vec![PathElement::Schema(FIELD_A.clone())]);
         assert_eq!(error_pattern.error.to_string(), "Value `field-a` did not conform to expected pattern `^[a-zA-Z]*$`".to_string());
 
         let error_length = err.errors.get(1).unwrap();
-        assert_eq!(error_length.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_LIST.clone(), LIST_SCHEMA.expect_member("member").clone()]);
+        assert_eq!(error_length.paths, vec![PathElement::Schema(FIELD_LIST.clone()), PathElement::Index(0)]);
         assert_eq!(error_length.error.to_string(), "Size: 20 does not conform to @length constraint. Expected between 0 and 4.".to_string());
     }
 
@@ -759,10 +1032,10 @@ mod tests {
         let error_required = err.errors.get(0).unwrap();
         let error_length = err.errors.get(1).unwrap();
 
-        assert_eq!(error_required.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_A.clone()]);
+        assert_eq!(error_required.paths, vec![PathElement::Schema(FIELD_A.clone())]);
         assert_eq!(error_required.error.to_string(), "Field is Required.".to_string());
 
-        assert_eq!(error_length.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_LIST.clone(), LIST_SCHEMA.expect_member("member").clone()]);
+        assert_eq!(error_length.paths, vec![PathElement::Schema(FIELD_LIST.clone()), PathElement::Index(0)]);
         assert_eq!(error_length.error.to_string(), "Size: 20 does not conform to @length constraint. Expected between 0 and 4.".to_string());
     }
 
@@ -773,16 +1046,15 @@ mod tests {
         let Some(err) = builder.field_list(inner_vec).field_a("fieldA".to_string()).build().err() else {
             panic!("Expected an error");
         };
-        assert_eq!(err.errors.len(), 1);
+        assert_eq!(err.errors.len(), 2);
         let error_length = err.errors.get(0).unwrap();
 
-        assert_eq!(error_length.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_LIST.clone()]);
+        assert_eq!(error_length.paths, vec![PathElement::Schema(FIELD_LIST.clone())]);
         assert_eq!(error_length.error.to_string(), "Size: 5 does not conform to @length constraint. Expected between 0 and 3.".to_string());
 
-        // TODO: Unique item support
-        //let error_unique = err.errors.get(1).unwrap();
-        // assert_eq!(error_unique.paths, vec![FIELD_LIST.clone(), LIST_SCHEMA.expect_member("member").clone()]);
-        // assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
+        let error_unique = err.errors.get(1).unwrap();
+        assert_eq!(error_unique.paths, vec![PathElement::Schema(FIELD_LIST.clone()), PathElement::Index(3)]);
+        assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
     }
 
     #[test]
@@ -798,15 +1070,15 @@ mod tests {
         assert_eq!(err.errors.len(), 3);
 
         let error_length = err.errors.get(0).unwrap();
-        assert_eq!(error_length.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_MAP.clone()]);
+        assert_eq!(error_length.paths, vec![PathElement::Schema(FIELD_MAP.clone())]);
         assert_eq!(error_length.error.to_string(), "Size: 3 does not conform to @length constraint. Expected between 0 and 2.".to_string());
 
         let error_key = err.errors.get(1).unwrap();
-        assert_eq!(error_key.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_MAP.clone(), MAP_SCHEMA.expect_member("key").clone()]);
+        assert_eq!(error_key.paths, vec![PathElement::Schema(FIELD_MAP.clone())]);
         assert_eq!(error_key.error.to_string(), "Value `bad-key` did not conform to expected pattern `^[a-zA-Z]*$`".to_string());
 
         let error_value = err.errors.get(2).unwrap();
-        assert_eq!(error_value.paths, vec![BASIC_VALIDATION_SCHEMA.clone(), FIELD_MAP.clone(), MAP_SCHEMA.expect_member("value").clone()]);
+        assert_eq!(error_value.paths, vec![PathElement::Schema(FIELD_MAP.clone())]);
         assert_eq!(error_value.error.to_string(), "Size: 18 does not conform to @length constraint. Expected between 0 and 4.".to_string());
     }
 
@@ -850,7 +1122,7 @@ mod tests {
         }
     }
     impl <'de> DeserializeWithSchema<'de> for NestedStructBuilder {
-        fn deserialize_with_schema<D>(schema: &SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+        fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>
         {
@@ -897,6 +1169,7 @@ mod tests {
     static FIELD_NESTED: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_NESTED_SCHEMA.expect_member("field_nested"));
     static FIELD_NESTED_REQUIRED: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_NESTED_SCHEMA.expect_member("field_nested_required"));
 
+    #[allow(dead_code)]
     struct StructWithNested {
         field_nested: Option<NestedStruct>,
         field_required_nested: NestedStruct,
@@ -911,7 +1184,7 @@ mod tests {
         field_required_nested: Required<MaybeBuilt<NestedStruct, NestedStructBuilder>>,
     }
     impl <'de> DeserializeWithSchema<'de> for StructWithNestedBuilder {
-        fn deserialize_with_schema<D>(schema: &SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+        fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>
         {
@@ -945,17 +1218,6 @@ mod tests {
         }
     }
     impl StructWithNestedBuilder {
-        pub fn field_nested(mut self, value: NestedStruct) -> Self {
-            self.field_nested = Some(MaybeBuilt::Struct(value));
-            self
-        }
-
-        #[doc(hidden)]
-        pub fn field_nested_builder(mut self, value: NestedStructBuilder) -> Self {
-            self.field_nested = Some(MaybeBuilt::Builder(value));
-            self
-        }
-
         pub fn field_nested_required(mut self, value: NestedStruct) -> Self {
             self.field_required_nested = Required::Set(MaybeBuilt::Struct(value));
             self
@@ -972,7 +1234,7 @@ mod tests {
     fn nested_struct_fields_build_if_no_errors() {
         let builder_nested = NestedStructBuilder::new().field_c("field".to_string());
         let builder = StructWithNestedBuilder::new();
-        let value = builder.field_nested_required_builder(builder_nested)
+        let _value = builder.field_nested_required_builder(builder_nested)
             .build()
             .expect("Failed to build SimpleStruct");
     }
@@ -982,7 +1244,7 @@ mod tests {
         let built_nested = NestedStructBuilder::new().field_c("field".to_string())
             .build().expect("Failed to build NestedStruct");
         let builder = StructWithNestedBuilder::new();
-        let value = builder.field_nested_required(built_nested).build()
+        let _value = builder.field_nested_required(built_nested).build()
             .expect("Failed to build SimpleStruct");
     }
 
@@ -995,13 +1257,13 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 1);
         let error_pattern = err.errors.get(0).unwrap();
-        assert_eq!(error_pattern.paths, vec![STRUCT_WITH_NESTED_SCHEMA.clone(), FIELD_NESTED_REQUIRED.clone(), FIELD_C.clone()]);
+        assert_eq!(error_pattern.paths, vec![PathElement::Schema(FIELD_NESTED_REQUIRED.clone()), PathElement::Schema(FIELD_C.clone())]);
         assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
     }
 
     // ==== Nested List Validations ====
     static LIST_OF_NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-        Schema::list_builder(ShapeId::from("com.example#ListOfNested"), traits![LengthTrait::builder().max(3).build(), UniqueItemsTrait])
+        Schema::list_builder(ShapeId::from("com.example#ListOfNested"), traits![LengthTrait::builder().max(3).build()])
             .put_member("member", &NESTED_SCHEMA, traits![])
             .build()
     });
@@ -1026,7 +1288,7 @@ mod tests {
     static FIELD_NESTED_LIST_REQUIRED: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_NESTED_LIST_SCHEMA.expect_member("field_nested_list_required"));
     static FIELD_DEEPLY_NESTED_LIST: LazyLock<&SchemaRef> =  LazyLock::new(|| STRUCT_WITH_NESTED_LIST_SCHEMA.expect_member("field_deeply_nested_list"));
 
-
+    #[allow(dead_code)]
     struct StructWithNestedLists {
         field_nested_list: Option<Vec<NestedStruct>>,
         field_required_nested_list: Vec<NestedStruct>,
@@ -1044,7 +1306,7 @@ mod tests {
         field_deeply_nested_list: Option<MaybeBuilt<Vec<Vec<Vec<NestedStruct>>>, Vec<Vec<Vec<NestedStructBuilder>>>>>
     }
     impl <'de> DeserializeWithSchema<'de> for StructWithNestedListsBuilder {
-        fn deserialize_with_schema<D>(schema: &SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+        fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>
         {
@@ -1081,34 +1343,16 @@ mod tests {
         }
     }
     impl StructWithNestedListsBuilder {
-        pub fn field_nested_list(mut self, values: Vec<NestedStruct>) -> Self {
-            self.field_nested_list = Some(MaybeBuilt::Struct(values));
-            self
-        }
-
-        #[doc(hidden)]
-        pub fn field_nested_list_builder(mut self, values: Vec<NestedStructBuilder>) -> Self {
-            self.field_nested_list = Some(MaybeBuilt::Builder(values));
-            self
-        }
-
         pub fn field_require_nested_list(mut self, values: Vec<NestedStruct>) -> Self {
             self.field_required_nested_list = Required::Set(MaybeBuilt::Struct(values));
             self
         }
 
-        #[doc(hidden)]
         pub fn field_required_nested_list_builder(mut self, values: Vec<NestedStructBuilder>) -> Self {
             self.field_required_nested_list = Required::Set(MaybeBuilt::Builder(values));
             self
         }
 
-        pub fn field_deeply_nested_list(mut self, values: Vec<Vec<Vec<NestedStruct>>>) -> Self {
-            self.field_deeply_nested_list = Some(MaybeBuilt::Struct(values));
-            self
-        }
-
-        #[doc(hidden)]
         pub fn field_deeply_nested_list_builder(mut self, values: Vec<Vec<Vec<NestedStructBuilder>>>) -> Self {
             self.field_deeply_nested_list = Some(MaybeBuilt::Builder(values));
             self
@@ -1130,7 +1374,7 @@ mod tests {
             NestedStructBuilder::new().field_c("b".to_string()).build().expect("Failed to build NestedStruct")
         ];
         let builder = StructWithNestedListsBuilder::new();
-        let value = builder
+        let _value = builder
             .field_require_nested_list(nested_list).build()
             .expect("Failed to build SimpleStruct");
     }
@@ -1150,17 +1394,12 @@ mod tests {
         assert_eq!(err.errors.len(), 2);
 
         let error_length = err.errors.get(0).unwrap();
-        assert_eq!(error_length.paths, [STRUCT_WITH_NESTED_LIST_SCHEMA.clone(), FIELD_NESTED_LIST_REQUIRED.clone()]);
+        assert_eq!(error_length.paths, vec![PathElement::Schema(FIELD_NESTED_LIST_REQUIRED.clone())]);
         assert_eq!(error_length.error.to_string(), "Size: 4 does not conform to @length constraint. Expected between 0 and 3.".to_string());
 
         let error_pattern = err.errors.get(1).unwrap();
-        assert_eq!(error_pattern.paths, [STRUCT_WITH_NESTED_LIST_SCHEMA.clone(), FIELD_NESTED_LIST_REQUIRED.clone(), LIST_OF_NESTED_SCHEMA.expect_member("member").clone(), FIELD_C.clone()]);
+        assert_eq!(error_pattern.paths, vec![PathElement::Schema(FIELD_NESTED_LIST_REQUIRED.clone()), PathElement::Index(2), PathElement::Schema(FIELD_C.clone())]);
         assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
-
-        // TODO: ADD UNIQUENESS CHECKS
-        // let error_unique = err.errors.get(2).unwrap();
-        // assert_eq!(error_unique.path, *LIST_OF_NESTED_SCHEMA.expect_member("member"));
-        // assert_eq!(error_unique.error.to_string(), "Items in collection should be unique.".to_string());
     }
 
     #[test]
@@ -1177,15 +1416,204 @@ mod tests {
         assert_eq!(err.errors.len(), 1);
 
         let error_pattern = err.errors.get(0).unwrap();
-        assert_eq!(error_pattern.paths, [
-            STRUCT_WITH_NESTED_LIST_SCHEMA.clone(),
-            FIELD_DEEPLY_NESTED_LIST.clone(),
-            LIST_OF_LIST_OF_LIST_OF_NESTED.expect_member("member").clone(),
-            LIST_OF_LIST_OF_NESTED.expect_member("member").clone(),
-            LIST_OF_NESTED_SCHEMA.expect_member("member").clone(),
-            FIELD_C.clone()
+        assert_eq!(error_pattern.paths, vec![
+            PathElement::Schema(FIELD_DEEPLY_NESTED_LIST.clone()),
+            PathElement::Index(0),
+            PathElement::Index(0),
+            PathElement::Index(0),
+            PathElement::Schema(FIELD_C.clone())
         ]);
         assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
+    }
+
+    // ==== `@uniqueItem` Validations ====
+
+    static SET_OF_STRUCT: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#SetOfStruct"), traits![UniqueItemsTrait])
+            .put_member("member", &NESTED_SCHEMA, traits![])
+            .build()
+    });
+    static SET_OF_STRING: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#SetOfString"), traits![UniqueItemsTrait])
+            .put_member("member", &STRING, traits![])
+            .build()
+    });
+    static LIST_OF_INT: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#ListOfInt"), traits![])
+            .put_member("member", &INTEGER, traits![])
+            .build()
+    });
+    static SET_OF_LIST: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#SetOfList"), traits![UniqueItemsTrait])
+            .put_member("member", &LIST_OF_INT, traits![])
+            .build()
+    });
+    static MAP_OF_INT: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::map_builder(ShapeId::from("com.example#MapOfInt"), traits![])
+            .put_member("key", &STRING, traits![])
+            .put_member("value", &INTEGER, traits![])
+            .build()
+    });
+    static SET_OF_MAP: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::list_builder(ShapeId::from("com.example#SetOfMap"), traits![UniqueItemsTrait])
+            .put_member("member", &MAP_OF_INT, traits![])
+            .build()
+    });
+    static STRUCT_WITH_SETS: LazyLock<SchemaRef> = LazyLock::new(|| {
+        Schema::structure_builder(ShapeId::from("test#StructWithSets"), Vec::new())
+            .put_member("set_of_struct", &SET_OF_STRUCT, traits![])
+            .put_member("set_of_simple", &SET_OF_STRING, traits![])
+            .put_member("set_of_list", &SET_OF_LIST, traits![])
+            .put_member("set_of_map", &SET_OF_MAP, traits![])
+            .build()
+    });
+    static FIELD_SET_OF_STRUCT: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_SETS.expect_member("set_of_struct"));
+    static FIELD_SET_OF_SIMPLE: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_SETS.expect_member("set_of_simple"));
+    static FIELD_SET_OF_LIST: LazyLock<&SchemaRef> =  LazyLock::new(|| STRUCT_WITH_SETS.expect_member("set_of_list"));
+    static FIELD_SET_OF_MAP: LazyLock<&SchemaRef> =  LazyLock::new(|| STRUCT_WITH_SETS.expect_member("set_of_map"));
+
+    #[allow(dead_code)]
+    struct StructWithSets {
+        set_of_struct: Option<Vec<NestedStruct>>,
+        set_of_simple: Option<Vec<String>>,
+        set_of_list: Option<Vec<Vec<i32>>>,
+        set_of_map: Option<Vec<IndexMap<String, i32>>>
+    }
+    impl StaticSchemaShape for StructWithSets {
+        fn schema() -> &'static SchemaRef {
+            &STRUCT_WITH_SETS
+        }
+    }
+
+    struct StructWithSetsBuilder {
+        set_of_struct: Option<MaybeBuilt<Vec<NestedStruct>, Vec<NestedStructBuilder>>>,
+        set_of_simple: Option<Vec<String>>,
+        set_of_list: Option<Vec<Vec<i32>>>,
+        set_of_map: Option<Vec<IndexMap<String, i32>>>
+    }
+    impl <'de> DeserializeWithSchema<'de> for StructWithSetsBuilder {
+        fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>
+        {
+            unimplemented!("We dont need to deserialize for testing.")
+        }
+    }
+    impl SerializeWithSchema for StructWithSetsBuilder {
+        fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+            let mut ser = serializer.write_struct(schema, 4usize)?;
+            ser.serialize_optional_member(&FIELD_SET_OF_STRUCT, &self.set_of_struct)?;
+            ser.serialize_optional_member(&FIELD_SET_OF_SIMPLE, &self.set_of_simple)?;
+            ser.serialize_optional_member(&FIELD_SET_OF_LIST, &self.set_of_list)?;
+            ser.serialize_optional_member(&FIELD_SET_OF_MAP, &self.set_of_map)?;
+            ser.end(schema)
+        }
+    }
+    impl ErrorCorrection for StructWithSetsBuilder {
+        type Value = StructWithSets;
+
+        fn correct(self) -> Self::Value {
+            StructWithSets {
+                set_of_struct: self.set_of_struct.correct(),
+                set_of_simple: self.set_of_simple,
+                set_of_list: self.set_of_list,
+                set_of_map: self.set_of_map,
+            }
+        }
+    }
+    impl <'de> ShapeBuilder<'de, StructWithSets> for StructWithSetsBuilder {
+        fn new() -> Self {
+            StructWithSetsBuilder {
+                set_of_struct: None,
+                set_of_simple: None,
+                set_of_list: None,
+                set_of_map: None,
+            }
+        }
+    }
+    impl StructWithSetsBuilder {
+        pub fn set_of_struct_builder(mut self, values: Vec<NestedStructBuilder>) -> Self {
+            self.set_of_struct = Some(MaybeBuilt::Builder(values));
+            self
+        }
+
+        pub fn set_of_simple(mut self, values: Vec<String>) -> Self {
+            self.set_of_simple = Some(values);
+            self
+        }
+
+        pub fn set_of_list(mut self, values: Vec<Vec<i32>>) -> Self {
+            self.set_of_list = Some(values);
+            self
+        }
+
+        pub fn set_of_map(mut self, values: Vec<IndexMap<String, i32>>) -> Self {
+            self.set_of_map = Some(values);
+            self
+        }
+    }
+
+    #[test]
+    fn detects_duplicates_in_sets() {
+        let structs = vec![
+            NestedStructBuilder::new().field_c("a".to_string()),
+            NestedStructBuilder::new().field_c("b".to_string()),
+            NestedStructBuilder::new().field_c("b".to_string())
+        ];
+        let simple = vec!["Stuff".to_string(), "Things".to_string(), "Stuff".to_string()];
+        let list = vec![vec![1, 2, 3], vec![4, 5, 6], vec![1, 2, 3]];
+        let mut map_a = IndexMap::new();
+        map_a.insert("Stuff".to_string(), 1);
+        map_a.insert("Things".to_string(), 2);
+        let mut map_b = IndexMap::new();
+        map_b.insert("Quux".to_string(), 1);
+        map_b.insert("Other".to_string(), 2);
+        let map = vec![map_a.clone(), map_b, map_a];
+        let builder = StructWithSetsBuilder::new();
+        let Some(err) = builder
+            .set_of_struct_builder(structs)
+            .set_of_simple(simple)
+            .set_of_list(list)
+            .set_of_map(map)
+            .build().err() else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 4);
+        // Should _only_ be uniqueness errors
+        for e in &err.errors {
+            assert_eq!(e.error.to_string(), "Items in collection should be unique.".to_string());
+        }
+        // println!("{:#?}", error_unique_struct.paths.iter().map(|p| p.id()));
+
+        let error_unique_struct = err.errors.get(0).unwrap();
+        assert_eq!(error_unique_struct.paths, vec![
+            PathElement::Schema(FIELD_SET_OF_STRUCT.clone()),
+            PathElement::Index(2)
+        ]);
+
+        let error_unique_simple = err.errors.get(1).unwrap();
+        assert_eq!(error_unique_simple.paths, vec![
+            PathElement::Schema(FIELD_SET_OF_SIMPLE.clone()),
+            PathElement::Index(2)
+        ]);
+
+        let error_unique_simple = err.errors.get(1).unwrap();
+        assert_eq!(error_unique_simple.paths, vec![
+            PathElement::Schema(FIELD_SET_OF_SIMPLE.clone()),
+            PathElement::Index(2)
+        ]);
+
+        let error_unique_list = err.errors.get(2).unwrap();
+        assert_eq!(error_unique_list.paths, vec![
+            PathElement::Schema(FIELD_SET_OF_LIST.clone()),
+            PathElement::Index(2)
+        ]);
+
+        let error_unique_map = err.errors.get(3).unwrap();
+        assert_eq!(error_unique_map.paths, vec![
+            PathElement::Schema(FIELD_SET_OF_MAP.clone()),
+            PathElement::Index(2)
+        ]);
     }
 
     // ==== Nested Map Validations ====
@@ -1218,6 +1646,7 @@ mod tests {
     static FIELD_NESTED_MAP_REQUIRED: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_NESTED_MAP_SCHEMA.expect_member("field_nested_map_required"));
     static FIELD_DEEPLY_NESTED_MAP: LazyLock<&SchemaRef> =  LazyLock::new(|| STRUCT_WITH_NESTED_MAP_SCHEMA.expect_member("field_deeply_nested_map"));
 
+    #[allow(dead_code)]
     struct StructWithNestedMaps {
         field_nested_map: Option<IndexMap<String, NestedStruct>>,
         field_nested_map_required: IndexMap<String, NestedStruct>,
@@ -1239,7 +1668,7 @@ mod tests {
         >>,
     }
     impl <'de> DeserializeWithSchema<'de> for StructWithNestedMapsBuilder {
-        fn deserialize_with_schema<D>(schema: &SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+        fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>
         {
@@ -1276,34 +1705,16 @@ mod tests {
         }
     }
     impl StructWithNestedMapsBuilder {
-        pub fn field_nested_map(mut self, values: IndexMap<String, NestedStruct>) -> Self {
-            self.field_nested_map = Some(MaybeBuilt::Struct(values));
-            self
-        }
-
-        #[doc(hidden)]
-        pub fn field_nested_map_builder(mut self, values: IndexMap<String, NestedStructBuilder>) -> Self {
-            self.field_nested_map = Some(MaybeBuilt::Builder(values));
-            self
-        }
-
         pub fn field_require_nested_map(mut self, values: IndexMap<String, NestedStruct>) -> Self {
             self.field_nested_map_required = Required::Set(MaybeBuilt::Struct(values));
             self
         }
 
-        #[doc(hidden)]
         pub fn field_required_nested_map_builder(mut self, values: IndexMap<String, NestedStructBuilder>) -> Self {
             self.field_nested_map_required = Required::Set(MaybeBuilt::Builder(values));
             self
         }
 
-        pub fn field_deeply_nested_map(mut self, values: IndexMap<String, IndexMap<String, IndexMap<String, NestedStruct>>>) -> Self {
-            self.field_deeply_nested_map = Some(MaybeBuilt::Struct(values));
-            self
-        }
-
-        #[doc(hidden)]
         pub fn field_deeply_nested_map_builder(mut self, values: IndexMap<String, IndexMap<String, IndexMap<String, NestedStructBuilder>>>) -> Self {
             self.field_deeply_nested_map = Some(MaybeBuilt::Builder(values));
             self
@@ -1342,11 +1753,15 @@ mod tests {
         assert_eq!(err.errors.len(), 2);
 
         let error_length = err.errors.get(0).unwrap();
-        assert_eq!(error_length.paths, [STRUCT_WITH_NESTED_MAP_SCHEMA.clone(), FIELD_NESTED_MAP_REQUIRED.clone()]);
+        assert_eq!(error_length.paths, vec![PathElement::Schema(FIELD_NESTED_MAP_REQUIRED.clone())]);
         assert_eq!(error_length.error.to_string(), "Size: 3 does not conform to @length constraint. Expected between 0 and 2.".to_string());
 
         let error_pattern = err.errors.get(1).unwrap();
-        assert_eq!(error_pattern.paths, [STRUCT_WITH_NESTED_MAP_SCHEMA.clone(), FIELD_NESTED_MAP_REQUIRED.clone(), MAP_OF_NESTED_SCHEMA.expect_member("value").clone(), FIELD_C.clone()]);
+        assert_eq!(error_pattern.paths, vec![
+            PathElement::Schema(FIELD_NESTED_MAP_REQUIRED.clone()),
+            PathElement::Key("b".to_string()),
+            PathElement::Schema(FIELD_C.clone())
+        ]);
         assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
     }
 
@@ -1371,13 +1786,12 @@ mod tests {
         assert_eq!(err.errors.len(), 1);
 
         let error_pattern = err.errors.get(0).unwrap();
-        assert_eq!(error_pattern.paths, [
-            STRUCT_WITH_NESTED_MAP_SCHEMA.clone(),
-            FIELD_DEEPLY_NESTED_MAP.clone(),
-            MAP_OF_MAP_OF_MAP_OF_NESTED.expect_member("value").clone(),
-            MAP_OF_MAP_OF_NESTED.expect_member("value").clone(),
-            MAP_OF_NESTED_SCHEMA.expect_member("value").clone(),
-            FIELD_C.clone()
+        assert_eq!(error_pattern.paths, vec![
+            PathElement::Schema(FIELD_DEEPLY_NESTED_MAP.clone()),
+            PathElement::Key("a".to_string()),
+            PathElement::Key("a".to_string()),
+            PathElement::Key("a".to_string()),
+            PathElement::Schema(FIELD_C.clone())
         ]);
         assert_eq!(error_pattern.error.to_string(), "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string());
     }

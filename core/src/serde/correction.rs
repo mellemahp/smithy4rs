@@ -6,13 +6,11 @@
 
 use bigdecimal::Zero;
 use indexmap::IndexMap;
-use serde::de::StdError;
 use crate::prelude::DOCUMENT;
 use crate::{Instant, BigDecimal, BigInt};
 use crate::schema::{Document, DocumentValue};
-use crate::serde::builders::{MaybeBuilt, Required};
+use crate::serde::builders::MaybeBuilt;
 use crate::serde::serializers::SerializeWithSchema;
-use crate::serde::validate::Validate;
 
 //////////////////////////////////////////////////////////////////////////////
 // Traits
