@@ -51,13 +51,14 @@ where
 ///
 /// This type allows us to track if a type was set or not
 /// during construction of a shape.
+#[derive(Clone)]
 pub enum Required<T: ErrorCorrectionDefault> {
     Set(T),
     Unset
 }
 impl <T: ErrorCorrectionDefault> Required<T> {
     #[inline]
-    pub(crate) fn get(self) -> T {
+    pub fn get(self) -> T {
         match self {
             Required::Unset => T::default(),
             Required::Set(v) => v

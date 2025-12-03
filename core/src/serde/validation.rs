@@ -5,7 +5,6 @@ use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
-use indexmap::IndexMap;
 use num_bigint::BigInt;
 use rustc_hash::FxHasher;
 use thiserror::Error;
@@ -860,6 +859,7 @@ impl ValidationError for SmithyConstraints {}
 #[cfg(test)]
 mod tests {
     use std::sync::LazyLock;
+    use indexmap::IndexMap;
     use crate::traits;
     use crate::prelude::{INTEGER, STRING};
     use crate::schema::{Schema, ShapeId, StaticSchemaShape};
@@ -1091,7 +1091,6 @@ mod tests {
     });
     static FIELD_C: LazyLock<&SchemaRef> = LazyLock::new(|| { NESTED_SCHEMA.expect_member("field_c") });
 
-    #[derive(Hash)]
     pub struct NestedStruct {
         field_c: String,
     }
@@ -1129,7 +1128,6 @@ mod tests {
             unimplemented!("We dont need to deserialize to test.")
         }
     }
-    // TODO: This could be a blanket impl for `Buildable` shapes
     impl ErrorCorrectionDefault for NestedStruct {
         fn default() -> Self {
             NestedStructBuilder::new().correct()
@@ -1618,7 +1616,7 @@ mod tests {
 
     // ==== Nested Map Validations ====
     static MAP_OF_NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-        Schema::map_builder(ShapeId::from("com.example#MapOfNested"), traits![LengthTrait::builder().max(2).build(), UniqueItemsTrait])
+        Schema::map_builder(ShapeId::from("com.example#MapOfNested"), traits![LengthTrait::builder().max(2).build()])
             .put_member("key", &STRING, traits![])
             .put_member("value", &NESTED_SCHEMA, traits![])
             .build()
