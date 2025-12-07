@@ -6,11 +6,13 @@
 
 use bigdecimal::Zero;
 use indexmap::IndexMap;
-use crate::prelude::DOCUMENT;
-use crate::{Instant, BigDecimal, BigInt};
-use crate::schema::{Document, DocumentValue};
-use crate::serde::builders::MaybeBuilt;
-use crate::serde::serializers::SerializeWithSchema;
+
+use crate::{
+    BigDecimal, BigInt, Instant,
+    prelude::DOCUMENT,
+    schema::{Document, DocumentValue},
+    serde::{builders::MaybeBuilt, serializers::SerializeWithSchema},
+};
 
 //////////////////////////////////////////////////////////////////////////////
 // Traits
@@ -52,7 +54,10 @@ correction_default_impl!(i32, 0i32);
 correction_default_impl!(i64, 0i64);
 correction_default_impl!(f32, 0f32);
 correction_default_impl!(f64, 0f64);
-correction_default_impl!(Instant, Instant::from_epoch_milliseconds(0).expect("Instant default should always be instantiatable"));
+correction_default_impl!(
+    Instant,
+    Instant::from_epoch_milliseconds(0).expect("Instant default should always be instantiatable")
+);
 correction_default_impl!(String, String::new());
 correction_default_impl!(BigDecimal, BigDecimal::zero());
 correction_default_impl!(BigInt, BigInt::zero());
@@ -67,13 +72,13 @@ impl ErrorCorrectionDefault for Document {
     }
 }
 
-impl <E> ErrorCorrectionDefault for Vec<E> {
+impl<E> ErrorCorrectionDefault for Vec<E> {
     fn default() -> Self {
         Vec::new()
     }
 }
 
-impl <E> ErrorCorrectionDefault for IndexMap<String, E> {
+impl<E> ErrorCorrectionDefault for IndexMap<String, E> {
     fn default() -> Self {
         IndexMap::new()
     }
@@ -82,7 +87,12 @@ impl <E> ErrorCorrectionDefault for IndexMap<String, E> {
 // TODO: ENUM AND INT ENUM IMPLS + Byte buffer impls
 
 // Fill a missing required builder
-impl<'de, S: ErrorCorrectionDefault + SerializeWithSchema, B: ErrorCorrection<Value=S> + SerializeWithSchema> ErrorCorrectionDefault for MaybeBuilt<S, B> {
+impl<
+    'de,
+    S: ErrorCorrectionDefault + SerializeWithSchema,
+    B: ErrorCorrection<Value = S> + SerializeWithSchema,
+> ErrorCorrectionDefault for MaybeBuilt<S, B>
+{
     fn default() -> Self {
         MaybeBuilt::Struct(S::default())
     }
@@ -93,7 +103,11 @@ impl<'de, S: ErrorCorrectionDefault + SerializeWithSchema, B: ErrorCorrection<Va
 //////////////////////////////////////////////////////////////////////////////
 
 // Get the contained struct or convert the contained builder
-impl <S: ErrorCorrectionDefault + SerializeWithSchema, B: ErrorCorrection<Value=S> + SerializeWithSchema> ErrorCorrection for MaybeBuilt<S, B> {
+impl<
+    S: ErrorCorrectionDefault + SerializeWithSchema,
+    B: ErrorCorrection<Value = S> + SerializeWithSchema,
+> ErrorCorrection for MaybeBuilt<S, B>
+{
     type Value = S;
 
     fn correct(self) -> Self::Value {
@@ -105,19 +119,19 @@ impl <S: ErrorCorrectionDefault + SerializeWithSchema, B: ErrorCorrection<Value=
 }
 
 // Convert and optional of a builder to an optional of the built shape
-impl <S, B: ErrorCorrection<Value=S>> ErrorCorrection for Option<B> {
+impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Option<B> {
     type Value = Option<S>;
 
     fn correct(self) -> Self::Value {
         match self {
             None => None,
-            Some(b) => Some(b.correct())
+            Some(b) => Some(b.correct()),
         }
     }
 }
 
 // Convert a vector of builders into a vector of built shapes
-impl <S, B: ErrorCorrection<Value=S>> ErrorCorrection for Vec<B> {
+impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Vec<B> {
     type Value = Vec<S>;
 
     fn correct(self) -> Self::Value {
@@ -130,7 +144,7 @@ impl <S, B: ErrorCorrection<Value=S>> ErrorCorrection for Vec<B> {
 }
 
 // Convert a vector of builders into a vector of built structures
-impl <S, B: ErrorCorrection<Value=S>> ErrorCorrection for IndexMap<String, B> {
+impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for IndexMap<String, B> {
     type Value = IndexMap<String, S>;
 
     fn correct(self) -> Self::Value {

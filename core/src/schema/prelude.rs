@@ -176,7 +176,6 @@ pub struct RangeTrait {
 static_trait_id!(RangeTrait, "smithy.api#range");
 smithy_trait_impl!(RangeTrait);
 
-
 static ZERO: LazyLock<BigDecimal> = LazyLock::new(BigDecimal::zero);
 static MAX: LazyLock<BigDecimal> = LazyLock::new(|| BigDecimal::from(u64::MAX));
 

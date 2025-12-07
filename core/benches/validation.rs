@@ -1,37 +1,55 @@
 //! Benchmarks of Validation
 
-use std::hint::black_box;
-use std::sync::LazyLock;
+use std::{hint::black_box, sync::LazyLock};
+
 use bigdecimal::BigDecimal;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use indexmap::IndexMap;
-use smithy4rs_core::prelude::{LengthTrait, RangeTrait, RequiredTrait, UniqueItemsTrait, INTEGER, STRING};
-use smithy4rs_core::schema::{Schema, SchemaRef, ShapeId, StaticSchemaShape};
-use smithy4rs_core::serde::builders::{MaybeBuilt, Required};
-use smithy4rs_core::serde::correction::{ErrorCorrection, ErrorCorrectionDefault};
-use smithy4rs_core::serde::de::{DeserializeWithSchema, Deserializer};
-use smithy4rs_core::serde::se::{SerializeWithSchema, Serializer, StructSerializer};
-use smithy4rs_core::serde::ShapeBuilder;
-use smithy4rs_core::serde::validate::Validator;
-use smithy4rs_core::traits;
+use smithy4rs_core::{
+    prelude::{INTEGER, LengthTrait, RangeTrait, RequiredTrait, STRING, UniqueItemsTrait},
+    schema::{Schema, SchemaRef, ShapeId, StaticSchemaShape},
+    serde::{
+        ShapeBuilder,
+        builders::{MaybeBuilt, Required},
+        correction::{ErrorCorrection, ErrorCorrectionDefault},
+        de::{DeserializeWithSchema, Deserializer},
+        se::{SerializeWithSchema, Serializer, StructSerializer},
+        validate::{DefaultValidator, Validator},
+    },
+    traits,
+};
 
 // ==== Test shapes ====
 static VALIDATE_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
-        .put_member("string", &STRING, traits![LengthTrait::builder().min(1).max(100).build(), RequiredTrait])
+        .put_member(
+            "string",
+            &STRING,
+            traits![
+                LengthTrait::builder().min(1).max(100).build(),
+                RequiredTrait
+            ],
+        )
         .put_member("required_int", &INTEGER, traits![RequiredTrait])
-        .put_member("integer", &INTEGER, traits![RangeTrait::builder().max(BigDecimal::from(100)).build()])
+        .put_member(
+            "integer",
+            &INTEGER,
+            traits![RangeTrait::builder().max(BigDecimal::from(100)).build()],
+        )
         .build()
 });
-static FIELD_STRING: LazyLock<&SchemaRef> = LazyLock::new(|| { VALIDATE_SHAPE_SCHEMA.expect_member("string") });
-static FIELD_REQUIRED_INT: LazyLock<&SchemaRef> = LazyLock::new(|| { VALIDATE_SHAPE_SCHEMA.expect_member("required_int") });
-static FIELD_INTEGER: LazyLock<&SchemaRef> = LazyLock::new(|| { VALIDATE_SHAPE_SCHEMA.expect_member("integer") });
+static FIELD_STRING: LazyLock<&SchemaRef> =
+    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("string"));
+static FIELD_REQUIRED_INT: LazyLock<&SchemaRef> =
+    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("required_int"));
+static FIELD_INTEGER: LazyLock<&SchemaRef> =
+    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("integer"));
 
 #[derive(Clone)]
 pub struct ValidatedStruct {
     string: String,
     required_int: i32,
-    integer: Option<i32>
+    integer: Option<i32>,
 }
 impl StaticSchemaShape for ValidatedStruct {
     fn schema() -> &'static SchemaRef {
@@ -42,7 +60,7 @@ impl SerializeWithSchema for ValidatedStruct {
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
-        serializer: S
+        serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 2usize)?;
         ser.serialize_member_named("string", &FIELD_STRING, &self.string)?;
@@ -56,7 +74,7 @@ impl SerializeWithSchema for ValidatedStruct {
 pub struct ValidatedStructBuilder {
     string: Required<String>,
     required_int: Required<i32>,
-    integer: Option<i32>
+    integer: Option<i32>,
 }
 impl ValidatedStructBuilder {
     pub fn string(mut self, value: String) -> Self {
@@ -72,10 +90,13 @@ impl ValidatedStructBuilder {
         self
     }
 }
-impl <'de> DeserializeWithSchema<'de> for ValidatedStructBuilder {
-    fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
+impl<'de> DeserializeWithSchema<'de> for ValidatedStructBuilder {
+    fn deserialize_with_schema<D>(
+        _schema: &SchemaRef,
+        _deserializer: &mut D,
+    ) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>
+        D: Deserializer<'de>,
     {
         unimplemented!("We dont need to deserialize to test.")
     }
@@ -86,7 +107,11 @@ impl ErrorCorrectionDefault for ValidatedStruct {
     }
 }
 impl SerializeWithSchema for ValidatedStructBuilder {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 1usize)?;
         ser.serialize_member_named("string", &FIELD_STRING, &self.string)?;
         ser.serialize_member_named("required_int", &FIELD_REQUIRED_INT, &self.required_int)?;
@@ -94,7 +119,7 @@ impl SerializeWithSchema for ValidatedStructBuilder {
         ser.end(schema)
     }
 }
-impl <'de> ShapeBuilder<'de, ValidatedStruct> for ValidatedStructBuilder {
+impl<'de> ShapeBuilder<'de, ValidatedStruct> for ValidatedStructBuilder {
     fn new() -> Self {
         Self {
             string: Required::Unset,
@@ -122,14 +147,17 @@ static UNVALIDATE_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         .put_member("integer", &INTEGER, traits![])
         .build()
 });
-static FIELD_UNCHECKED_STRING: LazyLock<&SchemaRef> = LazyLock::new(|| { VALIDATE_SHAPE_SCHEMA.expect_member("string") });
-static FIELD_UNCHECKED_REQUIRED_INT: LazyLock<&SchemaRef> = LazyLock::new(|| { VALIDATE_SHAPE_SCHEMA.expect_member("required_int") });
-static FIELD_UNCHECKED_INT: LazyLock<&SchemaRef> = LazyLock::new(|| { VALIDATE_SHAPE_SCHEMA.expect_member("integer") });
+static FIELD_UNCHECKED_STRING: LazyLock<&SchemaRef> =
+    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("string"));
+static FIELD_UNCHECKED_REQUIRED_INT: LazyLock<&SchemaRef> =
+    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("required_int"));
+static FIELD_UNCHECKED_INT: LazyLock<&SchemaRef> =
+    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("integer"));
 
 pub struct UnvalidatedStruct {
     string: String,
     required_int: i32,
-    integer: Option<i32>
+    integer: Option<i32>,
 }
 impl StaticSchemaShape for UnvalidatedStruct {
     fn schema() -> &'static SchemaRef {
@@ -140,11 +168,15 @@ impl SerializeWithSchema for UnvalidatedStruct {
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
-        serializer: S
+        serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 2usize)?;
         ser.serialize_member_named("string", &FIELD_UNCHECKED_STRING, &self.string)?;
-        ser.serialize_member_named("required_int", &FIELD_UNCHECKED_REQUIRED_INT, &self.required_int)?;
+        ser.serialize_member_named(
+            "required_int",
+            &FIELD_UNCHECKED_REQUIRED_INT,
+            &self.required_int,
+        )?;
         ser.serialize_member_named("integer", &FIELD_UNCHECKED_INT, &self.integer)?;
         ser.end(schema)
     }
@@ -167,8 +199,10 @@ static STRUCT_WITH_COLLECTIONS: LazyLock<SchemaRef> = LazyLock::new(|| {
         .put_member("field_nested_map", &MAP_OF_NESTED_SCHEMA, traits![])
         .build()
 });
-static FIELD_NESTED_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_COLLECTIONS.expect_member("field_nested_list"));
-static FIELD_NESTED_MAP: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_COLLECTIONS.expect_member("field_nested_map"));
+static FIELD_NESTED_LIST: LazyLock<&SchemaRef> =
+    LazyLock::new(|| STRUCT_WITH_COLLECTIONS.expect_member("field_nested_list"));
+static FIELD_NESTED_MAP: LazyLock<&SchemaRef> =
+    LazyLock::new(|| STRUCT_WITH_COLLECTIONS.expect_member("field_nested_map"));
 
 struct StructWithCollections {
     field_nested_list: Option<Vec<ValidatedStruct>>,
@@ -181,30 +215,59 @@ impl StaticSchemaShape for StructWithCollections {
     }
 }
 impl SerializeWithSchema for StructWithCollections {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 2usize)?;
-        ser.serialize_optional_member_named("field_nested_list", &FIELD_NESTED_LIST, &self.field_nested_list)?;
-        ser.serialize_optional_member_named("field_nested_map", &FIELD_NESTED_MAP, &self.field_nested_map)?;
+        ser.serialize_optional_member_named(
+            "field_nested_list",
+            &FIELD_NESTED_LIST,
+            &self.field_nested_list,
+        )?;
+        ser.serialize_optional_member_named(
+            "field_nested_map",
+            &FIELD_NESTED_MAP,
+            &self.field_nested_map,
+        )?;
         ser.end(schema)
     }
 }
 struct StructWithCollectionsBuilder {
     field_nested_list: Option<MaybeBuilt<Vec<ValidatedStruct>, Vec<ValidatedStructBuilder>>>,
-    field_nested_map: Option<MaybeBuilt<IndexMap<String, ValidatedStruct>, IndexMap<String, ValidatedStructBuilder>>>,
+    field_nested_map: Option<
+        MaybeBuilt<IndexMap<String, ValidatedStruct>, IndexMap<String, ValidatedStructBuilder>>,
+    >,
 }
-impl <'de> DeserializeWithSchema<'de> for StructWithCollectionsBuilder {
-    fn deserialize_with_schema<D>(_schema: &SchemaRef, _deserializer: &mut D) -> Result<Self, D::Error>
+impl<'de> DeserializeWithSchema<'de> for StructWithCollectionsBuilder {
+    fn deserialize_with_schema<D>(
+        _schema: &SchemaRef,
+        _deserializer: &mut D,
+    ) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>
+        D: Deserializer<'de>,
     {
         unimplemented!("We dont need to deserialize for testing.")
     }
 }
 impl SerializeWithSchema for StructWithCollectionsBuilder {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 2usize)?;
-        ser.serialize_optional_member_named("field_nested_list", &FIELD_NESTED_LIST, &self.field_nested_list)?;
-        ser.serialize_optional_member_named("field_nested_map", &FIELD_NESTED_MAP, &self.field_nested_map)?;
+        ser.serialize_optional_member_named(
+            "field_nested_list",
+            &FIELD_NESTED_LIST,
+            &self.field_nested_list,
+        )?;
+        ser.serialize_optional_member_named(
+            "field_nested_map",
+            &FIELD_NESTED_MAP,
+            &self.field_nested_map,
+        )?;
         ser.end(schema)
     }
 }
@@ -218,7 +281,7 @@ impl ErrorCorrection for StructWithCollectionsBuilder {
         }
     }
 }
-impl <'de> ShapeBuilder<'de, StructWithCollections> for StructWithCollectionsBuilder {
+impl<'de> ShapeBuilder<'de, StructWithCollections> for StructWithCollectionsBuilder {
     fn new() -> Self {
         StructWithCollectionsBuilder {
             field_nested_map: None,
@@ -232,7 +295,10 @@ impl StructWithCollectionsBuilder {
         self
     }
 
-    pub fn field_nested_map_builder(mut self, values: IndexMap<String, ValidatedStructBuilder>) -> Self {
+    pub fn field_nested_map_builder(
+        mut self,
+        values: IndexMap<String, ValidatedStructBuilder>,
+    ) -> Self {
         self.field_nested_map = Some(MaybeBuilt::Builder(values));
         self
     }
@@ -250,10 +316,15 @@ impl StructWithCollectionsBuilder {
 
 static STRUCT_WITH_SET: LazyLock<SchemaRef> = LazyLock::new(|| {
     Schema::structure_builder(ShapeId::from("test#StructWithNestedSet"), Vec::new())
-        .put_member("field_nested_set", &LIST_OF_NESTED_SCHEMA, traits![UniqueItemsTrait])
+        .put_member(
+            "field_nested_set",
+            &LIST_OF_NESTED_SCHEMA,
+            traits![UniqueItemsTrait],
+        )
         .build()
 });
-static FIELD_NESTED_SET: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_SET.expect_member("field_nested_set"));
+static FIELD_NESTED_SET: LazyLock<&SchemaRef> =
+    LazyLock::new(|| STRUCT_WITH_SET.expect_member("field_nested_set"));
 
 struct StructWithSet {
     field_nested_set: Option<Vec<ValidatedStruct>>,
@@ -264,9 +335,17 @@ impl StaticSchemaShape for StructWithSet {
     }
 }
 impl SerializeWithSchema for StructWithSet {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 1usize)?;
-        ser.serialize_optional_member_named("field_nested_set", &FIELD_NESTED_SET, &self.field_nested_set)?;
+        ser.serialize_optional_member_named(
+            "field_nested_set",
+            &FIELD_NESTED_SET,
+            &self.field_nested_set,
+        )?;
         ser.end(schema)
     }
 }
@@ -276,7 +355,8 @@ static STRUCT_WITH_LIST: LazyLock<SchemaRef> = LazyLock::new(|| {
         .put_member("field_nested_list", &LIST_OF_NESTED_SCHEMA, traits![])
         .build()
 });
-static FIELD_WITH_NESTED_LIST: LazyLock<&SchemaRef> = LazyLock::new(|| STRUCT_WITH_LIST.expect_member("field_nested_list"));
+static FIELD_WITH_NESTED_LIST: LazyLock<&SchemaRef> =
+    LazyLock::new(|| STRUCT_WITH_LIST.expect_member("field_nested_list"));
 
 // Mostly just for comparison against set implementation.
 struct StructWithList {
@@ -288,9 +368,17 @@ impl StaticSchemaShape for StructWithList {
     }
 }
 impl SerializeWithSchema for StructWithList {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &SchemaRef, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &SchemaRef,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let mut ser = serializer.write_struct(schema, 1usize)?;
-        ser.serialize_optional_member_named("field_nested_list", &FIELD_WITH_NESTED_LIST, &self.field_nested_list)?;
+        ser.serialize_optional_member_named(
+            "field_nested_list",
+            &FIELD_WITH_NESTED_LIST,
+            &self.field_nested_list,
+        )?;
         ser.end(schema)
     }
 }
@@ -302,7 +390,7 @@ pub fn validate_builder(c: &mut Criterion) {
         .required_int(1);
     c.bench_function("Validate Shape Builder", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&VALIDATE_SHAPE_SCHEMA, &builder));
+            let _ = black_box(DefaultValidator::new().validate(&VALIDATE_SHAPE_SCHEMA, &builder));
         })
     });
 }
@@ -311,10 +399,12 @@ pub fn validate_shape(c: &mut Criterion) {
     let built_shape = ValidatedStructBuilder::new()
         .string("string".to_string())
         .required_int(1)
-        .build().expect("Shape should build");
+        .build()
+        .expect("Shape should build");
     c.bench_function("Validate built shape", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&VALIDATE_SHAPE_SCHEMA, &built_shape));
+            let _ =
+                black_box(DefaultValidator::new().validate(&VALIDATE_SHAPE_SCHEMA, &built_shape));
         })
     });
 }
@@ -327,7 +417,9 @@ pub fn unvalidated_shape(c: &mut Criterion) {
     };
     c.bench_function("Shape with no constraints", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&UNVALIDATE_SHAPE_SCHEMA, &unvalidated_shape));
+            let _ = black_box(
+                DefaultValidator::new().validate(&UNVALIDATE_SHAPE_SCHEMA, &unvalidated_shape),
+            );
         })
     });
 }
@@ -346,7 +438,8 @@ pub fn builder_with_collections(c: &mut Criterion) {
         .field_nested_list_builder(list);
     c.bench_function("Collections of Builders", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&UNVALIDATE_SHAPE_SCHEMA, &collection));
+            let _ =
+                black_box(DefaultValidator::new().validate(&UNVALIDATE_SHAPE_SCHEMA, &collection));
         })
     });
 }
@@ -354,7 +447,8 @@ pub fn builder_with_collections(c: &mut Criterion) {
 pub fn built_shape_with_collections(c: &mut Criterion) {
     let built = ValidatedStructBuilder::new()
         .string("string".to_string())
-        .required_int(1).build()
+        .required_int(1)
+        .build()
         .expect("Shape should build");
     let list = vec![built.clone(), built.clone(), built.clone()];
     let mut map = IndexMap::new();
@@ -364,10 +458,12 @@ pub fn built_shape_with_collections(c: &mut Criterion) {
     let collection = StructWithCollectionsBuilder::new()
         .field_nested_map(map)
         .field_nested_list(list)
-        .build().expect("Shape should build");
+        .build()
+        .expect("Shape should build");
     c.bench_function("Collections of Built", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&STRUCT_WITH_COLLECTIONS, &collection));
+            let _ =
+                black_box(DefaultValidator::new().validate(&STRUCT_WITH_COLLECTIONS, &collection));
         })
     });
 }
@@ -376,14 +472,15 @@ pub fn built_shape_with_collections(c: &mut Criterion) {
 pub fn built_shape_with_list(c: &mut Criterion) {
     let built = ValidatedStructBuilder::new()
         .string("string".to_string())
-        .required_int(1).build()
+        .required_int(1)
+        .build()
         .expect("Shape should build");
     let collection = StructWithList {
         field_nested_list: Some(vec![built.clone(), built.clone(), built.clone()]),
     };
     c.bench_function("List of Built", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&STRUCT_WITH_LIST, &collection));
+            let _ = black_box(DefaultValidator::new().validate(&STRUCT_WITH_LIST, &collection));
         })
     });
 }
@@ -391,26 +488,35 @@ pub fn built_shape_with_list(c: &mut Criterion) {
 pub fn built_shape_with_set(c: &mut Criterion) {
     let built1 = ValidatedStructBuilder::new()
         .string("string".to_string())
-        .required_int(2).build()
+        .required_int(2)
+        .build()
         .expect("Shape should build");
     let built2 = ValidatedStructBuilder::new()
         .string("string".to_string())
-        .required_int(2).build()
+        .required_int(2)
+        .build()
         .expect("Shape should build");
     let built3 = ValidatedStructBuilder::new()
         .string("string".to_string())
-        .required_int(3).build()
+        .required_int(3)
+        .build()
         .expect("Shape should build");
     let collection = StructWithSet {
         field_nested_set: Some(vec![built1, built2, built3]),
     };
     c.bench_function("Set of Built", |b| {
         b.iter(|| {
-            let _ = black_box(Validator::new().validate(&STRUCT_WITH_SET, &collection));
+            let _ = black_box(DefaultValidator::new().validate(&STRUCT_WITH_SET, &collection));
         })
     });
 }
 
 criterion_group!(basic, validate_builder, validate_shape, unvalidated_shape);
-criterion_group!(collections, builder_with_collections, built_shape_with_collections, built_shape_with_list, built_shape_with_set);
+criterion_group!(
+    collections,
+    builder_with_collections,
+    built_shape_with_collections,
+    built_shape_with_list,
+    built_shape_with_set
+);
 criterion_main!(basic, collections);
