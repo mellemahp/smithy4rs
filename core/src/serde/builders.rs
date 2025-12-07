@@ -24,6 +24,7 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     ///
     /// Builds shape with the [`DefaultValidator`] if required fields
     /// are missing or validation fails
+    #[inline]
     fn build(self) -> Result<S, ValidationErrors> {
         self.build_with_validator(&mut DefaultValidator::new())
     }
@@ -35,6 +36,7 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     ///
     /// NOTE: Actual validation and build logic is implementated in builder [`Validate`]
     /// implementation.
+    #[inline]
     fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
         validator.validate(S::schema(), &self)?;
         Ok(self.correct())
