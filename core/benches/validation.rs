@@ -432,7 +432,7 @@ pub fn builder_with_collections(c: &mut Criterion) {
     let mut map = IndexMap::new();
     map.insert("a".to_string(), builder.clone());
     map.insert("b".to_string(), builder.clone());
-    map.insert("c".to_string(), builder.clone());
+    map.insert("c".to_string(), builder);
     let collection = StructWithCollectionsBuilder::new()
         .field_nested_map_builder(map)
         .field_nested_list_builder(list);
@@ -454,7 +454,7 @@ pub fn built_shape_with_collections(c: &mut Criterion) {
     let mut map = IndexMap::new();
     map.insert("a".to_string(), built.clone());
     map.insert("b".to_string(), built.clone());
-    map.insert("c".to_string(), built.clone());
+    map.insert("c".to_string(), built);
     let collection = StructWithCollectionsBuilder::new()
         .field_nested_map(map)
         .field_nested_list(list)
@@ -476,7 +476,7 @@ pub fn built_shape_with_list(c: &mut Criterion) {
         .build()
         .expect("Shape should build");
     let collection = StructWithList {
-        field_nested_list: Some(vec![built.clone(), built.clone(), built.clone()]),
+        field_nested_list: Some(vec![built.clone(), built.clone(), built]),
     };
     c.bench_function("List of Built", |b| {
         b.iter(|| {

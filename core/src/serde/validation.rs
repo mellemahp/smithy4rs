@@ -58,13 +58,13 @@ pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
 ///
 /// This validator will check that shapes conform to the provided schema types
 /// and any built-in Smithy constraint traits found in that schema, including:
-/// - [`@length`](https://smithy.io/2.0/spec/constraint-traits.html#length-trait)
-/// - [`@range`](https://smithy.io/2.0/spec/constraint-traits.html#range-trait)
-/// - [`@pattern`](https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait)
-/// - [`@uniqueItems`](https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait)
-/// - [`@required`](https://smithy.io/2.0/spec/type-refinement-traits.html#required-trait)
+/// - [`@length`](<https://smithy.io/2.0/spec/constraint-traits.html#length-trait>)
+/// - [`@range`](<https://smithy.io/2.0/spec/constraint-traits.html#range-trait>)
+/// - [`@pattern`](<https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait>)
+/// - [`@uniqueItems`](<https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait>)
+/// - [`@required`](<https://smithy.io/2.0/spec/type-refinement-traits.html#required-trait>)
 ///
-/// For more info on built-in Smithy constraints see: [Smithy Documentation](https://smithy.io/2.0/spec/constraint-traits.html)
+/// For more info on built-in Smithy constraints see: [Smithy Documentation](<https://smithy.io/2.0/spec/constraint-traits.html>)
 ///
 /// This is the default [`Validator`] implementation used in built shapes (i.e. when calling the default
 /// [`ShapeBuilder::build()`] implementation). It can also be used standalone on any serializable shapes.
@@ -141,16 +141,14 @@ impl<const D: usize, const ERR: usize> DefaultValidator<D, ERR> {
     ///
     /// Returns an error if the call would pop from an empty stack.
     fn pop_path(&mut self) -> Result<(), ValidationErrors> {
-        if let None = self.path_stack.pop() {
-            // If we have reached the base path something went wrong and there
-            // was an unbalanced validator call somewhere.
+        if self.path_stack.pop().is_none() {
             return self.short_circuit(ValidationFailure::PopFromEmptyValidator);
         }
         Ok(())
     }
 }
 
-impl<'a> Validator for &'a mut DefaultValidator {
+impl Validator for &mut DefaultValidator {
     #[inline]
     fn validate<V: SerializeWithSchema>(
         self,
@@ -161,11 +159,16 @@ impl<'a> Validator for &'a mut DefaultValidator {
         self.results()
     }
 }
+impl<const D: usize, const ERR: usize> Default for DefaultValidator<D, ERR> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 macro_rules! shape_type {
     ($self:ident, $schema:ident, $ty:expr) => {
         if !$schema.shape_type().eq(&$ty) {
-            $self.emit_error(SmithyConstraints::ShapeType($schema.shape_type().clone()))?;
+            $self.emit_error(SmithyConstraints::ShapeType(*$schema.shape_type()))?;
         }
     };
 }
@@ -193,7 +196,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         if !schema.shape_type().eq(&ShapeType::Structure)
             && !schema.shape_type().eq(&ShapeType::Union)
         {
-            self.emit_error(SmithyConstraints::ShapeType(schema.shape_type().clone()))?;
+            self.emit_error(SmithyConstraints::ShapeType(*schema.shape_type()))?;
         }
         Ok(DefaultStructValidator { root: self })
     }
@@ -285,14 +288,13 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         let len = value.len();
         length!(self, schema, len);
 
-        // Check pattern
-        if let Some(pattern) = schema.get_trait_as::<PatternTrait>() {
-            if let None = pattern.pattern().find(value) {
+        // Check @pattern trait matches provided.
+        if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
+            && pattern.pattern().find(value).is_none() {
                 self.emit_error(SmithyConstraints::Pattern(
                     value.to_string(),
                     pattern.pattern().to_string(),
                 ))?;
-            }
         }
 
         Ok(())
@@ -687,8 +689,8 @@ impl MapSerializer for DefaultMapValidator<'_> {
             // Return early on this error. Something is wrong with the schema.
             Err(err) => return self.root.short_circuit(err),
         };
-        let _key = key.serialize_with_schema(key_schema, &mut *self.root)?;
-        let _value = value.serialize_with_schema(value_schema, &mut *self.root)?;
+        key.serialize_with_schema(key_schema, &mut *self.root)?;
+        value.serialize_with_schema(value_schema, &mut *self.root)?;
         self.root.pop_path()
     }
 
@@ -700,7 +702,7 @@ impl MapSerializer for DefaultMapValidator<'_> {
 
 // Converts a key value to a String so Keys can be represented as a path element.
 struct KeySerializer;
-impl<'a> Serializer for &'a mut KeySerializer {
+impl Serializer for &mut KeySerializer {
     type Error = ValidationFailure;
     type Ok = String;
     type SerializeList = NoOpSerializer;
@@ -713,16 +715,12 @@ impl<'a> Serializer for &'a mut KeySerializer {
         schema: &SchemaRef,
         _len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
     fn write_map(self, schema: &SchemaRef, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -732,14 +730,14 @@ impl<'a> Serializer for &'a mut KeySerializer {
         _len: usize,
     ) -> Result<Self::SerializeList, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
     #[inline]
     fn write_boolean(self, schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
@@ -766,14 +764,14 @@ impl<'a> Serializer for &'a mut KeySerializer {
     #[inline]
     fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
     #[inline]
     fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
@@ -784,7 +782,7 @@ impl<'a> Serializer for &'a mut KeySerializer {
         _value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
@@ -795,7 +793,7 @@ impl<'a> Serializer for &'a mut KeySerializer {
         _value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
@@ -807,7 +805,7 @@ impl<'a> Serializer for &'a mut KeySerializer {
     #[inline]
     fn write_blob(self, schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
@@ -818,7 +816,7 @@ impl<'a> Serializer for &'a mut KeySerializer {
         _value: &Instant,
     ) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
@@ -829,21 +827,21 @@ impl<'a> Serializer for &'a mut KeySerializer {
         _value: &Document,
     ) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
     #[inline]
     fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 
     #[inline]
     fn skip(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(
-            schema.shape_type().clone(),
+            *schema.shape_type(),
         ))
     }
 }
@@ -978,6 +976,15 @@ impl ValidationErrors {
     pub fn len(&self) -> usize {
         self.errors.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
+    }
+}
+impl Default for ValidationErrors {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl serializers::Error for ValidationErrors {
     fn custom<T: Display>(_msg: T) -> Self {
@@ -993,6 +1000,7 @@ impl Display for ValidationErrors {
 
 /// Describes one specific validation failure and it's location.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ValidationErrorField {
     paths: Vec<PathElement>,
     error: Box<dyn ValidationError>,
@@ -1008,7 +1016,7 @@ impl ValidationErrorField {
 
 /// Represents a [JsonPointer](https://datatracker.ietf.org/doc/html/rfc6901) path element.
 ///
-/// For example, the JsonPointer `/field_a/1/field_b` would be represented as:
+/// For example, the `JsonPointer` `/field_a/1/field_b` would be represented as:
 /// ```rust,ignore
 /// use smithy4rs_core::serde::validate::{Path, PathItem};
 /// let paths = vec![
@@ -1084,17 +1092,16 @@ pub enum SmithyConstraints {
     /// [@required](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-required-trait)
     #[error("Field is Required.")]
     Required,
-    /// [@length](https://smithy.io/2.0/spec/constraint-traits.html#length-trait)
+    /// [@length](<https://smithy.io/2.0/spec/constraint-traits.html#length-trait>)
     #[error("Size: {0} does not conform to @length constraint. Expected between {1} and {2}.")]
     Length(usize, usize, usize),
-    /// [@pattern](https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait)
+    /// [@pattern](<https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait>)
     #[error("Value `{0}` did not conform to expected pattern `{1}`")]
     Pattern(String, String),
-    /// [@range](https://smithy.io/2.0/spec/constraint-traits.html#range-trait)
+    /// [@range](<https://smithy.io/2.0/spec/constraint-traits.html#range-trait>)
     #[error("Size: {0} does not conform to @range constraint. Expected between {1} and {2}.")]
     Range(BigDecimal, BigDecimal, BigDecimal),
-    // TODO(question): Could this be security risk if non-unique are returned?
-    /// [@uniqueItems](https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait]
+    /// [@uniqueItems](<https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait>)
     #[error("Items in collection should be unique.")]
     UniqueItems,
     #[error("Shape type {0} does not match expected.")]
@@ -1103,6 +1110,7 @@ pub enum SmithyConstraints {
 impl ValidationError for SmithyConstraints {}
 
 #[cfg(test)]
+#[allow(clippy::type_complexity)]
 mod tests {
     use std::sync::LazyLock;
 
@@ -1126,15 +1134,15 @@ mod tests {
     fn test_validation_errors_aggregate() {
         let mut errors = ValidationErrors::new();
         errors.add(
-            &vec![PathElement::Schema(STRING.clone())],
+            &[PathElement::Schema(STRING.clone())],
             SmithyConstraints::Required,
         );
         errors.add(
-            &vec![PathElement::Schema(STRING.clone())],
+            &[PathElement::Schema(STRING.clone())],
             SmithyConstraints::Length(1, 2, 3),
         );
         errors.add(
-            &vec![PathElement::Schema(STRING.clone())],
+            &[PathElement::Schema(STRING.clone())],
             SmithyConstraints::Required,
         );
         assert_eq!(errors.errors.len(), 3);
@@ -1288,7 +1296,7 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 1);
 
-        let error_field_a = err.errors.get(0).unwrap();
+        let error_field_a = err.errors.first().unwrap();
         assert_eq!(
             error_field_a.paths,
             vec![PathElement::Schema(FIELD_A.clone())]
@@ -1312,7 +1320,7 @@ mod tests {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 2);
-        let error_pattern = err.errors.get(0).unwrap();
+        let error_pattern = err.errors.first().unwrap();
         assert_eq!(
             error_pattern.paths,
             vec![PathElement::Schema(FIELD_A.clone())]
@@ -1344,7 +1352,7 @@ mod tests {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 2);
-        let error_required = err.errors.get(0).unwrap();
+        let error_required = err.errors.first().unwrap();
         let error_length = err.errors.get(1).unwrap();
 
         assert_eq!(
@@ -1389,7 +1397,7 @@ mod tests {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 2);
-        let error_length = err.errors.get(0).unwrap();
+        let error_length = err.errors.first().unwrap();
 
         assert_eq!(
             error_length.paths,
@@ -1431,7 +1439,7 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 3);
 
-        let error_length = err.errors.get(0).unwrap();
+        let error_length = err.errors.first().unwrap();
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(FIELD_MAP.clone())]
@@ -1463,7 +1471,7 @@ mod tests {
         );
     }
 
-    //// ====== NESTED SHAPE VALIDATION =====
+    // ====== NESTED SHAPE VALIDATION =====
     // Nested Shape
     static NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
@@ -1660,7 +1668,7 @@ mod tests {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 1);
-        let error_pattern = err.errors.get(0).unwrap();
+        let error_pattern = err.errors.first().unwrap();
         assert_eq!(
             error_pattern.paths,
             vec![
@@ -1861,7 +1869,7 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 2);
 
-        let error_length = err.errors.get(0).unwrap();
+        let error_length = err.errors.first().unwrap();
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(FIELD_NESTED_LIST_REQUIRED.clone())]
@@ -1903,7 +1911,7 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 1);
 
-        let error_pattern = err.errors.get(0).unwrap();
+        let error_pattern = err.errors.first().unwrap();
         assert_eq!(
             error_pattern.paths,
             vec![
@@ -2111,7 +2119,7 @@ mod tests {
         }
         // println!("{:#?}", error_unique_struct.paths.iter().map(|p| p.id()));
 
-        let error_unique_struct = err.errors.get(0).unwrap();
+        let error_unique_struct = err.errors.first().unwrap();
         assert_eq!(
             error_unique_struct.paths,
             vec![
@@ -2359,7 +2367,7 @@ mod tests {
 
         assert_eq!(err.errors.len(), 2);
 
-        let error_length = err.errors.get(0).unwrap();
+        let error_length = err.errors.first().unwrap();
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(FIELD_NESTED_MAP_REQUIRED.clone())]
@@ -2412,7 +2420,7 @@ mod tests {
         };
         assert_eq!(err.errors.len(), 1);
 
-        let error_pattern = err.errors.get(0).unwrap();
+        let error_pattern = err.errors.first().unwrap();
         assert_eq!(
             error_pattern.paths,
             vec![

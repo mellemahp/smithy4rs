@@ -137,16 +137,20 @@ impl PartialEq for TraitRef {
 }
 impl Deref for TraitRef {
     type Target = dyn SmithyTrait;
+
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.0.deref()
     }
 }
 impl From<Ref<dyn SmithyTrait>> for TraitRef {
+    #[inline]
     fn from(value: Ref<dyn SmithyTrait>) -> Self {
         Self(value)
     }
 }
 impl<T: SmithyTrait> From<T> for TraitRef {
+    #[inline]
     fn from(value: T) -> Self {
         Self(Ref::new(value))
     }

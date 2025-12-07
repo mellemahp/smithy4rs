@@ -20,6 +20,7 @@ pub trait SerializableShape: SchemaShape + SerializeWithSchema {
 
 // Blanket implementation of serialization for all Implement
 impl<T: SchemaShape + SerializeWithSchema> SerializableShape for T {
+    #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.serialize_with_schema(self.schema(), serializer)
     }
@@ -155,6 +156,7 @@ pub trait StructSerializer {
     }
 
     /// Skips a member in a structure.
+    #[inline]
     fn skip_member(&mut self, schema: &SchemaRef) -> Result<(), Self::Error> {
         /* Do nothing on skip by default */
         Ok(())
@@ -322,6 +324,7 @@ where
 }
 
 impl SerializeWithSchema for bool {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -332,6 +335,7 @@ impl SerializeWithSchema for bool {
 }
 
 impl SerializeWithSchema for i8 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -342,6 +346,7 @@ impl SerializeWithSchema for i8 {
 }
 
 impl SerializeWithSchema for i16 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -352,6 +357,7 @@ impl SerializeWithSchema for i16 {
 }
 
 impl SerializeWithSchema for i32 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -362,6 +368,7 @@ impl SerializeWithSchema for i32 {
 }
 
 impl SerializeWithSchema for i64 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -372,6 +379,7 @@ impl SerializeWithSchema for i64 {
 }
 
 impl SerializeWithSchema for f32 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -382,6 +390,7 @@ impl SerializeWithSchema for f32 {
 }
 
 impl SerializeWithSchema for f64 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -392,6 +401,7 @@ impl SerializeWithSchema for f64 {
 }
 
 impl SerializeWithSchema for BigInt {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -402,6 +412,7 @@ impl SerializeWithSchema for BigInt {
 }
 
 impl SerializeWithSchema for BigDecimal {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -412,6 +423,7 @@ impl SerializeWithSchema for BigDecimal {
 }
 
 impl SerializeWithSchema for ByteBuffer {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -422,6 +434,7 @@ impl SerializeWithSchema for ByteBuffer {
 }
 
 impl SerializeWithSchema for Instant {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -432,6 +445,7 @@ impl SerializeWithSchema for Instant {
 }
 
 impl SerializeWithSchema for String {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -442,6 +456,7 @@ impl SerializeWithSchema for String {
 }
 
 impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -456,6 +471,7 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
 }
 
 impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,

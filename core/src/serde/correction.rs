@@ -88,7 +88,6 @@ impl<E> ErrorCorrectionDefault for IndexMap<String, E> {
 
 // Fill a missing required builder
 impl<
-    'de,
     S: ErrorCorrectionDefault + SerializeWithSchema,
     B: ErrorCorrection<Value = S> + SerializeWithSchema,
 > ErrorCorrectionDefault for MaybeBuilt<S, B>
@@ -122,11 +121,9 @@ impl<
 impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Option<B> {
     type Value = Option<S>;
 
+    #[inline]
     fn correct(self) -> Self::Value {
-        match self {
-            None => None,
-            Some(b) => Some(b.correct()),
-        }
+        self.map(|b| b.correct())
     }
 }
 
