@@ -2,10 +2,10 @@
 #![allow(unused_variables)]
 #![allow(clippy::missing_errors_doc)]
 
-use crate::IndexMap;
 use std::{error::Error as StdError, fmt::Display};
+
 use crate::{
-    BigDecimal, BigInt, ByteBuffer, Instant,
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, SchemaRef, SchemaShape, ShapeId},
 };
 

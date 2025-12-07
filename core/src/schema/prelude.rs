@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::{fmt::Display, sync::LazyLock};
+
 use bigdecimal::{BigDecimal, Zero};
 use indexmap::IndexMap;
 use regex::Regex;
@@ -252,7 +253,6 @@ pub struct RangeTrait {
 }
 static_trait_id!(RangeTrait, RANGE_TRAIT_ID, "smithy.api#range");
 smithy_trait_impl!(RangeTrait);
-
 
 static ZERO: LazyLock<BigDecimal> = LazyLock::new(BigDecimal::zero);
 static MAX: LazyLock<BigDecimal> = LazyLock::new(|| BigDecimal::from(u64::MAX));
