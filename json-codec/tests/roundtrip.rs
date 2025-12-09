@@ -1,8 +1,7 @@
 use smithy4rs_core::{
     schema::SchemaRef,
-    serde::{deserializers::DeserializeWithSchema, serializers::SerializeWithSchema},
+    serde::{Buildable, ShapeBuilder, serializers::SerializeWithSchema},
 };
-use smithy4rs_core::serde::{Buildable, ShapeBuilder};
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 use smithy4rs_test_utils::*;
 
@@ -22,7 +21,10 @@ fn deserialize_from_json<'de, B: ShapeBuilder<'de, T>, T: Buildable<'de, B>>(
     schema: &SchemaRef,
 ) -> T {
     let mut deserializer = JsonDeserializer::new(data);
-    B::deserialize_with_schema(schema, &mut deserializer).unwrap().build().unwrap()
+    B::deserialize_with_schema(schema, &mut deserializer)
+        .unwrap()
+        .build()
+        .unwrap()
 }
 
 fn roundtrip<T, B>(value: &T, schema: &SchemaRef) -> T
@@ -50,7 +52,6 @@ fn test_optional_data_with_value() {
     let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
     assert_eq!(data, result);
 }
-
 
 #[test]
 fn test_optional_data_without_value() {

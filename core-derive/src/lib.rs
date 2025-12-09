@@ -8,12 +8,13 @@ use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
 use crate::{
-    deserialization::{builder_impls, builder_struct, deserialization_impl, get_builder_fields},
+    deserialization::{
+        buildable, builder_impls, builder_struct, deserialization_impl, get_builder_fields,
+    },
     schema::schema_impl,
     serialization::serialization_impl,
     utils::{get_crate_info, parse_schema},
 };
-use crate::deserialization::buildable;
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
 
@@ -96,7 +97,6 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
 #[proc_macro_derive(DeserializableStruct, attributes(smithy_schema))]
 pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let schema_ident = parse_schema(&input.attrs);
     let shape_name = &input.ident;
     let (extern_import, crate_ident) = get_crate_info();
 
@@ -126,7 +126,7 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
     let builder_impls = builder_impls(shape_name, &field_data);
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
     let builder_serializer = serialization_impl(&builder_name, &input);
-    let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
+    let deserialization = deserialization_impl(shape_name, &input, &crate_ident);
     let buildable = buildable(shape_name, &builder_name);
 
     // Builder struct is generated outside the const block to make it publicly accessible
