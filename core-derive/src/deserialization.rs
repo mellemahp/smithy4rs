@@ -3,7 +3,8 @@ use quote::quote;
 use syn::{Data, DeriveInput, Type};
 
 use crate::utils::{
-    extract_option_type, get_ident, get_inner_type, is_optional, is_primitive, replace_inner,
+    extract_option_type, get_ident, get_inner_type, is_optional, is_primitive, parse_schema,
+    replace_inner,
 };
 
 pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
@@ -90,11 +91,13 @@ pub(crate) fn get_builder_fields(input: &DeriveInput) -> Vec<BuilderFieldData> {
     };
     let mut field_data = Vec::new();
     for field in fields {
+        let schema = parse_schema(&field.attrs);
         let field_ident = field.ident.as_ref().unwrap().clone();
         let field_ty = &field.ty;
         let optional = is_optional(field_ty);
         let target = resolve_build_target(field_ty, optional);
         field_data.push(BuilderFieldData {
+            schema,
             field_ident,
             optional,
             target,
@@ -134,6 +137,7 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
 }
 
 pub(crate) struct BuilderFieldData {
+    schema: Ident,
     field_ident: Ident,
     optional: bool,
     target: BuildTarget,
@@ -248,8 +252,9 @@ impl BuilderFieldData {
     }
 
     /// Get the corresponding match arm for the builder field
-    fn deserialize_match_arm(&self, crate_ident: &TokenStream, schema: &Ident) -> TokenStream {
+    fn deserialize_match_arm(&self, crate_ident: &TokenStream) -> TokenStream {
         let field_name = &self.field_ident;
+        let schema = &self.schema;
         // Buildable fields use the `_builder` setter for deserialization
         // to take an unbuilt shape as input.
         match (self.optional, &self.target) {
@@ -291,7 +296,6 @@ impl BuilderFieldData {
 
 pub(crate) fn deserialization_impl(
     shape_name: &Ident,
-    schema_ident: &Ident,
     input: &DeriveInput,
     crate_ident: &TokenStream,
 ) -> TokenStream {
@@ -301,7 +305,7 @@ pub(crate) fn deserialization_impl(
     // Generate deserialize_member! or deserialize_optional_member! macro calls for each field
     let match_arms = field_data
         .iter()
-        .map(|d| d.deserialize_match_arm(crate_ident, schema_ident))
+        .map(|d| d.deserialize_match_arm(crate_ident))
         .collect::<Vec<_>>();
 
     quote! {

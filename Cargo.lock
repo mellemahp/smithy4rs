@@ -1017,7 +1017,6 @@ dependencies = [
  "downcast-rs",
  "fast-str",
  "indexmap",
- "log",
  "num-bigint",
  "pastey",
  "regex",
