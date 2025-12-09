@@ -167,7 +167,7 @@ pub trait Deserializer<'de>: Sized {
     // === Null handling ===
 
     /// Check if the next value is null without consuming it.
-    fn is_null(&self) -> bool;
+    fn is_null(&mut self) -> bool;
 
     /// Read a null value.
     fn read_null(&mut self) -> Result<(), Self::Error>;

@@ -65,48 +65,52 @@ const _: () = {
         }
     }
 };
+#[automatically_derived]
+pub struct SimpleStructBuilder {
+    field_a: smithy4rs_core::serde::builders::Required<String>,
+    field_b: smithy4rs_core::serde::builders::Required<i32>,
+    field_c: Option<smithy4rs_core::serde::builders::MaybeBuilt<Nested, NestedBuilder>>,
+}
+#[automatically_derived]
+impl SimpleStructBuilder {
+    pub fn new() -> Self {
+        Self {
+            field_a: smithy4rs_core::serde::builders::Required::Unset,
+            field_b: smithy4rs_core::serde::builders::Required::Unset,
+            field_c: None,
+        }
+    }
+    pub fn field_a(mut self, value: String) -> Self {
+        self.field_a = smithy4rs_core::serde::builders::Required::Set(value);
+        self
+    }
+    pub fn field_b(mut self, value: i32) -> Self {
+        self.field_b = smithy4rs_core::serde::builders::Required::Set(value);
+        self
+    }
+    pub fn field_c(mut self, value: Nested) -> Self {
+        self.field_c = Some(smithy4rs_core::serde::builders::MaybeBuilt::Struct(value));
+        self
+    }
+    pub fn field_c_builder(mut self, value: NestedBuilder) -> Self {
+        self.field_c = Some(smithy4rs_core::serde::builders::MaybeBuilt::Builder(value));
+        self
+    }
+}
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
+    use _smithy4rs::serde::serializers::Serializer as _Serializer;
+    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _Error;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
     use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
     use _smithy4rs::serde::ShapeBuilder as _ShapeBuilder;
-    #[automatically_derived]
-    pub struct SimpleStructBuilder {
-        field_a: _smithy4rs::serde::builders::Required<String>,
-        field_b: _smithy4rs::serde::builders::Required<i32>,
-        field_c: Option<_smithy4rs::serde::builders::MaybeBuilt<Nested, NestedBuilder>>,
-    }
-    #[automatically_derived]
-    impl SimpleStructBuilder {
-        pub fn new() -> Self {
-            Self {
-                field_a: _smithy4rs::serde::builders::Required::Unset,
-                field_b: _smithy4rs::serde::builders::Required::Unset,
-                field_c: None,
-            }
-        }
-        pub fn field_a(mut self, value: String) -> Self {
-            self.field_a = _smithy4rs::serde::builders::Required::Set(value);
-            self
-        }
-        pub fn field_b(mut self, value: i32) -> Self {
-            self.field_b = _smithy4rs::serde::builders::Required::Set(value);
-            self
-        }
-        pub fn field_c(mut self, value: Nested) -> Self {
-            self.field_c = Some(_smithy4rs::serde::builders::MaybeBuilt::Struct(value));
-            self
-        }
-        pub fn field_c_builder(mut self, value: NestedBuilder) -> Self {
-            self.field_c = Some(_smithy4rs::serde::builders::MaybeBuilt::Builder(value));
-            self
-        }
-    }
+    use _smithy4rs::serde::Buildable as _Buildable;
     #[automatically_derived]
     impl _ErrorCorrection for SimpleStructBuilder {
         type Value = SimpleStruct;
@@ -122,6 +126,26 @@ const _: () = {
     impl<'de> _ShapeBuilder<'de, SimpleStruct> for SimpleStructBuilder {
         fn new() -> Self {
             Self::new()
+        }
+    }
+    #[automatically_derived]
+    impl _ErrorCorrectionDefault for SimpleStruct {
+        fn default() -> Self {
+            SimpleStructBuilder::new().correct()
+        }
+    }
+    #[automatically_derived]
+    impl _SerializeWithSchema for SimpleStructBuilder {
+        fn serialize_with_schema<S: _Serializer>(
+            &self,
+            schema: &_SchemaRef,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            let mut ser = serializer.write_struct(schema, 3usize)?;
+            ser.serialize_member_named("field_a", &FIELD_A, &self.field_a)?;
+            ser.serialize_member_named("field_b", &FIELD_B, &self.field_b)?;
+            ser.serialize_optional_member_named("field_c", &FIELD_C, &self.field_c)?;
+            ser.end(schema)
         }
     }
     #[automatically_derived]
@@ -170,6 +194,7 @@ const _: () = {
                 )
         }
     }
+    impl<'de> _Buildable<'de, SimpleStructBuilder> for SimpleStruct {}
 };
 #[automatically_derived]
 impl ::core::fmt::Debug for SimpleStruct {
@@ -244,32 +269,36 @@ const _: () = {
         }
     }
 };
+#[automatically_derived]
+pub struct NestedBuilder {
+    field_a: smithy4rs_core::serde::builders::Required<String>,
+}
+#[automatically_derived]
+impl NestedBuilder {
+    pub fn new() -> Self {
+        Self {
+            field_a: smithy4rs_core::serde::builders::Required::Unset,
+        }
+    }
+    pub fn field_a(mut self, value: String) -> Self {
+        self.field_a = smithy4rs_core::serde::builders::Required::Set(value);
+        self
+    }
+}
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
+    use _smithy4rs::serde::serializers::Serializer as _Serializer;
+    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _Error;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
     use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
     use _smithy4rs::serde::ShapeBuilder as _ShapeBuilder;
-    #[automatically_derived]
-    pub struct NestedBuilder {
-        field_a: _smithy4rs::serde::builders::Required<String>,
-    }
-    #[automatically_derived]
-    impl NestedBuilder {
-        pub fn new() -> Self {
-            Self {
-                field_a: _smithy4rs::serde::builders::Required::Unset,
-            }
-        }
-        pub fn field_a(mut self, value: String) -> Self {
-            self.field_a = _smithy4rs::serde::builders::Required::Set(value);
-            self
-        }
-    }
+    use _smithy4rs::serde::Buildable as _Buildable;
     #[automatically_derived]
     impl _ErrorCorrection for NestedBuilder {
         type Value = Nested;
@@ -283,6 +312,24 @@ const _: () = {
     impl<'de> _ShapeBuilder<'de, Nested> for NestedBuilder {
         fn new() -> Self {
             Self::new()
+        }
+    }
+    #[automatically_derived]
+    impl _ErrorCorrectionDefault for Nested {
+        fn default() -> Self {
+            NestedBuilder::new().correct()
+        }
+    }
+    #[automatically_derived]
+    impl _SerializeWithSchema for NestedBuilder {
+        fn serialize_with_schema<S: _Serializer>(
+            &self,
+            schema: &_SchemaRef,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            let mut ser = serializer.write_struct(schema, 1usize)?;
+            ser.serialize_member_named("field_a", &FIELD_C, &self.field_a)?;
+            ser.end(schema)
         }
     }
     #[automatically_derived]
@@ -312,6 +359,7 @@ const _: () = {
                 )
         }
     }
+    impl<'de> _Buildable<'de, NestedBuilder> for Nested {}
 };
 #[automatically_derived]
 impl ::core::fmt::Debug for Nested {
