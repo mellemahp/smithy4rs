@@ -1,8 +1,8 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput};
-use crate::parse_schema;
-use crate::utils::is_optional;
+
+use crate::{parse_schema, utils::is_optional};
 
 /// Generates the `SerializableStruct` implementation for a shape.
 pub(crate) fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {

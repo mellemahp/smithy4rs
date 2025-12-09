@@ -1488,7 +1488,10 @@ mod tests {
         let error_key = err.errors.get(1).unwrap();
         assert_eq!(
             error_key.paths,
-            vec![PathElement::Schema(FIELD_MAP.clone()), PathElement::Key("bad-key".to_string())]
+            vec![
+                PathElement::Schema(FIELD_MAP.clone()),
+                PathElement::Key("bad-key".to_string())
+            ]
         );
         assert_eq!(
             error_key.error.to_string(),
@@ -1498,7 +1501,10 @@ mod tests {
         let error_value = err.errors.get(2).unwrap();
         assert_eq!(
             error_value.paths,
-            vec![PathElement::Schema(FIELD_MAP.clone()), PathElement::Key("a".to_string())]
+            vec![
+                PathElement::Schema(FIELD_MAP.clone()),
+                PathElement::Key("a".to_string())
+            ]
         );
         assert_eq!(
             error_value.error.to_string(),

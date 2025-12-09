@@ -86,7 +86,7 @@ impl<E> ErrorCorrectionDefault for IndexMap<String, E> {
     }
 }
 
-impl <E: ErrorCorrectionDefault> ErrorCorrectionDefault for Box<E> {
+impl<E: ErrorCorrectionDefault> ErrorCorrectionDefault for Box<E> {
     fn default() -> Self {
         Box::new(E::default())
     }
@@ -135,7 +135,7 @@ impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Option<B> {
     }
 }
 
-impl <E: ErrorCorrection> ErrorCorrection for Box<E> {
+impl<E: ErrorCorrection> ErrorCorrection for Box<E> {
     type Value = Box<E::Value>;
 
     fn correct(self) -> Self::Value {

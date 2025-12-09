@@ -1,23 +1,29 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, Type};
-use crate::utils::{extract_option_type, get_ident, get_inner_type, is_optional, is_primitive, replace_inner};
+
+use crate::utils::{
+    extract_option_type, get_ident, get_inner_type, is_optional, is_primitive, replace_inner,
+};
 
 pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
 
     // Generate builder struct fields
-    let builder_fields = field_data.iter()
+    let builder_fields = field_data
+        .iter()
         .map(BuilderFieldData::field_type)
         .collect::<Vec<_>>();
 
     // Generate new() initialization
-    let new_fields = field_data.iter()
+    let new_fields = field_data
+        .iter()
         .map(BuilderFieldData::initializer)
         .collect::<Vec<_>>();
 
     // Generate setter methods - consuming for chaining
-    let setters = field_data.iter()
+    let setters = field_data
+        .iter()
         .map(BuilderFieldData::setters)
         .collect::<Vec<_>>();
 
@@ -44,7 +50,8 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
 
     // Generate correct() method used to automatically derive `build()` methods
-    let build_fields = field_data.iter()
+    let build_fields = field_data
+        .iter()
         .map(BuilderFieldData::correct)
         .collect::<Vec<_>>();
 
@@ -90,7 +97,7 @@ pub(crate) fn get_builder_fields(input: &DeriveInput) -> Vec<BuilderFieldData> {
         field_data.push(BuilderFieldData {
             field_ident,
             optional,
-            target
+            target,
         });
     }
     field_data
@@ -115,7 +122,7 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
     // We will create two target types. One with the builder
     // and the other with the "built" type.
     let mut builder_type = ty.clone();
-    let type_ident = get_ident(&inner_type);
+    let type_ident = get_ident(inner_type);
     let builder_ident = Ident::new(&format!("{}Builder", type_ident), Span::call_site());
     replace_inner(&mut builder_type, builder_ident);
 
@@ -129,22 +136,23 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
 pub(crate) struct BuilderFieldData {
     field_ident: Ident,
     optional: bool,
-    target: BuildTarget
+    target: BuildTarget,
 }
+#[allow(clippy::large_enum_variant)]
 enum BuildTarget {
     /// A type that also implements `ShapeBuilder` and so must be wrapped with `MaybeBuilder<>`.
     Builable { shape: Type, builder: Type },
     /// A simple type (`string`, `i32`, etc.) that needs no additional wrapping.
-    Primitive(Type)
+    Primitive(Type),
 }
 impl BuilderFieldData {
     /// Type to use when representing this type as a field in a builder struct definition
     fn field_type(&self) -> TokenStream {
         let ty = match &self.target {
             BuildTarget::Builable { shape, builder } => {
-                quote!{ smithy4rs_core::serde::builders::MaybeBuilt<#shape, #builder> }
-            },
-            BuildTarget::Primitive(ty) => quote! { #ty }
+                quote! { smithy4rs_core::serde::builders::MaybeBuilt<#shape, #builder> }
+            }
+            BuildTarget::Primitive(ty) => quote! { #ty },
         };
         let field_name = &self.field_ident;
         if self.optional {
@@ -194,7 +202,7 @@ impl BuilderFieldData {
                         self
                     }
                 }
-            },
+            }
             BuildTarget::Primitive(ty) => {
                 quote! {
                     pub fn #field_name(mut self, value: #ty) -> Self {
@@ -253,7 +261,10 @@ impl BuilderFieldData {
                 }
             }
             (true, BuildTarget::Builable { builder, .. }) => {
-                let field_builder = Ident::new(format!("{}_builder", field_name).as_str(), Span::call_site());
+                let field_builder = Ident::new(
+                    format!("{}_builder", field_name).as_str(),
+                    Span::call_site(),
+                );
                 quote! {
                     #crate_ident::deserialize_optional_member!(member_schema, &#schema, de, builder, #field_builder, #builder);
                 }
@@ -266,7 +277,10 @@ impl BuilderFieldData {
                 }
             }
             (false, BuildTarget::Builable { builder, .. }) => {
-                let field_builder = Ident::new(format!("{}_builder", field_name).as_str(), Span::call_site());
+                let field_builder = Ident::new(
+                    format!("{}_builder", field_name).as_str(),
+                    Span::call_site(),
+                );
                 quote! {
                     #crate_ident::deserialize_member!(member_schema, &#schema, de, builder, #field_builder, #builder);
                 }
