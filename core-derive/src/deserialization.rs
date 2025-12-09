@@ -321,3 +321,9 @@ pub(crate) fn deserialization_impl(
         }
     }
 }
+
+pub(crate) fn buildable(shape_name: &Ident, builder_name: &Ident) -> TokenStream {
+    quote! {
+       impl <'de> _Buildable<'de, #builder_name> for #shape_name {}
+    }
+}

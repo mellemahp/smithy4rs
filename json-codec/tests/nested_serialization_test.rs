@@ -2,6 +2,7 @@
 use indexmap::IndexMap;
 use smithy4rs_core::serde::serializers::SerializeWithSchema;
 use smithy4rs_json_codec::JsonSerializer;
+use smithy4rs_core::serde::builders::ShapeBuilder;
 use smithy4rs_test_utils::*;
 
 #[test]

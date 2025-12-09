@@ -552,7 +552,7 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
         Ok(())
     }
 
-    fn is_null(&self) -> bool {
+    fn is_null(&mut self) -> bool {
         matches!(self.document.value, DocumentValue::Null)
     }
 

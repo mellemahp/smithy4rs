@@ -13,7 +13,7 @@ use crate::{
     serialization::serialization_impl,
     utils::{get_crate_info, parse_schema},
 };
-
+use crate::deserialization::buildable;
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
 
@@ -119,6 +119,7 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
         use #crate_ident::serde::correction::ErrorCorrection as _ErrorCorrection;
         use #crate_ident::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
         use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
+        use #crate_ident::serde::Buildable as _Buildable;
     };
     let field_data = get_builder_fields(&input);
     let builder = builder_struct(shape_name, &field_data);
@@ -126,6 +127,7 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
     let builder_serializer = serialization_impl(&builder_name, &input);
     let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
+    let buildable = buildable(shape_name, &builder_name);
 
     // Builder struct is generated outside the const block to make it publicly accessible
     quote! {
@@ -139,6 +141,8 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
             #builder_serializer
 
             #deserialization
+
+            #buildable
         };
     }
     .into()
