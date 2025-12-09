@@ -1,5 +1,5 @@
+use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span, TokenStream};
-use proc_macro_crate::{crate_name, FoundCrate};
 use quote::quote;
 use syn::{Attribute, Type};
 
@@ -93,7 +93,7 @@ pub(crate) fn get_crate_info() -> (TokenStream, TokenStream) {
 /// Checks if a type is a Smithy data model primitive.
 pub(crate) fn is_primitive(field_ty: &Type) -> bool {
     if let Type::Path(type_path) = field_ty
-        && let Some(segment) =  type_path.path.segments.last()
+        && let Some(segment) = type_path.path.segments.last()
     {
         return segment.ident == "String"
             || segment.ident == "bool"
@@ -107,7 +107,7 @@ pub(crate) fn is_primitive(field_ty: &Type) -> bool {
             || segment.ident == "BigDecimal"
             || segment.ident == "Instant"
             || segment.ident == "Document"
-            || segment.ident == "ByteBuffer"
+            || segment.ident == "ByteBuffer";
     }
     false
 }
@@ -124,7 +124,8 @@ fn get_inner_mut(ty: &mut Type) -> &mut Type {
     if let Type::Path(type_path) = &ty
         && let Some(segment) = type_path.path.segments.last()
         && let syn::PathArguments::AngleBracketed(args) = &segment.arguments
-        && let Some(syn::GenericArgument::Type(_)) = args.args.last() {
+        && let Some(syn::GenericArgument::Type(_)) = args.args.last()
+    {
         get_inner_mut(expect_inner_mut(ty))
     } else {
         ty
@@ -153,13 +154,14 @@ pub(crate) fn get_ident(ty: &Type) -> &Ident {
 #[cfg(test)]
 mod tests {
     use syn::Type;
+
     use super::*;
 
     #[test]
     fn is_optional_test() {
         let optional_simple = syn::parse_str::<Type>("Option<A>").unwrap();
-        let not_optional =  syn::parse_str::<Type>("Other<B>").unwrap();
-        let optional_nested =  syn::parse_str::<Type>("Option<Vec<Vec<B>>>").unwrap();
+        let not_optional = syn::parse_str::<Type>("Other<B>").unwrap();
+        let optional_nested = syn::parse_str::<Type>("Option<Vec<Vec<B>>>").unwrap();
         assert!(is_optional(&optional_simple));
         assert!(!is_optional(&not_optional));
         assert!(is_optional(&optional_nested));
@@ -235,7 +237,8 @@ mod tests {
 
     #[test]
     fn inner_type_of_nested_map_of_maps() {
-        let vec_nested = syn::parse_str::<Type>("Map<String, Map<String, Map<String, A>>>").unwrap();
+        let vec_nested =
+            syn::parse_str::<Type>("Map<String, Map<String, Map<String, A>>>").unwrap();
         let expected_type = syn::parse_str::<Type>("A").unwrap();
         assert_eq!(get_inner_type(&vec_nested), &expected_type);
     }
@@ -249,7 +252,6 @@ mod tests {
         assert!(!is_primitive(&not_primitive));
         assert!(is_primitive(&primitive_with_qualified_type));
     }
-
 
     #[test]
     fn replaces_inner_list() {
@@ -287,5 +289,3 @@ mod tests {
         assert_eq!(list, expected);
     }
 }
-
-

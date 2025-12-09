@@ -1,16 +1,18 @@
-mod utils;
+mod deserialization;
 mod schema;
 mod serialization;
-mod deserialization;
+mod utils;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
-use crate::deserialization::{builder_impls, builder_struct, deserialization_impl, get_builder_fields};
-use crate::schema::schema_impl;
-use crate::serialization::serialization_impl;
-use crate::utils::{get_crate_info, parse_schema};
+use crate::{
+    deserialization::{builder_impls, builder_struct, deserialization_impl, get_builder_fields},
+    schema::schema_impl,
+    serialization::serialization_impl,
+    utils::{get_crate_info, parse_schema},
+};
 
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
@@ -33,7 +35,7 @@ pub fn smithy_struct_derive(input: proc_macro::TokenStream) -> proc_macro::Token
         #serializable_tokens
         #deserializable_tokens
     }
-        .into()
+    .into()
 }
 
 /// Derives `SchemaShape` for a struct, backed by a static schema (`StaticSchemaShape`)
