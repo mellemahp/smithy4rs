@@ -5,6 +5,7 @@
 //! issues in some clients.
 
 use bigdecimal::Zero;
+use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
 
 use crate::{
@@ -61,6 +62,7 @@ correction_default_impl!(
 correction_default_impl!(String, String::new());
 correction_default_impl!(BigDecimal, BigDecimal::zero());
 correction_default_impl!(BigInt, BigInt::zero());
+correction_default_impl!(ByteBuffer, ByteBuffer::new());
 
 impl ErrorCorrectionDefault for Document {
     fn default() -> Self {
@@ -81,6 +83,12 @@ impl<E> ErrorCorrectionDefault for Vec<E> {
 impl<E> ErrorCorrectionDefault for IndexMap<String, E> {
     fn default() -> Self {
         IndexMap::new()
+    }
+}
+
+impl <E: ErrorCorrectionDefault> ErrorCorrectionDefault for Box<E> {
+    fn default() -> Self {
+        Box::new(E::default())
     }
 }
 
@@ -124,6 +132,14 @@ impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Option<B> {
     #[inline]
     fn correct(self) -> Self::Value {
         self.map(|b| b.correct())
+    }
+}
+
+impl <E: ErrorCorrection> ErrorCorrection for Box<E> {
+    type Value = Box<E::Value>;
+
+    fn correct(self) -> Self::Value {
+        Box::new((*self).correct())
     }
 }
 

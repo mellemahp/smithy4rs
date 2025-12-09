@@ -106,7 +106,8 @@ pub(crate) fn is_primitive(field_ty: &Type) -> bool {
             || segment.ident == "BigInt"
             || segment.ident == "BigDecimal"
             || segment.ident == "Instant"
-            || segment.ident == "Document";
+            || segment.ident == "Document"
+            || segment.ident == "ByteBuffer"
     }
     false
 }

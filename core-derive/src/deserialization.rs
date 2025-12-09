@@ -1,36 +1,24 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Type};
+use syn::{Data, DeriveInput, Type};
 use crate::utils::{extract_option_type, get_ident, get_inner_type, is_optional, is_primitive, replace_inner};
 
-pub(crate) fn builder_impl(shape_name: &Ident, input: &DeriveInput, crate_ident: &TokenStream) -> TokenStream {
-    let fields = match &input.data {
-        Data::Struct(data) => &data.fields,
-        _ => panic!("DeserializableStruct can only be derived for structs"),
-    };
-
+pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
-
-    let field_data = get_builder_fields(fields);
 
     // Generate builder struct fields
     let builder_fields = field_data.iter()
-        .map(|d| d.field_type(crate_ident))
+        .map(BuilderFieldData::field_type)
         .collect::<Vec<_>>();
 
     // Generate new() initialization
     let new_fields = field_data.iter()
-        .map(|d|d.initializer(crate_ident))
+        .map(BuilderFieldData::initializer)
         .collect::<Vec<_>>();
 
     // Generate setter methods - consuming for chaining
     let setters = field_data.iter()
-        .map(|d|d.setters(crate_ident))
-        .collect::<Vec<_>>();
-
-    // Generate correct() method used to automatically derive `build()` methods
-    let build_fields = field_data.iter()
-        .map(BuilderFieldData::correct)
+        .map(BuilderFieldData::setters)
         .collect::<Vec<_>>();
 
     quote! {
@@ -49,7 +37,18 @@ pub(crate) fn builder_impl(shape_name: &Ident, input: &DeriveInput, crate_ident:
 
             #(#setters)*
         }
+    }
+}
 
+pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
+    let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
+
+    // Generate correct() method used to automatically derive `build()` methods
+    let build_fields = field_data.iter()
+        .map(BuilderFieldData::correct)
+        .collect::<Vec<_>>();
+
+    quote! {
         #[automatically_derived]
         impl _ErrorCorrection for #builder_name {
             type Value = #shape_name;
@@ -67,10 +66,21 @@ pub(crate) fn builder_impl(shape_name: &Ident, input: &DeriveInput, crate_ident:
                 Self::new()
             }
         }
+
+        #[automatically_derived]
+        impl _ErrorCorrectionDefault for #shape_name {
+            fn default() -> Self {
+                #builder_name::new().correct()
+            }
+        }
     }
 }
 
-fn get_builder_fields(fields: &Fields) -> Vec<BuilderFieldData> {
+pub(crate) fn get_builder_fields(input: &DeriveInput) -> Vec<BuilderFieldData> {
+    let fields = match &input.data {
+        Data::Struct(data) => &data.fields,
+        _ => panic!("DeserializableStruct can only be derived for structs"),
+    };
     let mut field_data = Vec::new();
     for field in fields {
         let field_ident = field.ident.as_ref().unwrap().clone();
@@ -99,13 +109,13 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
 
     // If the inner type is a primitive type, just return that
     if is_primitive(inner_type) {
-        return BuildTarget::Primitive(inner_type.clone());
+        return BuildTarget::Primitive(ty.clone());
     }
 
     // We will create two target types. One with the builder
     // and the other with the "built" type.
     let mut builder_type = ty.clone();
-    let type_ident = get_ident(&ty);
+    let type_ident = get_ident(&inner_type);
     let builder_ident = Ident::new(&format!("{}Builder", type_ident), Span::call_site());
     replace_inner(&mut builder_type, builder_ident);
 
@@ -116,7 +126,7 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
     }
 }
 
-struct BuilderFieldData {
+pub(crate) struct BuilderFieldData {
     field_ident: Ident,
     optional: bool,
     target: BuildTarget
@@ -129,10 +139,10 @@ enum BuildTarget {
 }
 impl BuilderFieldData {
     /// Type to use when representing this type as a field in a builder struct definition
-    fn field_type(&self, crate_ident: &TokenStream) -> TokenStream {
+    fn field_type(&self) -> TokenStream {
         let ty = match &self.target {
             BuildTarget::Builable { shape, builder } => {
-                quote!{ #crate_ident::serde::builders::MaybeBuilt<#shape, #builder> }
+                quote!{ smithy4rs_core::serde::builders::MaybeBuilt<#shape, #builder> }
             },
             BuildTarget::Primitive(ty) => quote! { #ty }
         };
@@ -143,7 +153,7 @@ impl BuilderFieldData {
             }
         } else {
             quote! {
-                #field_name: #crate_ident::serde::builders::Required<#ty>
+                #field_name: smithy4rs_core::serde::builders::Required<#ty>
             }
         }
     }
@@ -151,36 +161,36 @@ impl BuilderFieldData {
     /// Initializer to use for setting a builder field in `new()` method
     /// - all optional fields are `None`.
     /// - All required fields are `Required::Unset`
-    fn initializer(&self, crate_ident: &TokenStream) -> TokenStream {
+    fn initializer(&self) -> TokenStream {
         let field_name = &self.field_ident;
         if self.optional {
             quote! { #field_name: None }
         } else {
-            quote! { #field_name: #crate_ident::serde::builders::Required::Unset }
+            quote! { #field_name: smithy4rs_core::serde::builders::Required::Unset }
         }
     }
 
     /// Generate builder setters.
     ///
     /// Setters consume `self` to allow for chaining.
-    fn setters(&self, crate_ident: &TokenStream) -> TokenStream {
+    fn setters(&self) -> TokenStream {
         let field_name = &self.field_ident;
         let wrapper = if self.optional {
             quote! { Some }
         } else {
-            quote! { #crate_ident::serde::builders::Required::Set }
+            quote! { smithy4rs_core::serde::builders::Required::Set }
         };
         match &self.target {
             BuildTarget::Builable { shape, builder } => {
                 let builder_fn = Ident::new(&format!("{}_builder", field_name), Span::call_site());
                 quote! {
                     pub fn #field_name(mut self, value: #shape) -> Self {
-                        self.#field_name = #wrapper(#crate_ident::serde::builders::MaybeBuilt::Struct(value));
+                        self.#field_name = #wrapper(smithy4rs_core::serde::builders::MaybeBuilt::Struct(value));
                         self
                     }
 
                     pub fn #builder_fn(mut self, value: #builder) -> Self {
-                        self.#field_name = #wrapper(#crate_ident::serde::builders::MaybeBuilt::Builder(value));
+                        self.#field_name = #wrapper(smithy4rs_core::serde::builders::MaybeBuilt::Builder(value));
                         self
                     }
                 }
@@ -271,14 +281,9 @@ pub(crate) fn deserialization_impl(
     input: &DeriveInput,
     crate_ident: &TokenStream,
 ) -> TokenStream {
-    let fields = match &input.data {
-        Data::Struct(data) => &data.fields,
-        _ => panic!("DeserializableStruct can only be derived for structs"),
-    };
-
+    let field_data = get_builder_fields(input);
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
 
-    let field_data = get_builder_fields(fields);
     // Generate deserialize_member! or deserialize_optional_member! macro calls for each field
     let match_arms = field_data
         .iter()
