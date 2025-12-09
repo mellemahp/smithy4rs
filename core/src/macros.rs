@@ -34,7 +34,8 @@ macro_rules! deserialize_optional_member {
     };
 }
 
-// Create a list of traits for use in Schema builders
+/// Create a list of traits for use in Schema builders
+#[doc(hidden)]
 #[macro_export]
 macro_rules! traits {
     () => { Vec::new() };

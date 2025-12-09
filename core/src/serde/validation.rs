@@ -1,4 +1,61 @@
+//! # Validation
+//!
+//! Validation compare a shape against a set of constraints defined in the Smithy Model.
+//!
+//! ## Some basic requirements
+//! Validation in `smithy4rs` has a few fundamental requirements:
+//! 1. **Validation MUST occur AFTER deserialization** -- Validation should occur only
+//!    once all data have been unmarshalled into a Builder. Multiple different
+//!    sources could be deserialized into a single shape definition, so ALL deserialization
+//!    must be completed before validation can occur. This also avoids validating multiple times
+//!    if multiple sources are used to construct a built shape.
+//! 2. **Validation must aggregate all errors from all nested types** -- Users should get a single
+//!    error for _ALL_ of their validation errors so they can fix them all at once.
+//!    **NOTE**: Validation errors are the ONLY errors that we will aggregate in this way.
+//! 3. **Validation must have a depth limit** -- If we allowed validation to walk arbitrarily deep into
+//!    a shape tree then it would be relatively easy to implement a DOS attack against any Document, Map,
+//!    List or recursive types. To prevent such attacks, [`Validator`] Implementations MUST have limits
+//!    on the maximum walk depth and maximum number of errors.
+//!
+//! ## Build and Validation
+//!
+//! ### Default Validation
+//! By default, users should _not_ be able to manually construct shapes that violate the basic Smithy contraints.
+//! In `smithy4rs`,  [`ShapeBuilder`] implementations are validated with the [`DefaultValidator`] on [`ShapeBuilder::build()`].
+//!
+//! This [`DefaultValidator`] (and therefore the `build()` method) will check the following built-in Smithy constraints:
+//! - [`@length`](<https://smithy.io/2.0/spec/constraint-traits.html#length-trait>)
+//! - [`@range`](<https://smithy.io/2.0/spec/constraint-traits.html#range-trait>)
+//! - [`@pattern`](<https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait>)
+//! - [`@uniqueItems`](<https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait>)
+//! - [`@required`](<https://smithy.io/2.0/spec/type-refinement-traits.html#required-trait>)
+//!
+//! In addition to checking these constraint traits, the default validator also checks that the type in
+//! the schema is compatible with the data type present in the shape.
+//!
+//! For more info on built-in Smithy constraints see: [Smithy Documentation](<https://smithy.io/2.0/spec/constraint-traits.html>)
+//!
+//! ### Custom Constraints
+//! Users may have a different definition of "Invalid". Custom definitions of validity should be encoded into
+//! a [`Validator`] implementation.
+//!
+//! For example, if you don't care if a response from a server missed a `@required` value,
+//! then you could create a `ClientValidator` that ignores missing `required` values.
+//!
+//! To use validate a builder using a custom validation implementation, use
+//! the [`ShapeBuilder::build_with_validator`] method with your custom implementation.
+//!
+//! ## Validating Protocol-specific constraints
+//! Some protocols may have additional constraints that they need to check in addition to the basic
+//! Smithy constraints.
+//!
+//! To support protocol-specific validation, [`Protocol`] implementations provide a [`Validator`]
+//! implementation (defaulting to the [`DefaultValidator`]) that is used to validate all shapes
+//! deserialized with that protocol.
+//!
+
 use std::{
+    collections::BTreeSet,
     convert::Into,
     error::Error,
     fmt::Display,
@@ -8,7 +65,7 @@ use std::{
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
-use rustc_hash::{FxBuildHasher, FxHashSet, FxHasher};
+use rustc_hash::FxHasher;
 use thiserror::Error;
 
 use crate::{
@@ -217,7 +274,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(DefaultListValidator {
             root: self,
             unique: schema.contains_type::<UniqueItemsTrait>(),
-            lookup: UniquenessTracker::new(len),
+            lookup: UniquenessTracker::new(),
             index: 0,
         })
     }
@@ -290,11 +347,12 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
         // Check @pattern trait matches provided.
         if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
-            && pattern.pattern().find(value).is_none() {
-                self.emit_error(SmithyConstraints::Pattern(
-                    value.to_string(),
-                    pattern.pattern().to_string(),
-                ))?;
+            && pattern.pattern().find(value).is_none()
+        {
+            self.emit_error(SmithyConstraints::Pattern(
+                value.to_string(),
+                pattern.pattern().to_string(),
+            ))?;
         }
 
         Ok(())
@@ -388,12 +446,12 @@ struct UniquenessTracker {
     // A b-tree is used here as it should be faster for
     // search for a relatively small number of numeric
     // values than a hashmap
-    lookup: FxHashSet<u64>,
+    lookup: BTreeSet<u64>,
 }
 impl UniquenessTracker {
-    fn new(len: usize) -> Self {
+    fn new() -> Self {
         UniquenessTracker {
-            lookup: FxHashSet::with_capacity_and_hasher(len, FxBuildHasher),
+            lookup: BTreeSet::new(),
         }
     }
 
@@ -729,16 +787,12 @@ impl Serializer for &mut KeySerializer {
         schema: &SchemaRef,
         _len: usize,
     ) -> Result<Self::SerializeList, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
     fn write_boolean(self, schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -763,16 +817,12 @@ impl Serializer for &mut KeySerializer {
 
     #[inline]
     fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
     fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -781,9 +831,7 @@ impl Serializer for &mut KeySerializer {
         schema: &SchemaRef,
         _value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -792,9 +840,7 @@ impl Serializer for &mut KeySerializer {
         schema: &SchemaRef,
         _value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -804,9 +850,7 @@ impl Serializer for &mut KeySerializer {
 
     #[inline]
     fn write_blob(self, schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -815,9 +859,7 @@ impl Serializer for &mut KeySerializer {
         schema: &SchemaRef,
         _value: &Instant,
     ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
@@ -826,23 +868,17 @@ impl Serializer for &mut KeySerializer {
         schema: &SchemaRef,
         _value: &Document,
     ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
     fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 
     #[inline]
     fn skip(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(
-            *schema.shape_type(),
-        ))
+        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
 }
 
@@ -1452,7 +1488,7 @@ mod tests {
         let error_key = err.errors.get(1).unwrap();
         assert_eq!(
             error_key.paths,
-            vec![PathElement::Schema(FIELD_MAP.clone())]
+            vec![PathElement::Schema(FIELD_MAP.clone()), PathElement::Key("bad-key".to_string())]
         );
         assert_eq!(
             error_key.error.to_string(),
@@ -1462,7 +1498,7 @@ mod tests {
         let error_value = err.errors.get(2).unwrap();
         assert_eq!(
             error_value.paths,
-            vec![PathElement::Schema(FIELD_MAP.clone())]
+            vec![PathElement::Schema(FIELD_MAP.clone()), PathElement::Key("a".to_string())]
         );
         assert_eq!(
             error_value.error.to_string(),

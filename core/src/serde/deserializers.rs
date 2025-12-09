@@ -24,9 +24,9 @@ pub trait Error: Sized + StdError {
 // Core Deserializer Trait
 // ============================================================================
 
-/// A **Deserializer** reads data from an input source, guided by Smithy schemas.
+/// A [`Deserializer`] reads data from an input source, guided by Smithy schemas.
 ///
-/// This trait mirrors the `Serializer` trait, providing schema-guided deserialization
+/// This trait mirrors the [`Serializer`] trait, providing schema-guided deserialization
 /// for all Smithy data types. It uses a consumer pattern for compound types (structs,
 /// lists, maps) where the deserializer iterates and "pushes" values to consumer functions.
 ///
@@ -86,14 +86,14 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Example (generated code)
     ///
-    /// ```ignore
-    /// impl<'de> DeserializeWithSchema<'de> for CitySummary {
+    /// ```rust,ignore
+    /// impl<'de> DeserializeWithSchema<'de> for CitySummaryBuilder {
     ///     fn deserialize<D: Deserializer<'de>>(
     ///         schema: &SchemaRef,
     ///         deserializer: &mut D
     ///     ) -> Result<Self, D::Error> {
     ///         let builder = Builder::new();
-    ///         let builder = deserializer.read_struct(schema, builder, |builder, member, de| {
+    ///         deserializer.read_struct(schema, builder, |builder, member, de| {
     ///             if member.member_index() == 0 {
     ///                 return Ok(builder.city_id(de.read_string(member)?));
     ///             }
@@ -101,8 +101,7 @@ pub trait Deserializer<'de>: Sized {
     ///                 return Ok(builder.name(de.read_string(member)?));
     ///             }
     ///             Ok(builder) // Unknown field
-    ///         })?;
-    ///         builder.build()
+    ///         })
     ///     }
     /// }
     /// ```
@@ -168,7 +167,7 @@ pub trait Deserializer<'de>: Sized {
     // === Null handling ===
 
     /// Check if the next value is null without consuming it.
-    fn is_null(&mut self) -> bool;
+    fn is_null(&self) -> bool;
 
     /// Read a null value.
     fn read_null(&mut self) -> Result<(), Self::Error>;
@@ -190,7 +189,7 @@ impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape
 // ============================================================================
 
 /// A data structure that can be deserialized from any data format supported
-/// by smithy4rs, guided by a schema.
+/// by `smithy4rs`, guided by a schema.
 ///
 /// This trait mirrors `SerializeWithSchema` on the serialization side.
 pub trait DeserializeWithSchema<'de>: Sized {

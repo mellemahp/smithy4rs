@@ -41,8 +41,8 @@
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
-//!  assert_eq!(*trait_impl.min(), Some(1usize));
-//!  assert_eq!(*trait_impl.max(), Some(4usize));
+//!  assert_eq!(trait_impl.min(), 1usize);
+//!  assert_eq!(trait_impl.max(), 4usize);
 //! ```
 //!
 //! ## Custom Traits
