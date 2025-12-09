@@ -3,11 +3,11 @@ mod schema;
 mod serialization;
 mod deserialization;
 
-use proc_macro2::{TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
-use crate::deserialization::{builder_impl, deserialization_impl};
+use crate::deserialization::{builder_impls, builder_struct, deserialization_impl, get_builder_fields};
 use crate::schema::schema_impl;
 use crate::serialization::serialization_impl;
 use crate::utils::{get_crate_info, parse_schema};
@@ -99,27 +99,42 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
     let (extern_import, crate_ident) = get_crate_info();
 
     // Generate builder struct and impl
-    let builder = builder_impl(shape_name, &input, &crate_ident);
 
-    let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
     let imports = quote! {
+        // Base imports
         #extern_import
         use #crate_ident::schema::SchemaRef as _SchemaRef;
         use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+        // serialization imports
+        use #crate_ident::serde::serializers::Serializer as _Serializer;
+        use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+        use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
+        // deserialization imports
         use #crate_ident::serde::deserializers::Deserializer as _Deserializer;
         use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
         use #crate_ident::serde::deserializers::Error as _Error;
+        // builder imports
         use #crate_ident::serde::correction::ErrorCorrection as _ErrorCorrection;
         use #crate_ident::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
         use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
     };
+    let field_data = get_builder_fields(&input);
+    let builder = builder_struct(shape_name, &field_data);
+    let builder_impls = builder_impls(shape_name, &field_data);
+    let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
+    let builder_serializer = serialization_impl(&builder_name, &input);
+    let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
 
-    // (?) Builder is generated outside the const block to make it publicly accessible
+    // Builder struct is generated outside the const block to make it publicly accessible
     quote! {
+        #builder
+
         const _: () = {
             #imports
 
-            #builder
+            #builder_impls
+
+            #builder_serializer
 
             #deserialization
         };

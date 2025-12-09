@@ -81,6 +81,7 @@ pub struct OptionalFieldsStruct {
     #[smithy_schema(OPTIONAL_OPTIONAL)]
     pub optional_field: Option<String>,
 }
+
 smithy!("test#NumericTypesStruct": {
     structure NUMERIC_TYPES_STRUCT_SCHEMA {
         NUMERIC_BYTE: BYTE = "byte_val"
@@ -124,6 +125,7 @@ pub struct SimpleStruct {
     #[smithy_schema(SIMPLE_FIELD_B)]
     pub field_b: i32,
 }
+
 smithy!("test#RecursiveShapesStruct": {
     structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
         RECURSIVE_SHAPES_STRING: STRING = "string_field"
@@ -149,8 +151,6 @@ pub struct RecursiveShapesStruct {
     #[smithy_schema(RECURSIVE_SHAPES_OPTIONAL)]
     pub optional_field: Option<String>,
     #[smithy_schema(RECURSIVE_SHAPES_NEXT)]
-    // TODO: Does this actually need boxing? Shapes themselves shouldnt
-    //       recurse, only their schemas.
     pub next: Option<Box<RecursiveShapesStruct>>,
 }
 smithy!("test#InnerStruct": {
