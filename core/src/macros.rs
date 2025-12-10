@@ -1,6 +1,10 @@
 //! Macros shared
 //! Primarily these macros are used to construct schemas and traits.
 
+use std::process::id;
+use crate::prelude::{DefaultTrait, RequiredTrait};
+use crate::schema::{DocumentValue, Schema};
+
 /// Helper macro for deserializing required struct members in generated code.
 ///
 /// This macro simplifies the pattern of checking if a member schema matches
@@ -42,6 +46,77 @@ macro_rules! traits {
         vec![$($x.into()),*]
     );
 }
+
+#[macro_export]
+macro_rules! smithy {
+    // Hide implementation details.
+    ($($smithy:tt)+) => {
+        $crate::smithy_internal!($($smithy)+)
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! smithy_internal {
+    //////////////////////////////////////////////////////////////////////////
+    // Traits
+    //////////////////////////////////////////////////////////////////////////
+    // INTERNAL: Empty traits
+    (@traits) => (
+        Vec::new()
+    );
+
+    // INTERNAL: List of one or more traits
+    (@traits $($x:expr),+ $(,)?) => (
+        vec![$($x.into()),*]
+    );
+
+    //////////////////////////////////////////////////////////////////////////
+    // Main implementation.
+    //
+    // Must be invoked as: smithy_internal!($($json)+)
+    //////////////////////////////////////////////////////////////////////////
+
+    // Structure with no members.
+    ($id:literal: { $(@$x:expr;)+ structure $name:ident {} }) => (
+        Schema::structure_builder($id, $crate::smithy!(@traits $($x),*))
+    );
+
+    // Structure with one or more members
+    ($id:literal: { $(@$t:expr;)+ structure $name:ident {$($members:tt)+} }) => (
+        let builder = Schema::structure_builder($id, $crate::smithy!(@traits $($t),*));
+        $crate::smithy!(@members builder $($members)+)
+    );
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // Member processing
+    //////////////////////////////////////////////////////////////////////////
+    (@members $(($builder:expr)+)+ $($(@$t:expr;)+ $($name:ident($field:literal): $schema:ident)+)+) => (
+        $(.put_member($field, &$schema, $crate::smithy!(@traits $($t),*));)*
+    );
+}
+#[cfg(test)]
+mod test {
+    use regex::Error::Syntax;
+    use crate::schema::{SmithyTrait, TraitRef};
+    use super::*;
+
+    #[test]
+    fn test() {
+        smithy!["my.com#Shape": {
+            @RequiredTrait;
+            @DefaultTrait(DocumentValue::String("stuff".into()));
+            structure SMITHY_STRUCT {
+                @RequiredTrait;
+                MEMBER_A: STRING = "member_a"
+            }
+        }];
+        println!("TRAITS: {:#?}", x);
+    }
+}
+
+
 
 // Create a lazy, static Schema definition
 #[macro_export]
