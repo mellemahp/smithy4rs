@@ -34,7 +34,7 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     ///
     /// To build a shape using the default validator use [`ShapeBuilder::build`].
     ///
-    /// NOTE: Actual validation and build logic is implementated in builder [`Validate`]
+    /// NOTE: Actual validation and build logic is implemented in builder [`Validate`]
     /// implementation.
     #[inline]
     fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
