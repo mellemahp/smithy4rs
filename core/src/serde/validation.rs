@@ -20,7 +20,7 @@
 //! ## Build and Validation
 //!
 //! ### Default Validation
-//! By default, users should _not_ be able to manually construct shapes that violate the basic Smithy contraints.
+//! By default, users should _not_ be able to manually construct shapes that violate the basic Smithy constraints.
 //! In `smithy4rs`,  [`ShapeBuilder`] implementations are validated with the [`DefaultValidator`] on [`ShapeBuilder::build()`].
 //!
 //! This [`DefaultValidator`] (and therefore the `build()` method) will check the following built-in Smithy constraints:
