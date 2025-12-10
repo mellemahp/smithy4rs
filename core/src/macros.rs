@@ -1,5 +1,4 @@
-//! Macros shared
-//! Primarily these macros are used to construct schemas and traits.
+//! Shared Macros for `Smithy4Rs`
 
 /// Helper macro for deserializing required struct members in generated code.
 ///
@@ -34,7 +33,8 @@ macro_rules! deserialize_optional_member {
     };
 }
 
-// Create a list of traits for use in Schema builders
+/// Create a list of traits for use in Schema builders
+#[doc(hidden)]
 #[macro_export]
 macro_rules! traits {
     () => { Vec::new() };
@@ -43,7 +43,8 @@ macro_rules! traits {
     );
 }
 
-// Create a lazy, static Schema definition
+/// Creates a lazy, static Schema definition
+#[doc(hidden)]
 #[macro_export]
 macro_rules! lazy_schema {
     // Internal helper to build member chain - @self recursion case (matches (@self) as single tt)

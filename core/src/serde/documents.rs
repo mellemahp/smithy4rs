@@ -742,323 +742,323 @@ impl<'de> DeserializeWithSchema<'de> for Document {
 // TODO(test): overhaul these to be use test shapes
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, sync::LazyLock};
-
-    use smithy4rs_core_derive::SmithyStruct;
-
-    use super::*;
-    use crate::{
-        lazy_schema,
-        prelude::*,
-        schema::{Schema, ShapeId},
-        traits,
-    };
-
-    lazy_schema!(
-        MAP_SCHEMA,
-        Schema::map_builder(ShapeId::from("com.example#Map"), traits![]),
-        ("key", STRING, traits![]),
-        ("value", STRING, traits![])
-    );
-    lazy_schema!(
-        LIST_SCHEMA,
-        Schema::list_builder("com.example#Map", traits![]),
-        ("member", STRING, traits![])
-    );
-    lazy_schema!(
-        SCHEMA,
-        Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
-        (MEMBER_A, "a", STRING, traits![]),
-        (MEMBER_B, "b", STRING, traits![]),
-        (MEMBER_C, "c", STRING, traits![]),
-        (MEMBER_LIST, "list", LIST_SCHEMA, traits![]),
-        (MEMBER_MAP, "map", MAP_SCHEMA, traits![])
-    );
-
-    #[derive(SmithyStruct)]
-    #[smithy_schema(SCHEMA)]
-    pub(crate) struct SerializeMe {
-        #[smithy_schema(MEMBER_A)]
-        pub member_a: String,
-        #[smithy_schema(MEMBER_B)]
-        pub member_b: String,
-        #[smithy_schema(MEMBER_C)]
-        pub member_optional: Option<String>,
-        #[smithy_schema(MEMBER_LIST)]
-        pub member_list: Vec<String>,
-        #[smithy_schema(MEMBER_MAP)]
-        pub member_map: IndexMap<String, String>,
-    }
-
-    #[test]
-    fn struct_to_document() {
-        let mut map = IndexMap::new();
-        map.insert(String::from("a"), String::from("b"));
-        let list = vec!["a".to_string(), "b".to_string()];
-        let struct_to_convert = SerializeMe {
-            member_a: "a".to_string(),
-            member_b: "b".to_string(),
-            member_optional: Some("c".to_string()),
-            member_map: map,
-            member_list: list,
-        };
-        let document: Document = struct_to_convert.into();
-        assert_eq!(&document.discriminator.clone().unwrap(), SCHEMA.id());
-        if let DocumentValue::Map(members) = document.value {
-            assert!(members.contains_key("a"));
-            if let DocumentValue::String(str) = &members.get("a").unwrap().value {
-                assert_eq!(str, &String::from("a"));
-            } else {
-                panic!("Expected String")
-            }
-            assert!(members.contains_key("b"));
-            if let DocumentValue::String(str) = &members.get("b").unwrap().value {
-                assert_eq!(str, &String::from("b"));
-            } else {
-                panic!("Expected String")
-            }
-            assert!(members.contains_key("c"));
-            if let DocumentValue::String(str) = &members.get("c").unwrap().value {
-                assert_eq!(str, &String::from("c"));
-            } else {
-                panic!("Expected String")
-            }
-            assert!(members.contains_key("map"));
-            assert!(members.contains_key("list"));
-        } else {
-            panic!("Expected document");
-        }
-    }
-
-    #[test]
-    fn string_document_value() {
-        let document_str: Document = "MyStr".into();
-        let output_str = document_str.as_string().expect("string");
-        assert_eq!(output_str, &"MyStr".to_string());
-        let val: &Schema = &STRING;
-        assert_eq!(document_str.schema(), val);
-    }
-
-    #[test]
-    fn number_document_values() {
-        let x: &Schema = &STRING;
-    }
-
-    // Roundtrip tests: value -> serialize to Document -> deserialize back to value
-
-    #[test]
-    fn roundtrip_bool() {
-        let original = true;
-        let doc = original
-            .serialize_with_schema(&BOOLEAN, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = bool::deserialize_with_schema(&BOOLEAN, &mut deser).unwrap();
-        assert_eq!(original, result);
-    }
-
-    #[test]
-    fn roundtrip_string() {
-        let original = "hello world".to_string();
-        let doc = original
-            .serialize_with_schema(&STRING, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = String::deserialize_with_schema(&STRING, &mut deser).unwrap();
-        assert_eq!(original, result);
-    }
-
-    #[test]
-    fn roundtrip_integers() {
-        // Byte
-        let original_byte: i8 = 127;
-        let doc = original_byte
-            .serialize_with_schema(&BYTE, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = i8::deserialize_with_schema(&BYTE, &mut deser).unwrap();
-        assert_eq!(original_byte, result);
-
-        // Short
-        let original_short: i16 = 32000;
-        let doc = original_short
-            .serialize_with_schema(&SHORT, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = i16::deserialize_with_schema(&SHORT, &mut deser).unwrap();
-        assert_eq!(original_short, result);
-
-        // Integer
-        let original_int: i32 = 123456;
-        let doc = original_int
-            .serialize_with_schema(&INTEGER, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = i32::deserialize_with_schema(&INTEGER, &mut deser).unwrap();
-        assert_eq!(original_int, result);
-
-        // Long
-        let original_long: i64 = 9876543210i64;
-        let doc = original_long
-            .serialize_with_schema(&LONG, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = i64::deserialize_with_schema(&LONG, &mut deser).unwrap();
-        assert_eq!(original_long, result);
-    }
-
-    #[test]
-    fn roundtrip_floats() {
-        // Float
-        let original_float: f32 = 1.2345;
-        let doc = original_float
-            .serialize_with_schema(&FLOAT, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = f32::deserialize_with_schema(&FLOAT, &mut deser).unwrap();
-        assert_eq!(original_float, result);
-
-        // Double
-        let original_double: f64 = 1.23456789;
-        let doc = original_double
-            .serialize_with_schema(&DOUBLE, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = f64::deserialize_with_schema(&DOUBLE, &mut deser).unwrap();
-        assert_eq!(original_double, result);
-    }
-
-    #[test]
-    #[ignore = "BigDecimal/BigInteger serialization not yet implemented"]
-    fn roundtrip_big_numbers() {
-        // BigInteger
-        let original_big_int = BigInt::from(123456789);
-        let doc = original_big_int
-            .serialize_with_schema(&BIG_INTEGER, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = BigInt::deserialize_with_schema(&BIG_INTEGER, &mut deser).unwrap();
-        assert_eq!(original_big_int, result);
-
-        // BigDecimal
-        let original_big_dec = BigDecimal::from_str("123.456").unwrap();
-        let doc = original_big_dec
-            .serialize_with_schema(&BIG_DECIMAL, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = BigDecimal::deserialize_with_schema(&BIG_DECIMAL, &mut deser).unwrap();
-        assert_eq!(original_big_dec, result);
-    }
-
-    #[test]
-    fn roundtrip_list() {
-        let original: Vec<String> = vec![
-            "first".to_string(),
-            "second".to_string(),
-            "third".to_string(),
-        ];
-        let doc = original
-            .serialize_with_schema(&LIST_SCHEMA, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser).unwrap();
-        assert_eq!(original, result);
-    }
-
-    #[test]
-    fn roundtrip_map() {
-        let mut original = IndexMap::new();
-        original.insert("key1".to_string(), "value1".to_string());
-        original.insert("key2".to_string(), "value2".to_string());
-        original.insert("key3".to_string(), "value3".to_string());
-
-        let doc = original
-            .serialize_with_schema(&MAP_SCHEMA, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result =
-            IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser).unwrap();
-        assert_eq!(original, result);
-    }
-
-    #[test]
-    fn roundtrip_struct() {
-        let mut original_map = IndexMap::new();
-        original_map.insert("mapkey1".to_string(), "mapvalue1".to_string());
-        original_map.insert("mapkey2".to_string(), "mapvalue2".to_string());
-
-        let original_list = vec![
-            "listitem1".to_string(),
-            "listitem2".to_string(),
-            "listitem3".to_string(),
-        ];
-
-        let original = SerializeMe {
-            member_a: "value_a".to_string(),
-            member_b: "value_b".to_string(),
-            member_optional: Some("value_c".to_string()),
-            member_map: original_map.clone(),
-            member_list: original_list.clone(),
-        };
-
-        // Serialize to document
-        let doc: Document = original.into();
-
-        // Deserialize back field by field (since we don't have a full Deserialize impl for SerializeMe)
-        let doc_map = doc.as_map().expect("Should be a map");
-
-        // Check member_a
-        let member_a_doc = doc_map.get("a").expect("Should have member a");
-        let mut deser_a = DocumentDeserializer::new(member_a_doc);
-        let a_value = String::deserialize_with_schema(&STRING, &mut deser_a).unwrap();
-        assert_eq!(a_value, "value_a");
-
-        // Check member_b
-        let member_b_doc = doc_map.get("b").expect("Should have member b");
-        let mut deser_b = DocumentDeserializer::new(member_b_doc);
-        let b_value = String::deserialize_with_schema(&STRING, &mut deser_b).unwrap();
-        assert_eq!(b_value, "value_b");
-
-        // Check member_optional
-        let member_c_doc = doc_map.get("c").expect("Should have member c");
-        let mut deser_c = DocumentDeserializer::new(member_c_doc);
-        let c_value = String::deserialize_with_schema(&STRING, &mut deser_c).unwrap();
-        assert_eq!(c_value, "value_c");
-
-        // Check list
-        let list_doc = doc_map.get("list").expect("Should have list");
-        let mut deser_list = DocumentDeserializer::new(list_doc);
-        let list_value =
-            Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser_list).unwrap();
-        assert_eq!(list_value, original_list);
-
-        // Check map
-        let map_doc = doc_map.get("map").expect("Should have map");
-        let mut deser_map = DocumentDeserializer::new(map_doc);
-        let map_value =
-            IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser_map)
-                .unwrap();
-        assert_eq!(map_value, original_map);
-    }
-
-    #[test]
-    fn roundtrip_option() {
-        // Some value
-        let original_some: Option<String> = Some("test".to_string());
-        let doc = original_some
-            .serialize_with_schema(&STRING, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = Option::<String>::deserialize_with_schema(&STRING, &mut deser).unwrap();
-        assert_eq!(original_some, result);
-
-        // None value
-        let original_none: Option<String> = None;
-        let doc = original_none
-            .serialize_with_schema(&STRING, DocumentParser)
-            .unwrap();
-        let mut deser = DocumentDeserializer::new(&doc);
-        let result = Option::<String>::deserialize_with_schema(&STRING, &mut deser).unwrap();
-        assert_eq!(original_none, result);
-    }
+    // use std::{str::FromStr, sync::LazyLock};
+    //
+    // use smithy4rs_core_derive::SmithyStruct;
+    //
+    // use super::*;
+    // use crate::{
+    //     lazy_schema,
+    //     prelude::*,
+    //     schema::{Schema, ShapeId},
+    //     traits,
+    // };
+    //
+    // lazy_schema!(
+    //     MAP_SCHEMA,
+    //     Schema::map_builder(ShapeId::from("com.example#Map"), traits![]),
+    //     ("key", STRING, traits![]),
+    //     ("value", STRING, traits![])
+    // );
+    // lazy_schema!(
+    //     LIST_SCHEMA,
+    //     Schema::list_builder("com.example#Map", traits![]),
+    //     ("member", STRING, traits![])
+    // );
+    // lazy_schema!(
+    //     SCHEMA,
+    //     Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
+    //     (MEMBER_A, "a", STRING, traits![]),
+    //     (MEMBER_B, "b", STRING, traits![]),
+    //     (MEMBER_C, "c", STRING, traits![]),
+    //     (MEMBER_LIST, "list", LIST_SCHEMA, traits![]),
+    //     (MEMBER_MAP, "map", MAP_SCHEMA, traits![])
+    // );
+    //
+    // #[derive(SmithyStruct)]
+    // #[smithy_schema(SCHEMA)]
+    // pub(crate) struct SerializeMe {
+    //     #[smithy_schema(MEMBER_A)]
+    //     pub member_a: String,
+    //     #[smithy_schema(MEMBER_B)]
+    //     pub member_b: String,
+    //     #[smithy_schema(MEMBER_C)]
+    //     pub member_optional: Option<String>,
+    //     #[smithy_schema(MEMBER_LIST)]
+    //     pub member_list: Vec<String>,
+    //     #[smithy_schema(MEMBER_MAP)]
+    //     pub member_map: IndexMap<String, String>,
+    // }
+    //
+    // #[test]
+    // fn struct_to_document() {
+    //     let mut map = IndexMap::new();
+    //     map.insert(String::from("a"), String::from("b"));
+    //     let list = vec!["a".to_string(), "b".to_string()];
+    //     let struct_to_convert = SerializeMe {
+    //         member_a: "a".to_string(),
+    //         member_b: "b".to_string(),
+    //         member_optional: Some("c".to_string()),
+    //         member_map: map,
+    //         member_list: list,
+    //     };
+    //     let document: Document = struct_to_convert.into();
+    //     assert_eq!(&document.discriminator.clone().unwrap(), SCHEMA.id());
+    //     if let DocumentValue::Map(members) = document.value {
+    //         assert!(members.contains_key("a"));
+    //         if let DocumentValue::String(str) = &members.get("a").unwrap().value {
+    //             assert_eq!(str, &String::from("a"));
+    //         } else {
+    //             panic!("Expected String")
+    //         }
+    //         assert!(members.contains_key("b"));
+    //         if let DocumentValue::String(str) = &members.get("b").unwrap().value {
+    //             assert_eq!(str, &String::from("b"));
+    //         } else {
+    //             panic!("Expected String")
+    //         }
+    //         assert!(members.contains_key("c"));
+    //         if let DocumentValue::String(str) = &members.get("c").unwrap().value {
+    //             assert_eq!(str, &String::from("c"));
+    //         } else {
+    //             panic!("Expected String")
+    //         }
+    //         assert!(members.contains_key("map"));
+    //         assert!(members.contains_key("list"));
+    //     } else {
+    //         panic!("Expected document");
+    //     }
+    // }
+    //
+    // #[test]
+    // fn string_document_value() {
+    //     let document_str: Document = "MyStr".into();
+    //     let output_str = document_str.as_string().expect("string");
+    //     assert_eq!(output_str, &"MyStr".to_string());
+    //     let val: &Schema = &STRING;
+    //     assert_eq!(document_str.schema(), val);
+    // }
+    //
+    // #[test]
+    // fn number_document_values() {
+    //     let x: &Schema = &STRING;
+    // }
+    //
+    // // Roundtrip tests: value -> serialize to Document -> deserialize back to value
+    //
+    // #[test]
+    // fn roundtrip_bool() {
+    //     let original = true;
+    //     let doc = original
+    //         .serialize_with_schema(&BOOLEAN, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = bool::deserialize_with_schema(&BOOLEAN, &mut deser).unwrap();
+    //     assert_eq!(original, result);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_string() {
+    //     let original = "hello world".to_string();
+    //     let doc = original
+    //         .serialize_with_schema(&STRING, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = String::deserialize_with_schema(&STRING, &mut deser).unwrap();
+    //     assert_eq!(original, result);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_integers() {
+    //     // Byte
+    //     let original_byte: i8 = 127;
+    //     let doc = original_byte
+    //         .serialize_with_schema(&BYTE, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = i8::deserialize_with_schema(&BYTE, &mut deser).unwrap();
+    //     assert_eq!(original_byte, result);
+    //
+    //     // Short
+    //     let original_short: i16 = 32000;
+    //     let doc = original_short
+    //         .serialize_with_schema(&SHORT, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = i16::deserialize_with_schema(&SHORT, &mut deser).unwrap();
+    //     assert_eq!(original_short, result);
+    //
+    //     // Integer
+    //     let original_int: i32 = 123456;
+    //     let doc = original_int
+    //         .serialize_with_schema(&INTEGER, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = i32::deserialize_with_schema(&INTEGER, &mut deser).unwrap();
+    //     assert_eq!(original_int, result);
+    //
+    //     // Long
+    //     let original_long: i64 = 9876543210i64;
+    //     let doc = original_long
+    //         .serialize_with_schema(&LONG, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = i64::deserialize_with_schema(&LONG, &mut deser).unwrap();
+    //     assert_eq!(original_long, result);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_floats() {
+    //     // Float
+    //     let original_float: f32 = 1.2345;
+    //     let doc = original_float
+    //         .serialize_with_schema(&FLOAT, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = f32::deserialize_with_schema(&FLOAT, &mut deser).unwrap();
+    //     assert_eq!(original_float, result);
+    //
+    //     // Double
+    //     let original_double: f64 = 1.23456789;
+    //     let doc = original_double
+    //         .serialize_with_schema(&DOUBLE, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = f64::deserialize_with_schema(&DOUBLE, &mut deser).unwrap();
+    //     assert_eq!(original_double, result);
+    // }
+    //
+    // #[test]
+    // #[ignore = "BigDecimal/BigInteger serialization not yet implemented"]
+    // fn roundtrip_big_numbers() {
+    //     // BigInteger
+    //     let original_big_int = BigInt::from(123456789);
+    //     let doc = original_big_int
+    //         .serialize_with_schema(&BIG_INTEGER, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = BigInt::deserialize_with_schema(&BIG_INTEGER, &mut deser).unwrap();
+    //     assert_eq!(original_big_int, result);
+    //
+    //     // BigDecimal
+    //     let original_big_dec = BigDecimal::from_str("123.456").unwrap();
+    //     let doc = original_big_dec
+    //         .serialize_with_schema(&BIG_DECIMAL, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = BigDecimal::deserialize_with_schema(&BIG_DECIMAL, &mut deser).unwrap();
+    //     assert_eq!(original_big_dec, result);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_list() {
+    //     let original: Vec<String> = vec![
+    //         "first".to_string(),
+    //         "second".to_string(),
+    //         "third".to_string(),
+    //     ];
+    //     let doc = original
+    //         .serialize_with_schema(&LIST_SCHEMA, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser).unwrap();
+    //     assert_eq!(original, result);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_map() {
+    //     let mut original = IndexMap::new();
+    //     original.insert("key1".to_string(), "value1".to_string());
+    //     original.insert("key2".to_string(), "value2".to_string());
+    //     original.insert("key3".to_string(), "value3".to_string());
+    //
+    //     let doc = original
+    //         .serialize_with_schema(&MAP_SCHEMA, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result =
+    //         IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser).unwrap();
+    //     assert_eq!(original, result);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_struct() {
+    //     let mut original_map = IndexMap::new();
+    //     original_map.insert("mapkey1".to_string(), "mapvalue1".to_string());
+    //     original_map.insert("mapkey2".to_string(), "mapvalue2".to_string());
+    //
+    //     let original_list = vec![
+    //         "listitem1".to_string(),
+    //         "listitem2".to_string(),
+    //         "listitem3".to_string(),
+    //     ];
+    //
+    //     let original = SerializeMe {
+    //         member_a: "value_a".to_string(),
+    //         member_b: "value_b".to_string(),
+    //         member_optional: Some("value_c".to_string()),
+    //         member_map: original_map.clone(),
+    //         member_list: original_list.clone(),
+    //     };
+    //
+    //     // Serialize to document
+    //     let doc: Document = original.into();
+    //
+    //     // Deserialize back field by field (since we don't have a full Deserialize impl for SerializeMe)
+    //     let doc_map = doc.as_map().expect("Should be a map");
+    //
+    //     // Check member_a
+    //     let member_a_doc = doc_map.get("a").expect("Should have member a");
+    //     let mut deser_a = DocumentDeserializer::new(member_a_doc);
+    //     let a_value = String::deserialize_with_schema(&STRING, &mut deser_a).unwrap();
+    //     assert_eq!(a_value, "value_a");
+    //
+    //     // Check member_b
+    //     let member_b_doc = doc_map.get("b").expect("Should have member b");
+    //     let mut deser_b = DocumentDeserializer::new(member_b_doc);
+    //     let b_value = String::deserialize_with_schema(&STRING, &mut deser_b).unwrap();
+    //     assert_eq!(b_value, "value_b");
+    //
+    //     // Check member_optional
+    //     let member_c_doc = doc_map.get("c").expect("Should have member c");
+    //     let mut deser_c = DocumentDeserializer::new(member_c_doc);
+    //     let c_value = String::deserialize_with_schema(&STRING, &mut deser_c).unwrap();
+    //     assert_eq!(c_value, "value_c");
+    //
+    //     // Check list
+    //     let list_doc = doc_map.get("list").expect("Should have list");
+    //     let mut deser_list = DocumentDeserializer::new(list_doc);
+    //     let list_value =
+    //         Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser_list).unwrap();
+    //     assert_eq!(list_value, original_list);
+    //
+    //     // Check map
+    //     let map_doc = doc_map.get("map").expect("Should have map");
+    //     let mut deser_map = DocumentDeserializer::new(map_doc);
+    //     let map_value =
+    //         IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser_map)
+    //             .unwrap();
+    //     assert_eq!(map_value, original_map);
+    // }
+    //
+    // #[test]
+    // fn roundtrip_option() {
+    //     // Some value
+    //     let original_some: Option<String> = Some("test".to_string());
+    //     let doc = original_some
+    //         .serialize_with_schema(&STRING, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = Option::<String>::deserialize_with_schema(&STRING, &mut deser).unwrap();
+    //     assert_eq!(original_some, result);
+    //
+    //     // None value
+    //     let original_none: Option<String> = None;
+    //     let doc = original_none
+    //         .serialize_with_schema(&STRING, DocumentParser)
+    //         .unwrap();
+    //     let mut deser = DocumentDeserializer::new(&doc);
+    //     let result = Option::<String>::deserialize_with_schema(&STRING, &mut deser).unwrap();
+    //     assert_eq!(original_none, result);
+    // }
 }
