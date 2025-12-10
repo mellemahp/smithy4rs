@@ -190,7 +190,7 @@ impl<const D: usize, const ERR: usize> DefaultValidator<D, ERR> {
         error: E,
     ) -> Result<(), ValidationErrors> {
         self.emit_error(error)?;
-        // SAFETY: Safe to unwrap as errors will alway be set to `SOME` above
+        // SAFETY: Safe to unwrap as errors will always be set to `SOME` above
         Err(self.errors.take().unwrap())
     }
 
@@ -1095,7 +1095,7 @@ pub enum ValidationFailure {
     ExpectedMember(String),
     /// This error should only ever occur for manual schema interactions,
     /// not for automatically generated Shapes.
-    #[error("Invalid Shape type. Expected {0:?}, recieved {1:?}.")]
+    #[error("Invalid Shape type. Expected {0:?}, received {1:?}.")]
     InvalidType(ShapeType, ShapeType),
     #[error("Maximum Validation depth: {0} exceeded")]
     MaximumDepthExceeded(usize),

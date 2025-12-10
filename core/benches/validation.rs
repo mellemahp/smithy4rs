@@ -140,7 +140,7 @@ impl ErrorCorrection for ValidatedStructBuilder {
     }
 }
 
-static UNVALIDATE_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+static UNVALIDATED_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     Schema::structure_builder(ShapeId::from("test#UnvalidatedShape"), Vec::new())
         .put_member("string", &STRING, traits![RequiredTrait])
         .put_member("required_int", &INTEGER, traits![RequiredTrait])
@@ -148,11 +148,11 @@ static UNVALIDATE_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         .build()
 });
 static FIELD_UNCHECKED_STRING: LazyLock<&SchemaRef> =
-    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("string"));
+    LazyLock::new(|| UNVALIDATED_SHAPE_SCHEMA.expect_member("string"));
 static FIELD_UNCHECKED_REQUIRED_INT: LazyLock<&SchemaRef> =
-    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("required_int"));
+    LazyLock::new(|| UNVALIDATED_SHAPE_SCHEMA.expect_member("required_int"));
 static FIELD_UNCHECKED_INT: LazyLock<&SchemaRef> =
-    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("integer"));
+    LazyLock::new(|| UNVALIDATED_SHAPE_SCHEMA.expect_member("integer"));
 
 pub struct UnvalidatedStruct {
     string: String,
@@ -161,7 +161,7 @@ pub struct UnvalidatedStruct {
 }
 impl StaticSchemaShape for UnvalidatedStruct {
     fn schema() -> &'static SchemaRef {
-        &UNVALIDATE_SHAPE_SCHEMA
+        &UNVALIDATED_SHAPE_SCHEMA
     }
 }
 impl SerializeWithSchema for UnvalidatedStruct {
@@ -418,7 +418,7 @@ pub fn unvalidated_shape(c: &mut Criterion) {
     c.bench_function("Shape with no constraints", |b| {
         b.iter(|| {
             let _ = black_box(
-                DefaultValidator::new().validate(&UNVALIDATE_SHAPE_SCHEMA, &unvalidated_shape),
+                DefaultValidator::new().validate(&UNVALIDATED_SHAPE_SCHEMA, &unvalidated_shape),
             );
         })
     });
@@ -439,7 +439,7 @@ pub fn builder_with_collections(c: &mut Criterion) {
     c.bench_function("Collections of Builders", |b| {
         b.iter(|| {
             let _ =
-                black_box(DefaultValidator::new().validate(&UNVALIDATE_SHAPE_SCHEMA, &collection));
+                black_box(DefaultValidator::new().validate(&UNVALIDATED_SHAPE_SCHEMA, &collection));
         })
     });
 }
