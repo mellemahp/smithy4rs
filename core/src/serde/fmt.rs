@@ -388,50 +388,37 @@ mod tests {
     use smithy4rs_core_derive::{SchemaShape, SerializableStruct};
 
     use super::*;
-    use crate::{
-        lazy_schema,
-        prelude::STRING,
-        schema::{Schema, ShapeId},
-        traits,
-    };
+    use crate::{prelude::STRING, schema::Schema, smithy};
 
-    lazy_schema!(
-        MAP_SCHEMA,
-        Schema::map_builder(ShapeId::from("com.example#Map"), traits![]),
-        ("key", STRING, traits![]),
-        ("value", STRING, traits![])
-    );
-    lazy_schema!(
-        LIST_SCHEMA,
-        Schema::list_builder(ShapeId::from("com.example#List"), traits![]),
-        ("member", STRING, traits![])
-    );
-    lazy_schema!(
-        SCHEMA,
-        Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
-        (MEMBER_A, "a", STRING, traits![]),
-        (MEMBER_B, "b", STRING, traits![SensitiveTrait]),
-        (MEMBER_C, "c", STRING, traits![]),
-        (MEMBER_MAP, "map", MAP_SCHEMA, traits![]),
-        (MEMBER_LIST, "list", LIST_SCHEMA, traits![])
-    );
-
-    lazy_schema!(
-        REDACTED_AGGREGATES,
-        Schema::structure_builder(ShapeId::from("com.example#Shape"), traits![]),
-        (
-            MEMBER_MAP_REDACT,
-            "map",
-            MAP_SCHEMA,
-            traits![SensitiveTrait]
-        ),
-        (
-            MEMBER_LIST_REDACT,
-            "list",
-            LIST_SCHEMA,
-            traits![SensitiveTrait]
-        )
-    );
+    smithy!("com.example#Map": {
+        map MAP_SCHEMA {
+            key: STRING
+            value: STRING
+        }
+    });
+    smithy!("com.example#List": {
+        list LIST_SCHEMA {
+            member: STRING
+        }
+    });
+    smithy!("com.example#Shape": {
+        structure SCHEMA {
+            MEMBER_A: STRING = "a"
+            @SensitiveTrait;
+            MEMBER_B: STRING = "b"
+            MEMBER_C: STRING = "c"
+            MEMBER_MAP: MAP_SCHEMA = "map"
+            MEMBER_LIST: LIST_SCHEMA = "list"
+        }
+    });
+    smithy!("com.example#Shape": {
+        structure REDACTED_AGGREGATES {
+            @SensitiveTrait;
+            MEMBER_MAP_REDACT: MAP_SCHEMA = "map"
+            @SensitiveTrait;
+            MEMBER_LIST_REDACT: LIST_SCHEMA = "list"
+        }
+    });
 
     #[derive(SchemaShape, SerializableStruct)]
     #[smithy_schema(SCHEMA)]

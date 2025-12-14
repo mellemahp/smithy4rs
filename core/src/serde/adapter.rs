@@ -287,31 +287,30 @@ mod tests {
 
     use super::*;
     use crate::{
-        lazy_schema,
         prelude::*,
-        schema::{Schema, SchemaShape, ShapeId},
-        traits,
+        schema::{Schema, SchemaShape},
+        smithy,
     };
 
-    lazy_schema!(
-        MAP_SCHEMA,
-        Schema::map_builder(ShapeId::from("com.example#Map"), traits![]),
-        ("key", STRING, traits![]),
-        ("value", STRING, traits![])
-    );
-    lazy_schema!(
-        LIST_SCHEMA,
-        Schema::list_builder(ShapeId::from("com.example#List"), traits![]),
-        ("member", STRING, traits![])
-    );
-    lazy_schema!(
-        SCHEMA,
-        Schema::structure_builder(ShapeId::from("com.example#Test"), traits![]),
-        (MEMBER_A, "a", STRING, traits![]),
-        (MEMBER_B, "b", STRING, traits![]),
-        (MEMBER_MAP, "map", MAP_SCHEMA, traits![]),
-        (MEMBER_LIST, "list", LIST_SCHEMA, traits![])
-    );
+    smithy!("com.example#Map": {
+        map MAP_SCHEMA {
+            key: STRING
+            value: STRING
+        }
+    });
+    smithy!("com.example#List": {
+        list LIST_SCHEMA {
+            member: STRING
+        }
+    });
+    smithy!("com.example#Test": {
+        structure SCHEMA {
+            MEMBER_A: STRING = "a"
+            MEMBER_B: STRING = "b"
+            MEMBER_MAP: MAP_SCHEMA = "map"
+            MEMBER_LIST: LIST_SCHEMA = "list"
+        }
+    });
 
     #[derive(SchemaShape, SerializableStruct)]
     #[smithy_schema(SCHEMA)]

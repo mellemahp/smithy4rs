@@ -17,14 +17,15 @@
 //! Examples of accessing traits from a [`Schema`]:
 //! ```rust
 //! # use std::sync::LazyLock;
-//! # use smithy4rs_core::{lazy_schema, traits, Ref};
+//! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
 //! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DocumentValue};
 //!
-//! lazy_schema!(
-//!     EXAMPLE_SCHEMA,
-//!     Schema::create_string("com.example#Map", traits![SensitiveTrait, LengthTrait::builder().max(4).min(1).build()])
-//! );
+//! smithy!("com.example#SensitiveString": {
+//!     @SensitiveTrait;
+//!     @LengthTrait::builder().max(4).min(1).build();
+//!     string EXAMPLE_SCHEMA
+//! });
 //!
 //! /// Checking if a trait is present on a schema
 //!  // Check by ID
