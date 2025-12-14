@@ -5,44 +5,33 @@ use std::{fmt::Display, sync::LazyLock};
 use indexmap::IndexMap;
 use regex::Regex;
 
-use crate::{
-    annotation_trait, lazy_shape_id,
-    schema::{
-        DocumentValue, NumberInteger, NumberValue, Schema, SchemaRef, ShapeId, SmithyTrait,
-        StaticTraitId,
-    },
-    static_trait_id, string_trait, traits,
-};
+use crate::{annotation_trait, lazy_shape_id, schema::{
+    DocumentValue, NumberInteger, NumberValue, Schema, SchemaRef, ShapeId, SmithyTrait,
+    StaticTraitId,
+}, smithy, static_trait_id, string_trait, traits};
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Prelude Shape Schemas
 ////////////////////////////////////////////////////////////////////////////////////
+
+smithy!("smithy.api#Blob": { blob BLOB });
+smithy!("smithy.api#Boolean": { boolean BOOLEAN });
+smithy!("smithy.api#String": { string STRING });
+smithy!("smithy.api#Timestamp": { timestamp TIMESTAMP });
+smithy!("smithy.api#Byte": { byte BYTE });
+smithy!("smithy.api#Short": { short SHORT });
+smithy!("smithy.api#Integer": { integer INTEGER });
+smithy!("smithy.api#Long": { long LONG });
+smithy!("smithy.api#Float": { float FLOAT });
+smithy!("smithy.api#Double": { double DOUBLE });
+smithy!("smithy.api#BigInteger": { bigInteger BIG_INTEGER });
+smithy!("smithy.api#BigDecimal": { bigDecimal BIG_DECIMAL });
+// TODO: Switch to `smithy!` macro for document
 macro_rules! prelude_schema {
     ($ident:ident, $factory:expr, $id:literal) => {
         pub static $ident: LazyLock<SchemaRef> = LazyLock::new(|| $factory($id, traits![]));
     };
 }
-
-prelude_schema!(BLOB, Schema::create_blob, "smithy.api#Blob");
-prelude_schema!(BOOLEAN, Schema::create_boolean, "smithy.api#Boolean");
-prelude_schema!(STRING, Schema::create_string, "smithy.api#String");
-prelude_schema!(TIMESTAMP, Schema::create_timestamp, "smithy.api#Timestamp");
-prelude_schema!(BYTE, Schema::create_byte, "smithy.api#Byte");
-prelude_schema!(SHORT, Schema::create_short, "smithy.api#Short");
-prelude_schema!(INTEGER, Schema::create_integer, "smithy.api#Integer");
-prelude_schema!(LONG, Schema::create_long, "smithy.api#Long");
-prelude_schema!(FLOAT, Schema::create_float, "smithy.api#Float");
-prelude_schema!(DOUBLE, Schema::create_double, "smithy.api#Double");
-prelude_schema!(
-    BIG_INTEGER,
-    Schema::create_big_integer,
-    "smithy.api#BigInteger"
-);
-prelude_schema!(
-    BIG_DECIMAL,
-    Schema::create_big_decimal,
-    "smithy.api#BigDecimal"
-);
 prelude_schema!(DOCUMENT, Schema::create_document, "smithy.api#Document");
 
 // TODO:

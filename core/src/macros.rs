@@ -47,11 +47,12 @@ macro_rules! traits {
     );
 }
 
+/// Creates a lazily-resolved smithy schema.
 #[macro_export]
 macro_rules! smithy {
     // Hide implementation details.
     ($($smithy:tt)+) => {
-        $crate::smithy_internal!($($smithy)+)
+        $crate::smithy_internal!($($smithy)+);
     };
 }
 
@@ -59,60 +60,297 @@ macro_rules! smithy {
 #[doc(hidden)]
 macro_rules! smithy_internal {
     //////////////////////////////////////////////////////////////////////////
-    // Traits
-    //////////////////////////////////////////////////////////////////////////
-    // INTERNAL: Empty traits
-    (@traits) => (
-        Vec::new()
-    );
-
-    // INTERNAL: List of one or more traits
-    (@traits $($x:expr),+ $(,)?) => (
-        vec![$($x.into()),*]
-    );
-
-    //////////////////////////////////////////////////////////////////////////
     // Main implementation.
     //
     // Must be invoked as: smithy_internal!($($json)+)
     //////////////////////////////////////////////////////////////////////////
-
-    // Structure with no members.
-    ($id:literal: { $(@$x:expr;)+ structure $name:ident {} }) => (
-        Schema::structure_builder($id, $crate::smithy!(@traits $($x),*))
+    // === Simple types ===
+    ($id:literal: {
+        $(@$t:expr;)*
+        boolean $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_boolean($id, $crate::traits!($($t),*))
+        );
     );
 
-    // Structure with one or more members
-    ($id:literal: { $(@$t:expr;)+ structure $name:ident {$($members:tt)+} }) => (
-        let builder = Schema::structure_builder($id, $crate::smithy!(@traits $($t),*));
-        $crate::smithy!(@members builder $($members)+)
+    ($id:literal: {
+        $(@$t:expr;)*
+        byte $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_byte($id, $crate::traits!($($t),*))
+        );
     );
 
+    ($id:literal: {
+        $(@$t:expr;)*
+        short $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_short($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        integer $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_integer($id, $crate::traits!($($t),*))
+        );
+    );
+
+     ($id:literal: {
+        $(@$t:expr;)*
+        long $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_long($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        float $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_float($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        double $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_double($id, $crate::traits!($($t),*))
+        );
+    );
+
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        bigInteger $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_big_integer($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        bigDecimal $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_big_decimal($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        timestamp $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_timestamp($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        string $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_string($id, $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        blob $name:ident
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::create_blob($id, $crate::traits!($($t),*))
+        );
+    );
+
+    // TODO: Document
+
+    // === Enums ===
+    // TODO: ENUMS!
+
+    // === Structure ===
+    // May or may not have members
+    ($id:literal: {
+        $(@$t:expr;)*
+        structure $name:ident {$(
+            $(@$m:expr;)*
+            $member_ident:ident : $member_schema:tt = $member_name:literal
+        )*}
+    }) => (
+       $crate::smithy!(@inner
+            $name,
+            Schema::structure_builder($id, $crate::traits!($($t),*)),
+            $(($member_ident, $member_name, $member_schema, $crate::traits!($($m),*))),*
+        );
+    );
+
+    // === Union ===
+
+    // === List ===
+    // Lists must have member named "member" that may also have traits applied.
+    ($id:literal: {
+        $(@$t:expr;)*
+        list $name:ident {
+            $(@$m:expr;)* member: $member:ident
+        }
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::list_builder($id, $crate::traits!($($t),*)),
+            ("member", $member, $crate::traits!($($m),*))
+        );
+    );
+
+    // === Map ===
+   // Maps must have members named "key" and "value that may also have traits applied.
+    ($id:literal: {
+        $(@$t:expr;)*
+        map $name:ident {
+            $(@$k:expr;)*
+            key: $key:ident
+            $(@$v:expr;)*
+            value: $value:ident
+        }
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            Schema::map_builder($id, $crate::traits!($($t),*)),
+            ("key", $key, $crate::traits!($($k),*)),
+            ("value", $value, $crate::traits!($($v),*))
+        );
+    );
+
+    // === Service Shapes ===
+    // TODO: Operation, Resource, Service
 
     //////////////////////////////////////////////////////////////////////////
-    // Member processing
+    // Actual impl of schema
+    //
+    // PRIVATE API
     //////////////////////////////////////////////////////////////////////////
-    (@members $(($builder:expr)+)+ $($(@$t:expr;)+ $($name:ident($field:literal): $schema:ident)+)+) => (
-        $(.put_member($field, &$schema, $crate::smithy!(@traits $($t),*));)*
-    );
+    // Schema with members and generated static member variables (i.e. structure)
+    (
+        @inner
+        $schema_name:ident,
+        $builder:expr,
+        $(($member_schema_name:ident, $member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
+    ) => {
+        $crate::pastey::paste! {
+            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
+                $crate::LazyLock::new(|| std::sync::Arc::new($builder));
+
+            pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+                $crate::lazy_schema!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
+            });
+
+            $(pub static $member_schema_name: $crate::LazyLock<&$crate::schema::SchemaRef> =
+                $crate::LazyLock::new(|| $schema_name.expect_member($member_ident));
+            )*
+        }
+    };
+
+    // Schema that does not generate static member schema variables (i.e. List and Map)
+    (
+        @inner
+        $schema_name:ident,
+        $builder:expr,
+        $(($member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
+    ) => {
+        $crate::pastey::paste! {
+            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
+                $crate::LazyLock::new(|| std::sync::Arc::new($builder));
+
+            pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+                $crate::lazy_schema!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
+            });
+        }
+    };
+
+    // No-op (i.e. no members)
+    (
+        @inner
+        $schema_name:ident,
+        $builder:expr
+    ) => {
+        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+            $builder
+        });
+    };
+
+    //////////////////////////////////////////////////////////////////////////
+    // Internal helpers to build chain of member `put` statements
+    //
+    // INTERNAL API
+    //////////////////////////////////////////////////////////////////////////
+    // Case - @self recursion case (matches (@self) as single tt)
+    (@build_chain $builder:expr, $builder_ref:expr, ($member_ident:literal, (@ self), $member_traits:expr) $(, $rest:tt)*) => {
+        $crate::smithy!(@build_chain $builder.put_member($member_ident, $builder_ref, $member_traits), $builder_ref $(, $rest)*)
+    };
+    // Case - members to add to chain.
+    (@build_chain $builder:expr, $builder_ref:expr, ($member_ident:literal, $member_schema:tt, $member_traits:expr) $(, $rest:tt)*) => {
+        $crate::smithy!(@build_chain $builder.put_member($member_ident, &$member_schema, $member_traits), $builder_ref $(, $rest)*)
+    };
+    // Case - No more members to process so schema can be built.
+    (@build_chain $builder:expr, $builder_ref:expr $(,)?) => {
+        $builder.build()
+    };
 }
+
+
 #[cfg(test)]
 mod test {
-    use regex::Error::Syntax;
-    use crate::schema::{SmithyTrait, TraitRef};
+    use crate::schema::{SchemaRef, SmithyTrait, TraitRef};
     use super::*;
+    use crate::prelude::{RequiredTrait, STRING};
+
+    smithy!["my.com#MyStructure": {
+        structure MY_STRUCT {
+            @RequiredTrait;
+            A: STRING = "a"
+            B: STRING = "b"
+        }
+    }];
+
+    smithy!["my.com#MyMap": {
+        map MY_MAP {
+            @RequiredTrait;
+            key: STRING
+            value: STRING
+        }
+    }];
+
+    smithy!["my.com#MyList": {
+        list MY_LIST {
+            member: STRING
+        }
+    }];
 
     #[test]
     fn test() {
-        smithy!["my.com#Shape": {
-            @RequiredTrait;
-            @DefaultTrait(DocumentValue::String("stuff".into()));
-            structure SMITHY_STRUCT {
-                @RequiredTrait;
-                MEMBER_A: STRING = "member_a"
-            }
-        }];
-        println!("TRAITS: {:#?}", x);
+        println!("Schema: {:#?}", &*MY_STRUCT);
     }
 }
 
