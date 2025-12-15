@@ -85,7 +85,7 @@ impl SerdeError for FmtError {
     }
 }
 
-// TODO: Update to just accept structs with schema.
+// TODO(formatting): Update to just accept structs with schema.
 #[allow(dead_code)]
 pub fn to_string<T: SerializeWithSchema + ?Sized>(
     schema: &SchemaRef,
@@ -229,12 +229,13 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
 
     #[inline]
     fn write_blob(self, _: &SchemaRef, _: &ByteBuffer) -> Result<(), Self::Error> {
+        // TODO(streams): How to write byte buffers streams?
         todo!()
     }
 
     #[inline]
     fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<(), Self::Error> {
-        // TODO: This is incorrect and needs to be fixed. Just to get all branches running
+        // TODO(timestamp formatting): This is incorrect and needs to be fixed. Just to get all branches running
         redact!(
             self,
             schema,
@@ -250,6 +251,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
 
     #[inline]
     fn write_document(self, _: &SchemaRef, _: &Document) -> Result<(), Self::Error> {
+        // TODO(document formatting): Write something for document types.
         todo!()
     }
 
@@ -271,7 +273,6 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 }
 
-// TODO: Add formatter for control characters?
 // Must be public to satisfy "leaking" of internal types.
 #[doc(hidden)]
 pub struct InnerFmtSerializer<'a, W: 'a>

@@ -81,7 +81,6 @@ pub trait MapSerializer {
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
-// TODO: Docs
 pub trait StructSerializer {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
@@ -172,9 +171,8 @@ pub trait Error: Sized + StdError {
     fn custom<T: Display>(msg: T) -> Self;
 }
 
-// TODO: datastream?
-// TODO: event stream?
-// TODO: Docs
+// TODO(streams): How should we handle data stream serialization?
+// TODO(events): Do we need any custom handling for event streams?
 pub trait Serializer: Sized {
     /// Error type emitted on failed serialization.
     ///
@@ -279,7 +277,6 @@ pub trait Serializer: Sized {
     /// Skip the serialization of a value.
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 
-    // TODO: Is this necessary?
     /// Flush all remaining data.
     fn flush(self) -> Result<Self::Ok, Self::Error> {
         todo!();
@@ -313,7 +310,7 @@ where
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut map = serializer.write_map(schema, self.len())?;
-        // TODO: is there a more efficient way to store/get these schemas?
+        // TODO(performance): is there a more efficient way to store/get these schemas?
         let key_schema = schema.expect_member("key");
         let value_schema = schema.expect_member("value");
         for (k, v) in self {

@@ -30,7 +30,7 @@ smithy!("smithy.api#BigInteger": { bigInteger BIG_INTEGER });
 smithy!("smithy.api#BigDecimal": { bigDecimal BIG_DECIMAL });
 smithy!("smithy.api#Document": { document DOCUMENT });
 
-// TODO:
+// TODO(primitive types):
 // - Primitive types
 
 ///////////////////////////////////////////////////////////////////////

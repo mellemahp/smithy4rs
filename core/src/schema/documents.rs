@@ -146,7 +146,6 @@ pub enum NumberFloat {
     BigDecimal(BigDecimal),
 }
 
-// TODO: DOCS
 #[derive(Error, Debug, Default)]
 pub enum DocumentError {
     #[error("Failed to convert document to type {0}")]
@@ -193,7 +192,7 @@ pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
 // Document Number Comparison
 //////////////////////////////////////////////////////////////////
 
-// TODO: Might be derive-able?
+// TODO(numeric comparisons): Add comparisons between numeric types.
 
 //////////////////////////////////////////////////////////////////
 // AS-ers to borrow document value as type if possible
@@ -229,7 +228,7 @@ impl Document {
         }
     }
 
-    // TODO: I dont think these number conversions are right.
+    // TODO(numeric comparisons): I dont think these number conversions are right.
     //      Just placeholders for now to get things working
 
     /// Get the timestamp value of the Document if it is a timestamp.
@@ -338,7 +337,7 @@ impl Document {
     }
 
     #[must_use]
-    // TODO: could the vec be replaced with slice?
+    // TODO(quality): could the vec be replaced with slice?
     pub fn as_list(&self) -> Option<&Vec<Document>> {
         if let DocumentValue::List(document_list) = &self.value {
             Some(document_list)
@@ -405,7 +404,7 @@ impl TryFrom<Document> for Instant {
     }
 }
 
-// TODO: Make Number conversions smarter? Or does rust `as` method handle truncation and such?
+// TODO(numeric comparisons): Make Number conversions smarter? Or does rust `as` method handle truncation and such?
 impl TryFrom<Document> for i8 {
     type Error = DocumentError;
 
@@ -794,7 +793,7 @@ mod tests {
         assert_eq!(long_value, 1i64);
     }
 
-    // TODO: Add comparison checks
+    // TODO(numeric comparisons): Add comparison checks
 
     #[test]
     fn float_document_values() {

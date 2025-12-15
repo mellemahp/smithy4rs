@@ -284,39 +284,34 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
+    // TODO(range): Range constraints for all numeric types
     fn write_byte(self, schema: &SchemaRef, _value: i8) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Byte);
-        // TODO: Range constraint
         Ok(())
     }
 
     fn write_short(self, schema: &SchemaRef, _value: i16) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Short);
-        // TODO: Range constraint
         Ok(())
     }
 
     fn write_integer(self, schema: &SchemaRef, _value: i32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Integer);
-        // TODO: Range constraint
         Ok(())
     }
 
     fn write_long(self, schema: &SchemaRef, _value: i64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Long);
-        // TODO: Range constraint
         Ok(())
     }
 
     fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Float);
-        // TODO: Range constraint
         Ok(())
     }
 
     fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Double);
-        // TODO: Range constraint
         Ok(())
     }
 
@@ -326,7 +321,6 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         _value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
-        // TODO: Range constraint
         Ok(())
     }
 
@@ -336,7 +330,6 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         _value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigDecimal);
-        // TODO: Range constraint
         Ok(())
     }
 
@@ -383,7 +376,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         /* Skip null value validation */
-        // TODO: How should sparseness be handled?
+        // TODO(sparse lists): Decide how sparseness be handled in validator
         Ok(())
     }
 
@@ -614,6 +607,7 @@ impl<'a> Serializer for &'a mut HashingSerializer {
         _schema: &SchemaRef,
         _value: &Document,
     ) -> Result<Self::Ok, Self::Error> {
+        // TODO(document validation): How to hash document types?
         todo!()
     }
 
@@ -1024,6 +1018,7 @@ impl Default for ValidationErrors {
 }
 impl serializers::Error for ValidationErrors {
     fn custom<T: Display>(_msg: T) -> Self {
+        // TODO(errors): What should be the "custom" behavior?
         todo!()
     }
 }

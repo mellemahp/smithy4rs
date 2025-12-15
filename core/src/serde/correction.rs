@@ -92,7 +92,8 @@ impl<E: ErrorCorrectionDefault> ErrorCorrectionDefault for Box<E> {
     }
 }
 
-// TODO: ENUM AND INT ENUM IMPLS + Byte buffer impls
+// TODO(enums): ENUM AND INT ENUM IMPLS +
+// TODO(streams): Byte buffer impls
 
 // Fill a missing required builder
 impl<

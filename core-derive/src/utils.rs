@@ -29,7 +29,7 @@ pub(crate) fn is_optional(ty: &Type) -> bool {
                 acc
             });
             // Figure out if the type is optional
-            // TODO(fix): Might erroneously detect optionals in sparse lists or maps
+            // TODO(sparse list): Might erroneously detect optionals in sparse lists or maps
             vec!["Option:", "std:option:Option:", "core:option:Option:"]
                 .into_iter()
                 .any(|s| idents_of_path == *s)

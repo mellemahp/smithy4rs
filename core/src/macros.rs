@@ -246,11 +246,11 @@ macro_rules! smithy_internal {
     );
 
     // === Union ===
-
+    // TODO(union): Add union shape macro
 
 
     // === Service Shapes ===
-    // TODO: Operation, Resource, Service
+    // TODO(service shapes): Add Operation, Resource, Service schema macros
 
     //////////////////////////////////////////////////////////////////////////
     // Actual impl of schema
