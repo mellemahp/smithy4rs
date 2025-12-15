@@ -12,8 +12,7 @@ cargo-binstall = "latest"
 "cargo:cargo-machete" = "latest"
 "cargo:cargo-expand" = "latest"
 rust = [
-  { profile = "minimal", version = "nightly", components = "rustfmt" },
-  { profile = "default", version = "1.90.0", components = "clippy" },
+  { profile = "minimal", version = "nightly", components = "rustfmt,clippy" },
 ]
 
 [tasks.dev]
