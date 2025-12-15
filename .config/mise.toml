@@ -12,7 +12,7 @@ cargo-binstall = "latest"
 "cargo:cargo-machete" = "latest"
 "cargo:cargo-expand" = "latest"
 rust = [
-  { profile = "minimal", version = "nightly", components = "rustfmt,clippy" },
+  { profile = "default", version = "nightly", components = "rustfmt,clippy" },
 ]
 
 [tasks.dev]
@@ -25,7 +25,7 @@ run = "cargo build"
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]
 description = "Check the code format"
-run = ["cargo +nightly fmt --all --", "cargo sort"]
+run = ["cargo fmt --all --", "cargo sort"]
 
 [tasks.fix]
 description = "Fix the code with Cargo, Clippy, etc."
