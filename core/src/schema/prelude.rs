@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
 use std::fmt::Display;
+
 use bigdecimal::Zero;
 use indexmap::IndexMap;
 use regex::Regex;
 
 use crate::{
-    BigDecimal, LazyLock,
-    annotation_trait,
+    BigDecimal, LazyLock, annotation_trait,
     schema::{DocumentValue, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId},
     smithy, static_trait_id, string_trait,
 };

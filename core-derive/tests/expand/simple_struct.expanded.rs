@@ -1,29 +1,8 @@
 use smithy4rs_core::{
-    lazy_schema, prelude::{INTEGER, STRING},
-    schema::{Schema, ShapeId},
-    traits,
+    prelude::{INTEGER, STRING},
+    schema::ShapeId, traits,
 };
 use smithy4rs_core_derive::SmithyStruct;
-pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
-    std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
-> = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
-    Schema::structure_builder(ShapeId::from("test#SimpleStruct"), Vec::new()),
-));
-pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<
-    ::smithy4rs_core::schema::SchemaRef,
-> = ::smithy4rs_core::LazyLock::new(|| {
-    (&*SIMPLE_SCHEMA_BUILDER)
-        .put_member("field_a", &STRING, Vec::new())
-        .put_member("field_b", &INTEGER, Vec::new())
-        .put_member("field_c", &STRING, Vec::new())
-        .build()
-});
-pub static FIELD_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
-SIMPLE_SCHEMA.expect_member("field_a"));
-pub static FIELD_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
-SIMPLE_SCHEMA.expect_member("field_b"));
-pub static FIELD_C: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
-SIMPLE_SCHEMA.expect_member("field_c"));
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(FIELD_A)]
@@ -70,6 +49,17 @@ pub struct SimpleStructBuilder {
     field_a: smithy4rs_core::serde::builders::Required<String>,
     field_b: smithy4rs_core::serde::builders::Required<i32>,
     field_c: Option<smithy4rs_core::serde::builders::MaybeBuilt<Nested, NestedBuilder>>,
+}
+#[automatically_derived]
+impl ::core::clone::Clone for SimpleStructBuilder {
+    #[inline]
+    fn clone(&self) -> SimpleStructBuilder {
+        SimpleStructBuilder {
+            field_a: ::core::clone::Clone::clone(&self.field_a),
+            field_b: ::core::clone::Clone::clone(&self.field_b),
+            field_c: ::core::clone::Clone::clone(&self.field_c),
+        }
+    }
 }
 #[automatically_derived]
 impl SimpleStructBuilder {
@@ -222,18 +212,6 @@ impl ::core::cmp::PartialEq for SimpleStruct {
             && self.field_c == other.field_c
     }
 }
-pub static NESTED_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
-    std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
-> = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
-    Schema::structure_builder(ShapeId::from("test#NESTED_STRUCT"), Vec::new()),
-));
-pub static NESTED_SCHEMA: ::smithy4rs_core::LazyLock<
-    ::smithy4rs_core::schema::SchemaRef,
-> = ::smithy4rs_core::LazyLock::new(|| {
-    (&*NESTED_SCHEMA_BUILDER).put_member("field_d", &STRING, Vec::new()).build()
-});
-pub static FIELD_D: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
-NESTED_SCHEMA.expect_member("field_d"));
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
     #[smithy_schema(FIELD_C)]
@@ -272,6 +250,15 @@ const _: () = {
 #[automatically_derived]
 pub struct NestedBuilder {
     field_a: smithy4rs_core::serde::builders::Required<String>,
+}
+#[automatically_derived]
+impl ::core::clone::Clone for NestedBuilder {
+    #[inline]
+    fn clone(&self) -> NestedBuilder {
+        NestedBuilder {
+            field_a: ::core::clone::Clone::clone(&self.field_a),
+        }
+    }
 }
 #[automatically_derived]
 impl NestedBuilder {

@@ -422,7 +422,7 @@ mod tests {
 
     #[derive(SchemaShape, SerializableStruct)]
     #[smithy_schema(SCHEMA)]
-    pub(crate) struct SerializeMe {
+    pub struct SerializeMe {
         #[smithy_schema(MEMBER_A)]
         pub member_a: String,
         #[smithy_schema(MEMBER_B)]

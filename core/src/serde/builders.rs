@@ -90,6 +90,7 @@ impl<T: SerializeWithSchema + ErrorCorrectionDefault> SerializeWithSchema for Re
 ///
 /// This type allows us to deserialize into builders and convert lazily to built shapes
 /// after validation.
+#[derive(Clone)]
 pub enum MaybeBuilt<
     S: ErrorCorrectionDefault + SerializeWithSchema,
     B: ErrorCorrection<Value = S> + SerializeWithSchema,

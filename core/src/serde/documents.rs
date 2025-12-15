@@ -739,7 +739,7 @@ impl<'de> DeserializeWithSchema<'de> for Document {
     }
 }
 
-// TODO(test): overhaul these to be use test shapes
+// TODO(test): overhaul these to use test shapes
 #[cfg(test)]
 mod tests {
     use std::{str::FromStr, sync::LazyLock};
@@ -776,7 +776,7 @@ mod tests {
 
     #[derive(SmithyStruct)]
     #[smithy_schema(SCHEMA)]
-    pub(crate) struct SerializeMe {
+    pub struct SerializeMe {
         #[smithy_schema(MEMBER_A)]
         pub member_a: String,
         #[smithy_schema(MEMBER_B)]

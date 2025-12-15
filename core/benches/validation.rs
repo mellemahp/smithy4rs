@@ -1,386 +1,114 @@
 //! Benchmarks of Validation
 
-use std::{hint::black_box, sync::LazyLock};
+use std::hint::black_box;
 
 use bigdecimal::BigDecimal;
 use criterion::{Criterion, criterion_group, criterion_main};
 use indexmap::IndexMap;
 use smithy4rs_core::{
-    prelude::{INTEGER, LengthTrait, RangeTrait, RequiredTrait, STRING, UniqueItemsTrait},
-    schema::{Schema, SchemaRef, ShapeId, StaticSchemaShape},
+    prelude::*,
     serde::{
         ShapeBuilder,
-        builders::{MaybeBuilt, Required},
-        correction::{ErrorCorrection, ErrorCorrectionDefault},
-        de::{DeserializeWithSchema, Deserializer},
-        se::{SerializeWithSchema, Serializer, StructSerializer},
         validate::{DefaultValidator, Validator},
     },
-    traits,
+    smithy,
 };
+use smithy4rs_core_derive::SmithyStruct;
 
 // ==== Test shapes ====
-static VALIDATE_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::structure_builder(ShapeId::from("test#ValidationStruct"), Vec::new())
-        .put_member(
-            "string",
-            &STRING,
-            traits![
-                LengthTrait::builder().min(1).max(100).build(),
-                RequiredTrait
-            ],
-        )
-        .put_member("required_int", &INTEGER, traits![RequiredTrait])
-        .put_member(
-            "integer",
-            &INTEGER,
-            traits![RangeTrait::builder().max(BigDecimal::from(100)).build()],
-        )
-        .build()
+smithy!("test#ValidationStruct": {
+    structure VALIDATE_SHAPE_SCHEMA {
+        @LengthTrait::builder().min(1).max(100).build();
+        FIELD_STRING: STRING = "string"
+        @RangeTrait::builder().max(BigDecimal::from(100)).build();
+        FIELD_REQUIRED_INT: INTEGER = "required_int"
+        FIELD_INTEGER: INTEGER = "integer"
+    }
 });
-static FIELD_STRING: LazyLock<&SchemaRef> =
-    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("string"));
-static FIELD_REQUIRED_INT: LazyLock<&SchemaRef> =
-    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("required_int"));
-static FIELD_INTEGER: LazyLock<&SchemaRef> =
-    LazyLock::new(|| VALIDATE_SHAPE_SCHEMA.expect_member("integer"));
 
-#[derive(Clone)]
+#[derive(SmithyStruct, Clone)]
+#[smithy_schema(VALIDATE_SHAPE_SCHEMA)]
 pub struct ValidatedStruct {
+    #[smithy_schema(FIELD_STRING)]
     string: String,
+    #[smithy_schema(FIELD_REQUIRED_INT)]
     required_int: i32,
+    #[smithy_schema(FIELD_INTEGER)]
     integer: Option<i32>,
 }
-impl StaticSchemaShape for ValidatedStruct {
-    fn schema() -> &'static SchemaRef {
-        &VALIDATE_SHAPE_SCHEMA
-    }
-}
-impl SerializeWithSchema for ValidatedStruct {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 2usize)?;
-        ser.serialize_member_named("string", &FIELD_STRING, &self.string)?;
-        ser.serialize_member_named("required_int", &FIELD_REQUIRED_INT, &self.required_int)?;
-        ser.serialize_member_named("integer", &FIELD_INTEGER, &self.integer)?;
-        ser.end(schema)
-    }
-}
 
-#[derive(Clone)]
-pub struct ValidatedStructBuilder {
-    string: Required<String>,
-    required_int: Required<i32>,
-    integer: Option<i32>,
-}
-impl ValidatedStructBuilder {
-    pub fn string(mut self, value: String) -> Self {
-        self.string = Required::Set(value);
-        self
+smithy!("test#UnvalidatedShape": {
+    structure UNVALIDATED_SHAPE_SCHEMA {
+        FIELD_UNCHECKED_STRING: STRING = "string"
+        FIELD_UNCHECKED_REQUIRED_INT: INTEGER = "required_int"
+        FIELD_UNCHECKED_INT: INTEGER = "integer"
     }
-    pub fn required_int(mut self, value: i32) -> Self {
-        self.required_int = Required::Set(value);
-        self
-    }
-    pub fn integer(mut self, value: i32) -> Self {
-        self.integer = Some(value);
-        self
-    }
-}
-impl<'de> DeserializeWithSchema<'de> for ValidatedStructBuilder {
-    fn deserialize_with_schema<D>(
-        _schema: &SchemaRef,
-        _deserializer: &mut D,
-    ) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        unimplemented!("We dont need to deserialize to test.")
-    }
-}
-impl ErrorCorrectionDefault for ValidatedStruct {
-    fn default() -> Self {
-        ValidatedStructBuilder::new().correct()
-    }
-}
-impl SerializeWithSchema for ValidatedStructBuilder {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 1usize)?;
-        ser.serialize_member_named("string", &FIELD_STRING, &self.string)?;
-        ser.serialize_member_named("required_int", &FIELD_REQUIRED_INT, &self.required_int)?;
-        ser.serialize_member_named("integer", &FIELD_INTEGER, &self.integer)?;
-        ser.end(schema)
-    }
-}
-impl<'de> ShapeBuilder<'de, ValidatedStruct> for ValidatedStructBuilder {
-    fn new() -> Self {
-        Self {
-            string: Required::Unset,
-            required_int: Required::Unset,
-            integer: None,
-        }
-    }
-}
-impl ErrorCorrection for ValidatedStructBuilder {
-    type Value = ValidatedStruct;
-
-    fn correct(self) -> Self::Value {
-        ValidatedStruct {
-            string: self.string.get(),
-            required_int: self.required_int.get(),
-            integer: self.integer,
-        }
-    }
-}
-
-static UNVALIDATED_SHAPE_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::structure_builder(ShapeId::from("test#UnvalidatedShape"), Vec::new())
-        .put_member("string", &STRING, traits![RequiredTrait])
-        .put_member("required_int", &INTEGER, traits![RequiredTrait])
-        .put_member("integer", &INTEGER, traits![])
-        .build()
 });
-static FIELD_UNCHECKED_STRING: LazyLock<&SchemaRef> =
-    LazyLock::new(|| UNVALIDATED_SHAPE_SCHEMA.expect_member("string"));
-static FIELD_UNCHECKED_REQUIRED_INT: LazyLock<&SchemaRef> =
-    LazyLock::new(|| UNVALIDATED_SHAPE_SCHEMA.expect_member("required_int"));
-static FIELD_UNCHECKED_INT: LazyLock<&SchemaRef> =
-    LazyLock::new(|| UNVALIDATED_SHAPE_SCHEMA.expect_member("integer"));
-
+#[derive(SmithyStruct, Clone)]
+#[smithy_schema(UNVALIDATED_SHAPE_SCHEMA)]
 pub struct UnvalidatedStruct {
+    #[smithy_schema(FIELD_UNCHECKED_STRING)]
     string: String,
+    #[smithy_schema(FIELD_REQUIRED_INT)]
     required_int: i32,
+    #[smithy_schema(FIELD_UNCHECKED_INT)]
     integer: Option<i32>,
 }
-impl StaticSchemaShape for UnvalidatedStruct {
-    fn schema() -> &'static SchemaRef {
-        &UNVALIDATED_SHAPE_SCHEMA
-    }
-}
-impl SerializeWithSchema for UnvalidatedStruct {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 2usize)?;
-        ser.serialize_member_named("string", &FIELD_UNCHECKED_STRING, &self.string)?;
-        ser.serialize_member_named(
-            "required_int",
-            &FIELD_UNCHECKED_REQUIRED_INT,
-            &self.required_int,
-        )?;
-        ser.serialize_member_named("integer", &FIELD_UNCHECKED_INT, &self.integer)?;
-        ser.end(schema)
-    }
-}
 
-static LIST_OF_NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::list_builder(ShapeId::from("com.example#ListOfNested"), traits![])
-        .put_member("member", &VALIDATE_SHAPE_SCHEMA, traits![])
-        .build()
+smithy!("com.example#ListOfNested": {
+    list LIST_OF_NESTED_SCHEMA {
+        member: VALIDATE_SHAPE_SCHEMA
+    }
 });
-static MAP_OF_NESTED_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::map_builder(ShapeId::from("com.example#MapOfNested"), traits![])
-        .put_member("key", &STRING, traits![])
-        .put_member("value", &VALIDATE_SHAPE_SCHEMA, traits![])
-        .build()
+smithy!("com.example#MapOfNested": {
+    map MAP_OF_NESTED_SCHEMA {
+        key: STRING
+        value: VALIDATE_SHAPE_SCHEMA
+    }
 });
-static STRUCT_WITH_COLLECTIONS: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::structure_builder(ShapeId::from("test#StructWithNestedList"), Vec::new())
-        .put_member("field_nested_list", &LIST_OF_NESTED_SCHEMA, traits![])
-        .put_member("field_nested_map", &MAP_OF_NESTED_SCHEMA, traits![])
-        .build()
-});
-static FIELD_NESTED_LIST: LazyLock<&SchemaRef> =
-    LazyLock::new(|| STRUCT_WITH_COLLECTIONS.expect_member("field_nested_list"));
-static FIELD_NESTED_MAP: LazyLock<&SchemaRef> =
-    LazyLock::new(|| STRUCT_WITH_COLLECTIONS.expect_member("field_nested_map"));
 
-struct StructWithCollections {
+smithy!("test#StructWithNestedList": {
+    structure STRUCT_WITH_COLLECTIONS {
+        FIELD_NESTED_LIST: LIST_OF_NESTED_SCHEMA = "field_nested_list"
+        FIELD_NESTED_MAP: MAP_OF_NESTED_SCHEMA = "field_nested_map"
+    }
+});
+
+#[derive(SmithyStruct, Clone)]
+#[smithy_schema(STRUCT_WITH_COLLECTIONS)]
+pub struct StructWithCollections {
+    #[smithy_schema(FIELD_NESTED_LIST)]
     field_nested_list: Option<Vec<ValidatedStruct>>,
+    #[smithy_schema(FIELD_NESTED_MAP)]
     field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
 }
 
-impl StaticSchemaShape for StructWithCollections {
-    fn schema() -> &'static SchemaRef {
-        &STRUCT_WITH_COLLECTIONS
+smithy!("test#StructWithNestedSet": {
+    structure STRUCT_WITH_SET {
+        @UniqueItemsTrait;
+        FIELD_NESTED_SET: LIST_OF_NESTED_SCHEMA = "field_nested_set"
     }
-}
-impl SerializeWithSchema for StructWithCollections {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 2usize)?;
-        ser.serialize_optional_member_named(
-            "field_nested_list",
-            &FIELD_NESTED_LIST,
-            &self.field_nested_list,
-        )?;
-        ser.serialize_optional_member_named(
-            "field_nested_map",
-            &FIELD_NESTED_MAP,
-            &self.field_nested_map,
-        )?;
-        ser.end(schema)
-    }
-}
-struct StructWithCollectionsBuilder {
-    field_nested_list: Option<MaybeBuilt<Vec<ValidatedStruct>, Vec<ValidatedStructBuilder>>>,
-    field_nested_map: Option<
-        MaybeBuilt<IndexMap<String, ValidatedStruct>, IndexMap<String, ValidatedStructBuilder>>,
-    >,
-}
-impl<'de> DeserializeWithSchema<'de> for StructWithCollectionsBuilder {
-    fn deserialize_with_schema<D>(
-        _schema: &SchemaRef,
-        _deserializer: &mut D,
-    ) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        unimplemented!("We dont need to deserialize for testing.")
-    }
-}
-impl SerializeWithSchema for StructWithCollectionsBuilder {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 2usize)?;
-        ser.serialize_optional_member_named(
-            "field_nested_list",
-            &FIELD_NESTED_LIST,
-            &self.field_nested_list,
-        )?;
-        ser.serialize_optional_member_named(
-            "field_nested_map",
-            &FIELD_NESTED_MAP,
-            &self.field_nested_map,
-        )?;
-        ser.end(schema)
-    }
-}
-impl ErrorCorrection for StructWithCollectionsBuilder {
-    type Value = StructWithCollections;
-
-    fn correct(self) -> Self::Value {
-        StructWithCollections {
-            field_nested_map: self.field_nested_map.correct(),
-            field_nested_list: self.field_nested_list.correct(),
-        }
-    }
-}
-impl<'de> ShapeBuilder<'de, StructWithCollections> for StructWithCollectionsBuilder {
-    fn new() -> Self {
-        StructWithCollectionsBuilder {
-            field_nested_map: None,
-            field_nested_list: None,
-        }
-    }
-}
-impl StructWithCollectionsBuilder {
-    pub fn field_nested_map(mut self, values: IndexMap<String, ValidatedStruct>) -> Self {
-        self.field_nested_map = Some(MaybeBuilt::Struct(values));
-        self
-    }
-
-    pub fn field_nested_map_builder(
-        mut self,
-        values: IndexMap<String, ValidatedStructBuilder>,
-    ) -> Self {
-        self.field_nested_map = Some(MaybeBuilt::Builder(values));
-        self
-    }
-
-    pub fn field_nested_list(mut self, values: Vec<ValidatedStruct>) -> Self {
-        self.field_nested_list = Some(MaybeBuilt::Struct(values));
-        self
-    }
-
-    pub fn field_nested_list_builder(mut self, values: Vec<ValidatedStructBuilder>) -> Self {
-        self.field_nested_list = Some(MaybeBuilt::Builder(values));
-        self
-    }
-}
-
-static STRUCT_WITH_SET: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::structure_builder(ShapeId::from("test#StructWithNestedSet"), Vec::new())
-        .put_member(
-            "field_nested_set",
-            &LIST_OF_NESTED_SCHEMA,
-            traits![UniqueItemsTrait],
-        )
-        .build()
 });
-static FIELD_NESTED_SET: LazyLock<&SchemaRef> =
-    LazyLock::new(|| STRUCT_WITH_SET.expect_member("field_nested_set"));
 
-struct StructWithSet {
+#[derive(SmithyStruct, Clone)]
+#[smithy_schema(STRUCT_WITH_SET)]
+pub struct StructWithSet {
+    #[smithy_schema(FIELD_NESTED_SET)]
     field_nested_set: Option<Vec<ValidatedStruct>>,
 }
-impl StaticSchemaShape for StructWithSet {
-    fn schema() -> &'static SchemaRef {
-        &STRUCT_WITH_SET
-    }
-}
-impl SerializeWithSchema for StructWithSet {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 1usize)?;
-        ser.serialize_optional_member_named(
-            "field_nested_set",
-            &FIELD_NESTED_SET,
-            &self.field_nested_set,
-        )?;
-        ser.end(schema)
-    }
-}
 
-static STRUCT_WITH_LIST: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::structure_builder(ShapeId::from("test#StructWithNestedList"), Vec::new())
-        .put_member("field_nested_list", &LIST_OF_NESTED_SCHEMA, traits![])
-        .build()
+smithy!("test#StructWithNestedList": {
+    structure STRUCT_WITH_LIST {
+        FIELD_WITH_NESTED_LIST: LIST_OF_NESTED_SCHEMA = "field_nested_list"
+    }
 });
-static FIELD_WITH_NESTED_LIST: LazyLock<&SchemaRef> =
-    LazyLock::new(|| STRUCT_WITH_LIST.expect_member("field_nested_list"));
 
 // Mostly just for comparison against set implementation.
-struct StructWithList {
+#[derive(SmithyStruct, Clone)]
+#[smithy_schema(STRUCT_WITH_LIST)]
+pub struct StructWithList {
+    #[smithy_schema(FIELD_WITH_NESTED_LIST)]
     field_nested_list: Option<Vec<ValidatedStruct>>,
-}
-impl StaticSchemaShape for StructWithList {
-    fn schema() -> &'static SchemaRef {
-        &STRUCT_WITH_LIST
-    }
-}
-impl SerializeWithSchema for StructWithList {
-    fn serialize_with_schema<S: Serializer>(
-        &self,
-        schema: &SchemaRef,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        let mut ser = serializer.write_struct(schema, 1usize)?;
-        ser.serialize_optional_member_named(
-            "field_nested_list",
-            &FIELD_WITH_NESTED_LIST,
-            &self.field_nested_list,
-        )?;
-        ser.end(schema)
-    }
 }
 
 // ==== Benchmarks ====

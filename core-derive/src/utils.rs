@@ -90,6 +90,19 @@ pub(crate) fn get_crate_info() -> (TokenStream, TokenStream) {
     (extern_import, crate_ident)
 }
 
+/// Get identifier to use outside `const` block for crate
+pub(crate) fn get_crate_ident() -> TokenStream {
+    let found_crate =
+        crate_name("smithy4rs-core").expect("smithy4rs-core is present in `Cargo.toml`");
+    match &found_crate {
+        FoundCrate::Itself => quote!(crate),
+        FoundCrate::Name(_) => {
+            let ident = Ident::new("smithy4rs_core", Span::call_site());
+            quote!( #ident )
+        }
+    }
+}
+
 /// Checks if a type is a Smithy data model primitive.
 pub(crate) fn is_primitive(field_ty: &Type) -> bool {
     if let Type::Path(type_path) = field_ty

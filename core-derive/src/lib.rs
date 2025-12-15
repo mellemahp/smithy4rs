@@ -17,6 +17,8 @@ use crate::{
 };
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
+// TODO(derive): Smithy Struct should automatically derive: Debug, PartialEq, and Clone
+//               if not already derived on shape.
 
 /// Convenience derive that combines `SchemaShape`, `SerializableStruct`, and `DeserializableStruct`
 #[proc_macro_derive(SmithyStruct, attributes(smithy_schema))]

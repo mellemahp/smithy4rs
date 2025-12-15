@@ -3,33 +3,35 @@ use quote::quote;
 use syn::{Data, DeriveInput, Type};
 
 use crate::utils::{
-    extract_option_type, get_ident, get_inner_type, is_optional, is_primitive, parse_schema,
-    replace_inner,
+    extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional, is_primitive,
+    parse_schema, replace_inner,
 };
 
 pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
+    let crate_ident = get_crate_ident();
 
     // Generate builder struct fields
     let builder_fields = field_data
         .iter()
-        .map(BuilderFieldData::field_type)
+        .map(|d| d.field_type(&crate_ident))
         .collect::<Vec<_>>();
 
     // Generate new() initialization
     let new_fields = field_data
         .iter()
-        .map(BuilderFieldData::initializer)
+        .map(|d| d.initializer(&crate_ident))
         .collect::<Vec<_>>();
 
     // Generate setter methods - consuming for chaining
     let setters = field_data
         .iter()
-        .map(BuilderFieldData::setters)
+        .map(|d| d.setters(&crate_ident))
         .collect::<Vec<_>>();
 
     quote! {
         #[automatically_derived]
+        #[derive(Clone)]
         pub struct #builder_name {
             #(#builder_fields,)*
         }
@@ -151,10 +153,10 @@ enum BuildTarget {
 }
 impl BuilderFieldData {
     /// Type to use when representing this type as a field in a builder struct definition
-    fn field_type(&self) -> TokenStream {
+    fn field_type(&self, crate_ident: &TokenStream) -> TokenStream {
         let ty = match &self.target {
             BuildTarget::Builable { shape, builder } => {
-                quote! { smithy4rs_core::serde::builders::MaybeBuilt<#shape, #builder> }
+                quote! { #crate_ident::serde::builders::MaybeBuilt<#shape, #builder> }
             }
             BuildTarget::Primitive(ty) => quote! { #ty },
         };
@@ -165,7 +167,7 @@ impl BuilderFieldData {
             }
         } else {
             quote! {
-                #field_name: smithy4rs_core::serde::builders::Required<#ty>
+                #field_name: #crate_ident::serde::builders::Required<#ty>
             }
         }
     }
@@ -173,36 +175,36 @@ impl BuilderFieldData {
     /// Initializer to use for setting a builder field in `new()` method
     /// - all optional fields are `None`.
     /// - All required fields are `Required::Unset`
-    fn initializer(&self) -> TokenStream {
+    fn initializer(&self, crate_ident: &TokenStream) -> TokenStream {
         let field_name = &self.field_ident;
         if self.optional {
             quote! { #field_name: None }
         } else {
-            quote! { #field_name: smithy4rs_core::serde::builders::Required::Unset }
+            quote! { #field_name: #crate_ident::serde::builders::Required::Unset }
         }
     }
 
     /// Generate builder setters.
     ///
     /// Setters consume `self` to allow for chaining.
-    fn setters(&self) -> TokenStream {
+    fn setters(&self, crate_ident: &TokenStream) -> TokenStream {
         let field_name = &self.field_ident;
         let wrapper = if self.optional {
             quote! { Some }
         } else {
-            quote! { smithy4rs_core::serde::builders::Required::Set }
+            quote! { #crate_ident::serde::builders::Required::Set }
         };
         match &self.target {
             BuildTarget::Builable { shape, builder } => {
                 let builder_fn = Ident::new(&format!("{}_builder", field_name), Span::call_site());
                 quote! {
                     pub fn #field_name(mut self, value: #shape) -> Self {
-                        self.#field_name = #wrapper(smithy4rs_core::serde::builders::MaybeBuilt::Struct(value));
+                        self.#field_name = #wrapper(#crate_ident::serde::builders::MaybeBuilt::Struct(value));
                         self
                     }
 
                     pub fn #builder_fn(mut self, value: #builder) -> Self {
-                        self.#field_name = #wrapper(smithy4rs_core::serde::builders::MaybeBuilt::Builder(value));
+                        self.#field_name = #wrapper(#crate_ident::serde::builders::MaybeBuilt::Builder(value));
                         self
                     }
                 }
