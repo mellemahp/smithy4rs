@@ -14,7 +14,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
       - run: mise build
 
@@ -22,7 +22,7 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
       - uses: jdx/mise-action@v3
@@ -32,7 +32,7 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
       - run: mise lint
 
@@ -40,7 +40,7 @@ jobs:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
       - run: mise fmt-all --check
 
@@ -48,7 +48,7 @@ jobs:
     name: Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
       - run: mise audit
 
@@ -56,5 +56,5 @@ jobs:
     name: Spell Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: crate-ci/typos@v1.38.1
+      - uses: actions/checkout@v6
+      - uses: crate-ci/typos@v1.40.0
