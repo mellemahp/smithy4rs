@@ -404,44 +404,44 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            MEMBER_A: STRING = "a"
+            A: STRING = "a"
             @SensitiveTrait;
-            MEMBER_B: STRING = "b"
-            MEMBER_C: STRING = "c"
-            MEMBER_MAP: MAP_SCHEMA = "map"
-            MEMBER_LIST: LIST_SCHEMA = "list"
+            B: STRING = "b"
+            C: STRING = "c"
+            MAP: MAP_SCHEMA = "map"
+            LIST: LIST_SCHEMA = "list"
         }
     });
     smithy!("com.example#Shape": {
         structure REDACTED_AGGREGATES {
             @SensitiveTrait;
-            MEMBER_MAP_REDACT: MAP_SCHEMA = "map"
+            MAP_REDACT: MAP_SCHEMA = "map"
             @SensitiveTrait;
-            MEMBER_LIST_REDACT: LIST_SCHEMA = "list"
+            LIST_REDACT: LIST_SCHEMA = "list"
         }
     });
 
     #[derive(SchemaShape, SerializableStruct)]
     #[smithy_schema(SCHEMA)]
     pub struct SerializeMe {
-        #[smithy_schema(MEMBER_A)]
+        #[smithy_schema(A)]
         pub member_a: String,
-        #[smithy_schema(MEMBER_B)]
+        #[smithy_schema(B)]
         pub member_b: String,
-        #[smithy_schema(MEMBER_C)]
+        #[smithy_schema(C)]
         pub member_optional: Option<String>,
-        #[smithy_schema(MEMBER_LIST)]
+        #[smithy_schema(LIST)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MEMBER_MAP)]
+        #[smithy_schema(MAP)]
         pub member_map: IndexMap<String, String>,
     }
 
     #[derive(SchemaShape, SerializableStruct)]
     #[smithy_schema(REDACTED_AGGREGATES)]
     pub(crate) struct RedactMe {
-        #[smithy_schema(MEMBER_LIST_REDACT)]
+        #[smithy_schema(LIST_REDACT)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MEMBER_MAP_REDACT)]
+        #[smithy_schema(MAP_REDACT)]
         pub member_map: IndexMap<String, String>,
     }
 

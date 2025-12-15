@@ -5,11 +5,11 @@ use smithy4rs_core::{
 use smithy4rs_core_derive::SmithyStruct;
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
-    #[smithy_schema(FIELD_A)]
+    #[smithy_schema(A)]
     pub field_a: String,
-    #[smithy_schema(FIELD_B)]
+    #[smithy_schema(B)]
     pub field_b: i32,
-    #[smithy_schema(FIELD_C)]
+    #[smithy_schema(C)]
     pub field_c: Option<Nested>,
 }
 const _: () = {
@@ -37,9 +37,21 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.serialize_member_named("field_a", &FIELD_A, &self.field_a)?;
-            ser.serialize_member_named("field_b", &FIELD_B, &self.field_b)?;
-            ser.serialize_optional_member_named("field_c", &FIELD_C, &self.field_c)?;
+            ser.serialize_member_named(
+                "field_a",
+                &_SIMPLE_SCHEMA_MEMBER_A,
+                &self.field_a,
+            )?;
+            ser.serialize_member_named(
+                "field_b",
+                &_SIMPLE_SCHEMA_MEMBER_B,
+                &self.field_b,
+            )?;
+            ser.serialize_optional_member_named(
+                "field_c",
+                &_SIMPLE_SCHEMA_MEMBER_C,
+                &self.field_c,
+            )?;
             ser.end(schema)
         }
     }
@@ -132,9 +144,21 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.serialize_member_named("field_a", &FIELD_A, &self.field_a)?;
-            ser.serialize_member_named("field_b", &FIELD_B, &self.field_b)?;
-            ser.serialize_optional_member_named("field_c", &FIELD_C, &self.field_c)?;
+            ser.serialize_member_named(
+                "field_a",
+                &_SIMPLE_SCHEMA_MEMBER_A,
+                &self.field_a,
+            )?;
+            ser.serialize_member_named(
+                "field_b",
+                &_SIMPLE_SCHEMA_MEMBER_B,
+                &self.field_b,
+            )?;
+            ser.serialize_optional_member_named(
+                "field_c",
+                &_SIMPLE_SCHEMA_MEMBER_C,
+                &self.field_c,
+            )?;
             ser.end(schema)
         }
     }
@@ -153,21 +177,30 @@ const _: () = {
                     schema,
                     builder,
                     |builder, member_schema, de| {
-                        if std::sync::Arc::ptr_eq(member_schema, &FIELD_A) {
+                        if std::sync::Arc::ptr_eq(
+                            member_schema,
+                            &_SIMPLE_SCHEMA_MEMBER_A,
+                        ) {
                             let value = <String as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
                                 member_schema,
                                 de,
                             )?;
                             return Ok(builder.field_a(value));
                         }
-                        if std::sync::Arc::ptr_eq(member_schema, &FIELD_B) {
+                        if std::sync::Arc::ptr_eq(
+                            member_schema,
+                            &_SIMPLE_SCHEMA_MEMBER_B,
+                        ) {
                             let value = <i32 as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
                                 member_schema,
                                 de,
                             )?;
                             return Ok(builder.field_b(value));
                         }
-                        if std::sync::Arc::ptr_eq(member_schema, &FIELD_C) {
+                        if std::sync::Arc::ptr_eq(
+                            member_schema,
+                            &_SIMPLE_SCHEMA_MEMBER_C,
+                        ) {
                             let value = <Option<
                                 NestedBuilder,
                             > as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
@@ -214,7 +247,7 @@ impl ::core::cmp::PartialEq for SimpleStruct {
 }
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
-    #[smithy_schema(FIELD_C)]
+    #[smithy_schema(D)]
     pub field_a: String,
 }
 const _: () = {
@@ -242,7 +275,11 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.serialize_member_named("field_a", &FIELD_C, &self.field_a)?;
+            ser.serialize_member_named(
+                "field_a",
+                &_NESTED_SCHEMA_MEMBER_D,
+                &self.field_a,
+            )?;
             ser.end(schema)
         }
     }
@@ -315,7 +352,11 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.serialize_member_named("field_a", &FIELD_C, &self.field_a)?;
+            ser.serialize_member_named(
+                "field_a",
+                &_NESTED_SCHEMA_MEMBER_D,
+                &self.field_a,
+            )?;
             ser.end(schema)
         }
     }
@@ -334,7 +375,10 @@ const _: () = {
                     schema,
                     builder,
                     |builder, member_schema, de| {
-                        if std::sync::Arc::ptr_eq(member_schema, &FIELD_C) {
+                        if std::sync::Arc::ptr_eq(
+                            member_schema,
+                            &_NESTED_SCHEMA_MEMBER_D,
+                        ) {
                             let value = <String as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
                                 member_schema,
                                 de,
