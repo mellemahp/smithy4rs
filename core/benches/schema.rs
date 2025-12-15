@@ -2,23 +2,17 @@ use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
-    lazy_schema,
     prelude::{HTTPChecksumRequiredTrait, HTTPQueryParamsTrait, HTTPQueryTrait},
     schema::{Schema, StaticTraitId},
-    traits,
+    smithy,
 };
 
-lazy_schema!(
-    TRAIT_SCHEMA,
-    Schema::create_string(
-        "com.example#Example",
-        traits![
-            HTTPQueryTrait::new("foo"),
-            HTTPQueryParamsTrait,
-            HTTPChecksumRequiredTrait
-        ]
-    )
-);
+smithy!("com.example#Example": {
+    @HTTPQueryTrait::new("foo");
+    @HTTPQueryParamsTrait;
+    @HTTPChecksumRequiredTrait;
+    string TRAIT_SCHEMA
+});
 
 pub fn trait_access_id(c: &mut Criterion) {
     c.bench_function("Trait Access By ID", |b| {
