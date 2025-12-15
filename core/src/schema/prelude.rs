@@ -7,9 +7,7 @@ use regex::Regex;
 
 use crate::{
     annotation_trait,
-    schema::{
-        DocumentValue, NumberInteger, NumberValue, Schema, ShapeId, SmithyTrait, StaticTraitId,
-    },
+    schema::{DocumentValue, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId},
     smithy, static_trait_id, string_trait,
 };
 

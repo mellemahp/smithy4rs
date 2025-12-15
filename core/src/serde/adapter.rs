@@ -286,11 +286,7 @@ mod tests {
     use smithy4rs_core_derive::{SchemaShape, SerializableStruct};
 
     use super::*;
-    use crate::{
-        prelude::*,
-        schema::{Schema, SchemaShape},
-        smithy,
-    };
+    use crate::{prelude::*, schema::SchemaShape, smithy};
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {

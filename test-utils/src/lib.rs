@@ -4,7 +4,7 @@
 // TODO(test): Add constraint test shapes once we have validation
 
 use indexmap::IndexMap;
-use smithy4rs_core::{ByteBuffer, Instant, prelude::*, schema::Schema, smithy};
+use smithy4rs_core::{ByteBuffer, Instant, prelude::*, smithy};
 use smithy4rs_core_derive::SmithyStruct;
 
 smithy!("test#StringList": {

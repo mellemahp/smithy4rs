@@ -67,7 +67,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_boolean($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_boolean($id, $crate::traits!($($t),*))
         );
     );
 
@@ -77,7 +77,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_byte($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_byte($id, $crate::traits!($($t),*))
         );
     );
 
@@ -87,7 +87,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_short($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_short($id, $crate::traits!($($t),*))
         );
     );
 
@@ -97,7 +97,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_integer($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_integer($id, $crate::traits!($($t),*))
         );
     );
 
@@ -107,7 +107,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_long($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_long($id, $crate::traits!($($t),*))
         );
     );
 
@@ -117,7 +117,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_float($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_float($id, $crate::traits!($($t),*))
         );
     );
 
@@ -127,7 +127,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_double($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_double($id, $crate::traits!($($t),*))
         );
     );
 
@@ -138,7 +138,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_big_integer($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_big_integer($id, $crate::traits!($($t),*))
         );
     );
 
@@ -148,7 +148,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_big_decimal($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_big_decimal($id, $crate::traits!($($t),*))
         );
     );
 
@@ -158,7 +158,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_timestamp($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_timestamp($id, $crate::traits!($($t),*))
         );
     );
 
@@ -168,7 +168,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_string($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_string($id, $crate::traits!($($t),*))
         );
     );
 
@@ -178,7 +178,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_blob($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_blob($id, $crate::traits!($($t),*))
         );
     );
 
@@ -188,14 +188,12 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::create_document($id, $crate::traits!($($t),*))
+            $crate::schema::Schema::create_document($id, $crate::traits!($($t),*))
         );
     );
 
-    // TODO: Document
-
     // === Enums ===
-    // TODO: ENUMS!
+    // TODO(enums): Add support for intEnum and enum generation
 
     // === Collections ====
 
@@ -208,7 +206,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::list_builder($id, $crate::traits!($($t),*)),
+            $crate::schema::Schema::list_builder($id, $crate::traits!($($t),*)),
             ("member", $member, $crate::traits!($($m),*))
         );
     );
@@ -225,7 +223,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
-            Schema::map_builder($id, $crate::traits!($($t),*)),
+            $crate::schema::Schema::map_builder($id, $crate::traits!($($t),*)),
             ("key", $key, $crate::traits!($($k),*)),
             ("value", $value, $crate::traits!($($v),*))
         );
@@ -241,7 +239,7 @@ macro_rules! smithy_internal {
     }) => (
        $crate::smithy!(@inner
             $name,
-            Schema::structure_builder($id, $crate::traits!($($t),*)),
+            $crate::schema::Schema::structure_builder($id, $crate::traits!($($t),*)),
             $(($member_ident, $member_name, $member_schema, $crate::traits!($($m),*))),*
         );
     );

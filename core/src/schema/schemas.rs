@@ -8,7 +8,6 @@ use std::{
     sync::{Arc, LazyLock, OnceLock, RwLock},
 };
 
-use indexmap::IndexSet;
 use rustc_hash::FxBuildHasher;
 
 use crate::{
@@ -32,7 +31,7 @@ pub type TraitList = Vec<TraitRef>;
 pub enum Schema {
     Scalar(ScalarSchema),
     Struct(StructSchema),
-    Enum(EnumSchema<String>),
+    Enum(EnumSchema<&'static str>),
     IntEnum(EnumSchema<i32>),
     List(ListSchema),
     Map(MapSchema),
@@ -152,7 +151,7 @@ impl Schema {
     /// Create a Schema for an [IntEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape.
     pub fn create_int_enum(
         id: impl Into<ShapeId>,
-        values: IndexSet<i32>,
+        values: Vec<i32>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::IntEnum(EnumSchema {
@@ -195,7 +194,7 @@ impl Schema {
     /// Create a Schema for an [Enum](https://smithy.io/2.0/spec/simple-types.html#enum) shape.
     pub fn create_enum(
         id: impl Into<ShapeId>,
-        values: IndexSet<String>,
+        values: Vec<&'static str>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::Enum(EnumSchema {
@@ -434,7 +433,7 @@ impl Schema {
     /// Get as an [`EnumSchema`] type with `String` inner value
     /// if possible, otherwise `None`.
     #[must_use]
-    pub fn as_enum(&self) -> Option<&EnumSchema<String>> {
+    pub fn as_enum(&self) -> Option<&EnumSchema<&'static str>> {
         if let Schema::Enum(enum_schema) = self {
             Some(enum_schema)
         } else {

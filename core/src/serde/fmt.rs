@@ -388,7 +388,7 @@ mod tests {
     use smithy4rs_core_derive::{SchemaShape, SerializableStruct};
 
     use super::*;
-    use crate::{prelude::STRING, schema::Schema, smithy};
+    use crate::{prelude::STRING, smithy};
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
