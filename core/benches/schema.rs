@@ -3,7 +3,7 @@ use std::hint::black_box;
 use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     prelude::{HTTPChecksumRequiredTrait, HTTPQueryParamsTrait, HTTPQueryTrait},
-    schema::{Schema, StaticTraitId},
+    schema::StaticTraitId,
     smithy,
 };
 
