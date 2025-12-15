@@ -1,49 +1,33 @@
 #![allow(dead_code)]
 
-use std::{fmt::Display, sync::LazyLock};
+use std::fmt::Display;
 
 use indexmap::IndexMap;
 use regex::Regex;
 
 use crate::{
-    annotation_trait, lazy_shape_id,
-    schema::{
-        DocumentValue, NumberInteger, NumberValue, Schema, SchemaRef, ShapeId, SmithyTrait,
-        StaticTraitId,
-    },
-    static_trait_id, string_trait, traits,
+    annotation_trait,
+    schema::{DocumentValue, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId},
+    smithy, static_trait_id, string_trait,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Prelude Shape Schemas
 ////////////////////////////////////////////////////////////////////////////////////
-macro_rules! prelude_schema {
-    ($ident:ident, $factory:expr, $id:literal) => {
-        pub static $ident: LazyLock<SchemaRef> = LazyLock::new(|| $factory($id, traits![]));
-    };
-}
 
-prelude_schema!(BLOB, Schema::create_blob, "smithy.api#Blob");
-prelude_schema!(BOOLEAN, Schema::create_boolean, "smithy.api#Boolean");
-prelude_schema!(STRING, Schema::create_string, "smithy.api#String");
-prelude_schema!(TIMESTAMP, Schema::create_timestamp, "smithy.api#Timestamp");
-prelude_schema!(BYTE, Schema::create_byte, "smithy.api#Byte");
-prelude_schema!(SHORT, Schema::create_short, "smithy.api#Short");
-prelude_schema!(INTEGER, Schema::create_integer, "smithy.api#Integer");
-prelude_schema!(LONG, Schema::create_long, "smithy.api#Long");
-prelude_schema!(FLOAT, Schema::create_float, "smithy.api#Float");
-prelude_schema!(DOUBLE, Schema::create_double, "smithy.api#Double");
-prelude_schema!(
-    BIG_INTEGER,
-    Schema::create_big_integer,
-    "smithy.api#BigInteger"
-);
-prelude_schema!(
-    BIG_DECIMAL,
-    Schema::create_big_decimal,
-    "smithy.api#BigDecimal"
-);
-prelude_schema!(DOCUMENT, Schema::create_document, "smithy.api#Document");
+smithy!("smithy.api#Blob": { blob BLOB });
+smithy!("smithy.api#Boolean": { boolean BOOLEAN });
+smithy!("smithy.api#String": { string STRING });
+smithy!("smithy.api#Timestamp": { timestamp TIMESTAMP });
+smithy!("smithy.api#Byte": { byte BYTE });
+smithy!("smithy.api#Short": { short SHORT });
+smithy!("smithy.api#Integer": { integer INTEGER });
+smithy!("smithy.api#Long": { long LONG });
+smithy!("smithy.api#Float": { float FLOAT });
+smithy!("smithy.api#Double": { double DOUBLE });
+smithy!("smithy.api#BigInteger": { bigInteger BIG_INTEGER });
+smithy!("smithy.api#BigDecimal": { bigDecimal BIG_DECIMAL });
+smithy!("smithy.api#Document": { document DOCUMENT });
 
 // TODO:
 // - Primitive types
@@ -53,94 +37,32 @@ prelude_schema!(DOCUMENT, Schema::create_document, "smithy.api#Document");
 ///////////////////////////////////////////////////////////////////////
 
 // ==== Annotation traits ====
-annotation_trait!(SensitiveTrait, SENSITIVE_TRAIT_ID, "smithy.api#sensitive");
-annotation_trait!(StreamingTrait, STREAMING_TRAIT_ID, "smithy.api#streaming");
-annotation_trait!(SparseTrait, SPARSE_TRAIT_ID, "smithy.api#sparse");
-annotation_trait!(RequiredTrait, REQUIRED_TRAIT_ID, "smithy.api#required");
-annotation_trait!(
-    UnitTypeTrait,
-    UNIT_TYPE_TRAIT_ID,
-    "smithy.api#UnitTypeTrait"
-);
-annotation_trait!(
-    EventHeaderTrait,
-    EVENT_HEADER_TRAIT_ID,
-    "smithy.api#eventheader"
-);
-annotation_trait!(
-    EventPayloadTrait,
-    EVENT_PAYLOAD_TRAIT_ID,
-    "smithy.api#eventPayload"
-);
-annotation_trait!(
-    IdempotencyTokenTrait,
-    IDEMPOTENCY_TOKEN_TRAIT_ID,
-    "smithy.api#IdempotencyToken"
-);
-annotation_trait!(HttpLabelTrait, HTTP_LABEL_TRAIT_ID, "smithy.api#httpLabel");
-annotation_trait!(
-    HttpPayloadTrait,
-    HTTP_PAYLOAD_TRAIT_ID,
-    "smithy.api#httpPayload"
-);
-annotation_trait!(
-    HTTPQueryParamsTrait,
-    HTTP_QUERY_PARAMS_TRAIT_ID,
-    "smithy.api#httpQueryParams"
-);
-annotation_trait!(
-    HTTPResponseCodeTrait,
-    HTTP_RESPONSE_CODE_TRAIT_ID,
-    "smithy.api#httpResponseCode"
-);
-annotation_trait!(
-    HTTPChecksumRequiredTrait,
-    HTTP_CHECKSUM_REQUIRED_TRAIT_ID,
-    "smithy.api#httpChecksumRequired"
-);
-annotation_trait!(
-    HostLabelTrait,
-    HTTP_HOST_LABEL_TRAIT_ID,
-    "smithy.api#hostLabel"
-);
+annotation_trait!(SensitiveTrait, "smithy.api#sensitive");
+annotation_trait!(StreamingTrait, "smithy.api#streaming");
+annotation_trait!(SparseTrait, "smithy.api#sparse");
+annotation_trait!(RequiredTrait, "smithy.api#required");
+annotation_trait!(UnitTypeTrait, "smithy.api#UnitTypeTrait");
+annotation_trait!(EventHeaderTrait, "smithy.api#eventheader");
+annotation_trait!(EventPayloadTrait, "smithy.api#eventPayload");
+annotation_trait!(IdempotencyTokenTrait, "smithy.api#IdempotencyToken");
+annotation_trait!(HttpLabelTrait, "smithy.api#httpLabel");
+annotation_trait!(HttpPayloadTrait, "smithy.api#httpPayload");
+annotation_trait!(HTTPQueryParamsTrait, "smithy.api#httpQueryParams");
+annotation_trait!(HTTPResponseCodeTrait, "smithy.api#httpResponseCode");
+annotation_trait!(HTTPChecksumRequiredTrait, "smithy.api#httpChecksumRequired");
+annotation_trait!(HostLabelTrait, "smithy.api#hostLabel");
 
 // ====  Traits that take just a string value ====
-string_trait!(
-    MediaTypeTrait,
-    MEDIA_TYPE_TRAIT_ID,
-    media_type,
-    "smithy.api#mediaType"
-);
-string_trait!(
-    JsonNameTrait,
-    JSON_NAME_TRAIT_ID,
-    name,
-    "smithy.api#jsonName"
-);
-string_trait!(
-    HTTPHeaderTrait,
-    HTTP_HEADER_TRAIT_ID,
-    name,
-    "smithy.api#httpHeader"
-);
+string_trait!(MediaTypeTrait, media_type, "smithy.api#mediaType");
+string_trait!(JsonNameTrait, name, "smithy.api#jsonName");
+string_trait!(HTTPHeaderTrait, name, "smithy.api#httpHeader");
 string_trait!(
     HTTPPrefixHeadersTrait,
-    HTTP_PREFIX_HEADERS_TRAIT_ID,
     prefix,
     "smithy.api#httpPrefixHeaders"
 );
-string_trait!(
-    HTTPQueryTrait,
-    HTTP_QUERY_TRAIT_ID,
-    key,
-    "smithy.api#httpQuery"
-);
-string_trait!(
-    EndpointTrait,
-    ENDPOINT_TRAIT_ID,
-    host_prefix,
-    "smithy.api#endpoint"
-);
+string_trait!(HTTPQueryTrait, key, "smithy.api#httpQuery");
+string_trait!(EndpointTrait, host_prefix, "smithy.api#endpoint");
 
 // ==== Traits with other values ====
 
@@ -148,7 +70,7 @@ string_trait!(
 ///
 /// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
 pub struct DefaultTrait(pub DocumentValue);
-static_trait_id!(DefaultTrait, DEFAULT_TRAIT_ID, "smithy.api#default");
+static_trait_id!(DefaultTrait, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
         DefaultTrait::trait_id()
@@ -195,7 +117,7 @@ impl ErrorTrait {
         }
     }
 }
-static_trait_id!(ErrorTrait, ERROR_TRAIT_ID, "smithy.api#error");
+static_trait_id!(ErrorTrait, "smithy.api#error");
 smithy_trait_impl!(ErrorTrait);
 
 /// Indicates if the client or server is at fault for a given error.
@@ -238,7 +160,7 @@ impl HTTPErrorTrait {
         }
     }
 }
-static_trait_id!(HTTPErrorTrait, HTTP_ERROR_TRAIT_ID, "smithy.api#httpError");
+static_trait_id!(HTTPErrorTrait, "smithy.api#httpError");
 smithy_trait_impl!(HTTPErrorTrait);
 
 /////////////////////////////////////////////////
@@ -250,7 +172,7 @@ pub struct RangeTrait {
     max: Option<usize>,
     value: DocumentValue,
 }
-static_trait_id!(RangeTrait, RANGE_TRAIT_ID, "smithy.api#range");
+static_trait_id!(RangeTrait, "smithy.api#range");
 smithy_trait_impl!(RangeTrait);
 
 /// Builder for the [`RangeTrait`]
@@ -314,7 +236,7 @@ pub struct LengthTrait {
     max: Option<usize>,
     value: DocumentValue,
 }
-static_trait_id!(LengthTrait, LENGTH_TRAIT_ID, "smithy.api#length");
+static_trait_id!(LengthTrait, "smithy.api#length");
 smithy_trait_impl!(LengthTrait);
 
 impl LengthTrait {
@@ -371,18 +293,14 @@ impl LengthTraitBuilder {
     }
 }
 
-annotation_trait!(
-    UniqueItemsTrait,
-    UNIQUE_ITEM_TRAIT_ID,
-    "smithy.api#uniqueItems"
-);
+annotation_trait!(UniqueItemsTrait, "smithy.api#uniqueItems");
 
 #[derive(Debug)]
 pub struct PatternTrait {
     pattern: Regex,
     value: DocumentValue,
 }
-static_trait_id!(PatternTrait, PATTERN_TRAIT_ID, "smithy.api#pattern");
+static_trait_id!(PatternTrait, "smithy.api#pattern");
 smithy_trait_impl!(PatternTrait);
 
 impl PatternTrait {
@@ -406,21 +324,9 @@ impl PatternTrait {
 // Auth Traits
 /////////////////////////////////////////////////
 
-annotation_trait!(
-    HttpBasicAuthTrait,
-    HTTP_BASIC_AUTH_TRAIT_ID,
-    "smithy.api#httpBasicAuth"
-);
-annotation_trait!(
-    HttpDigestAuthTrait,
-    HTTP_DIGEST_AUTH_TRAIT_ID,
-    "smithy.api#httpDigestAuth"
-);
-annotation_trait!(
-    HttpBearerAuthTrait,
-    HTTP_BEARER_AUTH_TRAIT_ID,
-    "smithy.api#httpBearerAuth"
-);
+annotation_trait!(HttpBasicAuthTrait, "smithy.api#httpBasicAuth");
+annotation_trait!(HttpDigestAuthTrait, "smithy.api#httpDigestAuth");
+annotation_trait!(HttpBearerAuthTrait, "smithy.api#httpBearerAuth");
 
 #[derive(Debug)]
 pub struct HttpApiKeyAuthTrait {
@@ -429,11 +335,7 @@ pub struct HttpApiKeyAuthTrait {
     scheme: Option<String>,
     value: DocumentValue,
 }
-static_trait_id!(
-    HttpApiKeyAuthTrait,
-    HTTP_API_KEY_AUTH_TRAIT_ID,
-    "smithy.api#httpApiKeyAuth"
-);
+static_trait_id!(HttpApiKeyAuthTrait, "smithy.api#httpApiKeyAuth");
 smithy_trait_impl!(HttpApiKeyAuthTrait);
 
 impl HttpApiKeyAuthTrait {

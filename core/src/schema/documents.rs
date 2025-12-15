@@ -6,10 +6,10 @@ use indexmap::IndexMap;
 use thiserror::Error;
 
 use crate::{
-    BigDecimal, BigInt, ByteBuffer, Instant, lazy_schema,
+    BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::*,
     schema::{Schema, SchemaRef, SchemaShape, ShapeId, ShapeType},
-    traits,
+    smithy,
 };
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
@@ -680,11 +680,11 @@ impl From<String> for Document {
     }
 }
 
-lazy_schema!(
-    LIST_DOCUMENT_SCHEMA,
-    Schema::list_builder(DOCUMENT.id().clone(), traits![]),
-    ("member", DOCUMENT, traits![])
-);
+smithy!("smithy.api#Document": {
+    list LIST_DOCUMENT_SCHEMA {
+        member: DOCUMENT
+    }
+});
 
 impl<T: Into<Document>> From<Vec<T>> for Document {
     fn from(value: Vec<T>) -> Self {
@@ -697,12 +697,12 @@ impl<T: Into<Document>> From<Vec<T>> for Document {
     }
 }
 
-lazy_schema!(
-    MAP_DOCUMENT_SCHEMA,
-    Schema::map_builder(DOCUMENT.id().clone(), traits![]),
-    ("key", STRING, traits![]),
-    ("value", DOCUMENT, traits![])
-);
+smithy!("smithy.api#Document": {
+    map MAP_DOCUMENT_SCHEMA {
+        key: STRING
+        value: DOCUMENT
+    }
+});
 impl<T: Into<Document>> From<IndexMap<String, T>> for Document {
     fn from(value: IndexMap<String, T>) -> Self {
         let mut result = IndexMap::new();

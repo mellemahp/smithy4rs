@@ -3,55 +3,43 @@
 // TODO(verify): We don't add required to anything yet
 // TODO(test): Add constraint test shapes once we have validation
 
-use std::sync::LazyLock;
-
 use indexmap::IndexMap;
-use smithy4rs_core::{
-    ByteBuffer, Instant, lazy_schema,
-    prelude::*,
-    schema::{Schema, SchemaRef, ShapeId},
-    traits,
-};
+use smithy4rs_core::{ByteBuffer, Instant, prelude::*, smithy};
 use smithy4rs_core_derive::SmithyStruct;
 
-lazy_schema!(
-    STRING_LIST_SCHEMA,
-    Schema::list_builder("test#StringList", traits![]),
-    ("member", STRING, traits![])
-);
+smithy!("test#StringList": {
+    list STRING_LIST_SCHEMA {
+        member: STRING
+    }
+});
 
-lazy_schema!(
-    STRING_MAP_SCHEMA,
-    Schema::map_builder(ShapeId::from("test#StringMap"), traits![]),
-    ("key", STRING, traits![]),
-    ("value", STRING, traits![])
-);
+smithy!("test#StringMap": {
+    map STRING_MAP_SCHEMA {
+        key: STRING
+        value: STRING
+    }
+});
 
-lazy_schema!(
-    INTEGER_LIST_SCHEMA,
-    Schema::list_builder("test#IntegerList", traits![]),
-    ("member", INTEGER, traits![])
-);
+smithy!("test#IntegerList": {
+    list INTEGER_LIST_SCHEMA {
+        member: INTEGER
+    }
+});
 
-lazy_schema!(
-    ALL_PRIMITIVES_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#AllPrimitivesStruct"), traits![]),
-    (ALL_PRIMITIVES_STRING, "string_field", STRING, traits![]),
-    (ALL_PRIMITIVES_BYTE, "byte_field", BYTE, traits![]),
-    (ALL_PRIMITIVES_SHORT, "short_field", SHORT, traits![]),
-    (ALL_PRIMITIVES_INTEGER, "integer_field", INTEGER, traits![]),
-    (ALL_PRIMITIVES_LONG, "long_field", LONG, traits![]),
-    (ALL_PRIMITIVES_FLOAT, "float_field", FLOAT, traits![]),
-    (ALL_PRIMITIVES_DOUBLE, "double_field", DOUBLE, traits![]),
-    (ALL_PRIMITIVES_BOOLEAN, "boolean_field", BOOLEAN, traits![]),
-    (ALL_PRIMITIVES_BLOB, "blob_field", BLOB, traits![]),
-    (
-        ALL_PRIMITIVES_TIMESTAMP,
-        "timestamp_field",
-        TIMESTAMP,
-        traits![]
-    )
-);
+smithy!("test#AllPrimitivesStruct": {
+    structure ALL_PRIMITIVES_STRUCT_SCHEMA {
+        ALL_PRIMITIVES_STRING: STRING = "string_field"
+        ALL_PRIMITIVES_BYTE: BYTE = "byte_field"
+        ALL_PRIMITIVES_SHORT: SHORT = "short_field"
+        ALL_PRIMITIVES_INTEGER: INTEGER = "integer_field"
+        ALL_PRIMITIVES_LONG: LONG = "long_field"
+        ALL_PRIMITIVES_FLOAT: FLOAT = "float_field"
+        ALL_PRIMITIVES_DOUBLE: DOUBLE = "double_field"
+        ALL_PRIMITIVES_BOOLEAN: BOOLEAN = "boolean_field"
+        ALL_PRIMITIVES_BLOB: BLOB = "blob_field"
+        ALL_PRIMITIVES_TIMESTAMP: TIMESTAMP = "timestamp_field"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
@@ -78,12 +66,12 @@ pub struct AllPrimitivesStruct {
     pub timestamp_field: Instant,
 }
 
-lazy_schema!(
-    OPTIONAL_FIELDS_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#OptionalFieldsStruct"), traits![]),
-    (OPTIONAL_REQUIRED, "required_field", STRING, traits![]),
-    (OPTIONAL_OPTIONAL, "optional_field", STRING, traits![])
-);
+smithy!("test#OptionalFieldsStruct": {
+    structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
+        OPTIONAL_REQUIRED: STRING = "required_field"
+        OPTIONAL_OPTIONAL: STRING = "optional_field"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
@@ -93,17 +81,16 @@ pub struct OptionalFieldsStruct {
     #[smithy_schema(OPTIONAL_OPTIONAL)]
     pub optional_field: Option<String>,
 }
-
-lazy_schema!(
-    NUMERIC_TYPES_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#NumericTypesStruct"), traits![]),
-    (NUMERIC_BYTE, "byte_val", BYTE, traits![]),
-    (NUMERIC_SHORT, "short_val", SHORT, traits![]),
-    (NUMERIC_INT, "int_val", INTEGER, traits![]),
-    (NUMERIC_LONG, "long_val", LONG, traits![]),
-    (NUMERIC_FLOAT, "float_val", FLOAT, traits![]),
-    (NUMERIC_DOUBLE, "double_val", DOUBLE, traits![])
-);
+smithy!("test#NumericTypesStruct": {
+    structure NUMERIC_TYPES_STRUCT_SCHEMA {
+        NUMERIC_BYTE: BYTE = "byte_val"
+        NUMERIC_SHORT: SHORT = "short_val"
+        NUMERIC_INT: INTEGER = "int_val"
+        NUMERIC_LONG: LONG = "long_val"
+        NUMERIC_FLOAT: FLOAT = "float_val"
+        NUMERIC_DOUBLE: DOUBLE = "double_val"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
@@ -122,12 +109,12 @@ pub struct NumericTypesStruct {
     pub double_val: f64,
 }
 
-lazy_schema!(
-    SIMPLE_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#SimpleStruct"), traits![]),
-    (SIMPLE_FIELD_A, "field_a", STRING, traits![]),
-    (SIMPLE_FIELD_B, "field_b", INTEGER, traits![])
-);
+smithy!("test#SimpleStruct": {
+    structure SIMPLE_STRUCT_SCHEMA {
+        SIMPLE_FIELD_A: STRING = "field_a"
+        SIMPLE_FIELD_B: INTEGER = "field_b"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
@@ -137,17 +124,16 @@ pub struct SimpleStruct {
     #[smithy_schema(SIMPLE_FIELD_B)]
     pub field_b: i32,
 }
-
-lazy_schema!(
-    RECURSIVE_SHAPES_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#RecursiveShapesStruct"), traits![]),
-    (RECURSIVE_SHAPES_STRING, "string_field", STRING, traits![]),
-    (RECURSIVE_SHAPES_INTEGER, "integer_field", INTEGER, traits![]),
-    (RECURSIVE_SHAPES_LIST, "list_field", STRING_LIST_SCHEMA, traits![]),
-    (RECURSIVE_SHAPES_MAP, "map_field", STRING_MAP_SCHEMA, traits![]),
-    (RECURSIVE_SHAPES_OPTIONAL, "optional_field", STRING, traits![]),
-    (RECURSIVE_SHAPES_NEXT, "next", (@self), traits![])
-);
+smithy!("test#RecursiveShapesStruct": {
+    structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
+        RECURSIVE_SHAPES_STRING: STRING = "string_field"
+        RECURSIVE_SHAPES_INTEGER: INTEGER = "integer_field"
+        RECURSIVE_SHAPES_LIST: STRING_LIST_SCHEMA = "list_field"
+        RECURSIVE_SHAPES_MAP: STRING_MAP_SCHEMA = "map_field"
+        RECURSIVE_SHAPES_OPTIONAL: STRING = "optional_field"
+        RECURSIVE_SHAPES_NEXT: (@self) = "next"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
@@ -165,14 +151,13 @@ pub struct RecursiveShapesStruct {
     #[smithy_schema(RECURSIVE_SHAPES_NEXT)]
     pub next: Option<Box<RecursiveShapesStruct>>,
 }
-
-lazy_schema!(
-    INNER_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#InnerStruct"), traits![]),
-    (INNER_FIELD_A, "field_a", STRING, traits![]),
-    (INNER_FIELD_B, "field_b", STRING, traits![]),
-    (INNER_FIELD_C, "field_c", STRING, traits![])
-);
+smithy!("test#InnerStruct": {
+    structure INNER_STRUCT_SCHEMA {
+        INNER_FIELD_A: STRING = "field_a"
+        INNER_FIELD_B: STRING = "field_b"
+        INNER_FIELD_C: STRING = "field_c"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(INNER_STRUCT_SCHEMA)]
@@ -185,44 +170,27 @@ pub struct InnerStruct {
     pub field_c: String,
 }
 
-pub static INNER_STRUCT_LIST_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::list_builder(ShapeId::from("test#InnerStructList"), traits![])
-        .put_member("member", &INNER_STRUCT_SCHEMA, traits![])
-        .build()
+smithy!("test#InnerStructList": {
+    list INNER_STRUCT_LIST_SCHEMA {
+        member: INNER_STRUCT_SCHEMA
+    }
 });
-
-pub static INNER_STRUCT_MAP_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
-    Schema::map_builder(ShapeId::from("test#InnerStructMap"), traits![])
-        .put_member("key", &STRING, traits![])
-        .put_member("value", &INNER_STRUCT_SCHEMA, traits![])
-        .build()
+smithy!("test#InnerStructMap": {
+    map INNER_STRUCT_MAP_SCHEMA {
+        key: STRING
+        value: INNER_STRUCT_SCHEMA
+    }
 });
-
-lazy_schema!(
-    NESTED_COLLECTIONS_STRUCT_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#NestedCollectionsStruct"), traits![]),
-    (NESTED_NAME, "name", STRING, traits![]),
-    (NESTED_COUNT, "count", INTEGER, traits![]),
-    (
-        NESTED_SINGLE,
-        "single_nested",
-        INNER_STRUCT_SCHEMA,
-        traits![]
-    ),
-    (
-        NESTED_OPTIONAL,
-        "optional_nested",
-        INNER_STRUCT_SCHEMA,
-        traits![]
-    ),
-    (
-        NESTED_LIST,
-        "list_nested",
-        INNER_STRUCT_LIST_SCHEMA,
-        traits![]
-    ),
-    (NESTED_MAP, "map_nested", INNER_STRUCT_MAP_SCHEMA, traits![])
-);
+smithy!("test#NestedCollectionsStruct": {
+    structure NESTED_COLLECTIONS_STRUCT_SCHEMA {
+        NESTED_NAME: STRING = "name"
+        NESTED_COUNT: INTEGER = "count"
+        NESTED_SINGLE: INNER_STRUCT_SCHEMA = "single_nested"
+        NESTED_OPTIONAL: INNER_STRUCT_SCHEMA = "optional_nested"
+        NESTED_LIST: INNER_STRUCT_LIST_SCHEMA = "list_nested"
+        NESTED_MAP: INNER_STRUCT_MAP_SCHEMA = "map_nested"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]

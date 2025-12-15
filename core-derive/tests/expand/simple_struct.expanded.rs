@@ -4,23 +4,6 @@ use smithy4rs_core::{
     traits,
 };
 use smithy4rs_core_derive::SmithyStruct;
-pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
-    std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
-> = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
-    Schema::structure_builder(ShapeId::from("test#SimpleStruct"), Vec::new()),
-));
-pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<
-    ::smithy4rs_core::schema::SchemaRef,
-> = ::smithy4rs_core::LazyLock::new(|| {
-    (&*SIMPLE_SCHEMA_BUILDER)
-        .put_member("field_a", &STRING, Vec::new())
-        .put_member("field_b", &INTEGER, Vec::new())
-        .build()
-});
-pub static FIELD_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
-SIMPLE_SCHEMA.expect_member("field_a"));
-pub static FIELD_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::SchemaRef> = ::smithy4rs_core::LazyLock::new(||
-SIMPLE_SCHEMA.expect_member("field_b"));
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(FIELD_A)]
