@@ -62,15 +62,15 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use bigdecimal::BigDecimal;
+use bigdecimal::{FromPrimitive, ToPrimitive};
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use rustc_hash::FxHasher;
 use thiserror::Error;
 
 use crate::{
-    Instant,
-    prelude::{LengthTrait, PatternTrait, UniqueItemsTrait},
+    BigDecimal, Instant,
+    prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
     schema::{Document, SchemaRef, ShapeType},
     serde::{
         se::{SerializeWithSchema, Serializer},
@@ -238,6 +238,23 @@ macro_rules! length {
         }
     };
 }
+
+// TODO(warnings): Should this emit a warning or error on unrepresentable value??
+macro_rules! range {
+    ($self:ident, $schema:ident, $value:ident, $converter:ident) => {
+        if let Some(range) = $schema.get_trait_as::<RangeTrait>()
+            && let (Some(min), Some(max)) = (range.min().$converter(), range.max().$converter())
+            && ($value < min || $value > max)
+        {
+            $self.emit_error(SmithyConstraints::Range(
+                BigDecimal::from($value),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        };
+    };
+}
+
 impl<'a> Serializer for &'a mut DefaultValidator {
     type Error = ValidationErrors;
     type Ok = ();
@@ -284,52 +301,95 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    // TODO(range): Range constraints for all numeric types
-    fn write_byte(self, schema: &SchemaRef, _value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Byte);
+        range!(self, schema, value, to_i8);
         Ok(())
     }
 
-    fn write_short(self, schema: &SchemaRef, _value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Short);
+        range!(self, schema, value, to_i16);
         Ok(())
     }
 
-    fn write_integer(self, schema: &SchemaRef, _value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Integer);
+        range!(self, schema, value, to_i32);
         Ok(())
     }
 
-    fn write_long(self, schema: &SchemaRef, _value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Long);
+        range!(self, schema, value, to_i64);
         Ok(())
     }
 
-    fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Float);
+        if let Some(range) = schema.get_trait_as::<RangeTrait>()
+            && let (Some(min), Some(max)) = (range.min().to_f32(), range.max().to_f32())
+            && (value < min || value > max)
+        {
+            self.emit_error(SmithyConstraints::Range(
+                BigDecimal::from_f32(value).unwrap_or_default(),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        };
         Ok(())
     }
 
-    fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Double);
+        if let Some(range) = schema.get_trait_as::<RangeTrait>()
+            && let (Some(min), Some(max)) = (range.min().to_f64(), range.max().to_f64())
+            && (value < min || value > max)
+        {
+            self.emit_error(SmithyConstraints::Range(
+                BigDecimal::from_f64(value).unwrap_or_default(),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        };
         Ok(())
     }
 
     fn write_big_integer(
         self,
         schema: &SchemaRef,
-        _value: &BigInt,
+        value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
+        if let Some(range) = schema.get_trait_as::<RangeTrait>() {
+            // TODO(optimization): This conversion + comparison is likely slow
+            let big_value = BigDecimal::from_bigint(value.clone(), 0);
+            if &big_value < range.min() || &big_value > range.max() {
+                self.emit_error(SmithyConstraints::Range(
+                    big_value,
+                    range.min().clone(),
+                    range.max().clone(),
+                ))?;
+            }
+        }
         Ok(())
     }
 
     fn write_big_decimal(
         self,
         schema: &SchemaRef,
-        _value: &BigDecimal,
+        value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigDecimal);
+        if let Some(range) = schema.get_trait_as::<RangeTrait>()
+            && (value < range.min() || value > range.max())
+        {
+            self.emit_error(SmithyConstraints::Range(
+                value.clone(),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        }
         Ok(())
     }
 
