@@ -8,13 +8,21 @@ use std::{
     sync::{Arc, LazyLock, OnceLock, RwLock},
 };
 
+use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxBuildHasher;
 
 use crate::{
-    FxIndexMap, FxIndexSet, Ref,
+    Ref,
     prelude::{DefaultTrait, RequiredTrait},
     schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
 };
+
+// Faster Map and Set implementations used for internal types and Schemas.
+//
+// NOTE: These should _not_ be used in serialized/deserialized types as they are not
+// resistant to DOS attacks.
+type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
+type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
 
 /// Reference to a Smithy Schema type.
 ///
@@ -309,7 +317,9 @@ impl Schema {
 
     /// Get a map of all members attached to this schema.
     ///
-    /// **NOTE**: Scalar schemas with no members will return an empty map.
+    /// <div class ="note">
+    /// Scalar schemas with no members will return an empty map.
+    /// </div>
     pub(crate) fn members(&self) -> &FxIndexMap<String, SchemaRef> {
         match self {
             // TODO(errors): Error handling
@@ -340,7 +350,9 @@ impl Schema {
 
     /// Returns member schema reference or *panics*
     ///
-    /// **WARNING**: In general this should only be used in generated code.
+    /// <div class ="warning">
+    /// In general this should only be used in generated code.
+    /// </div>
     #[must_use]
     pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
         self.get_member(member_name)
@@ -607,8 +619,7 @@ impl Deref for MemberTarget {
 }
 impl Debug for MemberTarget {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO(formatting): Add a nicer format result
-        writeln!(f, "Member Target")
+        self.deref().fmt(f)
     }
 }
 impl PartialEq for MemberTarget {

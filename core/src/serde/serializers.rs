@@ -124,7 +124,7 @@ pub trait StructSerializer {
 
     /// Serializes an optional member.
     ///
-    /// This method will call [`StructSerializer::skip`] on any optional members
+    /// This method will call [`StructSerializer::skip_member`] on any optional members
     /// that are `None`, otherwise the `Some` value is unwrapped and serialized as normal.
     fn serialize_optional_member<T: SerializeWithSchema>(
         &mut self,
@@ -176,7 +176,9 @@ pub trait Error: Sized + StdError {
 pub trait Serializer: Sized {
     /// Error type emitted on failed serialization.
     ///
-    /// **Note**: Serializers need to be able to catch and convert dyn Errors from their code.
+    /// <div class ="note">
+    /// Serializers need to be able to catch and convert dyn Errors from their code.
+    /// </div>
     type Error: Error;
 
     /// Ok return type. Should usually be `()`

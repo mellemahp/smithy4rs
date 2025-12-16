@@ -2,6 +2,7 @@
 //! [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) definition and
 //! associated utilities.
 //!
+//!
 //! ## Using Smithy Traits from as Schema
 //!
 //! Smithy [`crate::schema::Schema`]'s may contain one or more Smithy Traits. These
@@ -92,7 +93,9 @@ use crate::{
 /// my_trait.downcast_ref::<SpecificTraitImpl>()
 /// ```
 ///
-/// **NOTE**: All Smithy Trait implementations MUST implement this trait.
+/// <div class ="note">
+/// All Smithy Trait implementations MUST implement this trait.
+/// </div>
 pub trait SmithyTrait: DowncastSync {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;
@@ -116,7 +119,7 @@ impl Debug for dyn SmithyTrait {
 ///
 /// Generated or pre-defined Smithy Traits _should_ implement this trait.
 /// [`SmithyTrait`] implementations that do not implement this trait cannot
-/// be downcast into by the [`TraitMap::get_as`] or [`Schema::get_trait_as`]
+/// be downcast into by [`crate::schema::Schema::get_trait_as`]
 /// methods.
 pub trait StaticTraitId: SmithyTrait {
     /// Static trait ID as found in Smithy model definition of the trait.
@@ -165,7 +168,9 @@ impl<T: SmithyTrait> From<T> for TraitRef {
 ///  In general, users should try to move towards a code-generated versions and downcast
 /// into those if they need to access data within the trait.
 ///
-/// NOTE: Dynamic implementations cannot be downcast into a concrete implementation.
+/// <div class ="note">
+/// Dynamic implementations cannot be downcast into a concrete implementation.
+/// </div>
 #[derive(Debug, Clone, PartialEq)]
 pub struct DynamicTrait {
     id: ShapeId,
@@ -174,7 +179,9 @@ pub struct DynamicTrait {
 impl DynamicTrait {
     /// Create a new [`SmithyTrait`] with no corresponding concrete implementation.
     ///
-    /// NOTE: Traits created with this method cannot be downcast into a specific implementation.
+    /// <div class ="warning">
+    /// Traits created with this method cannot be downcast into a specific implementation.
+    /// </div>
     pub fn from(id: ShapeId, value: DocumentValue) -> Ref<dyn SmithyTrait> {
         Ref::new(Self { id, value })
     }

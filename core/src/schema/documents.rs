@@ -2,6 +2,7 @@
 
 use std::error::Error;
 
+use bigdecimal::ToPrimitive;
 use indexmap::IndexMap;
 use thiserror::Error;
 
@@ -17,7 +18,6 @@ use crate::{
 /// Document types are a protocol-agnostic view of untyped data. Protocols should attempt
 /// to smooth over protocol incompatibilities with the Smithy data model.
 ///
-// TODO: Is there data loss in struct conversions to Documents that should be noted?
 #[derive(Clone, PartialEq, Debug)]
 pub struct Document {
     pub(crate) schema: SchemaRef,
@@ -42,7 +42,9 @@ impl Document {
     ///
     /// The discriminator is primarily used to implement polymorphism using documents in deserialization.
     ///
-    /// *Impl note*: It is expected that protocols set the discriminator on deserialization if applicable
+    /// <div class="warning">
+    /// It is expected that protocols set the discriminator on deserialization if applicable
+    /// </div>
     #[must_use]
     pub fn discriminator(&self) -> Option<&ShapeId> {
         self.discriminator.as_ref()
@@ -50,7 +52,9 @@ impl Document {
 
     /// Get the size of the document.
     ///
-    /// **NOTE**: Scalar documents always return a size of 1
+    /// <div class ="note">
+    /// Scalar documents always return a size of 1
+    /// </div>
     #[must_use]
     pub fn size(&self) -> usize {
         match self.value {
@@ -87,7 +91,9 @@ pub enum DocumentValue {
 ///
 /// Smithy numbers types include: byte, short, integer, long, float, double, bigInteger, bigDecimal.
 ///
-/// *Note*: `IntEnum` shapes are represented as integers in the Smithy data model.
+/// <div class ="note">
+/// `IntEnum` shapes are represented as integers in the Smithy data model.
+/// </div>
 #[derive(Debug, Clone, PartialEq)]
 pub enum NumberValue {
     Integer(NumberInteger),
@@ -188,15 +194,15 @@ pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
     Box::new(DocumentError::DocumentConversion(expected.to_string()))
 }
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // Document Number Comparison
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 
 // TODO(numeric comparisons): Add comparisons between numeric types.
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // AS-ers to borrow document value as type if possible
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 impl Document {
     /// Get the blob value of the Document if it is a blob.
     #[must_use]
@@ -249,7 +255,7 @@ impl Document {
                 &NumberInteger::Short(s) => s.try_into().ok(),
                 &NumberInteger::Integer(i) => i.try_into().ok(),
                 &NumberInteger::Long(l) => l.try_into().ok(),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i8(),
             },
             _ => None,
         }
@@ -264,7 +270,7 @@ impl Document {
                 &NumberInteger::Short(s) => Some(s),
                 &NumberInteger::Integer(i) => i.try_into().ok(),
                 &NumberInteger::Long(l) => l.try_into().ok(),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i16(),
             },
             _ => None,
         }
@@ -279,7 +285,7 @@ impl Document {
                 &NumberInteger::Short(s) => Some(s.into()),
                 &NumberInteger::Integer(i) => Some(i),
                 &NumberInteger::Long(l) => l.try_into().ok(),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i32(),
             },
             _ => None,
         }
@@ -294,7 +300,7 @@ impl Document {
                 &NumberInteger::Short(s) => Some(s.into()),
                 &NumberInteger::Integer(i) => Some(i.into()),
                 &NumberInteger::Long(l) => Some(l),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i64(),
             },
             _ => None,
         }
@@ -307,7 +313,7 @@ impl Document {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 &NumberFloat::Float(f) => Some(f),
                 &NumberFloat::Double(d) => Some(d as f32),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b.to_f32(),
             },
             _ => None,
         }
@@ -320,7 +326,7 @@ impl Document {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 &NumberFloat::Float(f) => Some(f.into()),
                 &NumberFloat::Double(d) => Some(d),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b.to_f64(),
             },
             _ => None,
         }
@@ -337,7 +343,6 @@ impl Document {
     }
 
     #[must_use]
-    // TODO(quality): could the vec be replaced with slice?
     pub fn as_list(&self) -> Option<&Vec<Document>> {
         if let DocumentValue::List(document_list) = &self.value {
             Some(document_list)
@@ -356,9 +361,9 @@ impl Document {
     }
 }
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // Conversions of documents to other types
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 
 impl TryFrom<Document> for ByteBuffer {
     type Error = DocumentError;
@@ -415,7 +420,9 @@ impl TryFrom<Document> for i8 {
                 NumberInteger::Short(s) => Ok(s as i8),
                 NumberInteger::Integer(i) => Ok(i as i8),
                 NumberInteger::Long(l) => Ok(l as i8),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i8()
+                    .ok_or(DocumentError::DocumentConversion("i8".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i8".to_string())),
         }
@@ -432,7 +439,9 @@ impl TryFrom<Document> for i16 {
                 NumberInteger::Short(s) => Ok(s),
                 NumberInteger::Integer(i) => Ok(i as i16),
                 NumberInteger::Long(l) => Ok(l as i16),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i16()
+                    .ok_or(DocumentError::DocumentConversion("i16".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i16".to_string())),
         }
@@ -449,7 +458,9 @@ impl TryFrom<Document> for i32 {
                 NumberInteger::Short(s) => Ok(s.into()),
                 NumberInteger::Integer(i) => Ok(i),
                 NumberInteger::Long(l) => Ok(l as i32),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i32()
+                    .ok_or(DocumentError::DocumentConversion("i32".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i32".to_string())),
         }
@@ -466,7 +477,9 @@ impl TryFrom<Document> for i64 {
                 NumberInteger::Short(s) => Ok(s.into()),
                 NumberInteger::Integer(i) => Ok(i.into()),
                 NumberInteger::Long(l) => Ok(l),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i64()
+                    .ok_or(DocumentError::DocumentConversion("i64".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i64".to_string())),
         }
@@ -481,7 +494,9 @@ impl TryFrom<Document> for f32 {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 NumberFloat::Float(f) => Ok(f),
                 NumberFloat::Double(d) => Ok(d as f32),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b
+                    .to_f32()
+                    .ok_or(DocumentError::DocumentConversion("f32".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("f32".to_string())),
         }
@@ -496,7 +511,9 @@ impl TryFrom<Document> for f64 {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 NumberFloat::Float(f) => Ok(f64::from(f)),
                 NumberFloat::Double(d) => Ok(d),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b
+                    .to_f64()
+                    .ok_or(DocumentError::DocumentConversion("f64".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("f64".to_string())),
         }
@@ -555,9 +572,9 @@ impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap
     }
 }
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // Conversions INTO Document types
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 
 impl From<bool> for Document {
     fn from(value: bool) -> Self {

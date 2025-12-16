@@ -2,6 +2,7 @@ pub mod schema;
 
 pub use schema::prelude;
 
+#[doc(hidden)]
 pub mod macros;
 pub mod serde;
 
@@ -18,16 +19,11 @@ pub use pastey;
 /// Defined as a common type so Arc type could be swapped out.
 pub type Ref<T> = Arc<T>;
 
-/// Faster Map and Set implementations used for internal types and Schemas.
-///
-/// NOTE: These should not be used in serialized/deserialized types as they are not
-/// resistant to DOS attacks.
-pub type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
-pub type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
-
+#[doc(hidden)]
 pub use bigdecimal::BigDecimal;
+#[doc(hidden)]
 pub use bytebuffer::ByteBuffer;
-use indexmap::{IndexMap, IndexSet};
+#[doc(hidden)]
 pub use num_bigint::BigInt;
-use rustc_hash::FxBuildHasher;
+#[doc(hidden)]
 pub use temporal_rs::Instant;

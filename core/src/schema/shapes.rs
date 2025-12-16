@@ -2,8 +2,6 @@
 //! Definition of the [types](https://smithy.io/2.0/spec/simple-types.html) that
 //! compose the Smithy data model.
 //!
-//!
-//!
 
 #![allow(dead_code)]
 

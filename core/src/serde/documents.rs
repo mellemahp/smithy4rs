@@ -19,9 +19,9 @@ use crate::{
     },
 };
 
-/////////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 // Serialization
-/////////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 
 impl SerializeWithSchema for Document {
     fn serialize_with_schema<S: Serializer>(
@@ -101,7 +101,7 @@ impl Document {
     ///
     /// Returns `DocumentError` if the shape cannot be serialized to a document,
     /// typically due to schema mismatches or validation failures.
-    /// ```
+    ///
     pub fn from<T: SchemaShape + SerializeWithSchema>(shape: T) -> Result<Self, DocumentError> {
         shape.serialize_with_schema(shape.schema(), DocumentParser)
     }
@@ -378,9 +378,9 @@ impl StructSerializer for Document {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 // Deserialization
-/////////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 
 use crate::serde::de::{DeserializeWithSchema, Deserializer};
 

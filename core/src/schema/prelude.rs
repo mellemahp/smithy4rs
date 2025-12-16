@@ -1,4 +1,10 @@
 #![allow(dead_code)]
+//! # Prelude
+//! [`crate::schema::Schema`] definitions for the [Smithy prelude](https://github.com/smithy-lang/smithy/blob/65b473ddb94f9edda933f00bab988d465b2bd2fe/smithy-model/src/main/resources/software/amazon/smithy/model/loader/prelude.smithy)
+//!
+//! The prelude consists of public, built-in shapes like [`STRING`], [`INTEGER`], etc. that
+//! are available to all models. Prelude shapes and traits are all in the `smithy.api` namespace
+//! and must be hard-coded as they are used by generate shapes.
 
 use std::fmt::Display;
 
@@ -7,15 +13,18 @@ use indexmap::IndexMap;
 use regex::Regex;
 
 use crate::{
-    BigDecimal, LazyLock, annotation_trait,
-    schema::{DocumentValue, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId},
+    annotation_trait,
+    schema::{
+        DocumentValue, NumberFloat, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId,
+    },
     smithy, static_trait_id, string_trait,
 };
 
-////////////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 // Prelude Shape Schemas
-////////////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 
+// === Simple types ===
 smithy!("smithy.api#Blob": { blob BLOB });
 smithy!("smithy.api#Boolean": { boolean BOOLEAN });
 smithy!("smithy.api#String": { string STRING });
@@ -30,12 +39,39 @@ smithy!("smithy.api#BigInteger": { bigInteger BIG_INTEGER });
 smithy!("smithy.api#BigDecimal": { bigDecimal BIG_DECIMAL });
 smithy!("smithy.api#Document": { document DOCUMENT });
 
-// TODO(primitive types):
-// - Primitive types
+// === Primitive types ===
+smithy!("smithy.api#PrimitiveBoolean": {
+    @DefaultTrait(DocumentValue::Boolean(false));
+    boolean PRIMITIVE_BOOLEAN
+});
+smithy!("smithy.api#PrimitiveByte": {
+    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(0i8))));
+    byte PRIMITIVE_BYTE
+});
+smithy!("smithy.api#PrimitiveShort": {
+    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Short(0i16))));
+    short PRIMITIVE_SHORT
+});
+smithy!("smithy.api#PrimitiveInteger": {
+    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(0i32))));
+    integer PRIMITIVE_INTEGER
+});
+smithy!("smithy.api#PrimitiveLong": {
+    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Long(0i64))));
+    boolean PRIMITIVE_LONG
+});
+smithy!("smithy.api#PrimitiveFloat": {
+    @DefaultTrait(DocumentValue::Number(NumberValue::Float(NumberFloat::Float(0f32))));
+    float PRIMITIVE_FLOAT
+});
+smithy!("smithy.api#PrimitiveDouble": {
+    @DefaultTrait(DocumentValue::Number(NumberValue::Float(NumberFloat::Double(0f64))));
+    double PRIMITIVE_DOUBLE
+});
 
-///////////////////////////////////////////////////////////////////////
+// ============================================================================
 // Prelude Traits
-///////////////////////////////////////////////////////////////////////
+// ============================================================================
 
 // ==== Annotation traits ====
 annotation_trait!(SensitiveTrait, "smithy.api#sensitive");
@@ -164,9 +200,10 @@ impl HTTPErrorTrait {
 static_trait_id!(HTTPErrorTrait, "smithy.api#httpError");
 smithy_trait_impl!(HTTPErrorTrait);
 
-/////////////////////////////////////////////////
+// ============================================================================
 // Constraint Traits
-/////////////////////////////////////////////////
+// ============================================================================
+
 #[derive(Debug)]
 pub struct RangeTrait {
     min: Option<BigDecimal>,
@@ -317,7 +354,9 @@ impl PatternTrait {
     #[must_use]
     /// Create a new [`PatternTrait`]
     ///
-    /// *NOTE*: Will panic if the pattern is invalid.
+    /// <div class ="warning">
+    /// Will panic if the pattern is invalid.
+    /// </div>
     pub fn new(pattern: &str) -> Self {
         PatternTrait {
             pattern: Regex::new(pattern).unwrap(),
@@ -326,9 +365,9 @@ impl PatternTrait {
     }
 }
 
-/////////////////////////////////////////////////
+// ============================================================================
 // Auth Traits
-/////////////////////////////////////////////////
+// ============================================================================
 
 annotation_trait!(HttpBasicAuthTrait, "smithy.api#httpBasicAuth");
 annotation_trait!(HttpDigestAuthTrait, "smithy.api#httpDigestAuth");

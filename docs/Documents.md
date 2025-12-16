@@ -158,11 +158,13 @@ struct Document {
     /// a particular protocol retains the trait behavior of that protocol for 
     /// conversion to a typed Shape.
     ///
-    /// NOTE: This should remain _private_ . It only matters for conversion to 
+    /// <div class ="warning"> 
+    /// This should remain _private_ . It only matters for conversion to 
     /// a typed structure and should not be exposed. 
     /// Note also: Thread safety here is not an issue as immutable borrows are 
     /// generally thread safe and deserialized documents like this really shouldnt be 
     /// shared across threads anyway.
+    /// </div>
     translator: Option<Box<dyn DocumentTranslator>>
 }
 ```
