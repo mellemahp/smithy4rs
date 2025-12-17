@@ -41,7 +41,7 @@ smithy!("test#AllPrimitivesStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
     #[smithy_schema(ALL_PRIMITIVES_STRING)]
@@ -73,7 +73,7 @@ smithy!("test#OptionalFieldsStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
 pub struct OptionalFieldsStruct {
     #[smithy_schema(OPTIONAL_REQUIRED)]
@@ -81,6 +81,7 @@ pub struct OptionalFieldsStruct {
     #[smithy_schema(OPTIONAL_OPTIONAL)]
     pub optional_field: Option<String>,
 }
+
 smithy!("test#NumericTypesStruct": {
     structure NUMERIC_TYPES_STRUCT_SCHEMA {
         NUMERIC_BYTE: BYTE = "byte_val"
@@ -92,7 +93,7 @@ smithy!("test#NumericTypesStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
 pub struct NumericTypesStruct {
     #[smithy_schema(NUMERIC_BYTE)]
@@ -116,7 +117,7 @@ smithy!("test#SimpleStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(SIMPLE_FIELD_A)]
@@ -124,6 +125,7 @@ pub struct SimpleStruct {
     #[smithy_schema(SIMPLE_FIELD_B)]
     pub field_b: i32,
 }
+
 smithy!("test#RecursiveShapesStruct": {
     structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
         RECURSIVE_SHAPES_STRING: STRING = "string_field"
@@ -135,7 +137,7 @@ smithy!("test#RecursiveShapesStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
     #[smithy_schema(RECURSIVE_SHAPES_STRING)]
@@ -159,7 +161,7 @@ smithy!("test#InnerStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(INNER_STRUCT_SCHEMA)]
 pub struct InnerStruct {
     #[smithy_schema(INNER_FIELD_A)]
@@ -192,7 +194,7 @@ smithy!("test#NestedCollectionsStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]
 pub struct NestedCollectionsStruct {
     #[smithy_schema(NESTED_NAME)]

@@ -1,17 +1,17 @@
 use smithy4rs_core::{
-    lazy_schema,
     prelude::{INTEGER, STRING},
-    schema::{Schema, ShapeId},
+    schema::ShapeId,
     traits,
 };
 use smithy4rs_core_derive::SmithyStruct;
 
-lazy_schema!(
-    SIMPLE_SCHEMA,
-    Schema::structure_builder(ShapeId::from("test#SimpleStruct"), traits![]),
-    (FIELD_A, "field_a", STRING, traits![]),
-    (FIELD_B, "field_b", INTEGER, traits![])
-);
+smithy!("test#SimpleStruct": {
+    structure SIMPLE_SCHEMA {
+        FIELD_A: STRING = "field_a"
+        FIELD_B: INTEGER = "field_b"
+        FIELD_C: STRING = "field_c"
+    }
+});
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(SIMPLE_SCHEMA)]
@@ -20,4 +20,19 @@ pub struct SimpleStruct {
     pub field_a: String,
     #[smithy_schema(FIELD_B)]
     pub field_b: i32,
+    #[smithy_schema(FIELD_C)]
+    pub field_c: Option<Nested>,
+}
+
+smithy!("test#NESTED_STRUCT": {
+    structure NESTED_SCHEMA {
+        FIELD_D: STRING = "field_d"
+    }
+});
+
+#[derive(SmithyStruct, Debug, PartialEq)]
+#[smithy_schema(NESTED_SCHEMA)]
+pub struct Nested {
+    #[smithy_schema(FIELD_C)]
+    pub field_a: String,
 }

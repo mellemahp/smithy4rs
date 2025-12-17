@@ -29,7 +29,7 @@ impl SerializeWithSchema for Document {
         schema: &SchemaRef,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        // TODO: Handle exceptions?
+        // TODO(errors): Handle exceptions?
         match get_shape_type(schema).unwrap() {
             ShapeType::Blob => serializer.write_blob(schema, self.as_blob().unwrap()),
             ShapeType::Boolean => serializer.write_boolean(schema, self.as_bool().unwrap()),
@@ -70,7 +70,7 @@ impl SerializeWithSchema for Document {
                     if let Some(member_schema) = schema.get_member(key) {
                         struct_serializer.serialize_member(member_schema, value)?;
                     } else {
-                        // TODO: Should unknown members be allowed???
+                        // TODO(unknown members) Should unknown members be allowed?
                         todo!("Add some logging on unknown members");
                     }
                 }
@@ -114,9 +114,8 @@ impl Error for DocumentError {
 }
 
 pub struct DocumentParser;
-// TODO: Should this have schema type validation?
+// TODO(document validation): Should this have schema type validation?
 impl Serializer for DocumentParser {
-    // TODO: Error
     type Error = DocumentError;
     type Ok = Document;
     type SerializeList = Document;
@@ -282,7 +281,6 @@ impl Serializer for DocumentParser {
 }
 
 impl ListSerializer for Document {
-    // TODO: Errors
     type Error = DocumentError;
     type Ok = Document;
 
@@ -498,7 +496,7 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
                 builder = consumer(builder, member_schema, &mut field_deser)?;
             }
             // If field is missing, consumer won't be called (handles optional fields)
-            // TODO: consume unknown member?
+            // TODO(unknown members): consume unknown member?
         }
 
         Ok(builder)
@@ -517,7 +515,6 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
             DocumentError::DocumentConversion("Expected list document".to_string())
         })?;
 
-        // TODO: not needed?
         let member_schema = schema.get_member("member").ok_or_else(|| {
             DocumentError::DocumentConversion("List missing member schema".to_string())
         })?;
@@ -739,7 +736,7 @@ impl<'de> DeserializeWithSchema<'de> for Document {
     }
 }
 
-// TODO(test): overhaul these to be use test shapes
+// TODO(test): overhaul these to use test shapes
 #[cfg(test)]
 mod tests {
     use std::{str::FromStr, sync::LazyLock};
@@ -776,7 +773,7 @@ mod tests {
 
     #[derive(SmithyStruct)]
     #[smithy_schema(SCHEMA)]
-    pub(crate) struct SerializeMe {
+    pub struct SerializeMe {
         #[smithy_schema(MEMBER_A)]
         pub member_a: String,
         #[smithy_schema(MEMBER_B)]

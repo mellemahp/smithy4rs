@@ -268,7 +268,7 @@ static EMPTY: LazyLock<FxIndexMap<String, SchemaRef>> = LazyLock::new(FxIndexMap
 impl Schema {
     /// Get the [`ShapeType`] of the schema.
     #[must_use]
-    pub const fn shape_type(&self) -> &ShapeType {
+    pub fn shape_type(&self) -> &ShapeType {
         match self {
             Schema::Scalar(ScalarSchema { shape_type, .. })
             | Schema::Struct(StructSchema { shape_type, .. }) => shape_type,
@@ -276,7 +276,7 @@ impl Schema {
             Schema::IntEnum(_) => &ShapeType::IntEnum,
             Schema::List(_) => &ShapeType::List,
             Schema::Map(_) => &ShapeType::Map,
-            Schema::Member(_) => &ShapeType::Member,
+            Schema::Member(member) => member.target.shape_type(),
         }
     }
 
@@ -312,7 +312,7 @@ impl Schema {
     /// **NOTE**: Scalar schemas with no members will return an empty map.
     pub(crate) fn members(&self) -> &FxIndexMap<String, SchemaRef> {
         match self {
-            // TODO: Error handling
+            // TODO(errors): Error handling
             Schema::Struct(StructSchema { members, .. }) => members,
             Schema::Member(member) => member.target.members(),
             _ => &EMPTY,
@@ -503,7 +503,7 @@ impl SchemaBuilder {
     }
 
     fn validate_member_name(&self, name: &str) {
-        // TODO: Return a result instead of panicking?
+        // TODO(errors): Return a result instead of panicking?
         match self.shape_type {
             ShapeType::List => {
                 assert_eq!(
@@ -522,7 +522,7 @@ impl SchemaBuilder {
     }
 
     /// Build a [`Schema`] and return a [`SchemaRef`] to it.
-    // TODO: Convert to `Result<SchemaRef, BuildError>
+    // TODO(errors): Convert to `Result<SchemaRef, BuildError>
     #[must_use]
     pub fn build(&self) -> SchemaRef {
         if let Some(schema) = self.built.get() {
@@ -581,7 +581,7 @@ impl SchemaBuilder {
     }
 }
 
-// TODO: Do Member targets need to use weak ref to avoid Arc cycles?
+// TODO(references): Do Member targets need to use weak ref to avoid Arc cycles?
 #[derive(Clone)]
 pub enum MemberTarget {
     Resolved(SchemaRef),
@@ -607,7 +607,7 @@ impl Deref for MemberTarget {
 }
 impl Debug for MemberTarget {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO
+        // TODO(formatting): Add a nicer format result
         writeln!(f, "Member Target")
     }
 }
@@ -725,7 +725,7 @@ mod tests {
         assert_eq!(schema.shape_type(), &ShapeType::Structure);
         assert_eq!(schema.id(), &ShapeId::from("api.smithy#Example"));
         let member = schema.get_member("target_a").unwrap();
-        assert_eq!(member.shape_type(), &ShapeType::Member);
+        assert_eq!(member.shape_type(), &ShapeType::Integer);
         assert_eq!(member.id(), &ShapeId::from("api.smithy#Example$target_a"));
         let Some(member_schema) = member.as_member() else {
             panic!("Should be member schema!")
@@ -752,7 +752,7 @@ mod tests {
             panic!("Should be list!")
         };
         let member = &list_schema.member;
-        assert_eq!(member.shape_type(), &ShapeType::Member);
+        assert_eq!(member.shape_type(), &ShapeType::String);
         assert_eq!(member.id(), &ShapeId::from("api.smithy#List$member"));
     }
 
@@ -768,11 +768,11 @@ mod tests {
             panic!("Should be map!")
         };
         let key = &map_schema.key;
-        assert_eq!(key.shape_type(), &ShapeType::Member);
+        assert_eq!(key.shape_type(), &ShapeType::String);
         assert_eq!(key.id(), &ShapeId::from("api.smithy#Map$key"));
 
         let value = &map_schema.value;
-        assert_eq!(value.shape_type(), &ShapeType::Member);
+        assert_eq!(value.shape_type(), &ShapeType::String);
         assert_eq!(value.id(), &ShapeId::from("api.smithy#Map$value"));
     }
 

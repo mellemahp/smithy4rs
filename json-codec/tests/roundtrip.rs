@@ -1,6 +1,6 @@
 use smithy4rs_core::{
     schema::SchemaRef,
-    serde::{deserializers::DeserializeWithSchema, serializers::SerializeWithSchema},
+    serde::{Buildable, ShapeBuilder, serializers::SerializeWithSchema},
 };
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 use smithy4rs_test_utils::*;
@@ -16,17 +16,21 @@ fn serialize_to_json<T: SerializeWithSchema>(value: &T, schema: &SchemaRef) -> V
     buf
 }
 
-fn deserialize_from_json<'de, T: DeserializeWithSchema<'de>>(
+fn deserialize_from_json<'de, B: ShapeBuilder<'de, T>, T: Buildable<'de, B>>(
     data: &'de [u8],
     schema: &SchemaRef,
 ) -> T {
     let mut deserializer = JsonDeserializer::new(data);
-    T::deserialize_with_schema(schema, &mut deserializer).unwrap()
+    B::deserialize_with_schema(schema, &mut deserializer)
+        .unwrap()
+        .build()
+        .unwrap()
 }
 
-fn roundtrip<T>(value: &T, schema: &SchemaRef) -> T
+fn roundtrip<T, B>(value: &T, schema: &SchemaRef) -> T
 where
-    T: SerializeWithSchema + for<'de> DeserializeWithSchema<'de>,
+    B: for<'de> ShapeBuilder<'de, T>,
+    T: SerializeWithSchema + for<'de> Buildable<'de, B>,
 {
     let json = serialize_to_json(value, schema);
     println!("Serialized JSON: {}", String::from_utf8_lossy(&json));
@@ -51,9 +55,9 @@ fn test_optional_data_with_value() {
 
 #[test]
 fn test_optional_data_without_value() {
+    // Don't set optional_field - it will be None
     let data = OptionalFieldsStructBuilder::new()
         .required_field("required".to_string())
-        // Don't set optional_field - it will be None
         .build()
         .unwrap();
 
