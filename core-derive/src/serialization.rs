@@ -5,7 +5,11 @@ use syn::{Data, DeriveInput};
 use crate::{parse_schema, utils::is_optional};
 
 /// Generates the `SerializableStruct` implementation for a shape.
-pub(crate) fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> TokenStream {
+pub(crate) fn serialization_impl(
+    shape_name: &Ident,
+    schema_ident: &Ident,
+    input: &DeriveInput,
+) -> TokenStream {
     let fields = match &input.data {
         Data::Struct(data) => &data.fields,
         _ => panic!("SerializableStruct can only be derived for structs"),
@@ -24,7 +28,12 @@ pub(crate) fn serialization_impl(shape_name: &Ident, input: &DeriveInput) -> Tok
     }
     // Now write the thing
     let method = field_data.iter().map(|d| d.method_call());
-    let member_schema = field_data.iter().map(|d| &d.schema);
+    let member_schema = field_data.iter().map(|d| {
+        Ident::new(
+            &format!("_{}_MEMBER_{}", schema_ident, &d.schema),
+            Span::call_site(),
+        )
+    });
     let member_name = field_data.iter().map(|d| &d.field_ident);
     let member_name_str = field_data.iter().map(|d| d.field_ident.to_string());
     quote! {

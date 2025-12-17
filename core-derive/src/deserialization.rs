@@ -86,14 +86,20 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
     }
 }
 
-pub(crate) fn get_builder_fields(input: &DeriveInput) -> Vec<BuilderFieldData> {
+pub(crate) fn get_builder_fields(
+    schema_ident: &Ident,
+    input: &DeriveInput,
+) -> Vec<BuilderFieldData> {
     let fields = match &input.data {
         Data::Struct(data) => &data.fields,
         _ => panic!("DeserializableStruct can only be derived for structs"),
     };
     let mut field_data = Vec::new();
     for field in fields {
-        let schema = parse_schema(&field.attrs);
+        let schema = Ident::new(
+            &format!("_{}_MEMBER_{}", schema_ident, parse_schema(&field.attrs)),
+            Span::call_site(),
+        );
         let field_ident = field.ident.as_ref().unwrap().clone();
         let field_ty = &field.ty;
         let optional = is_optional(field_ty);
@@ -298,10 +304,11 @@ impl BuilderFieldData {
 
 pub(crate) fn deserialization_impl(
     shape_name: &Ident,
+    schema_ident: &Ident,
     input: &DeriveInput,
     crate_ident: &TokenStream,
 ) -> TokenStream {
-    let field_data = get_builder_fields(input);
+    let field_data = get_builder_fields(schema_ident, input);
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
 
     // Generate deserialize_member! or deserialize_optional_member! macro calls for each field

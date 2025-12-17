@@ -272,7 +272,7 @@ macro_rules! smithy_internal {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
             });
 
-            $(pub static $member_schema_name: $crate::LazyLock<&$crate::schema::SchemaRef> =
+            $(pub static [<_$schema_name _MEMBER_$member_schema_name>]: $crate::LazyLock<&$crate::schema::SchemaRef> =
                 $crate::LazyLock::new(|| $schema_name.expect_member($member_ident));
             )*
         }
