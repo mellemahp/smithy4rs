@@ -115,6 +115,15 @@ pub struct MemberSchema {
     flattened_traits: OnceLock<TraitMap>,
 }
 impl MemberSchema {
+    /// Gets the traits that apply to this member.
+    ///
+    /// This includes traits on the member target which are combined
+    /// with direct member traits to give the full trait list.
+    ///
+    /// <div class="note">
+    /// Note: Calling this method will resolve both the target and the
+    /// combined set of traits if either have not already been resolved.
+    /// </div>
     #[inline]
     fn traits(&self) -> &TraitMap {
         self.flattened_traits.get_or_init(|| {
@@ -318,7 +327,7 @@ impl Schema {
     /// Get a map of all members attached to this schema.
     ///
     /// <div class ="note">
-    /// Scalar schemas with no members will return an empty map.
+    /// **NOTE**: Scalar schemas with no members will return an empty map.
     /// </div>
     pub(crate) fn members(&self) -> &FxIndexMap<String, SchemaRef> {
         match self {

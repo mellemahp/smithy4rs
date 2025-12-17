@@ -12,7 +12,7 @@
 /// smithy!("test#SimpleStruct": {
 ///     structure SIMPLE_STRUCT_SCHEMA {
 ///         SIMPLE_FIELD_A: STRING = "field_a"
-///        SIMPLE_FIELD_B: INTEGER = "field_b"
+///         SIMPLE_FIELD_B: INTEGER = "field_b"
 ///     }
 /// });
 ///
@@ -460,7 +460,7 @@ macro_rules! deserialize_optional_member {
 /// Helper macro that creates a list of traits for use in Schema builders
 ///
 /// <div class ="note">
-/// Unlike the `vec!` macro, the default here creates a _unallocated_ vec
+/// **NOTE**: Unlike the `vec!` macro, the default here creates a _unallocated_ vec
 /// so there is no added overhead from always using it in schema macros.
 /// </div>
 #[doc(hidden)]

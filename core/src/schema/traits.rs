@@ -94,7 +94,7 @@ use crate::{
 /// ```
 ///
 /// <div class ="note">
-/// All Smithy Trait implementations MUST implement this trait.
+/// **NOTE**: All Smithy Trait implementations MUST implement this trait.
 /// </div>
 pub trait SmithyTrait: DowncastSync {
     /// The ID of the trait as expressed in the Smithy model.
@@ -169,7 +169,7 @@ impl<T: SmithyTrait> From<T> for TraitRef {
 /// into those if they need to access data within the trait.
 ///
 /// <div class ="note">
-/// Dynamic implementations cannot be downcast into a concrete implementation.
+/// **NOTE**: Dynamic implementations cannot be downcast into a concrete implementation.
 /// </div>
 #[derive(Debug, Clone, PartialEq)]
 pub struct DynamicTrait {

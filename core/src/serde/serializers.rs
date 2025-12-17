@@ -177,7 +177,7 @@ pub trait Serializer: Sized {
     /// Error type emitted on failed serialization.
     ///
     /// <div class ="note">
-    /// Serializers need to be able to catch and convert dyn Errors from their code.
+    /// **NOTE**: Serializers need to be able to catch and convert dyn Errors from their code.
     /// </div>
     type Error: Error;
 

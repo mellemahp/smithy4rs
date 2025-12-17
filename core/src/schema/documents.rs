@@ -53,7 +53,7 @@ impl Document {
     /// Get the size of the document.
     ///
     /// <div class ="note">
-    /// Scalar documents always return a size of 1
+    /// **NOTE**: Scalar documents always return a size of 1
     /// </div>
     #[must_use]
     pub fn size(&self) -> usize {
@@ -92,7 +92,7 @@ pub enum DocumentValue {
 /// Smithy numbers types include: byte, short, integer, long, float, double, bigInteger, bigDecimal.
 ///
 /// <div class ="note">
-/// `IntEnum` shapes are represented as integers in the Smithy data model.
+/// **NOTE**: `IntEnum` shapes are represented as integers in the Smithy data model.
 /// </div>
 #[derive(Debug, Clone, PartialEq)]
 pub enum NumberValue {

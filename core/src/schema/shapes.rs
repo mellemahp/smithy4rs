@@ -27,6 +27,7 @@ pub struct ShapeId {
     member: Option<String>,
 }
 impl Hash for ShapeId {
+    #[inline]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
