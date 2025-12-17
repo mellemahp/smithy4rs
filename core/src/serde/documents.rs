@@ -763,26 +763,26 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            MEMBER_A: STRING = "a"
-            MEMBER_B: STRING = "b"
-            MEMBER_C: STRING = "c"
-            MEMBER_LIST: LIST_SCHEMA = "list"
-            MEMBER_MAP: MAP_SCHEMA = "map"
+            A: STRING = "a"
+            B: STRING = "b"
+            C: STRING = "c"
+            LIST: LIST_SCHEMA = "list"
+            MAP: MAP_SCHEMA = "map"
         }
     });
 
     #[derive(SmithyStruct)]
     #[smithy_schema(SCHEMA)]
     pub struct SerializeMe {
-        #[smithy_schema(MEMBER_A)]
+        #[smithy_schema(A)]
         pub member_a: String,
-        #[smithy_schema(MEMBER_B)]
+        #[smithy_schema(B)]
         pub member_b: String,
-        #[smithy_schema(MEMBER_C)]
+        #[smithy_schema(C)]
         pub member_optional: Option<String>,
-        #[smithy_schema(MEMBER_LIST)]
+        #[smithy_schema(LIST)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MEMBER_MAP)]
+        #[smithy_schema(MAP)]
         pub member_map: IndexMap<String, String>,
     }
 

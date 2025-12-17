@@ -28,147 +28,147 @@ smithy!("test#IntegerList": {
 
 smithy!("test#AllPrimitivesStruct": {
     structure ALL_PRIMITIVES_STRUCT_SCHEMA {
-        ALL_PRIMITIVES_STRING: STRING = "string_field"
-        ALL_PRIMITIVES_BYTE: BYTE = "byte_field"
-        ALL_PRIMITIVES_SHORT: SHORT = "short_field"
-        ALL_PRIMITIVES_INTEGER: INTEGER = "integer_field"
-        ALL_PRIMITIVES_LONG: LONG = "long_field"
-        ALL_PRIMITIVES_FLOAT: FLOAT = "float_field"
-        ALL_PRIMITIVES_DOUBLE: DOUBLE = "double_field"
-        ALL_PRIMITIVES_BOOLEAN: BOOLEAN = "boolean_field"
-        ALL_PRIMITIVES_BLOB: BLOB = "blob_field"
-        ALL_PRIMITIVES_TIMESTAMP: TIMESTAMP = "timestamp_field"
+        STRING: STRING = "string_field"
+        BYTE: BYTE = "byte_field"
+        SHORT: SHORT = "short_field"
+        INTEGER: INTEGER = "integer_field"
+        LONG: LONG = "long_field"
+        FLOAT: FLOAT = "float_field"
+        DOUBLE: DOUBLE = "double_field"
+        BOOLEAN: BOOLEAN = "boolean_field"
+        BLOB: BLOB = "blob_field"
+        TIMESTAMP: TIMESTAMP = "timestamp_field"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
-    #[smithy_schema(ALL_PRIMITIVES_STRING)]
+    #[smithy_schema(STRING)]
     pub string_field: String,
-    #[smithy_schema(ALL_PRIMITIVES_BYTE)]
+    #[smithy_schema(BYTE)]
     pub byte_field: i8,
-    #[smithy_schema(ALL_PRIMITIVES_SHORT)]
+    #[smithy_schema(SHORT)]
     pub short_field: i16,
-    #[smithy_schema(ALL_PRIMITIVES_INTEGER)]
+    #[smithy_schema(INTEGER)]
     pub integer_field: i32,
-    #[smithy_schema(ALL_PRIMITIVES_LONG)]
+    #[smithy_schema(LONG)]
     pub long_field: i64,
-    #[smithy_schema(ALL_PRIMITIVES_FLOAT)]
+    #[smithy_schema(FLOAT)]
     pub float_field: f32,
-    #[smithy_schema(ALL_PRIMITIVES_DOUBLE)]
+    #[smithy_schema(DOUBLE)]
     pub double_field: f64,
-    #[smithy_schema(ALL_PRIMITIVES_BOOLEAN)]
+    #[smithy_schema(BOOLEAN)]
     pub boolean_field: bool,
-    #[smithy_schema(ALL_PRIMITIVES_BLOB)]
+    #[smithy_schema(BLOB)]
     pub blob_field: ByteBuffer,
-    #[smithy_schema(ALL_PRIMITIVES_TIMESTAMP)]
+    #[smithy_schema(TIMESTAMP)]
     pub timestamp_field: Instant,
 }
 
 smithy!("test#OptionalFieldsStruct": {
     structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
-        OPTIONAL_REQUIRED: STRING = "required_field"
-        OPTIONAL_OPTIONAL: STRING = "optional_field"
+        REQUIRED: STRING = "required_field"
+        OPTIONAL: STRING = "optional_field"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
 pub struct OptionalFieldsStruct {
-    #[smithy_schema(OPTIONAL_REQUIRED)]
+    #[smithy_schema(REQUIRED)]
     pub required_field: String,
-    #[smithy_schema(OPTIONAL_OPTIONAL)]
+    #[smithy_schema(OPTIONAL)]
     pub optional_field: Option<String>,
 }
 
 smithy!("test#NumericTypesStruct": {
     structure NUMERIC_TYPES_STRUCT_SCHEMA {
-        NUMERIC_BYTE: BYTE = "byte_val"
-        NUMERIC_SHORT: SHORT = "short_val"
-        NUMERIC_INT: INTEGER = "int_val"
-        NUMERIC_LONG: LONG = "long_val"
-        NUMERIC_FLOAT: FLOAT = "float_val"
-        NUMERIC_DOUBLE: DOUBLE = "double_val"
+        BYTE: BYTE = "byte_val"
+        SHORT: SHORT = "short_val"
+        INT: INTEGER = "int_val"
+        LONG: LONG = "long_val"
+        FLOAT: FLOAT = "float_val"
+        DOUBLE: DOUBLE = "double_val"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
 pub struct NumericTypesStruct {
-    #[smithy_schema(NUMERIC_BYTE)]
+    #[smithy_schema(BYTE)]
     pub byte_val: i8,
-    #[smithy_schema(NUMERIC_SHORT)]
+    #[smithy_schema(SHORT)]
     pub short_val: i16,
-    #[smithy_schema(NUMERIC_INT)]
+    #[smithy_schema(INT)]
     pub int_val: i32,
-    #[smithy_schema(NUMERIC_LONG)]
+    #[smithy_schema(LONG)]
     pub long_val: i64,
-    #[smithy_schema(NUMERIC_FLOAT)]
+    #[smithy_schema(FLOAT)]
     pub float_val: f32,
-    #[smithy_schema(NUMERIC_DOUBLE)]
+    #[smithy_schema(DOUBLE)]
     pub double_val: f64,
 }
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_STRUCT_SCHEMA {
-        SIMPLE_FIELD_A: STRING = "field_a"
-        SIMPLE_FIELD_B: INTEGER = "field_b"
+        A: STRING = "field_a"
+        B: INTEGER = "field_b"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
-    #[smithy_schema(SIMPLE_FIELD_A)]
+    #[smithy_schema(A)]
     pub field_a: String,
-    #[smithy_schema(SIMPLE_FIELD_B)]
+    #[smithy_schema(B)]
     pub field_b: i32,
 }
 
 smithy!("test#RecursiveShapesStruct": {
     structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
-        RECURSIVE_SHAPES_STRING: STRING = "string_field"
-        RECURSIVE_SHAPES_INTEGER: INTEGER = "integer_field"
-        RECURSIVE_SHAPES_LIST: STRING_LIST_SCHEMA = "list_field"
-        RECURSIVE_SHAPES_MAP: STRING_MAP_SCHEMA = "map_field"
-        RECURSIVE_SHAPES_OPTIONAL: STRING = "optional_field"
-        RECURSIVE_SHAPES_NEXT: (@self) = "next"
+        STRING: STRING = "string_field"
+        INTEGER: INTEGER = "integer_field"
+        LIST: STRING_LIST_SCHEMA = "list_field"
+        MAP: STRING_MAP_SCHEMA = "map_field"
+        OPTIONAL: STRING = "optional_field"
+        NEXT: (@self) = "next"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
-    #[smithy_schema(RECURSIVE_SHAPES_STRING)]
+    #[smithy_schema(STRING)]
     pub string_field: String,
-    #[smithy_schema(RECURSIVE_SHAPES_INTEGER)]
+    #[smithy_schema(INTEGER)]
     pub integer_field: i32,
-    #[smithy_schema(RECURSIVE_SHAPES_LIST)]
+    #[smithy_schema(LIST)]
     pub list_field: Vec<String>,
-    #[smithy_schema(RECURSIVE_SHAPES_MAP)]
+    #[smithy_schema(MAP)]
     pub map_field: IndexMap<String, String>,
-    #[smithy_schema(RECURSIVE_SHAPES_OPTIONAL)]
+    #[smithy_schema(OPTIONAL)]
     pub optional_field: Option<String>,
-    #[smithy_schema(RECURSIVE_SHAPES_NEXT)]
+    #[smithy_schema(NEXT)]
     pub next: Option<Box<RecursiveShapesStruct>>,
 }
 smithy!("test#InnerStruct": {
     structure INNER_STRUCT_SCHEMA {
-        INNER_FIELD_A: STRING = "field_a"
-        INNER_FIELD_B: STRING = "field_b"
-        INNER_FIELD_C: STRING = "field_c"
+        A: STRING = "field_a"
+        B: STRING = "field_b"
+        C: STRING = "field_c"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(INNER_STRUCT_SCHEMA)]
 pub struct InnerStruct {
-    #[smithy_schema(INNER_FIELD_A)]
+    #[smithy_schema(A)]
     pub field_a: String,
-    #[smithy_schema(INNER_FIELD_B)]
+    #[smithy_schema(B)]
     pub field_b: String,
-    #[smithy_schema(INNER_FIELD_C)]
+    #[smithy_schema(C)]
     pub field_c: String,
 }
 
@@ -185,28 +185,28 @@ smithy!("test#InnerStructMap": {
 });
 smithy!("test#NestedCollectionsStruct": {
     structure NESTED_COLLECTIONS_STRUCT_SCHEMA {
-        NESTED_NAME: STRING = "name"
-        NESTED_COUNT: INTEGER = "count"
-        NESTED_SINGLE: INNER_STRUCT_SCHEMA = "single_nested"
-        NESTED_OPTIONAL: INNER_STRUCT_SCHEMA = "optional_nested"
-        NESTED_LIST: INNER_STRUCT_LIST_SCHEMA = "list_nested"
-        NESTED_MAP: INNER_STRUCT_MAP_SCHEMA = "map_nested"
+        NAME: STRING = "name"
+        COUNT: INTEGER = "count"
+        SINGLE: INNER_STRUCT_SCHEMA = "single_nested"
+        OPTIONAL: INNER_STRUCT_SCHEMA = "optional_nested"
+        LIST: INNER_STRUCT_LIST_SCHEMA = "list_nested"
+        MAP: INNER_STRUCT_MAP_SCHEMA = "map_nested"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq, Clone)]
 #[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]
 pub struct NestedCollectionsStruct {
-    #[smithy_schema(NESTED_NAME)]
+    #[smithy_schema(NAME)]
     pub name: String,
-    #[smithy_schema(NESTED_COUNT)]
+    #[smithy_schema(COUNT)]
     pub count: i32,
-    #[smithy_schema(NESTED_SINGLE)]
+    #[smithy_schema(SINGLE)]
     pub single_nested: InnerStruct,
-    #[smithy_schema(NESTED_OPTIONAL)]
+    #[smithy_schema(OPTIONAL)]
     pub optional_nested: Option<InnerStruct>,
-    #[smithy_schema(NESTED_LIST)]
+    #[smithy_schema(LIST)]
     pub list_nested: Vec<InnerStruct>,
-    #[smithy_schema(NESTED_MAP)]
+    #[smithy_schema(MAP)]
     pub map_nested: IndexMap<String, InnerStruct>,
 }

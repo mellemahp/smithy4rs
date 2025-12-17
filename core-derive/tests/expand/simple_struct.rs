@@ -16,23 +16,23 @@ smithy!("test#SimpleStruct": {
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
-    #[smithy_schema(FIELD_A)]
+    #[smithy_schema(A)]
     pub field_a: String,
-    #[smithy_schema(FIELD_B)]
+    #[smithy_schema(B)]
     pub field_b: i32,
-    #[smithy_schema(FIELD_C)]
+    #[smithy_schema(C)]
     pub field_c: Option<Nested>,
 }
 
 smithy!("test#NESTED_STRUCT": {
     structure NESTED_SCHEMA {
-        FIELD_D: STRING = "field_d"
+        D: STRING = "field_d"
     }
 });
 
 #[derive(SmithyStruct, Debug, PartialEq)]
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
-    #[smithy_schema(FIELD_C)]
+    #[smithy_schema(D)]
     pub field_a: String,
 }

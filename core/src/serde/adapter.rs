@@ -287,7 +287,7 @@ impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use smithy4rs_core_derive::{SchemaShape, SerializableStruct};
+    use smithy4rs_core_derive::SmithyStruct;
 
     use super::*;
     use crate::{prelude::*, schema::SchemaShape, smithy};
@@ -305,23 +305,23 @@ mod tests {
     });
     smithy!("com.example#Test": {
         structure SCHEMA {
-            MEMBER_A: STRING = "a"
-            MEMBER_B: STRING = "b"
-            MEMBER_MAP: MAP_SCHEMA = "map"
-            MEMBER_LIST: LIST_SCHEMA = "list"
+            A: STRING = "a"
+            B: STRING = "b"
+            MAP: MAP_SCHEMA = "map"
+            LIST: LIST_SCHEMA = "list"
         }
     });
 
-    #[derive(SchemaShape, SerializableStruct)]
+    #[derive(SmithyStruct)]
     #[smithy_schema(SCHEMA)]
-    struct Test {
-        #[smithy_schema(MEMBER_A)]
+    pub struct Test {
+        #[smithy_schema(A)]
         a: String,
-        #[smithy_schema(MEMBER_B)]
+        #[smithy_schema(B)]
         b: String,
-        #[smithy_schema(MEMBER_LIST)]
+        #[smithy_schema(LIST)]
         member_list: Vec<String>,
-        #[smithy_schema(MEMBER_MAP)]
+        #[smithy_schema(MAP)]
         member_map: IndexMap<String, String>,
     }
 

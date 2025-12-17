@@ -71,10 +71,11 @@ pub fn schema_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
 pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let shape_name = &input.ident;
+    let schema_ident = parse_schema(&input.attrs);
 
     // `Deserialize` is implemented implicitly
     // Generate the  SerializeWithSchema implementation
-    let serialization = serialization_impl(shape_name, &input);
+    let serialization = serialization_impl(shape_name, &schema_ident, &input);
 
     let (extern_import, crate_ident) = get_crate_info();
     // Dont include imports if tests
@@ -100,6 +101,7 @@ pub fn serializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro:
 pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let shape_name = &input.ident;
+    let schema_ident = parse_schema(&input.attrs);
     let (extern_import, crate_ident) = get_crate_info();
 
     // Generate builder struct and impl
@@ -123,12 +125,12 @@ pub fn deserializable_struct_derive(input: proc_macro::TokenStream) -> proc_macr
         use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
         use #crate_ident::serde::Buildable as _Buildable;
     };
-    let field_data = get_builder_fields(&input);
+    let field_data = get_builder_fields(&schema_ident, &input);
     let builder = builder_struct(shape_name, &field_data);
     let builder_impls = builder_impls(shape_name, &field_data);
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
-    let builder_serializer = serialization_impl(&builder_name, &input);
-    let deserialization = deserialization_impl(shape_name, &input, &crate_ident);
+    let builder_serializer = serialization_impl(&builder_name, &schema_ident, &input);
+    let deserialization = deserialization_impl(shape_name, &schema_ident, &input, &crate_ident);
     let buildable = buildable(shape_name, &builder_name);
 
     // Builder struct is generated outside the const block to make it publicly accessible
