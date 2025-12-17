@@ -4,10 +4,8 @@
 
 use std::{error::Error as StdError, fmt::Display};
 
-use indexmap::IndexMap;
-
 use crate::{
-    BigDecimal, BigInt, ByteBuffer, Instant,
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, SchemaRef, SchemaShape, ShapeId},
 };
 
@@ -22,6 +20,7 @@ pub trait SerializableShape: SchemaShape + SerializeWithSchema {
 
 // Blanket implementation of serialization for all Implement
 impl<T: SchemaShape + SerializeWithSchema> SerializableShape for T {
+    #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.serialize_with_schema(self.schema(), serializer)
     }
@@ -82,7 +81,6 @@ pub trait MapSerializer {
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
-// TODO: Docs
 pub trait StructSerializer {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
@@ -157,6 +155,7 @@ pub trait StructSerializer {
     }
 
     /// Skips a member in a structure.
+    #[inline]
     fn skip_member(&mut self, schema: &SchemaRef) -> Result<(), Self::Error> {
         /* Do nothing on skip by default */
         Ok(())
@@ -172,9 +171,8 @@ pub trait Error: Sized + StdError {
     fn custom<T: Display>(msg: T) -> Self;
 }
 
-// TODO: datastream?
-// TODO: event stream?
-// TODO: Docs
+// TODO(streams): How should we handle data stream serialization?
+// TODO(events): Do we need any custom handling for event streams?
 pub trait Serializer: Sized {
     /// Error type emitted on failed serialization.
     ///
@@ -269,10 +267,16 @@ pub trait Serializer: Sized {
     /// Serialize a `null` value
     fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 
+    /// Write a missing expected value.
+    ///
+    /// Default implementation simply `skip()`s the missing value.
+    fn write_missing(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+        self.skip(schema)
+    }
+
     /// Skip the serialization of a value.
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 
-    // TODO: Is this necessary?
     /// Flush all remaining data.
     fn flush(self) -> Result<Self::Ok, Self::Error> {
         todo!();
@@ -306,11 +310,9 @@ where
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut map = serializer.write_map(schema, self.len())?;
-        // TODO: is there a more efficient way to store/get these schemas?
-        let key_schema = schema.get_member("key").expect("Should have key schema");
-        let value_schema = schema
-            .get_member("value")
-            .expect("Should have value schema");
+        // TODO(performance): is there a more efficient way to store/get these schemas?
+        let key_schema = schema.expect_member("key");
+        let value_schema = schema.expect_member("value");
         for (k, v) in self {
             map.serialize_entry(key_schema, value_schema, k, v)?;
         }
@@ -319,6 +321,7 @@ where
 }
 
 impl SerializeWithSchema for bool {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -329,6 +332,7 @@ impl SerializeWithSchema for bool {
 }
 
 impl SerializeWithSchema for i8 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -339,6 +343,7 @@ impl SerializeWithSchema for i8 {
 }
 
 impl SerializeWithSchema for i16 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -349,6 +354,7 @@ impl SerializeWithSchema for i16 {
 }
 
 impl SerializeWithSchema for i32 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -359,6 +365,7 @@ impl SerializeWithSchema for i32 {
 }
 
 impl SerializeWithSchema for i64 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -369,6 +376,7 @@ impl SerializeWithSchema for i64 {
 }
 
 impl SerializeWithSchema for f32 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -379,6 +387,7 @@ impl SerializeWithSchema for f32 {
 }
 
 impl SerializeWithSchema for f64 {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -389,6 +398,7 @@ impl SerializeWithSchema for f64 {
 }
 
 impl SerializeWithSchema for BigInt {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -399,6 +409,7 @@ impl SerializeWithSchema for BigInt {
 }
 
 impl SerializeWithSchema for BigDecimal {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -409,6 +420,7 @@ impl SerializeWithSchema for BigDecimal {
 }
 
 impl SerializeWithSchema for ByteBuffer {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -419,6 +431,7 @@ impl SerializeWithSchema for ByteBuffer {
 }
 
 impl SerializeWithSchema for Instant {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -429,6 +442,7 @@ impl SerializeWithSchema for Instant {
 }
 
 impl SerializeWithSchema for String {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -439,6 +453,7 @@ impl SerializeWithSchema for String {
 }
 
 impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -453,6 +468,7 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
 }
 
 impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
+    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,

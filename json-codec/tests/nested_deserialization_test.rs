@@ -1,4 +1,4 @@
-use smithy4rs_core::serde::deserializers::DeserializeWithSchema;
+use smithy4rs_core::serde::{ShapeBuilder, deserializers::DeserializeWithSchema};
 use smithy4rs_json_codec::JsonDeserializer;
 use smithy4rs_test_utils::*;
 
@@ -44,10 +44,12 @@ fn test_nested_struct_deserialization() {
     }"#;
 
     let mut deserializer = JsonDeserializer::new(json.as_bytes());
-    let nested = NestedCollectionsStruct::deserialize_with_schema(
+    let nested = NestedCollectionsStructBuilder::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
         &mut deserializer,
     )
+    .unwrap()
+    .build()
     .unwrap();
 
     println!("Deserialized nested struct: {:?}", nested);
@@ -114,10 +116,12 @@ fn test_recursive_struct_deserialization() {
     }"#;
 
     let mut deserializer = JsonDeserializer::new(json.as_bytes());
-    let top = RecursiveShapesStruct::deserialize_with_schema(
+    let top = RecursiveShapesStructBuilder::deserialize_with_schema(
         &RECURSIVE_SHAPES_STRUCT_SCHEMA,
         &mut deserializer,
     )
+    .unwrap()
+    .build()
     .unwrap();
 
     println!("Deserialized recursive struct: {:?}", top);
@@ -177,10 +181,12 @@ fn test_deeply_nested_without_recursion() {
     }"#;
 
     let mut deserializer = JsonDeserializer::new(json.as_bytes());
-    let nested = NestedCollectionsStruct::deserialize_with_schema(
+    let nested = NestedCollectionsStructBuilder::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
         &mut deserializer,
     )
+    .unwrap()
+    .build()
     .unwrap();
 
     println!("Deserialized deeply nested struct: {:?}", nested);

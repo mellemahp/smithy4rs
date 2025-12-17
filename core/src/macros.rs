@@ -34,7 +34,8 @@ macro_rules! deserialize_optional_member {
     };
 }
 
-// Create a list of traits for use in Schema builders
+/// Create a list of traits for use in Schema builders
+#[doc(hidden)]
 #[macro_export]
 macro_rules! traits {
     () => { Vec::new() };
@@ -245,11 +246,11 @@ macro_rules! smithy_internal {
     );
 
     // === Union ===
-
+    // TODO(union): Add union shape macro
 
 
     // === Service Shapes ===
-    // TODO: Operation, Resource, Service
+    // TODO(service shapes): Add Operation, Resource, Service schema macros
 
     //////////////////////////////////////////////////////////////////////////
     // Actual impl of schema

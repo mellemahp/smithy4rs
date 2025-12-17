@@ -38,3 +38,7 @@ workspace = true
 [[bench]]
 name = "schema"
 harness = false
+
+[[bench]]
+name = "validation"
+harness = false

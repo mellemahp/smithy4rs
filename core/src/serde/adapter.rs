@@ -16,7 +16,7 @@ use crate::{
         serializers::{Error, Serializer},
     },
 };
-// TODO: This should all be behind a feature flag so serde is not
+// TODO(features): This should all be behind a feature flag so serde is not
 //       required for all consumers.
 struct SerdeAdapter<S: serde::Serializer> {
     serializer: S,
@@ -141,16 +141,19 @@ impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
 
     #[inline]
     fn write_blob(self, _: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+        // TODO(streams): How to support data streams?
         todo!()
     }
 
     #[inline]
     fn write_timestamp(self, _: &SchemaRef, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+        // TODO(timestamp formatting): How to write timestamps with formatting traits?
         todo!()
     }
 
     #[inline]
     fn write_document(self, _: &SchemaRef, _value: &Document) -> Result<Self::Ok, Self::Error> {
+        // TODO(document serde): Finish implementing for document types.
         todo!()
     }
 
@@ -253,7 +256,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     where
         T: SerializeWithSchema + ?Sized,
     {
-        // TODO: How to handle error?
+        // TODO(errors): How to handle error?
         let Some(me) = member_schema.as_member() else {
             panic!("Expected member schema!");
         };

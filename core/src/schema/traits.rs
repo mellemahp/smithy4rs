@@ -41,8 +41,8 @@
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
-//!  assert_eq!(*trait_impl.min(), Some(1usize));
-//!  assert_eq!(*trait_impl.max(), Some(4usize));
+//!  assert_eq!(trait_impl.min(), 1usize);
+//!  assert_eq!(trait_impl.max(), 4usize);
 //! ```
 //!
 //! ## Custom Traits
@@ -137,16 +137,20 @@ impl PartialEq for TraitRef {
 }
 impl Deref for TraitRef {
     type Target = dyn SmithyTrait;
+
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.0.deref()
     }
 }
 impl From<Ref<dyn SmithyTrait>> for TraitRef {
+    #[inline]
     fn from(value: Ref<dyn SmithyTrait>) -> Self {
         Self(value)
     }
 }
 impl<T: SmithyTrait> From<T> for TraitRef {
+    #[inline]
     fn from(value: T) -> Self {
         Self(Ref::new(value))
     }
