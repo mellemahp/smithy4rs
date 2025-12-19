@@ -1,3 +1,4 @@
+mod builder;
 mod deserialization;
 mod schema;
 mod serialization;
@@ -8,13 +9,13 @@ use quote::quote;
 use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote};
 
 use crate::{
-    deserialization::{
-        buildable, builder_impls, builder_struct, deserialization_impl, get_builder_fields,
-    },
+    builder::{buildable, builder_impls, builder_struct, get_builder_fields},
+    deserialization::deserialization_impl,
     schema::schema_impl,
     serialization::serialization_impl,
     utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema},
 };
+
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
 // TODO(derive): Smithy Struct should automatically derive: Debug, PartialEq, and Clone
@@ -29,11 +30,11 @@ pub fn smithy_enum(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    // process all discriminants
+    // process all discriminants.
     // *WARNING*: This must occur _BEFORE_ adding unknown variant
     let input = discriminant_to_attribute(args.clone(), input);
     // Add unknown variants
-    unknown_variants(args, input)
+    unknown_variant(args, input)
 }
 
 #[proc_macro_attribute]
@@ -58,7 +59,7 @@ pub fn discriminant_to_attribute(
 
 /// This macro is automatically adds an unknown variant for Enums and Unions.
 #[proc_macro_attribute]
-pub fn unknown_variants(
+pub fn unknown_variant(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -87,31 +88,32 @@ pub fn unknown_variants(
         ],
         discriminant: None,
         fields: syn::Fields::Unnamed(field),
-        ident: Ident::new("_Unknown", Span::call_site()),
+        ident: Ident::new("Unknown", Span::call_site()),
     });
-
     quote!(#enum_struct).into()
 }
 
-/// Derive `SchemaShape`, `SerializableShape` and `DeserializableStruct` for an enum
-#[proc_macro_derive(SmithyEnum, attributes(smithy_schema, enum_value))]
-pub fn smithy_enum_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(Dummy, attributes(smithy_schema, enum_value))]
+pub fn dummy_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let schema = schema_shape_derive(input.clone());
-    let serializable = serializable_shape_derive(input);
+    let serializable = serializable_shape_derive(input.clone());
+    let deserializable = deserializable_shape_derive(input);
 
     let schema_tokens = TokenStream::from(schema);
-    let serialize_tokens = TokenStream::from(serializable);
+    let serializable_tokens = TokenStream::from(serializable);
+    let deserializable_tokens = TokenStream::from(deserializable);
 
     quote! {
         #schema_tokens
-        #serialize_tokens
+        #serializable_tokens
+        #deserializable_tokens
     }
     .into()
 }
 
 /// Convenience derive that combines `SchemaShape`, `SerializableShape`, and `DeserializableShape`
 /// for Smithy Enums, Structures, and Unions.
-#[proc_macro_derive(SmithyShape, attributes(smithy_schema))]
+#[proc_macro_derive(SmithyShape, attributes(smithy_schema, enum_value))]
 pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Generate all three derive expansions
     let schema = schema_shape_derive(input.clone());
@@ -194,7 +196,6 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
                 #builder
 
                 const _: () = {
-                    // Base imports
                     #extern_import
                     use #crate_ident::schema::SchemaRef as _SchemaRef;
 
@@ -207,18 +208,15 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
             }
             .into()
         }
-        Data::Enum(_) => {
-            quote! {
-                const _: () = {
-                    // Base imports
-                    #extern_import
-                    use #crate_ident::schema::SchemaRef as _SchemaRef;
+        Data::Enum(_) => quote! {
+            const _: () = {
+                #extern_import
+                use #crate_ident::schema::SchemaRef as _SchemaRef;
 
-                    #deser
-                };
-            }
-            .into()
+                #deser
+            };
         }
+        .into(),
         _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
     }
 }

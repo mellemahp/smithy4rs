@@ -151,7 +151,7 @@ impl Schema {
     /// Create a Schema for an [IntEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape.
     pub fn create_int_enum(
         id: impl Into<ShapeId>,
-        values: Vec<i32>,
+        values: Box<[i32]>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::IntEnum(EnumSchema {
@@ -194,7 +194,7 @@ impl Schema {
     /// Create a Schema for an [Enum](https://smithy.io/2.0/spec/simple-types.html#enum) shape.
     pub fn create_enum(
         id: impl Into<ShapeId>,
-        values: Vec<&'static str>,
+        values: Box<[&'static str]>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::Enum(EnumSchema {

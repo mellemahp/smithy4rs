@@ -9,7 +9,7 @@ pub enum TestEnum {
     C,
     #[automatically_derived]
     #[doc(hidden)]
-    _Unknown(String),
+    Unknown(String),
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
@@ -34,12 +34,13 @@ const _: () = {
             schema: &_SchemaRef,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            match self {
-                TestEnum::A => serializer.write_string(schema, "a"),
-                TestEnum::B => serializer.write_string(schema, "b"),
-                TestEnum::C => serializer.write_string(schema, "c"),
-                TestEnum::_Unknown(value) => serializer.write_string(schema, value),
-            }
+            let value = match self {
+                TestEnum::A => "a",
+                TestEnum::B => "b",
+                TestEnum::C => "c",
+                TestEnum::Unknown(value) => value.as_str(),
+            };
+            serializer.write_string(schema, value)
         }
     }
 };
@@ -57,12 +58,14 @@ const _: () = {
         where
             D: _Deserializer<'de>,
         {
-            match deserializer.read_string(schema)? {
+            let val = deserializer.read_string(schema)?;
+            let result = match val.as_str() {
                 "a" => TestEnum::A,
                 "b" => TestEnum::B,
                 "c" => TestEnum::C,
-                val => TestEnum::_Unknown(val),
-            }
+                _ => TestEnum::Unknown(val),
+            };
+            Ok(result)
         }
     }
 };
