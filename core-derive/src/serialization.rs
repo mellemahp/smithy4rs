@@ -2,8 +2,10 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Field, Lit};
 
-use crate::{parse_schema, utils::is_optional};
-use crate::utils::parse_enum_value;
+use crate::{
+    parse_schema,
+    utils::{is_optional, parse_enum_value},
+};
 
 /// Generates the `SerializeWithSchema` implementation for a shape.
 pub(crate) fn serialization_impl(
@@ -139,4 +141,3 @@ fn determine_enum_ser_method(data: &DataEnum) -> Ident {
         _ => panic!("Unsupported enum value. Expected string or int literal."),
     }
 }
-

@@ -178,6 +178,10 @@ pub(crate) fn parse_enum_value(attrs: &[Attribute]) -> Option<Lit> {
     value
 }
 
+pub(crate) fn get_builder_ident(shape_name: &Ident) -> Ident {
+    Ident::new(&format!("{}Builder", shape_name), Span::call_site())
+}
+
 #[cfg(test)]
 mod tests {
     use syn::Type;

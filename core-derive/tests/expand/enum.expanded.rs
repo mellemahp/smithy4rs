@@ -1,4 +1,4 @@
-use smithy4rs_core_derive::{SmithyEnum, smithy_enum};
+use smithy4rs_core_derive::{SmithyShape, smithy_enum};
 #[smithy_schema(SIMPLE_ENUM)]
 pub enum TestEnum {
     #[enum_value("a")]
@@ -39,6 +39,29 @@ const _: () = {
                 TestEnum::B => serializer.write_string(schema, "b"),
                 TestEnum::C => serializer.write_string(schema, "c"),
                 TestEnum::_Unknown(value) => serializer.write_string(schema, value),
+            }
+        }
+    }
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
+    use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
+    #[automatically_derived]
+    impl<'de> _DeserializeWithSchema<'de> for TestEnum {
+        fn deserialize_with_schema<D>(
+            schema: &_SchemaRef,
+            deserializer: &mut D,
+        ) -> Result<Self, D::Error>
+        where
+            D: _Deserializer<'de>,
+        {
+            match deserializer.read_string(schema)? {
+                "a" => TestEnum::A,
+                "b" => TestEnum::B,
+                "c" => TestEnum::C,
+                val => TestEnum::_Unknown(val),
             }
         }
     }

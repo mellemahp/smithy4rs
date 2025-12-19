@@ -1,4 +1,4 @@
-use smithy4rs_core_derive::{SmithyEnum, smithy_enum};
+use smithy4rs_core_derive::{SmithyShape, smithy_enum};
 
 smithy!("test#SimpleStruct": {
     enum SIMPLE_ENUM {
@@ -9,7 +9,7 @@ smithy!("test#SimpleStruct": {
 });
 
 #[smithy_enum]
-#[derive(SmithyEnum)]
+#[derive(SmithyShape)]
 #[smithy_schema(SIMPLE_ENUM)]
 pub enum TestEnum {
     A = "a",
