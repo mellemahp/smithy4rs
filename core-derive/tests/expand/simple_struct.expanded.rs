@@ -2,7 +2,7 @@ use smithy4rs_core::{
     prelude::{INTEGER, STRING},
     schema::ShapeId, traits,
 };
-use smithy4rs_core_derive::SmithyStruct;
+use smithy4rs_core_derive::SmithyShape;
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]
@@ -103,9 +103,6 @@ const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
-    use _smithy4rs::serde::serializers::Serializer as _Serializer;
-    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _Error;
@@ -136,6 +133,9 @@ const _: () = {
             SimpleStructBuilder::new().correct()
         }
     }
+    use _smithy4rs::serde::serializers::Serializer as _Serializer;
+    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     #[automatically_derived]
     impl _SerializeWithSchema for SimpleStructBuilder {
         fn serialize_with_schema<S: _Serializer>(
@@ -313,9 +313,6 @@ const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::SchemaRef as _SchemaRef;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
-    use _smithy4rs::serde::serializers::Serializer as _Serializer;
-    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _Error;
@@ -344,6 +341,9 @@ const _: () = {
             NestedBuilder::new().correct()
         }
     }
+    use _smithy4rs::serde::serializers::Serializer as _Serializer;
+    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
     #[automatically_derived]
     impl _SerializeWithSchema for NestedBuilder {
         fn serialize_with_schema<S: _Serializer>(

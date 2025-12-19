@@ -386,7 +386,7 @@ where
 mod tests {
 
     use indexmap::IndexMap;
-    use smithy4rs_core_derive::{SchemaShape, SerializableStruct};
+    use smithy4rs_core_derive::{SchemaShape, SerializableShape};
 
     use super::*;
     use crate::{prelude::STRING, smithy};
@@ -421,7 +421,7 @@ mod tests {
         }
     });
 
-    #[derive(SchemaShape, SerializableStruct)]
+    #[derive(SchemaShape, SerializableShape)]
     #[smithy_schema(SCHEMA)]
     pub struct SerializeMe {
         #[smithy_schema(A)]
@@ -436,7 +436,7 @@ mod tests {
         pub member_map: IndexMap<String, String>,
     }
 
-    #[derive(SchemaShape, SerializableStruct)]
+    #[derive(SchemaShape, SerializableShape)]
     #[smithy_schema(REDACTED_AGGREGATES)]
     pub(crate) struct RedactMe {
         #[smithy_schema(LIST_REDACT)]
