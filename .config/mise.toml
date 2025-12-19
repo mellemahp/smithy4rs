@@ -25,7 +25,7 @@ run = "cargo build"
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]
 description = "Check the code format"
-run = ["cargo fmt --all --", "cargo sort"]
+run = ["cargo +nightly fmt --all --", "cargo sort"]
 
 [tasks.fix]
 description = "Fix the code with Cargo, Clippy, etc."

@@ -3,7 +3,7 @@ use smithy4rs_core::{
     schema::ShapeId,
     traits,
 };
-use smithy4rs_core_derive::SmithyStruct;
+use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_SCHEMA {
@@ -13,7 +13,7 @@ smithy!("test#SimpleStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyShape, Debug, PartialEq)]
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]
@@ -30,7 +30,7 @@ smithy!("test#NESTED_STRUCT": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq)]
+#[derive(SmithyShape, Debug, PartialEq)]
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
     #[smithy_schema(D)]

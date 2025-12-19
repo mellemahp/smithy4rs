@@ -741,7 +741,7 @@ impl<'de> DeserializeWithSchema<'de> for Document {
 mod tests {
     use std::{str::FromStr, sync::LazyLock};
 
-    use smithy4rs_core_derive::SmithyStruct;
+    use smithy4rs_core_derive::SmithyShape;
 
     use super::*;
     use crate::{
@@ -771,7 +771,7 @@ mod tests {
         }
     });
 
-    #[derive(SmithyStruct)]
+    #[derive(SmithyShape)]
     #[smithy_schema(SCHEMA)]
     pub struct SerializeMe {
         #[smithy_schema(A)]

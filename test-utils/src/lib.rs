@@ -3,9 +3,11 @@
 // TODO(verify): We don't add required to anything yet
 // TODO(test): Add constraint test shapes once we have validation
 
+mod enums;
+
 use indexmap::IndexMap;
 use smithy4rs_core::{ByteBuffer, Instant, prelude::*, smithy};
-use smithy4rs_core_derive::SmithyStruct;
+use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#StringList": {
     list STRING_LIST_SCHEMA {
@@ -41,7 +43,7 @@ smithy!("test#AllPrimitivesStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
     #[smithy_schema(STRING)]
@@ -73,7 +75,7 @@ smithy!("test#OptionalFieldsStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
 pub struct OptionalFieldsStruct {
     #[smithy_schema(REQUIRED)]
@@ -93,7 +95,7 @@ smithy!("test#NumericTypesStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
 pub struct NumericTypesStruct {
     #[smithy_schema(BYTE)]
@@ -117,7 +119,7 @@ smithy!("test#SimpleStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]
@@ -137,7 +139,7 @@ smithy!("test#RecursiveShapesStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
     #[smithy_schema(STRING)]
@@ -161,7 +163,7 @@ smithy!("test#InnerStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(INNER_STRUCT_SCHEMA)]
 pub struct InnerStruct {
     #[smithy_schema(A)]
@@ -194,11 +196,12 @@ smithy!("test#NestedCollectionsStruct": {
     }
 });
 
-#[derive(SmithyStruct, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, Debug, PartialEq, Clone)]
 #[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]
 pub struct NestedCollectionsStruct {
     #[smithy_schema(NAME)]
     pub name: String,
+
     #[smithy_schema(COUNT)]
     pub count: i32,
     #[smithy_schema(SINGLE)]
