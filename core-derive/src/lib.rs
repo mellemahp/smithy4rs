@@ -5,7 +5,7 @@ mod utils;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{DeriveInput, ItemEnum, Variant, parse, parse_macro_input, parse_quote};
+use syn::{DeriveInput, ItemEnum, Variant, parse, parse_macro_input, parse_quote, Lit};
 
 use crate::{
     deserialization::{
@@ -15,6 +15,7 @@ use crate::{
     serialization::serialization_impl,
     utils::{get_crate_info, parse_schema},
 };
+use crate::utils::parse_enum_value;
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
 // TODO(derive): Smithy Struct should automatically derive: Debug, PartialEq, and Clone
@@ -29,10 +30,11 @@ pub fn smithy_enum(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    // Add unknown variants
-    let input = unknown_variants(args.clone(), input);
     // process all discriminants
-    discriminant_to_attribute(args, input)
+    // *WARNING*: This must occur _BEFORE_ adding unknown variant
+    let input = discriminant_to_attribute(args.clone(), input);
+    // Add unknown variants
+    unknown_variants(args, input)
 }
 
 #[proc_macro_attribute]
@@ -65,10 +67,23 @@ pub fn unknown_variants(
     // Expect NO args
     let _ = parse_macro_input!(args as parse::Nothing);
 
+    // Determine if unknown should store string or int. Unions (without `enum_value` attr)
+    // will default tousing String as unknown data value.
+    let field = if let Some(val) = parse_enum_value(&enum_struct
+        .variants.first().expect("Expected at least one variant")
+        .attrs) && let Lit::Int(_) = val
+    {
+        parse_quote!((i32))
+    } else {
+        parse_quote!((String))
+    };
     enum_struct.variants.push(Variant {
-        attrs: vec![],
+        attrs: vec![
+            parse_quote!(#[automatically_derived]),
+            parse_quote!(#[doc(hidden)]),
+        ],
         discriminant: None,
-        fields: syn::Fields::Unnamed(parse_quote!((String))),
+        fields: syn::Fields::Unnamed(field),
         ident: Ident::new("_Unknown", Span::call_site()),
     });
 

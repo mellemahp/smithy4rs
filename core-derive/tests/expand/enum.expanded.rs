@@ -7,6 +7,8 @@ pub enum TestEnum {
     B,
     #[enum_value("c")]
     C,
+    #[automatically_derived]
+    #[doc(hidden)]
     _Unknown(String),
 }
 const _: () = {

@@ -1,8 +1,9 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Attribute, Data, DataEnum, DataStruct, DeriveInput, Field, Lit};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Field, Lit};
 
 use crate::{parse_schema, utils::is_optional};
+use crate::utils::parse_enum_value;
 
 /// Generates the `SerializeWithSchema` implementation for a shape.
 pub(crate) fn serialization_impl(
@@ -121,35 +122,21 @@ fn serialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
     quote! {
         match self {
             #(#shape_name::#variant => serializer.#method(schema, #value)),*
-            #shape_name::_Unknown(value) =>  serializer.write_string(schema, value)
+            #shape_name::_Unknown(value) =>  serializer.#method(schema, value)
         }
     }
 }
 
 /// Determines enum method to use for serializing an enum.
-pub(crate) fn determine_enum_ser_method(data: &DataEnum) -> Ident {
+fn determine_enum_ser_method(data: &DataEnum) -> Ident {
     let first_var = data
         .variants
         .first()
         .expect("At least one enum variant expected");
-    let value = parse_enum_value(&first_var.attrs);
-    match value {
-        Lit::Str(_) => Ident::new("write_string", Span::call_site()),
-        Lit::Int(_) => Ident::new("write_integer", Span::call_site()),
+    match parse_enum_value(&first_var.attrs) {
+        Some(Lit::Str(_)) => Ident::new("write_string", Span::call_site()),
+        Some(Lit::Int(_)) => Ident::new("write_integer", Span::call_site()),
         _ => panic!("Unsupported enum value. Expected string or int literal."),
     }
 }
 
-/// Parse an `#[enum_value(...)` attribute
-pub(crate) fn parse_enum_value(attrs: &[Attribute]) -> Lit {
-    let mut target_schema = None;
-    for attr in attrs {
-        if attr.path().is_ident("enum_value") {
-            target_schema = Some(
-                attr.parse_args::<Lit>()
-                    .expect("`enum_value` attribute should be an identifier"),
-            );
-        }
-    }
-    target_schema.expect("Could not find `enum_value` attribute")
-}

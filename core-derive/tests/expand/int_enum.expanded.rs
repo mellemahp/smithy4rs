@@ -7,7 +7,9 @@ pub enum TestIntEnum {
     B,
     #[enum_value(3)]
     C,
-    _Unknown(String),
+    #[automatically_derived]
+    #[doc(hidden)]
+    _Unknown(i32),
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
@@ -36,7 +38,7 @@ const _: () = {
                 TestIntEnum::A => serializer.write_integer(schema, 1),
                 TestIntEnum::B => serializer.write_integer(schema, 2),
                 TestIntEnum::C => serializer.write_integer(schema, 3),
-                TestIntEnum::_Unknown(value) => serializer.write_string(schema, value),
+                TestIntEnum::_Unknown(value) => serializer.write_integer(schema, value),
             }
         }
     }
