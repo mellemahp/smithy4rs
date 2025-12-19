@@ -114,18 +114,31 @@ impl FieldData {
 /// Generates body of serialization impl for Enums
 fn serialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
     let method = determine_enum_ser_method(data);
-    let unknown = syn::parse_str::<Ident>("_Unknown").unwrap();
+    let unknown = syn::parse_str::<Ident>("Unknown").unwrap();
     let variant = data
         .variants
         .iter()
         .map(|v| &v.ident)
         .filter(|i| **i != unknown);
-    let value = data.variants.iter().map(|v| parse_enum_value(&v.attrs));
+    let value = data
+        .variants
+        .iter()
+        .map(|v| parse_enum_value(&v.attrs).expect("parsable #[enum_value] attribute"));
+    let is_string = matches!(
+        parse_enum_value(&data.variants.first().expect("at least one variant").attrs),
+        Some(Lit::Str(_))
+    );
+    let value_ident = if is_string {
+        quote! { value.as_str() }
+    } else {
+        quote! { *value }
+    };
     quote! {
-        match self {
-            #(#shape_name::#variant => serializer.#method(schema, #value)),*
-            #shape_name::_Unknown(value) =>  serializer.#method(schema, value)
-        }
+        let value = match self {
+            #(#shape_name::#variant => #value,)*
+            #shape_name::Unknown(value) => #value_ident
+        };
+        serializer.#method(schema, value)
     }
 }
 

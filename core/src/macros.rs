@@ -176,28 +176,27 @@ macro_rules! smithy_internal {
     // === Enums ===
     ($id:literal: {
         $(@$t:expr;)*
-        enum $name:ident {
-            $($_variant:tt = $value:literal),*
-        }
+        enum $name:ident {$(
+            $_variant:ident = $value:literal
+        )*}
     }) => (
         $crate::smithy!(@inner
             $name,
-            $crate::schema::Schema::create_enum($id, vec!($($value),*), $crate::traits!($($t),*))
+            $crate::schema::Schema::create_enum($id, Box::new([$($value),*]), $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
         $(@$t:expr;)*
-        intEnum $name:ident {
-            $($_variant:tt = $value:literal),*
-        }
+        intEnum $name:ident {$(
+            $_variant:ident = $value:literal
+        )*}
     }) => (
         $crate::smithy!(@inner
             $name,
-            $crate::schema::Schema::create_int_enum($id, vec!($($value),*), $crate::traits!($($t),*))
+            $crate::schema::Schema::create_int_enum($id, Box::new([$($value),*]), $crate::traits!($($t),*))
         );
     );
-
 
     // === Collections ====
 
