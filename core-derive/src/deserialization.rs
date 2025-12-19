@@ -1,11 +1,118 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DeriveInput, Type};
+use syn::{Data, DataEnum, DataStruct, DeriveInput, Lit, Type};
 
 use crate::utils::{
-    extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional, is_primitive,
-    parse_schema, replace_inner,
+    extract_option_type, get_builder_ident, get_crate_ident, get_ident, get_inner_type,
+    is_optional, is_primitive, parse_enum_value, parse_schema, replace_inner,
 };
+
+/// Generate `DeserializeWithSchema` implementation for Smithy Shapes
+pub(crate) fn deserialization_impl(
+    crate_ident: &TokenStream,
+    shape_name: &Ident,
+    schema_ident: &Ident,
+    input: &DeriveInput,
+) -> TokenStream {
+    let deser_impl = match &input.data {
+        // Structures are deserialized via builders
+        Data::Struct(data) => deserialize_builder(crate_ident, schema_ident, shape_name, data),
+        Data::Enum(data) => deserialize_enum(shape_name, data),
+        _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
+    };
+    quote! {
+        // Base deserialization imports
+        use #crate_ident::serde::deserializers::Deserializer as _Deserializer;
+        use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
+
+        #deser_impl
+    }
+}
+
+// ============================================================================
+// Builder (Union & Structure) Deserialization
+// ============================================================================
+
+/// Generate deserializer body for structure builder
+fn deserialize_builder(
+    crate_ident: &TokenStream,
+    schema_ident: &Ident,
+    shape_name: &Ident,
+    data_struct: &DataStruct,
+) -> TokenStream {
+    let builder_name = get_builder_ident(shape_name);
+    let field_data = get_builder_fields(schema_ident, data_struct);
+
+    // Generate deserialize_member! or deserialize_optional_member! macro calls for each field
+    let match_arms = field_data
+        .iter()
+        .map(|d| d.deserialize_match_arm(crate_ident))
+        .collect::<Vec<_>>();
+
+    quote! {
+        // builder-specific imports
+        use #crate_ident::serde::correction::ErrorCorrection as _ErrorCorrection;
+        use #crate_ident::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
+        use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
+        use #crate_ident::serde::Buildable as _Buildable;
+
+        #[automatically_derived]
+        impl<'de> _DeserializeWithSchema<'de> for #builder_name {
+            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+            where
+                D: _Deserializer<'de>,
+            {
+                let builder = #builder_name::new();
+                deserializer.read_struct(schema, builder, |builder, member_schema, de| {
+                    #(#match_arms)*
+                    Ok(builder) // Unknown field
+                })
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Enum Deserialization
+// ============================================================================
+
+fn deserialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
+    let method = determine_enum_deser_method(data);
+    let unknown = syn::parse_str::<Ident>("_Unknown").unwrap();
+    let variant = data
+        .variants
+        .iter()
+        .map(|v| &v.ident)
+        .filter(|i| **i != unknown);
+    let value = data.variants.iter().map(|v| parse_enum_value(&v.attrs));
+    quote! {
+        #[automatically_derived]
+        impl<'de> _DeserializeWithSchema<'de> for #shape_name {
+            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+            where
+                D: _Deserializer<'de>,
+            {
+                match deserializer.#method(schema)? {
+                    #(#value => #shape_name::#variant),*
+                    val => #shape_name::_Unknown(val)
+                }
+            }
+        }
+    }
+}
+
+/// Determines enum method to use for deserializing an enum.
+fn determine_enum_deser_method(data: &DataEnum) -> Ident {
+    let first_var = data
+        .variants
+        .first()
+        .expect("At least one enum variant expected");
+    match parse_enum_value(&first_var.attrs) {
+        Some(Lit::Str(_)) => Ident::new("read_string", Span::call_site()),
+        Some(Lit::Int(_)) => Ident::new("read_integer", Span::call_site()),
+        _ => panic!("Unsupported enum value. Expected string or int literal."),
+    }
+}
 
 pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
     let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
@@ -86,16 +193,9 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
     }
 }
 
-pub(crate) fn get_builder_fields(
-    schema_ident: &Ident,
-    input: &DeriveInput,
-) -> Vec<BuilderFieldData> {
-    let fields = match &input.data {
-        Data::Struct(data) => &data.fields,
-        _ => panic!("DeserializableStruct can only be derived for structs"),
-    };
+pub fn get_builder_fields(schema_ident: &Ident, data: &DataStruct) -> Vec<BuilderFieldData> {
     let mut field_data = Vec::new();
-    for field in fields {
+    for field in &data.fields {
         let schema = Ident::new(
             &format!("_{}_MEMBER_{}", schema_ident, parse_schema(&field.attrs)),
             Span::call_site(),
@@ -297,39 +397,6 @@ impl BuilderFieldData {
                 quote! {
                     #crate_ident::deserialize_member!(member_schema, &#schema, de, builder, #field_builder, #builder);
                 }
-            }
-        }
-    }
-}
-
-pub(crate) fn deserialization_impl(
-    shape_name: &Ident,
-    schema_ident: &Ident,
-    input: &DeriveInput,
-    crate_ident: &TokenStream,
-) -> TokenStream {
-    let field_data = get_builder_fields(schema_ident, input);
-    let builder_name = Ident::new(&format!("{}Builder", shape_name), Span::call_site());
-
-    // Generate deserialize_member! or deserialize_optional_member! macro calls for each field
-    let match_arms = field_data
-        .iter()
-        .map(|d| d.deserialize_match_arm(crate_ident))
-        .collect::<Vec<_>>();
-
-    quote! {
-       // Builder implements DeserializeWithSchema
-        #[automatically_derived]
-        impl<'de> _DeserializeWithSchema<'de> for #builder_name {
-            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
-            where
-                D: _Deserializer<'de>,
-            {
-                let builder = #builder_name::new();
-                deserializer.read_struct(schema, builder, |builder, member_schema, de| {
-                    #(#match_arms)*
-                    Ok(builder) // Unknown field
-                })
             }
         }
     }
