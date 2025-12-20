@@ -1,6 +1,7 @@
-use smithy4rs_core::smithy;
-use smithy4rs_core_derive::{smithy_union, Dummy};
-use smithy4rs_core::prelude::*;
+#![allow(dead_code)]
+
+use smithy4rs_core::{prelude::*, smithy};
+use smithy4rs_core_derive::{Dummy, smithy_union};
 
 smithy!("test#SimpleUnion": {
     union UNION {
@@ -13,12 +14,12 @@ smithy!("test#SimpleUnion": {
 #[smithy_union]
 #[derive(Dummy)]
 #[smithy_schema(UNION)]
-pub enum TestEnum {
+pub enum TestUnion {
     #[smithy_schema(A)]
     A(String),
     #[smithy_schema(B)]
     B(i32),
     // Unit variant
     #[smithy_schema(C)]
-    C
+    C,
 }

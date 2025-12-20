@@ -117,13 +117,16 @@ fn unknown_variant(enum_data: &mut ItemEnum) {
 pub fn dummy_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let schema = schema_shape_derive(input.clone());
     let serializable = serializable_shape_derive(input.clone());
+    let deserializable = deserializable_shape_derive(input);
 
     let schema_tokens = TokenStream::from(schema);
     let serializable_tokens = TokenStream::from(serializable);
+    let deserializable_tokens = TokenStream::from(deserializable);
 
     quote! {
         #schema_tokens
         #serializable_tokens
+        #deserializable_tokens
     }
     .into()
 }

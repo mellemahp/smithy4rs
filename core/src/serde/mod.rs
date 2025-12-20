@@ -5,8 +5,8 @@ pub mod deserializers;
 pub mod documents;
 mod fmt;
 pub mod serializers;
-pub mod validation;
 pub mod unit;
+pub mod validation;
 
 pub use builders::{Buildable, ShapeBuilder};
 pub use deserializers as de;

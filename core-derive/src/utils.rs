@@ -186,9 +186,12 @@ pub(crate) fn get_builder_ident(shape_name: &Ident) -> Ident {
 ///
 /// Union's have member schemas for their variants.
 pub(crate) fn is_union(data_enum: &DataEnum) -> bool {
-    data_enum.variants.first()
+    data_enum
+        .variants
+        .first()
         .expect("Enum must have at least one variant")
-        .attrs.iter()
+        .attrs
+        .iter()
         .any(|attr| attr.path().is_ident("smithy_schema"))
 }
 

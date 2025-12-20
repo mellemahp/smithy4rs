@@ -53,3 +53,51 @@ const _: () = {
         }
     }
 };
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
+    use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
+    use _smithy4rs::serde::deserializers::Error as _DeserializerError;
+    use _smithy4rs::serde::unit::Unit as _Unit;
+    #[automatically_derived]
+    impl<'de> _DeserializeWithSchema<'de> for TestEnum {
+        fn deserialize_with_schema<D>(
+            schema: &_SchemaRef,
+            deserializer: &mut D,
+        ) -> Result<Self, D::Error>
+        where
+            D: _Deserializer<'de>,
+        {
+            deserializer
+                .read_struct(
+                    schema,
+                    None,
+                    |option, member_schema, de| {
+                        if option.is_some() {
+                            return Err(
+                                D::Error::custom("Attempted to set union value twice"),
+                            );
+                        }
+                        if std::sync::Arc::ptr_eq(member_schema, &_UNION_MEMBER_A) {
+                            let value = String::deserialize_with_schema(
+                                member_schema,
+                                de,
+                            )?;
+                            return Ok(Some(TestEnum::A(value)));
+                        }
+                        if std::sync::Arc::ptr_eq(member_schema, &_UNION_MEMBER_B) {
+                            let value = i32::deserialize_with_schema(member_schema, de)?;
+                            return Ok(Some(TestEnum::B(value)));
+                        }
+                        if std::sync::Arc::ptr_eq(member_schema, &_UNION_MEMBER_C) {
+                            let _ = _Unit::deserialize_with_schema(member_schema, de)?;
+                            return Ok(Some(TestEnum::C));
+                        }
+                        Ok(Some(TestEnum::Unknown("unknown".to_string())))
+                    },
+                )?
+                .ok_or(D::Error::custom("Failed to deserialize union"))
+        }
+    }
+};
