@@ -5,14 +5,14 @@ use smithy4rs_core_derive::{Dummy, smithy_union};
 
 smithy!("test#SimpleUnion": {
     union UNION {
-        A: STRING = "field_a"
-        B: INTEGER = "field_b"
-        C: UNIT = "field_c"
+        A: STRING = "a"
+        B: INTEGER = "b"
+        C: UNIT = "c"
     }
 });
 
 #[smithy_union]
-#[derive(Dummy)]
+#[derive(Dummy, PartialEq, Debug)]
 #[smithy_schema(UNION)]
 pub enum TestUnion {
     #[smithy_schema(A)]

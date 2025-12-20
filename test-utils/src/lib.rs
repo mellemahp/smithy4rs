@@ -13,3 +13,4 @@ pub use basic_types::*;
 pub use enums::*;
 pub use nested::*;
 pub use recursive::*;
+pub use unions::*;
