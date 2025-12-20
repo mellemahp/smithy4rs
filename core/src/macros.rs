@@ -251,8 +251,19 @@ macro_rules! smithy_internal {
             ("value", $value, $crate::traits!($($v),*))
         );
     );
-    // === Structure ===
-    // May or may not have members
+
+    // === Structure & Unions ===
+    // Empty structure
+     ($id:literal: {
+        $(@$t:expr;)*
+        structure $name:ident {}
+    }) => (
+       $crate::smithy!(@inner
+            $name,
+            $crate::schema::Schema::structure_builder($id, $crate::traits!($($t),*)).build()
+        );
+    );
+
     ($id:literal: {
         $(@$t:expr;)*
         structure $name:ident {$(
@@ -267,9 +278,19 @@ macro_rules! smithy_internal {
         );
     );
 
-    // === Union ===
-    // TODO(union): Add union shape macro
-
+    ($id:literal: {
+        $(@$t:expr;)*
+        union $name:ident {$(
+            $(@$m:expr;)*
+            $member_ident:ident : $member_schema:tt = $member_name:literal
+        )*}
+    }) => (
+       $crate::smithy!(@inner
+            $name,
+            $crate::schema::Schema::union_builder($id, $crate::traits!($($t),*)),
+            $(($member_ident, $member_name, $member_schema, $crate::traits!($($m),*))),*
+        );
+    );
 
     // === Service Shapes ===
     // TODO(service shapes): Add Operation, Resource, Service schema macros

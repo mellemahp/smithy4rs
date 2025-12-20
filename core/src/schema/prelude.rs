@@ -14,6 +14,9 @@ use crate::{
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Prelude Shape Schemas
+// ---------------------
+// These are the base shapes of the smithy data model.
+// For more information see: https://smithy.io/2.0/spec/index.html
 ////////////////////////////////////////////////////////////////////////////////////
 
 smithy!("smithy.api#Blob": { blob BLOB });
@@ -34,6 +37,19 @@ smithy!("smithy.api#Document": { document DOCUMENT });
 // - Primitive types
 
 ///////////////////////////////////////////////////////////////////////
+// Unit Type
+// ---------
+// Unit types is used by unions and operations to indicate input/output
+// or variants that have no meaningful value
+///////////////////////////////////////////////////////////////////////
+annotation_trait!(UnitTypeTrait, "smithy.api#UnitTypeTrait");
+
+smithy!("smithy.api#Unit": {
+    @UnitTypeTrait;
+    structure UNIT {}
+});
+
+///////////////////////////////////////////////////////////////////////
 // Prelude Traits
 ///////////////////////////////////////////////////////////////////////
 
@@ -42,7 +58,6 @@ annotation_trait!(SensitiveTrait, "smithy.api#sensitive");
 annotation_trait!(StreamingTrait, "smithy.api#streaming");
 annotation_trait!(SparseTrait, "smithy.api#sparse");
 annotation_trait!(RequiredTrait, "smithy.api#required");
-annotation_trait!(UnitTypeTrait, "smithy.api#UnitTypeTrait");
 annotation_trait!(EventHeaderTrait, "smithy.api#eventheader");
 annotation_trait!(EventPayloadTrait, "smithy.api#eventPayload");
 annotation_trait!(IdempotencyTokenTrait, "smithy.api#IdempotencyToken");

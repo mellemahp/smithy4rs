@@ -161,6 +161,18 @@ pub trait StructSerializer {
         Ok(())
     }
 
+    /// Handle unknown values.
+    #[inline]
+    fn serialize_unknown(&mut self, schema: &SchemaRef, name: &String) -> Result<(), Self::Error> {
+        // Error out on unknown by default
+        // TODO(unknown members): Is this the correct default behavior?
+        Err(
+            Self::Error::custom(
+                format!("Attempted to serialize unknown value: {:?}", name)
+            )
+        )
+    }
+
     /// Finish serializing a structure.
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }

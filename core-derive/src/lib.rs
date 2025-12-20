@@ -37,6 +37,11 @@ pub fn smithy_union(
     // Expect NO args
     let _ = parse_macro_input!(args as parse::Nothing);
 
+    // Add a marker attribute to help us differentiate unions from regular enums
+    // NOTE: We cannot use field presence as an indicator b/c unions may have
+    // empty (i.e. `UNIT`) values
+    enum_struct.attrs.push(parse_quote!(#[smithy_union_enum]));
+
     // Add unknown variants
     unknown_variant(&mut enum_struct);
 
@@ -108,20 +113,17 @@ fn unknown_variant(enum_data: &mut ItemEnum) {
 // Derive Macros
 // ============================================================================
 
-#[proc_macro_derive(Dummy, attributes(smithy_schema, enum_value))]
+#[proc_macro_derive(Dummy, attributes(smithy_schema, enum_value, smithy_union_enum))]
 pub fn dummy_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let schema = schema_shape_derive(input.clone());
     let serializable = serializable_shape_derive(input.clone());
-    let deserializable = deserializable_shape_derive(input);
 
     let schema_tokens = TokenStream::from(schema);
     let serializable_tokens = TokenStream::from(serializable);
-    let deserializable_tokens = TokenStream::from(deserializable);
 
     quote! {
         #schema_tokens
         #serializable_tokens
-        #deserializable_tokens
     }
     .into()
 }
