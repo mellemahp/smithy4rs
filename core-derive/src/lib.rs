@@ -21,56 +21,73 @@ use crate::{
 // TODO(derive): Smithy Struct should automatically derive: Debug, PartialEq, and Clone
 //               if not already derived on shape.
 
+// ============================================================================
+// Attribute Macros
+// ============================================================================
+
+/// Modifies an enum to be usable as a Smithy Union
+///
+/// This macro is used to automatically add an unknown variant for Union shapes.
+#[proc_macro_attribute]
+pub fn smithy_union(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let mut enum_struct = parse_macro_input!(input as ItemEnum);
+    // Expect NO args
+    let _ = parse_macro_input!(args as parse::Nothing);
+
+    // Add a marker attribute to help us differentiate unions from regular enums
+    // NOTE: We cannot use field presence as an indicator b/c unions may have
+    // empty (i.e. `UNIT`) values
+    enum_struct.attrs.push(parse_quote!(#[smithy_union_enum]));
+
+    // Add unknown variants
+    unknown_variant(&mut enum_struct);
+
+    // Re-write stucture with changes
+    quote!(#enum_struct).into()
+}
+
 /// Modifies an enum to be usable as a Smithy enum
 ///
-/// This macro is used to automatically add an unknown variant for Smithy Enums and Union shapes.
-/// It also allows us to use discriminants for both string and int enums
+/// This macro is used to automatically add an unknown variant for Smithy Enums.
+/// It also allows us to use discriminants for both string and int enum definitions.
 #[proc_macro_attribute]
 pub fn smithy_enum(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    // process all discriminants.
-    // *WARNING*: This must occur _BEFORE_ adding unknown variant
-    let input = discriminant_to_attribute(args.clone(), input);
-    // Add unknown variants
-    unknown_variant(args, input)
-}
-
-#[proc_macro_attribute]
-pub fn discriminant_to_attribute(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
     let mut enum_struct = parse_macro_input!(input as ItemEnum);
     // Expect NO args
     let _ = parse_macro_input!(args as parse::Nothing);
+    // process all discriminants.
+    // *WARNING*: This must occur _BEFORE_ adding unknown variant
+    discriminants_to_attributes(&mut enum_struct);
+    // Add unknown variants
+    unknown_variant(&mut enum_struct);
 
+    // Re-write stucture with changes
+    quote!(#enum_struct).into()
+}
+
+/// Convert discriminants to `[#enum_value]` attributes
+fn discriminants_to_attributes(enum_data: &mut ItemEnum) {
     // Change all discriminants to attributes for consistency
-    for variant in enum_struct.variants.iter_mut() {
+    for variant in enum_data.variants.iter_mut() {
         if let Some((_, expr)) = &variant.discriminant {
             variant.attrs.push(parse_quote!(#[enum_value(#expr)]));
             variant.discriminant = None;
         };
     }
-
-    quote!(#enum_struct).into()
 }
 
-/// This macro is automatically adds an unknown variant for Enums and Unions.
-#[proc_macro_attribute]
-pub fn unknown_variant(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    let mut enum_struct = parse_macro_input!(input as ItemEnum);
-    // Expect NO args
-    let _ = parse_macro_input!(args as parse::Nothing);
-
+/// Adds an `Unknown` variant for Enums and Unions.
+fn unknown_variant(enum_data: &mut ItemEnum) {
     // Determine if unknown should store string or int. Unions (without `enum_value` attr)
     // will default tousing String as unknown data value.
     let field = if let Some(val) = parse_enum_value(
-        &enum_struct
+        &enum_data
             .variants
             .first()
             .expect("Expected at least one variant")
@@ -81,7 +98,7 @@ pub fn unknown_variant(
     } else {
         parse_quote!((String))
     };
-    enum_struct.variants.push(Variant {
+    enum_data.variants.push(Variant {
         attrs: vec![
             parse_quote!(#[automatically_derived]),
             parse_quote!(#[doc(hidden)]),
@@ -90,10 +107,13 @@ pub fn unknown_variant(
         fields: syn::Fields::Unnamed(field),
         ident: Ident::new("Unknown", Span::call_site()),
     });
-    quote!(#enum_struct).into()
 }
 
-#[proc_macro_derive(Dummy, attributes(smithy_schema, enum_value))]
+// ============================================================================
+// Derive Macros
+// ============================================================================
+
+#[proc_macro_derive(Dummy, attributes(smithy_schema, enum_value, smithy_union_enum))]
 pub fn dummy_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let schema = schema_shape_derive(input.clone());
     let serializable = serializable_shape_derive(input.clone());

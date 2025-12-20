@@ -1,6 +1,6 @@
 use smithy4rs_core::{
     schema::SchemaRef,
-    serde::{Buildable, ShapeBuilder, serializers::SerializeWithSchema},
+    serde::{Buildable, ShapeBuilder, de::DeserializeWithSchema, serializers::SerializeWithSchema},
 };
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 use smithy4rs_test_utils::*;
@@ -152,5 +152,15 @@ fn test_empty_strings() {
         .unwrap();
 
     let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    assert_eq!(data, result);
+}
+
+#[test]
+fn test_union() {
+    let data = TestUnion::A("stuff".to_string());
+    let json = serialize_to_json(&data, &UNION);
+    println!("Serialized JSON: {}", String::from_utf8_lossy(&json));
+    let mut deserializer = JsonDeserializer::new(&json);
+    let result = TestUnion::deserialize_with_schema(&UNION, &mut deserializer).unwrap();
     assert_eq!(data, result);
 }
