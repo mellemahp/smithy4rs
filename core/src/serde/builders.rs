@@ -32,10 +32,12 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// Build the final shape from the builder, checking fields using a
     /// custom [`Validator`] implementation.
     ///
-    /// To build a shape using the default validator use [`ShapeBuilder::build`].
+    /// To build a shape using the default validator use [`Self::build()`].
     ///
-    /// NOTE: Actual validation and build logic is implemented in builder [`Validate`]
-    /// implementation.
+    /// <div class="note">
+    /// **NOTE**: Validation is supported by the [`SerializeWithSchema`] implementation
+    /// for the builder.
+    /// </div>
     #[inline]
     fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
         validator.validate(S::schema(), &self)?;

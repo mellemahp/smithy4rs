@@ -1,50 +1,30 @@
-//! Smithy Macros
-//! Primarily these macros are used to construct schemas and traits.
-
-/// Helper macro for deserializing required struct members in generated code.
+/// # Smithy Schema Macro
+/// Creates a lazily-resolved smithy [`Schema`](crate::schema::Schema) from a user-friend DSL
+/// that tries to mimic the Smithy IDL syntax.
 ///
-/// This macro simplifies the pattern of checking if a member schema matches
-/// and deserializing its value into the builder.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! deserialize_member {
-    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if std::sync::Arc::ptr_eq($member, $schema) {
-            let value = <$ty as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
-            return Ok($builder.$method(value));
-        }
-    };
-}
-
-/// Helper macro for deserializing optional struct members in generated code.
+/// Generated schemas can be used by `Smithy4rs` proc macros to automatically implement
+/// schema-guided (de)serialization for structures and enums.
 ///
-/// This macro handles optional fields by deserializing as Option<T> and only
-/// calling the builder method if Some.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! deserialize_optional_member {
-    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if std::sync::Arc::ptr_eq($member, $schema) {
-            let value = <Option::<$ty> as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
-            if let Some(v) = value {
-                return Ok($builder.$method(v));
-            }
-            return Ok($builder);
-        }
-    };
-}
-
-/// Create a list of traits for use in Schema builders
-#[doc(hidden)]
-#[macro_export]
-macro_rules! traits {
-    () => { Vec::new() };
-    ($($x:expr),+ $(,)?) => (
-        vec![$($x.into()),*]
-    );
-}
-
-/// Creates a lazily-resolved smithy schema.
+/// ```rust
+/// use smithy4rs_core::smithy;
+/// use smithy4rs_core_derive::SmithyStruct;
+///
+/// smithy!("test#SimpleStruct": {
+///     structure SIMPLE_STRUCT_SCHEMA {
+///         SIMPLE_FIELD_A: STRING = "field_a"
+///         SIMPLE_FIELD_B: INTEGER = "field_b"
+///     }
+/// });
+///
+/// #[derive(SmithyStruct, Debug, PartialEq)]
+/// #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
+/// pub struct SimpleStruct {
+///     #[smithy_schema(SIMPLE_FIELD_A)]
+///     pub field_a: String,
+///     #[smithy_schema(SIMPLE_FIELD_B)]
+///     pub field_b: i32,
+/// }
+/// ```
 #[macro_export]
 macro_rules! smithy {
     // Hide implementation details.
@@ -56,11 +36,11 @@ macro_rules! smithy {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! smithy_internal {
-    //////////////////////////////////////////////////////////////////////////
+    // ============================================================================
     // Main implementation.
     //
-    // Must be invoked as: smithy_internal!($($json)+)
-    //////////////////////////////////////////////////////////////////////////
+    // Must be invoked as: smithy_internal!($($smithy)+)
+    // ============================================================================
     // === Simple types ===
     ($id:literal: {
         $(@$t:expr;)*
@@ -252,11 +232,12 @@ macro_rules! smithy_internal {
     // === Service Shapes ===
     // TODO(service shapes): Add Operation, Resource, Service schema macros
 
-    //////////////////////////////////////////////////////////////////////////
+    // ============================================================================
     // Actual impl of schema
     //
     // PRIVATE API
-    //////////////////////////////////////////////////////////////////////////
+    // ============================================================================
+
     // Schema with members and generated static member variables (i.e. structure)
     (
         @inner
@@ -306,11 +287,12 @@ macro_rules! smithy_internal {
         });
     };
 
-    //////////////////////////////////////////////////////////////////////////
+    // ============================================================================
     // Internal helpers to build chain of member `put` statements
     //
     // INTERNAL API
-    //////////////////////////////////////////////////////////////////////////
+    // ============================================================================
+
     // Case - @self recursion case (matches (@self) as single tt)
     (@build_chain $builder:expr, $builder_ref:expr, ($member_ident:literal, (@ self), $member_traits:expr) $(, $rest:tt)*) => {
         $crate::smithy!(@build_chain $builder.put_member($member_ident, $builder_ref, $member_traits), $builder_ref $(, $rest)*)
@@ -325,22 +307,25 @@ macro_rules! smithy_internal {
     };
 }
 
-// Add a StaticTraitId implementation for a SmithyTrait.
-#[macro_export]
-macro_rules! static_trait_id {
-    ($trait_struct:ident, $id:literal) => {
-        impl StaticTraitId for $trait_struct {
-            #[inline]
-            fn trait_id() -> &'static ShapeId {
-                static ID: $crate::LazyLock<$crate::schema::ShapeId> =
-                    $crate::LazyLock::new(|| $crate::schema::ShapeId::from($id));
-                &ID
-            }
-        }
-    };
-}
-
-// Creates an implementation for a "marker" trait that contains no data
+/// # Smithy Annotation Trait Macro
+/// Creates a [`SmithyTrait`](crate::schema::SmithyTrait) implementation for a marker trait that contains no data.
+///
+/// An example of a Smithy "annotation" trait is the [@idempotent](https://smithy.io/2.0/spec/behavior-traits.html#smithy-api-idempotent-trait) trait:
+/// ```smithy
+/// @trait
+/// structure idempotent {}
+/// ```
+///
+/// ## Example
+/// The following example generates an empty struct, `IdempotencyTokenTrait`,
+/// that implements [`SmithyTrait`](crate::schema::SmithyTrait) and has a
+/// [`StaticTraitId`](crate::schema::StaticTraitId) of `"smithy.api#IdempotencyToken"`.
+///
+/// ```rust
+/// use smithy4rs_core::annotation_trait;
+///
+/// annotation_trait!(IdempotencyTokenTrait, "smithy.api#IdempotencyToken");
+/// ```
 #[macro_export]
 macro_rules! annotation_trait {
     ($trait_struct:ident, $id:literal) => {
@@ -364,7 +349,25 @@ macro_rules! annotation_trait {
     };
 }
 
-// Trait definitions that contain only a string value
+/// # Smithy String Trait Macro
+/// Trait definitions that contain only a string value.
+///
+/// An example of a `string` trait is the [`@documentation`](https://smithy.io/2.0/spec/documentation-traits.html#smithy-api-documentation-trait) trait:
+/// ```smithy
+/// @trait
+/// string documentation
+/// ```
+///
+/// ### Example
+/// The following example creates a struct, `MediaTypeTrait`, with a single public
+/// field (`media_type`) that implements [`SmithyTrait`](crate::schema::SmithyTrait) and has a
+/// [`StaticTraitId`](crate::schema::StaticTraitId) of `"smithy.api#mediaType"`
+///
+/// ```rust
+/// use smithy4rs_core::string_trait;
+///
+/// string_trait!(MediaTypeTrait, media_type, "smithy.api#mediaType");
+/// ```
 #[macro_export]
 macro_rules! string_trait {
     ($trait_struct:ident, $value_name:ident, $id:literal) => {
@@ -397,4 +400,74 @@ macro_rules! string_trait {
             }
         }
     };
+}
+
+// ============================================================================
+// Helper Macros
+// ----------------------------------------------------------------------------
+// These macros are generally should not be used directly
+// ============================================================================
+
+/// Helper macro to add [`crate::schema::StaticTraitId`] implementation for a SmithyTrait.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! static_trait_id {
+    ($trait_struct:ident, $id:literal) => {
+        impl StaticTraitId for $trait_struct {
+            #[inline]
+            fn trait_id() -> &'static ShapeId {
+                static ID: $crate::LazyLock<$crate::schema::ShapeId> =
+                    $crate::LazyLock::new(|| $crate::schema::ShapeId::from($id));
+                &ID
+            }
+        }
+    };
+}
+
+/// Helper macro for deserializing required struct members in generated code.
+///
+/// This macro simplifies the pattern of checking if a member schema matches
+/// and deserializing its value into the builder.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! deserialize_member {
+    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
+        if std::sync::Arc::ptr_eq($member, $schema) {
+            let value = <$ty as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
+            return Ok($builder.$method(value));
+        }
+    };
+}
+
+/// Helper macro for deserializing optional struct members in generated code.
+///
+/// This macro handles optional fields by deserializing as Option<T> and only
+/// calling the builder method if Some.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! deserialize_optional_member {
+    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
+        if std::sync::Arc::ptr_eq($member, $schema) {
+            let value = <Option::<$ty> as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
+            if let Some(v) = value {
+                return Ok($builder.$method(v));
+            }
+            return Ok($builder);
+        }
+    };
+}
+
+/// Helper macro that creates a list of traits for use in Schema builders
+///
+/// <div class ="note">
+/// **NOTE**: Unlike the `vec!` macro, the default here creates a _unallocated_ vec
+/// so there is no added overhead from always using it in schema macros.
+/// </div>
+#[doc(hidden)]
+#[macro_export]
+macro_rules! traits {
+    () => { Vec::new() };
+    ($($x:expr),+ $(,)?) => (
+        vec![$($x.into()),*]
+    );
 }

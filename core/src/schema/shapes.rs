@@ -2,8 +2,6 @@
 //! Definition of the [types](https://smithy.io/2.0/spec/simple-types.html) that
 //! compose the Smithy data model.
 //!
-//!
-//!
 
 #![allow(dead_code)]
 
@@ -29,6 +27,7 @@ pub struct ShapeId {
     member: Option<String>,
 }
 impl Hash for ShapeId {
+    #[inline]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }

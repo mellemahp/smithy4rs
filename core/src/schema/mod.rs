@@ -3,7 +3,7 @@ pub mod prelude;
 mod traits;
 pub use traits::*;
 
-mod documents;
+pub mod documents;
 pub use documents::*;
 
 mod shapes;

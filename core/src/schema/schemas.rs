@@ -8,13 +8,21 @@ use std::{
     sync::{Arc, LazyLock, OnceLock, RwLock},
 };
 
+use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxBuildHasher;
 
 use crate::{
-    FxIndexMap, FxIndexSet, Ref,
+    Ref,
     prelude::{DefaultTrait, RequiredTrait},
     schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
 };
+
+// Faster Map and Set implementations used for internal types and Schemas.
+//
+// NOTE: These should _not_ be used in serialized/deserialized types as they are not
+// resistant to DOS attacks.
+type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
+type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
 
 /// Reference to a Smithy Schema type.
 ///
@@ -107,6 +115,15 @@ pub struct MemberSchema {
     flattened_traits: OnceLock<TraitMap>,
 }
 impl MemberSchema {
+    /// Gets the traits that apply to this member.
+    ///
+    /// This includes traits on the member target which are combined
+    /// with direct member traits to give the full trait list.
+    ///
+    /// <div class="note">
+    /// Note: Calling this method will resolve both the target and the
+    /// combined set of traits if either have not already been resolved.
+    /// </div>
     #[inline]
     fn traits(&self) -> &TraitMap {
         self.flattened_traits.get_or_init(|| {
@@ -309,7 +326,9 @@ impl Schema {
 
     /// Get a map of all members attached to this schema.
     ///
+    /// <div class ="note">
     /// **NOTE**: Scalar schemas with no members will return an empty map.
+    /// </div>
     pub(crate) fn members(&self) -> &FxIndexMap<String, SchemaRef> {
         match self {
             // TODO(errors): Error handling
@@ -340,7 +359,9 @@ impl Schema {
 
     /// Returns member schema reference or *panics*
     ///
-    /// **WARNING**: In general this should only be used in generated code.
+    /// <div class ="warning">
+    /// In general this should only be used in generated code.
+    /// </div>
     #[must_use]
     pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
         self.get_member(member_name)
@@ -582,6 +603,9 @@ impl SchemaBuilder {
 }
 
 // TODO(references): Do Member targets need to use weak ref to avoid Arc cycles?
+/// Schema targeted by a member schema
+///
+/// Member targets are lazily resolved in order to support recursive shapes
 #[derive(Clone)]
 pub enum MemberTarget {
     Resolved(SchemaRef),
@@ -595,20 +619,16 @@ impl Deref for MemberTarget {
     fn deref(&self) -> &Self::Target {
         match self {
             MemberTarget::Resolved(target) => target,
-            MemberTarget::Lazy { builder, value } => value.get().map_or_else(
-                || {
-                    value.set(builder.build()).expect("Lock poisoned");
-                    value.get().unwrap()
-                },
-                |value| value,
-            ),
+            MemberTarget::Lazy { builder, value } => value.get().unwrap_or_else(|| {
+                value.set(builder.build()).expect("Lock poisoned");
+                value.get().unwrap()
+            }),
         }
     }
 }
 impl Debug for MemberTarget {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO(formatting): Add a nicer format result
-        writeln!(f, "Member Target")
+        self.deref().fmt(f)
     }
 }
 impl PartialEq for MemberTarget {

@@ -1,7 +1,164 @@
 #![allow(dead_code)]
+//! # Document Types
+//! [Documents](https://smithy.io/2.0/spec/simple-types.html#document) are a protocol-agnostic
+//! representation of untyped data in the smithy data model. They function as a kind of "any" type.
+//!
+//! ### Smithy Data Model
+//! The Smithy data model consists of:
+//! - Numbers: `byte`, `short`, `integer`, `long`, `float`, `double`, `bigInteger`, `bigDecimal`.
+//!   `IntEnum` shapes are represented as integers in the Smithy data model.
+//! - `boolean`
+//! - `blob`
+//! - `string`: `enum` shapes are represented as strings in the Smithy data model
+//! - `timestamp`: Represented as an [`Instant`]
+//! - `list`: list of Documents
+//! - `map`: map of int|long|string keys to Document values
+//! - `struct`: structure or union
+//!
+//! ## Document Properties
+//! 1. Shape Conversion - All generated shapes should be able to be converted to/from a document
+//! 2. Lossless Serialization: Documents created from a shape should serialize exactly the same as the shape they are created from. I.e.
+//!
+//! ```rust,ignore
+//!    // These two should be equivalent
+//!    my_smithy_shape.serialize(serializer)?;
+//!    my_smithy_shape.as_document().serialize(serializer)?;
+//! ```
+//!
+//! 3. Lossless Deserialization: Deserializing to a document then converting to a shape should be the same as deserializing to that shape. I.e. :
+//!
+//! ```rust,ignore
+//!    // These two should be equivalent
+//!    let my_shape = deserializer::deserialize::<MyShape>::();
+//!    let my_shape = deserializer::deserialize::<Document>::().into();
+//! ```
+//! This is particularly important for dealing with errors, events, and over-the-wire polymorphism.
+//!
+//! 4. Protocol Smoothing: Documents should try to smooth over any protocol-specific incompatibilities with the smithy data model.
+//! 5. Discriminators - Documents with an encloded type should be able to be (de)serialized with data that identifies their
+//!
+//! ### Protocol Smoothing
+//! Because Document types are a protocol-agnostic view of untyped data, Protocol codecs should attempt to smooth over
+//! any protocol-specific incompatibilities with the Smithy data model when deserializing into a document type.
+//!
+//! For example, If a protocol represents a blob as a base64 encoded string, then deserializing the value into a
+//! document should base64 decode the value and use the underlying bytes as the blob value in the document.
+//! When the document is re-serialized by the same protocol, the protocol should handle conversion from a byte
+//! buffer back to a base64 encoded string.
+//!
+//! ### Lossless serialization
+//! Point two *REQUIRES* that documents created from a shape have the exact same schema as that shape.
+//!
+//! A good example of why is to consider the following Smithy Shape:
+//!
+//! ```smithy
+//! structure MyStruct {
+//!     @jsonName("foo")
+//!     bar: String
+//! }
+//! ```
+//!
+//! When we go to serialize an instance of this shape with a JSON protocol we would expect that the member `bar`
+//! is renamed to `foo` in the serialized JSON data:
+//!
+//! ```rust,ignore
+//! let myStructInstance = MyStruct::builder().bar("my-string").build()?;
+//! myStructInstance.serialize(jsonSerializer);  // -> Yields `{ "foo": "my-string" }`
+//! ```
+//!
+//! The JSON protocol will achieve this conversion by discovering the `jsonName` trait on the
+//! schema of the `myStructInstance` `bar` member.
+//!
+//! Another good example is the case of a `@sensitive` field on a structure:
+//!
+//! ```smithy
+//! structure MyStructRedacted {
+//!    @sensitive
+//!    password: String
+//! }
+//! ```
+//!
+//! `Display`-ing such a structure should result in the `@sensitive` field being redacted:
+//! ```rust,ignore
+//! let myStructInstance = MyStruct::builder().password("Secret".to_string()).build()?;
+//! assert_eq!("MyStruct[password:**REDACTED**]", format!("{myStructInstance}"))
+//! ```
+//!
+//! We do _not_ want conversion to a document to suddenly start leaking a sensitive field.
+//!
+//! In order to retain trait information, Documents created from a shape MUST retain that shape’s Schema.
+//!
+//! ### Discriminators
+//! Document types may have a `ShapeId` that indicates the type they correspond to.
+//! This ID can be serialized to allow consumers to handle over the wire polymorphism (primarily for over-the wire polymorphism).
+//! Typed documents must return the shape ID of the enclosed shape.
+//!
+//! For example, let’s say we convert a shape of type `com.example#MyShape` into a document type.
+//! The document would then store the `ShapeID` as its discriminator.
+//!
+//! Serializing this document with a JSON protocol might result in a field `__type` being added to the output JSON :
+//!
+//! ```json
+//! {
+//!   "__type": "com.example#MyShape",
+//!   "other": {}
+//! }
+//! ```
+//!
+//! <div class="warning">
+//! Discriminators are only really useful for documents (or other structs) being serialized as Structure and Union types.
+//! As such they, are serialized by the [`StructSerializer::serialize_discriminator`] method.
+//! </div>
+//!
+//!
+//! Similarly, a deserializer might want to pull the `__type` data from a JSON blob when deserializing into a Document type.
+//!
+//!
+//! ## Lossless Deserialization
+//!
+//! Let’s say we want to deserialize an error type that has the schema:
+//! ```smithy
+//! @error("client")
+//! @http
+//! struct MyClientError {
+//!    @required
+//!    message: String
+//!    @jsonName("foo")
+//!    bar: String
+//! }
+//! ```
+//!
+//! Over the wire we might get a JSON body like:
+//!
+//! ```json
+//! {
+//!   "__type": "com.example#MyClientError",
+//!   "message": "Something broke pretty bad!",
+//!   "foo": "quux!"
+//! }
+//! ```
+//!
+//! Because the error response _could_ be one of multiple error types, we don't know the type
+//! to deserialize it to in advance.
+//! We deserialize the JSON data to a Document, extract the discriminator, and use it to:
+//!
+//! ```rust,ignore
+//! let error_document = Document::deserialize(json_deserializer)?;
+//! let builder = error_document.get_builder(error_document.discriminator());
+//! let output = builder.deserialize(error_document)?.build();
+//! // This sort of type-erasure thing is hard in rust. Maybe using an enum or something
+//! // to cast could work? Out of scope for this discussion
+//! ```
+//!
+//! The initial `error_document` has no schema information (beyond the base `Document` schema), so it does not perform any protocol-specific
+//! conversions during deserialization (i.e. it won't convert the field name `foo` to `bar` based on the `@jsonName` trait).
+//!
+//! However, when we deserialize the document into the final Error type we need to execute the protocol-specific handling of the `jsonName` trait.
+//!
 
 use std::error::Error;
 
+use bigdecimal::ToPrimitive;
 use indexmap::IndexMap;
 use thiserror::Error;
 
@@ -17,7 +174,6 @@ use crate::{
 /// Document types are a protocol-agnostic view of untyped data. Protocols should attempt
 /// to smooth over protocol incompatibilities with the Smithy data model.
 ///
-// TODO: Is there data loss in struct conversions to Documents that should be noted?
 #[derive(Clone, PartialEq, Debug)]
 pub struct Document {
     pub(crate) schema: SchemaRef,
@@ -42,7 +198,9 @@ impl Document {
     ///
     /// The discriminator is primarily used to implement polymorphism using documents in deserialization.
     ///
-    /// *Impl note*: It is expected that protocols set the discriminator on deserialization if applicable
+    /// <div class="warning">
+    /// It is expected that protocols set the discriminator on deserialization if applicable
+    /// </div>
     #[must_use]
     pub fn discriminator(&self) -> Option<&ShapeId> {
         self.discriminator.as_ref()
@@ -50,7 +208,9 @@ impl Document {
 
     /// Get the size of the document.
     ///
+    /// <div class ="note">
     /// **NOTE**: Scalar documents always return a size of 1
+    /// </div>
     #[must_use]
     pub fn size(&self) -> usize {
         match self.value {
@@ -87,7 +247,9 @@ pub enum DocumentValue {
 ///
 /// Smithy numbers types include: byte, short, integer, long, float, double, bigInteger, bigDecimal.
 ///
-/// *Note*: `IntEnum` shapes are represented as integers in the Smithy data model.
+/// <div class ="note">
+/// **NOTE**: `IntEnum` shapes are represented as integers in the Smithy data model.
+/// </div>
 #[derive(Debug, Clone, PartialEq)]
 pub enum NumberValue {
     Integer(NumberInteger),
@@ -146,6 +308,7 @@ pub enum NumberFloat {
     BigDecimal(BigDecimal),
 }
 
+/// Errors that can occur when converting to/from a document type.
 #[derive(Error, Debug, Default)]
 pub enum DocumentError {
     #[error("Failed to convert document to type {0}")]
@@ -188,15 +351,15 @@ pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
     Box::new(DocumentError::DocumentConversion(expected.to_string()))
 }
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // Document Number Comparison
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 
 // TODO(numeric comparisons): Add comparisons between numeric types.
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // AS-ers to borrow document value as type if possible
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 impl Document {
     /// Get the blob value of the Document if it is a blob.
     #[must_use]
@@ -249,7 +412,7 @@ impl Document {
                 &NumberInteger::Short(s) => s.try_into().ok(),
                 &NumberInteger::Integer(i) => i.try_into().ok(),
                 &NumberInteger::Long(l) => l.try_into().ok(),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i8(),
             },
             _ => None,
         }
@@ -264,7 +427,7 @@ impl Document {
                 &NumberInteger::Short(s) => Some(s),
                 &NumberInteger::Integer(i) => i.try_into().ok(),
                 &NumberInteger::Long(l) => l.try_into().ok(),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i16(),
             },
             _ => None,
         }
@@ -279,7 +442,7 @@ impl Document {
                 &NumberInteger::Short(s) => Some(s.into()),
                 &NumberInteger::Integer(i) => Some(i),
                 &NumberInteger::Long(l) => l.try_into().ok(),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i32(),
             },
             _ => None,
         }
@@ -294,7 +457,7 @@ impl Document {
                 &NumberInteger::Short(s) => Some(s.into()),
                 &NumberInteger::Integer(i) => Some(i.into()),
                 &NumberInteger::Long(l) => Some(l),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b.to_i64(),
             },
             _ => None,
         }
@@ -307,7 +470,7 @@ impl Document {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 &NumberFloat::Float(f) => Some(f),
                 &NumberFloat::Double(d) => Some(d as f32),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b.to_f32(),
             },
             _ => None,
         }
@@ -320,7 +483,7 @@ impl Document {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 &NumberFloat::Float(f) => Some(f.into()),
                 &NumberFloat::Double(d) => Some(d),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b.to_f64(),
             },
             _ => None,
         }
@@ -337,7 +500,6 @@ impl Document {
     }
 
     #[must_use]
-    // TODO(quality): could the vec be replaced with slice?
     pub fn as_list(&self) -> Option<&Vec<Document>> {
         if let DocumentValue::List(document_list) = &self.value {
             Some(document_list)
@@ -356,9 +518,9 @@ impl Document {
     }
 }
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // Conversions of documents to other types
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 
 impl TryFrom<Document> for ByteBuffer {
     type Error = DocumentError;
@@ -415,7 +577,9 @@ impl TryFrom<Document> for i8 {
                 NumberInteger::Short(s) => Ok(s as i8),
                 NumberInteger::Integer(i) => Ok(i as i8),
                 NumberInteger::Long(l) => Ok(l as i8),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i8()
+                    .ok_or(DocumentError::DocumentConversion("i8".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i8".to_string())),
         }
@@ -432,7 +596,9 @@ impl TryFrom<Document> for i16 {
                 NumberInteger::Short(s) => Ok(s),
                 NumberInteger::Integer(i) => Ok(i as i16),
                 NumberInteger::Long(l) => Ok(l as i16),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i16()
+                    .ok_or(DocumentError::DocumentConversion("i16".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i16".to_string())),
         }
@@ -449,7 +615,9 @@ impl TryFrom<Document> for i32 {
                 NumberInteger::Short(s) => Ok(s.into()),
                 NumberInteger::Integer(i) => Ok(i),
                 NumberInteger::Long(l) => Ok(l as i32),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i32()
+                    .ok_or(DocumentError::DocumentConversion("i32".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i32".to_string())),
         }
@@ -466,7 +634,9 @@ impl TryFrom<Document> for i64 {
                 NumberInteger::Short(s) => Ok(s.into()),
                 NumberInteger::Integer(i) => Ok(i.into()),
                 NumberInteger::Long(l) => Ok(l),
-                NumberInteger::BigInt(_) => todo!("Support conversion if possible"),
+                NumberInteger::BigInt(b) => b
+                    .to_i64()
+                    .ok_or(DocumentError::DocumentConversion("i64".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("i64".to_string())),
         }
@@ -481,7 +651,9 @@ impl TryFrom<Document> for f32 {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 NumberFloat::Float(f) => Ok(f),
                 NumberFloat::Double(d) => Ok(d as f32),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b
+                    .to_f32()
+                    .ok_or(DocumentError::DocumentConversion("f32".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("f32".to_string())),
         }
@@ -496,7 +668,9 @@ impl TryFrom<Document> for f64 {
             DocumentValue::Number(NumberValue::Float(nf)) => match nf {
                 NumberFloat::Float(f) => Ok(f64::from(f)),
                 NumberFloat::Double(d) => Ok(d),
-                NumberFloat::BigDecimal(_) => todo!(),
+                NumberFloat::BigDecimal(b) => b
+                    .to_f64()
+                    .ok_or(DocumentError::DocumentConversion("f64".to_string())),
             },
             _ => Err(DocumentError::DocumentConversion("f64".to_string())),
         }
@@ -555,9 +729,9 @@ impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap
     }
 }
 
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 // Conversions INTO Document types
-//////////////////////////////////////////////////////////////////
+// ============================================================================
 
 impl From<bool> for Document {
     fn from(value: bool) -> Self {

@@ -24,11 +24,12 @@ pub trait Error: Sized + StdError {
 // Core Deserializer Trait
 // ============================================================================
 
-/// A [`Deserializer`] reads data from an input source, guided by Smithy schemas.
+/// A `Deserializer` reads data from an input source, guided by Smithy schemas.
 ///
-/// This trait mirrors the [`Serializer`] trait, providing schema-guided deserialization
-/// for all Smithy data types. It uses a consumer pattern for compound types (structs,
-/// lists, maps) where the deserializer iterates and "pushes" values to consumer functions.
+/// This trait mirrors the [`Serializer`](crate::serde::se::Serializer) trait, providing
+/// schema-guided deserialization for all Smithy data types. It uses a consumer pattern
+/// for compound types (structs, lists, maps) where the deserializer iterates and "pushes"
+/// values to consumer functions.
 ///
 /// The deserializer is stateful and methods take `&mut self` to advance through the input.
 pub trait Deserializer<'de>: Sized {
@@ -191,7 +192,8 @@ impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape
 /// A data structure that can be deserialized from any data format supported
 /// by `smithy4rs`, guided by a schema.
 ///
-/// This trait mirrors `SerializeWithSchema` on the serialization side.
+/// This trait mirrors [`SerializeWithSchema`](crate::serde::se::SerializeWithSchema)
+/// on the serialization side.
 pub trait DeserializeWithSchema<'de>: Sized {
     /// Deserialize this value from the given deserializer using the provided schema.
     fn deserialize_with_schema<D>(
