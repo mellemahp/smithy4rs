@@ -31,7 +31,7 @@ static ESCAPE: [u8; 256] = {
 };
 
 // TODO: Add pretty printing, will need some refactoring of the writing code to add some formatter/writer abstraction
-/// JSON serializer that writes directly to a Vec<u8>.
+/// JSON serializer that writes directly to a `Vec<u8>`.
 #[repr(C, align(64))]
 pub struct JsonSerializer<'a> {
     buf: &'a mut Vec<u8>,

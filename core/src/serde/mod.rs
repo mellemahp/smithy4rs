@@ -3,7 +3,7 @@ pub mod builders;
 pub mod correction;
 pub mod deserializers;
 pub mod documents;
-mod fmt;
+pub mod fmt;
 pub mod serializers;
 pub mod validation;
 
