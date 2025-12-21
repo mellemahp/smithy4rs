@@ -71,16 +71,15 @@ use rustc_hash::FxHasher;
 use thiserror::Error;
 
 use crate::{
-    BigDecimal, Instant,
+    BigDecimal, FxIndexSet, Instant,
     prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
-    schema::{Document, SchemaRef, ShapeType},
+    schema::{Document, Schema, SchemaRef, ShapeType},
     serde::{
         se::{SerializeWithSchema, Serializer},
         serializers,
         serializers::{ListSerializer, MapSerializer, StructSerializer},
     },
 };
-
 //////////////////////////////////////////////////////////////////////////////
 // Validation Traits
 //////////////////////////////////////////////////////////////////////////////
@@ -318,8 +317,22 @@ impl<'a> Serializer for &'a mut DefaultValidator {
     }
 
     fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
-        shape_type!(self, schema, ShapeType::Integer);
-        range!(self, schema, value, to_i32);
+        // IntEnums are treated as Integers
+        if schema.shape_type().eq(&ShapeType::Integer) {
+            range!(self, schema, value, to_i32);
+        } else if schema.shape_type().eq(&ShapeType::IntEnum) {
+            let Schema::IntEnum(enum_schema) = &**schema else {
+                unreachable!("Only intEnum schemas can be constructed with an enum type");
+            };
+            if !enum_schema.values.contains(&value) {
+                self.emit_error(SmithyConstraints::IntEnumValue(
+                    value,
+                    enum_schema.values.clone(),
+                ))?;
+            }
+        } else {
+            self.emit_error(SmithyConstraints::ShapeType(*schema.shape_type()))?;
+        }
         Ok(())
     }
 
@@ -398,20 +411,33 @@ impl<'a> Serializer for &'a mut DefaultValidator {
     }
 
     fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
-        shape_type!(self, schema, ShapeType::String);
-        let len = value.len();
-        length!(self, schema, len);
+        // Enums are treated as strings for the purpose of validation
+        if schema.shape_type().eq(&ShapeType::String) {
+            let len = value.len();
+            length!(self, schema, len);
 
-        // Check @pattern trait matches provided.
-        if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
-            && pattern.pattern().find(value).is_none()
-        {
-            self.emit_error(SmithyConstraints::Pattern(
-                value.to_string(),
-                pattern.pattern().to_string(),
-            ))?;
+            // Check @pattern trait matches provided.
+            if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
+                && pattern.pattern().find(value).is_none()
+            {
+                self.emit_error(SmithyConstraints::Pattern(
+                    value.to_string(),
+                    pattern.pattern().to_string(),
+                ))?;
+            }
+        } else if schema.shape_type().eq(&ShapeType::Enum) {
+            let Schema::Enum(enum_schema) = &**schema else {
+                unreachable!("Only enum schemas can be constructed with an enum type");
+            };
+            if !enum_schema.values.contains(value) {
+                self.emit_error(SmithyConstraints::EnumValue(
+                    value.to_owned(),
+                    enum_schema.values.clone(),
+                ))?;
+            }
+        } else {
+            self.emit_error(SmithyConstraints::ShapeType(*schema.shape_type()))?;
         }
-
         Ok(())
     }
 
@@ -1201,9 +1227,14 @@ pub enum SmithyConstraints {
     UniqueItems,
     #[error("Shape type {0} does not match expected.")]
     ShapeType(ShapeType),
+    #[error("Enum value `{0}` invalid. Expected one of: {1:?}.")]
+    EnumValue(String, FxIndexSet<&'static str>),
+    #[error("Enum value `{0}` invalid. Expected one of: {1:?}.")]
+    IntEnumValue(i32, FxIndexSet<i32>),
 }
 impl ValidationError for SmithyConstraints {}
 
+// TODO(testing): Convert these to use common shapes from the test-utils crate.
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
 mod tests {
@@ -1222,7 +1253,7 @@ mod tests {
             de::Deserializer,
             deserializers::DeserializeWithSchema,
         },
-        traits,
+        smithy, traits,
     };
 
     #[test]
@@ -1245,7 +1276,7 @@ mod tests {
         assert_eq!(&errors.errors[2].error.to_string(), "Field is Required.");
     }
 
-    /// ==== Basic Shape Validations ====
+    // ==== Basic Shape Validations ====
     static LIST_SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
         Schema::list_builder(
             ShapeId::from("com.example#List"),
@@ -2535,6 +2566,49 @@ mod tests {
         assert_eq!(
             error_pattern.error.to_string(),
             "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string()
+        );
+    }
+
+    // ==== Enum Validations ====
+    smithy!("test#Enum": {
+        enum TEST_ENUM {
+            A = "a"
+            B = "b"
+        }
+    });
+
+    #[test]
+    fn checks_string_against_enum_value() {
+        let mut validator = DefaultValidator::new();
+        let Err(err) = validator.validate(&TEST_ENUM, &"lies!".to_string()) else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 1);
+        let error_enum = err.errors.first().unwrap();
+        assert_eq!(
+            error_enum.error.to_string(),
+            "Enum value `lies!` invalid. Expected one of: {\"a\", \"b\"}.".to_string()
+        );
+    }
+
+    smithy!("test#intEnum": {
+        intEnum TEST_INT_ENUM {
+            A = 1
+            B = 2
+        }
+    });
+
+    #[test]
+    fn checks_int_against_int_enum_value() {
+        let mut validator = DefaultValidator::new();
+        let Err(err) = validator.validate(&TEST_INT_ENUM, &4) else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 1);
+        let error_enum = err.errors.first().unwrap();
+        assert_eq!(
+            error_enum.error.to_string(),
+            "Enum value `4` invalid. Expected one of: {1, 2}.".to_string()
         );
     }
 }

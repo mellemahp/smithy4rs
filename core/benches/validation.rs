@@ -13,7 +13,7 @@ use smithy4rs_core::{
     },
     smithy,
 };
-use smithy4rs_core_derive::SmithyStruct;
+use smithy4rs_core_derive::SmithyShape;
 
 // ==== Test shapes ====
 smithy!("test#ValidationStruct": {
@@ -25,7 +25,7 @@ smithy!("test#ValidationStruct": {
         INTEGER: INTEGER = "integer"
     }
 });
-#[derive(SmithyStruct, Clone)]
+#[derive(SmithyShape, Clone)]
 #[smithy_schema(VALIDATE_SHAPE_SCHEMA)]
 pub struct ValidatedStruct {
     #[smithy_schema(STRING)]
@@ -43,7 +43,7 @@ smithy!("test#UnvalidatedShape": {
         INT: INTEGER = "integer"
     }
 });
-#[derive(SmithyStruct, Clone)]
+#[derive(SmithyShape, Clone)]
 #[smithy_schema(UNVALIDATED_SHAPE_SCHEMA)]
 pub struct UnvalidatedStruct {
     #[smithy_schema(STRING)]
@@ -73,7 +73,7 @@ smithy!("test#StructWithNestedList": {
     }
 });
 
-#[derive(SmithyStruct, Clone)]
+#[derive(SmithyShape, Clone)]
 #[smithy_schema(STRUCT_WITH_COLLECTIONS)]
 pub struct StructWithCollections {
     #[smithy_schema(LIST)]
@@ -89,7 +89,7 @@ smithy!("test#StructWithNestedSet": {
     }
 });
 
-#[derive(SmithyStruct, Clone)]
+#[derive(SmithyShape, Clone)]
 #[smithy_schema(STRUCT_WITH_SET)]
 pub struct StructWithSet {
     #[smithy_schema(NESTED_SET)]
@@ -103,7 +103,7 @@ smithy!("test#StructWithNestedList": {
 });
 
 // Mostly just for comparison against set implementation.
-#[derive(SmithyStruct, Clone)]
+#[derive(SmithyShape, Clone)]
 #[smithy_schema(STRUCT_WITH_LIST)]
 pub struct StructWithList {
     #[smithy_schema(NESTED_LIST)]
