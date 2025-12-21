@@ -9,11 +9,10 @@
 use std::fmt::Display;
 
 use bigdecimal::Zero;
-use indexmap::IndexMap;
 use regex::Regex;
 
 use crate::{
-    annotation_trait,
+    BigDecimal, IndexMap, LazyLock, annotation_trait,
     schema::{
         DocumentValue, NumberFloat, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId,
     },

@@ -5,15 +5,15 @@
 //!
 //! ### Smithy Data Model
 //! The Smithy data model consists of:
-//! - Numbers: byte, short, integer, long, float, double, bigInteger, bigDecimal. IntEnum shapes are
-//!   represented as integers in the Smithy data model.
-//! - boolean
-//! - blob
-//! - string: enum shapes are represented as strings in the Smithy data model
-//! - timestamp: Represented as an [`Instant`]
-//! - list: list of Documents
-//! - map: map of int|long|string keys to Document values
-//! - struct: structure or union
+//! - Numbers: `byte`, `short`, `integer`, `long`, `float`, `double`, `bigInteger`, `bigDecimal`.
+//!   `IntEnum` shapes are represented as integers in the Smithy data model.
+//! - `boolean`
+//! - `blob`
+//! - `string`: `enum` shapes are represented as strings in the Smithy data model
+//! - `timestamp`: Represented as an [`Instant`]
+//! - `list`: list of Documents
+//! - `map`: map of int|long|string keys to Document values
+//! - `struct`: structure or union
 //!
 //! ## Document Properties
 //! 1. Shape Conversion - All generated shapes should be able to be converted to/from a document
@@ -89,7 +89,7 @@
 //! In order to retain trait information, Documents created from a shape MUST retain that shape’s Schema.
 //!
 //! ### Discriminators
-//! Document types may have a ShapeId that indicates the type they correspond to.
+//! Document types may have a `ShapeId` that indicates the type they correspond to.
 //! This ID can be serialized to allow consumers to handle over the wire polymorphism (primarily for over-the wire polymorphism).
 //! Typed documents must return the shape ID of the enclosed shape.
 //!
@@ -155,7 +155,6 @@
 //!
 //! However, when we deserialize the document into the final Error type we need to execute the protocol-specific handling of the `jsonName` trait.
 //!
-
 
 use std::error::Error;
 

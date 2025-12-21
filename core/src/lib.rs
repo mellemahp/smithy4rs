@@ -24,6 +24,8 @@ pub use bigdecimal::BigDecimal;
 #[doc(hidden)]
 pub use bytebuffer::ByteBuffer;
 #[doc(hidden)]
+pub use indexmap::IndexMap;
+#[doc(hidden)]
 pub use num_bigint::BigInt;
 #[doc(hidden)]
 pub use temporal_rs::Instant;
