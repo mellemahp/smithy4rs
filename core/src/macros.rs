@@ -408,7 +408,7 @@ macro_rules! string_trait {
 // These macros are generally should not be used directly
 // ============================================================================
 
-/// Helper macro to add [`crate::schema::StaticTraitId`]implementation for a SmithyTrait.
+/// Helper macro to add [`crate::schema::StaticTraitId`] implementation for a SmithyTrait.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! static_trait_id {

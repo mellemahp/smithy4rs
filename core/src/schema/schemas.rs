@@ -603,6 +603,9 @@ impl SchemaBuilder {
 }
 
 // TODO(references): Do Member targets need to use weak ref to avoid Arc cycles?
+/// Schema targeted by a member schema
+///
+/// Member targets are lazily resolved in order to support recursive shapes
 #[derive(Clone)]
 pub enum MemberTarget {
     Resolved(SchemaRef),
