@@ -724,9 +724,9 @@ mod tests {
     use super::*;
     use crate::{
         prelude::{JsonNameTrait, STRING},
-        schema::DocumentValue,
         traits,
     };
+    use crate::schema::DefaultDocumentValue;
 
     #[test]
     fn scalar_schemas() {
@@ -972,7 +972,7 @@ mod tests {
                 &STRING,
                 traits![
                     RequiredTrait,
-                    DefaultTrait(DocumentValue::String("Woo".into()))
+                    DefaultTrait(DefaultDocumentValue::String("Woo".into()).into())
                 ],
             )
             .put_member("target_a", &STRING, traits![RequiredTrait])

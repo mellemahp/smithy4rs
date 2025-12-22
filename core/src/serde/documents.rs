@@ -253,7 +253,7 @@ impl Serializer for DocumentParser {
     fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
         Ok(Document {
             schema: schema.clone(),
-            value: DefaultDocumentValue::Timestamp(value.clone()).into(),
+            value: DefaultDocumentValue::Timestamp(*value).into(),
             discriminator: Some(schema.id().clone()),
         })
     }
@@ -812,25 +812,13 @@ mod tests {
         };
         let document: Document = struct_to_convert.into();
         assert_eq!(&document.discriminator.clone().unwrap(), SCHEMA.id());
-        if let DocumentValue::Map(members) = document.value {
-            assert!(members.contains_key("a"));
-            if let DocumentValue::String(str) = &members.get("a").unwrap().value {
-                assert_eq!(str, &String::from("a"));
-            } else {
-                panic!("Expected String")
-            }
-            assert!(members.contains_key("b"));
-            if let DocumentValue::String(str) = &members.get("b").unwrap().value {
-                assert_eq!(str, &String::from("b"));
-            } else {
-                panic!("Expected String")
-            }
-            assert!(members.contains_key("c"));
-            if let DocumentValue::String(str) = &members.get("c").unwrap().value {
-                assert_eq!(str, &String::from("c"));
-            } else {
-                panic!("Expected String")
-            }
+        if let Some(members) = document.as_map() {
+            let doc_a = &members.get("a").unwrap();
+            assert_eq!(doc_a.as_string().unwrap(), "a");
+            let doc_b = &members.get("b").unwrap();
+            assert_eq!(doc_b.as_string().unwrap(), "b");
+            let doc_c = &members.get("c").unwrap();
+            assert_eq!(doc_c.as_string().unwrap(), "c");
             assert!(members.contains_key("map"));
             assert!(members.contains_key("list"));
         } else {

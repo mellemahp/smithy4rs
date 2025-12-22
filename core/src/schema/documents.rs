@@ -212,15 +212,180 @@ impl Document {
     pub fn discriminator(&self) -> Option<&ShapeId> {
         self.discriminator.as_ref()
     }
+}
 
-    /// Get the size of the document.
+// == Delegation methods ==
+// All of these methods just delegate to the `DocumentValue` implementation.
+// These are just convenience methods to remove the need to call the value first.
+impl Document {
+    /// Get the Shape Type for the underlying contents of the document.
     ///
-    /// <div class ="note">
-    /// **NOTE**: Scalar documents always return a size of 1
-    /// </div>
+    /// The type returned from this method will differ from the type of the document (which will
+    /// be [`ShapeType::Document`]).
+    ///
+    /// ### Enums
+    /// - `enum` shapes: Enum shapes are treated as a `string`, and variants can be found in
+    ///   the corresponding schema for the document.
+    ///  - `intEnum` shapes: Enum shapes are treated as an `integer`, and variants can be found in
+    ///    the corresponding schema for the document.
     #[must_use]
+    #[inline]
+    fn get_type(&self) -> &ShapeType {
+        self.value.get_type()
+    }
+
+    /// Get the number of elements in an array document, or the number of key value pairs in a map document.
+    ///
+    /// *NOTE*: Should return `0` for all other
+    #[must_use]
+    #[inline]
     pub fn size(&self) -> usize {
         self.value.size()
+    }
+
+    /// Get the `blob` value of the Document if it is a `blob`.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `blob` ([`ByteBuffer`]) value.
+    #[must_use]
+    #[inline]
+    pub fn as_blob(&self) -> Option<&ByteBuffer> {
+        self.value.as_blob()
+    }
+
+    /// Get the `boolean` value of the Document if it is a `boolean` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `boolean` value.
+    #[must_use]
+    #[inline]
+    pub fn as_bool(&self) -> Option<bool> {
+        self.value.as_bool()
+    }
+
+    /// Get the `string` value of the Document if it is a `string` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `string` value.
+    #[must_use]
+    #[inline]
+    pub fn as_string(&self) -> Option<&str> {
+        self.value.as_string()
+    }
+
+    /// Get the `timestamp` value of the Document if it is a `timestamp` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `timestamp` ([`Instant`]) value.
+    #[must_use]
+    #[inline]
+    pub fn as_timestamp(&self) -> Option<&Instant> {
+        self.value.as_timestamp()
+    }
+
+    /// Get the `byte` value of the Document if it is a `byte` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `byte` (`i8`) value.
+    #[must_use]
+    #[inline]
+    pub fn as_byte(&self) -> Option<i8> {
+        self.value.as_byte()
+    }
+
+    /// Get the `short` value of the Document if it is a `short` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `short` (`i16`) value.
+    #[must_use]
+    #[inline]
+    pub fn as_short(&self) -> Option<i16> {
+        self.value.as_short()
+    }
+
+    /// Get the `integer` value of the Document if it is an `integer` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to an
+    /// `integer` (`i32`) value.
+    #[must_use]
+    #[inline]
+    pub fn as_integer(&self) -> Option<i32> {
+        self.value.as_integer()
+    }
+
+    /// Get the `long` value of the Document if it is a `long` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to a
+    /// `long` (`i64`) value.
+    #[must_use]
+    #[inline]
+    pub fn as_long(&self) -> Option<i64> {
+        self.value.as_long()
+    }
+
+    /// Get the `float` value of the Document if it is a `float` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to
+    /// `float` (`f32`) value.
+    #[must_use]
+    #[inline]
+    pub fn as_float(&self) -> Option<f32> {
+        self.value.as_float()
+    }
+
+    /// Get the `decimal` value of the Document if it is a `decimal` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to
+    /// `double` (`f64`) value.
+    #[must_use]
+    #[inline]
+    pub fn as_double(&self) -> Option<f64> {
+        self.value.as_double()
+    }
+
+    /// Get the `bigInteger` value of the Document if it is a `bigInteger` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to
+    /// `bigInteger` ([`BigInt`]) value.
+    #[must_use]
+    #[inline]
+    pub fn as_big_integer(&self) -> Option<&BigInt> {
+        self.value.as_big_integer()
+    }
+
+    /// Get the `bigDecimal` value of the Document if it is a `bigDecimal` or can be converted into one.
+    ///
+    /// Returns `None` if the document could not be converted to
+    /// `bigDecimal` ([`BigDecimal`]) value.
+    #[must_use]
+    #[inline]
+    pub fn as_big_decimal(&self) -> Option<&BigDecimal> {
+        self.value.as_big_decimal()
+    }
+
+    /// Get the list contents of the Document if it is a list.
+    ///
+    /// Returns `None` if the document is not a list.
+    #[must_use]
+    #[inline]
+    pub fn as_list(&self) -> Option<&Vec<Document>> {
+        self.value.as_list()
+    }
+
+    /// Get the map contents of the Document if it is a map.
+    ///
+    /// Returns `None` if the document is not a map.
+    #[must_use]
+    #[inline]
+    pub fn as_map(&self) -> Option<&IndexMap<String, Document>> {
+        self.value.as_map()
+    }
+
+    /// Returns true if the document represents a `Null` value.
+    #[must_use]
+    #[inline]
+    pub fn is_null(&self) -> bool {
+        self.value.is_null()
     }
 }
 
@@ -229,8 +394,6 @@ impl SchemaShape for Document {
         &self.schema
     }
 }
-
-// TODO: Should documents implement iterators?
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
 ///
@@ -245,7 +408,7 @@ pub trait DocumentValue: Send + Sync  {
     /// - `enum` shapes: Enum shapes are treated as a `string`, and variants can be found in
     ///   the corresponding schema for the document.
     ///  - `intEnum` shapes: Enum shapes are treated as an `integer`, and variants can be found in
-    ///     the corresponding schema for the document.
+    ///    the corresponding schema for the document.
     #[must_use]
     fn get_type(&self) -> &ShapeType;
 
@@ -361,6 +524,7 @@ impl Debug for dyn DocumentValue + 'static {
         todo!()
     }
 }
+
 impl PartialEq for dyn DocumentValue + 'static {
     fn eq(&self, _other: &Self) -> bool {
         todo!()
@@ -389,7 +553,11 @@ impl DocumentValue for DefaultDocumentValue {
     }
 
     fn size(&self) -> usize {
-        todo!()
+        match self {
+            Self::List(v) => v.len(),
+            Self::Map(v) => v.len(),
+            _ => 0
+        }
     }
 
     fn as_blob(&self) -> Option<&ByteBuffer> {
@@ -636,6 +804,166 @@ pub(crate) fn conversion_error(expected: &'static str) -> Box<dyn Error> {
 }
 
 // ============================================================================
+// Convert Document into types
+// ============================================================================
+
+impl TryFrom<Document> for ByteBuffer {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_blob().cloned().ok_or(
+            DocumentError::DocumentConversion("blob".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for bool {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_bool().ok_or(
+            DocumentError::DocumentConversion("bool".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for String {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_string().map(|b| b.to_string()).ok_or(
+            DocumentError::DocumentConversion("string".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for Instant {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_timestamp().copied().ok_or(
+            DocumentError::DocumentConversion("timestamp".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for i8 {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_byte().ok_or(
+            DocumentError::DocumentConversion("byte".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for i16 {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_short().ok_or(
+            DocumentError::DocumentConversion("short".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for i32 {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_integer().ok_or(
+            DocumentError::DocumentConversion("integer".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for i64 {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_long().ok_or(
+            DocumentError::DocumentConversion("long".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for f32 {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_float().ok_or(
+            DocumentError::DocumentConversion("float".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for f64 {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_double().ok_or(
+            DocumentError::DocumentConversion("double".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for BigInt {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_big_integer().cloned().ok_or(
+            DocumentError::DocumentConversion("bigInt".to_string())
+        )
+    }
+}
+
+impl TryFrom<Document> for BigDecimal {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        value.as_big_decimal().cloned().ok_or(
+            DocumentError::DocumentConversion("bigDecimal".to_string())
+        )
+    }
+}
+
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Vec<T> {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        let vec = value.as_list().ok_or(
+            DocumentError::DocumentConversion("list".to_string())
+        )?;
+        let mut result: Vec<T> = Vec::new();
+        for doc in vec {
+            match T::try_from(doc.clone()) {
+                Ok(val) => result.push(val),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(result)
+    }
+}
+
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap<String, T> {
+    type Error = DocumentError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        let map = value.as_map().ok_or(
+            DocumentError::DocumentConversion("map".to_string())
+        )?;
+        let mut result: IndexMap<String, T> = IndexMap::new();
+        for (key, val) in map {
+            let _ = match T::try_from(val.clone()) {
+                Ok(val) => result.insert(key.to_string(), val),
+                Err(e) => return Err(e),
+            };
+        }
+        Ok(result)
+    }
+}
+
+// ============================================================================
 // Conversions INTO Document types
 // ============================================================================
 impl From<DefaultDocumentValue> for DocumentImpl {
@@ -810,12 +1138,12 @@ mod tests {
         let document_str: Document = "MyStr".into();
         let val: &Schema = &STRING;
         assert_eq!(document_str.schema(), val);
-        let output_str: String = document_str.try_into().unwrap();
+        let output_str: String = document_str.as_string().unwrap().to_string();
         assert_eq!(output_str, "MyStr".to_string());
 
         let document_string: Document = "MyString".into();
         assert_eq!(document_string.schema(), val);
-        let output_string: String = document_string.try_into().unwrap();
+        let output_string: String = document_string.as_string().unwrap().to_string();
         assert_eq!(&output_string, &"MyString");
     }
 
