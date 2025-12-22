@@ -739,9 +739,9 @@ mod tests {
     use super::*;
     use crate::{
         prelude::{JsonNameTrait, STRING},
+        schema::DefaultDocumentValue,
         traits,
     };
-    use crate::schema::DefaultDocumentValue;
 
     #[test]
     fn scalar_schemas() {

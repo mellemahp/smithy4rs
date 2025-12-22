@@ -1,6 +1,6 @@
 use std::{
     cmp::PartialEq,
-    fmt::{Display, Error},
+    fmt::{Debug, Display, Error, Formatter},
     io,
 };
 
@@ -379,6 +379,15 @@ where
     #[inline]
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.ser.writer.write_all(b"]").map_err(FmtError::Io)
+    }
+}
+
+// Documents use the formatter for debug just like generated shapes
+impl Debug for Document {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // TODO(document debug): use the formatter directly rather than use write macro.
+        // Also map to correct error
+        write!(f, "{}", to_string(self.schema(), self).unwrap())
     }
 }
 

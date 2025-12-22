@@ -156,13 +156,21 @@
 //! However, when we deserialize the document into the final Error type we need to execute the protocol-specific handling of the `jsonName` trait.
 //!
 
-use std::error::Error;
-use std::fmt::{Debug, Formatter};
+use std::{
+    error::Error,
+    fmt::{Debug, Formatter},
+};
+
 use bigdecimal::ToPrimitive;
 use indexmap::IndexMap;
 use thiserror::Error;
 
-use crate::{BigDecimal, BigInt, ByteBuffer, Instant, prelude::*, schema::{Schema, SchemaRef, SchemaShape, ShapeId, ShapeType}, smithy, Ref};
+use crate::{
+    BigDecimal, BigInt, ByteBuffer, Instant, Ref,
+    prelude::*,
+    schema::{SchemaRef, SchemaShape, ShapeId, ShapeType},
+    smithy,
+};
 
 // ============================================================================
 // Base Document Wrapper and trait
@@ -175,7 +183,7 @@ pub type DocumentImpl = Ref<dyn DocumentValue>;
 /// Document types are a protocol-agnostic view of untyped data. Protocols should attempt
 /// to smooth over protocol incompatibilities with the Smithy data model.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Document {
     pub(crate) schema: SchemaRef,
     pub(crate) value: DocumentImpl,
@@ -183,15 +191,18 @@ pub struct Document {
 }
 
 impl PartialEq for Document {
-    fn eq(&self, _other: &Self) -> bool {
-        todo!()
+    #[allow(clippy::op_ref)]
+    fn eq(&self, other: &Self) -> bool {
+        self.schema == other.schema
+            && self.discriminator == other.discriminator
+            && &self.value == &other.value
     }
 }
 
 impl Document {
     /// Get the Schema of the document
     #[must_use]
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &SchemaRef {
         &self.schema
     }
 
@@ -230,7 +241,7 @@ impl Document {
     ///    the corresponding schema for the document.
     #[must_use]
     #[inline]
-    fn get_type(&self) -> &ShapeType {
+    fn get_type(&self) -> Option<&ShapeType> {
         self.value.get_type()
     }
 
@@ -398,7 +409,7 @@ impl SchemaShape for Document {
 /// A Smithy document type, representing untyped data from the Smithy data model.
 ///
 /// TODO: DOCS ON MODEL
-pub trait DocumentValue: Send + Sync  {
+pub trait DocumentValue: Send + Sync {
     /// Get the Shape Type for the underlying contents of the document.
     ///
     /// The type returned from this method will differ from the type of the document (which will
@@ -410,7 +421,8 @@ pub trait DocumentValue: Send + Sync  {
     ///  - `intEnum` shapes: Enum shapes are treated as an `integer`, and variants can be found in
     ///    the corresponding schema for the document.
     #[must_use]
-    fn get_type(&self) -> &ShapeType;
+    #[cold] // cold as this is mostly called for testing.
+    fn get_type(&self) -> Option<&ShapeType>;
 
     /// Get the number of elements in an array document, or the number of key value pairs in a map document.
     ///
@@ -519,15 +531,42 @@ pub trait DocumentValue: Send + Sync  {
     fn is_null(&self) -> bool;
 }
 
-impl Debug for dyn DocumentValue + 'static {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
-}
-
 impl PartialEq for dyn DocumentValue + 'static {
-    fn eq(&self, _other: &Self) -> bool {
-        todo!()
+    fn eq(&self, other: &Self) -> bool {
+        // TODO(numerical comparison): We should compare compatible numeric types
+        // if possible. This is just a placeholder to get test working.
+        match (self.get_type(), other.get_type()) {
+            (Some(ShapeType::String), Some(ShapeType::String)) => {
+                self.as_string() == other.as_string()
+            }
+            (Some(ShapeType::Blob), Some(ShapeType::Blob)) => self.as_blob() == other.as_blob(),
+            (Some(ShapeType::Boolean), Some(ShapeType::Boolean)) => {
+                self.as_bool() == other.as_bool()
+            }
+            (Some(ShapeType::Timestamp), Some(ShapeType::Timestamp)) => {
+                self.as_timestamp() == other.as_timestamp()
+            }
+            (Some(ShapeType::Byte), Some(ShapeType::Byte)) => self.as_byte() == other.as_byte(),
+            (Some(ShapeType::Short), Some(ShapeType::Short)) => self.as_short() == other.as_short(),
+            (Some(ShapeType::Integer), Some(ShapeType::Integer)) => {
+                self.as_integer() == other.as_integer()
+            }
+            (Some(ShapeType::Long), Some(ShapeType::Long)) => self.as_long() == other.as_long(),
+            (Some(ShapeType::Float), Some(ShapeType::Float)) => self.as_float() == other.as_float(),
+            (Some(ShapeType::Double), Some(ShapeType::Double)) => {
+                self.as_double() == other.as_double()
+            }
+            (Some(ShapeType::BigInteger), Some(ShapeType::BigInteger)) => {
+                self.as_big_integer() == other.as_big_integer()
+            }
+            (Some(ShapeType::BigDecimal), Some(ShapeType::BigDecimal)) => {
+                self.as_big_decimal() == other.as_big_decimal()
+            }
+            (Some(ShapeType::List), Some(ShapeType::List)) => self.as_map() == other.as_map(),
+            (Some(ShapeType::Map), Some(ShapeType::Map)) => self.as_map() == other.as_map(),
+            (None, None) => true,
+            _ => false,
+        }
     }
 }
 
@@ -548,15 +587,37 @@ pub enum DefaultDocumentValue {
 }
 
 impl DocumentValue for DefaultDocumentValue {
-    fn get_type(&self) -> &ShapeType {
-        todo!()
+    fn get_type(&self) -> Option<&ShapeType> {
+        match self {
+            DefaultDocumentValue::Number(n) => match n {
+                NumberValue::Integer(i) => match i {
+                    NumberInteger::Byte(_) => Some(&ShapeType::Byte),
+                    NumberInteger::Short(_) => Some(&ShapeType::Short),
+                    NumberInteger::Integer(_) => Some(&ShapeType::Integer),
+                    NumberInteger::Long(_) => Some(&ShapeType::Long),
+                    NumberInteger::BigInt(_) => Some(&ShapeType::BigInteger),
+                },
+                NumberValue::Float(f) => match f {
+                    NumberFloat::Float(_) => Some(&ShapeType::Float),
+                    NumberFloat::Double(_) => Some(&ShapeType::Double),
+                    NumberFloat::BigDecimal(_) => Some(&ShapeType::BigDecimal),
+                },
+            },
+            DefaultDocumentValue::Boolean(_) => Some(&ShapeType::Boolean),
+            DefaultDocumentValue::Blob(_) => Some(&ShapeType::Blob),
+            DefaultDocumentValue::String(_) => Some(&ShapeType::String),
+            DefaultDocumentValue::Timestamp(_) => Some(&ShapeType::Timestamp),
+            DefaultDocumentValue::List(_) => Some(&ShapeType::List),
+            DefaultDocumentValue::Map(_) => Some(&ShapeType::Map),
+            _ => None,
+        }
     }
 
     fn size(&self) -> usize {
         match self {
             Self::List(v) => v.len(),
             Self::Map(v) => v.len(),
-            _ => 0
+            _ => 0,
         }
     }
 
@@ -785,7 +846,7 @@ impl crate::serde::de::Error for DocumentError {
 /// Get the shape type of the Document
 ///
 /// If the Document is a member, then returns the type of the member target.
-pub(crate) fn get_shape_type(schema: &Schema) -> Result<&ShapeType, Box<dyn Error>> {
+pub(crate) fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
     let shape_type = schema.shape_type();
     if shape_type == &ShapeType::Member {
         let Some(member) = schema.as_member() else {
@@ -796,6 +857,13 @@ pub(crate) fn get_shape_type(schema: &Schema) -> Result<&ShapeType, Box<dyn Erro
         Ok(member.target.shape_type())
     } else {
         Ok(shape_type)
+    }
+}
+
+impl Debug for dyn DocumentValue + 'static {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // TODO(document debug): Add actual impl
+        write!(f, "[DocumentValue]")
     }
 }
 
@@ -811,9 +879,10 @@ impl TryFrom<Document> for ByteBuffer {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_blob().cloned().ok_or(
-            DocumentError::DocumentConversion("blob".to_string())
-        )
+        value
+            .as_blob()
+            .cloned()
+            .ok_or(DocumentError::DocumentConversion("blob".to_string()))
     }
 }
 
@@ -821,9 +890,9 @@ impl TryFrom<Document> for bool {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_bool().ok_or(
-            DocumentError::DocumentConversion("bool".to_string())
-        )
+        value
+            .as_bool()
+            .ok_or(DocumentError::DocumentConversion("bool".to_string()))
     }
 }
 
@@ -831,9 +900,10 @@ impl TryFrom<Document> for String {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_string().map(|b| b.to_string()).ok_or(
-            DocumentError::DocumentConversion("string".to_string())
-        )
+        value
+            .as_string()
+            .map(|b| b.to_string())
+            .ok_or(DocumentError::DocumentConversion("string".to_string()))
     }
 }
 
@@ -841,9 +911,10 @@ impl TryFrom<Document> for Instant {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_timestamp().copied().ok_or(
-            DocumentError::DocumentConversion("timestamp".to_string())
-        )
+        value
+            .as_timestamp()
+            .copied()
+            .ok_or(DocumentError::DocumentConversion("timestamp".to_string()))
     }
 }
 
@@ -851,9 +922,9 @@ impl TryFrom<Document> for i8 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_byte().ok_or(
-            DocumentError::DocumentConversion("byte".to_string())
-        )
+        value
+            .as_byte()
+            .ok_or(DocumentError::DocumentConversion("byte".to_string()))
     }
 }
 
@@ -861,9 +932,9 @@ impl TryFrom<Document> for i16 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_short().ok_or(
-            DocumentError::DocumentConversion("short".to_string())
-        )
+        value
+            .as_short()
+            .ok_or(DocumentError::DocumentConversion("short".to_string()))
     }
 }
 
@@ -871,9 +942,9 @@ impl TryFrom<Document> for i32 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_integer().ok_or(
-            DocumentError::DocumentConversion("integer".to_string())
-        )
+        value
+            .as_integer()
+            .ok_or(DocumentError::DocumentConversion("integer".to_string()))
     }
 }
 
@@ -881,9 +952,9 @@ impl TryFrom<Document> for i64 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_long().ok_or(
-            DocumentError::DocumentConversion("long".to_string())
-        )
+        value
+            .as_long()
+            .ok_or(DocumentError::DocumentConversion("long".to_string()))
     }
 }
 
@@ -891,9 +962,9 @@ impl TryFrom<Document> for f32 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_float().ok_or(
-            DocumentError::DocumentConversion("float".to_string())
-        )
+        value
+            .as_float()
+            .ok_or(DocumentError::DocumentConversion("float".to_string()))
     }
 }
 
@@ -901,9 +972,9 @@ impl TryFrom<Document> for f64 {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_double().ok_or(
-            DocumentError::DocumentConversion("double".to_string())
-        )
+        value
+            .as_double()
+            .ok_or(DocumentError::DocumentConversion("double".to_string()))
     }
 }
 
@@ -911,9 +982,10 @@ impl TryFrom<Document> for BigInt {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_big_integer().cloned().ok_or(
-            DocumentError::DocumentConversion("bigInt".to_string())
-        )
+        value
+            .as_big_integer()
+            .cloned()
+            .ok_or(DocumentError::DocumentConversion("bigInt".to_string()))
     }
 }
 
@@ -921,9 +993,10 @@ impl TryFrom<Document> for BigDecimal {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        value.as_big_decimal().cloned().ok_or(
-            DocumentError::DocumentConversion("bigDecimal".to_string())
-        )
+        value
+            .as_big_decimal()
+            .cloned()
+            .ok_or(DocumentError::DocumentConversion("bigDecimal".to_string()))
     }
 }
 
@@ -931,9 +1004,9 @@ impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Vec<T> {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        let vec = value.as_list().ok_or(
-            DocumentError::DocumentConversion("list".to_string())
-        )?;
+        let vec = value
+            .as_list()
+            .ok_or(DocumentError::DocumentConversion("list".to_string()))?;
         let mut result: Vec<T> = Vec::new();
         for doc in vec {
             match T::try_from(doc.clone()) {
@@ -949,9 +1022,9 @@ impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
-        let map = value.as_map().ok_or(
-            DocumentError::DocumentConversion("map".to_string())
-        )?;
+        let map = value
+            .as_map()
+            .ok_or(DocumentError::DocumentConversion("map".to_string()))?;
         let mut result: IndexMap<String, T> = IndexMap::new();
         for (key, val) in map {
             let _ = match T::try_from(val.clone()) {
@@ -986,7 +1059,8 @@ impl From<i8> for Document {
     fn from(value: i8) -> Self {
         Document {
             schema: BYTE.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -996,7 +1070,8 @@ impl From<i16> for Document {
     fn from(value: i16) -> Self {
         Document {
             schema: SHORT.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Short(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Short(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -1006,7 +1081,10 @@ impl From<i32> for Document {
     fn from(value: i32) -> Self {
         Document {
             schema: INTEGER.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(
+                value,
+            )))
+            .into(),
             discriminator: None,
         }
     }
@@ -1016,7 +1094,8 @@ impl From<i64> for Document {
     fn from(value: i64) -> Self {
         Document {
             schema: LONG.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Long(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Long(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -1026,7 +1105,8 @@ impl From<f32> for Document {
     fn from(value: f32) -> Self {
         Document {
             schema: FLOAT.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Float(NumberFloat::Float(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Float(NumberFloat::Float(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -1036,7 +1116,8 @@ impl From<f64> for Document {
     fn from(value: f64) -> Self {
         Document {
             schema: DOUBLE.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Float(NumberFloat::Double(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Float(NumberFloat::Double(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -1056,7 +1137,8 @@ impl From<BigInt> for Document {
     fn from(value: BigInt) -> Self {
         Document {
             schema: BIG_INTEGER.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::BigInt(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -1066,7 +1148,8 @@ impl From<BigDecimal> for Document {
     fn from(value: BigDecimal) -> Self {
         Document {
             schema: BIG_DECIMAL.clone(),
-            value: DefaultDocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(value))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Float(NumberFloat::BigDecimal(value)))
+                .into(),
             discriminator: None,
         }
     }
@@ -1136,7 +1219,7 @@ mod tests {
     #[test]
     fn string_document_value() {
         let document_str: Document = "MyStr".into();
-        let val: &Schema = &STRING;
+        let val: &SchemaRef = &STRING;
         assert_eq!(document_str.schema(), val);
         let output_str: String = document_str.as_string().unwrap().to_string();
         assert_eq!(output_str, "MyStr".to_string());
@@ -1151,7 +1234,7 @@ mod tests {
     fn list_document_value() {
         let vec = vec!["a", "b", "c"];
         let document_list: Document = vec.into();
-        let val: &Schema = &LIST_DOCUMENT_SCHEMA;
+        let val: &SchemaRef = &LIST_DOCUMENT_SCHEMA;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
         let vec_out: Vec<String> = document_list.try_into().unwrap();
@@ -1166,7 +1249,7 @@ mod tests {
         let mut map_in: IndexMap<String, String> = IndexMap::new();
         map_in.insert("a".to_string(), "b".to_string());
         let map_doc: Document = map_in.into();
-        let val: &Schema = &MAP_DOCUMENT_SCHEMA;
+        let val: &SchemaRef = &MAP_DOCUMENT_SCHEMA;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
 
@@ -1178,21 +1261,21 @@ mod tests {
     #[test]
     fn integer_document_values() {
         let byte: Document = 1i8.into();
-        let byte_val: &Schema = &BYTE;
+        let byte_val: &SchemaRef = &BYTE;
         assert_eq!(byte.schema(), byte_val);
 
         let short: Document = 1i16.into();
-        let short_val: &Schema = &SHORT;
+        let short_val: &SchemaRef = &SHORT;
 
         assert_eq!(short.schema(), short_val);
 
         let integer: Document = 1i32.into();
-        let integer_val: &Schema = &INTEGER;
+        let integer_val: &SchemaRef = &INTEGER;
 
         assert_eq!(integer.schema(), integer_val);
 
         let long: Document = 1i64.into();
-        let long_val: &Schema = &LONG;
+        let long_val: &SchemaRef = &LONG;
 
         assert_eq!(long.schema(), long_val);
     }
@@ -1202,11 +1285,11 @@ mod tests {
     #[test]
     fn float_document_values() {
         let float: Document = 1f32.into();
-        let float_val: &Schema = &FLOAT;
+        let float_val: &SchemaRef = &FLOAT;
         assert_eq!(float.schema(), float_val);
 
         let double: Document = 1f64.into();
-        let double_val: &Schema = &DOUBLE;
+        let double_val: &SchemaRef = &DOUBLE;
         assert_eq!(double.schema(), double_val);
 
         let float_value: f32 = float.try_into().unwrap();

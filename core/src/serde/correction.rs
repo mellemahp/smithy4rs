@@ -13,10 +13,9 @@ use indexmap::IndexMap;
 use crate::{
     BigDecimal, BigInt, Instant,
     prelude::DOCUMENT,
-    schema::Document,
+    schema::{DefaultDocumentValue, Document},
     serde::{builders::MaybeBuilt, serializers::SerializeWithSchema},
 };
-use crate::schema::DefaultDocumentValue;
 //////////////////////////////////////////////////////////////////////////////
 // Traits
 //////////////////////////////////////////////////////////////////////////////

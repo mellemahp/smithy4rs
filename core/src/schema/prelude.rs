@@ -11,10 +11,14 @@ use std::fmt::Display;
 use bigdecimal::Zero;
 use regex::Regex;
 
-use crate::{BigDecimal, IndexMap, LazyLock, annotation_trait, schema::{
-    NumberFloat, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId,
-}, smithy, static_trait_id, string_trait};
-use crate::schema::{DefaultDocumentValue, DocumentImpl};
+use crate::{
+    BigDecimal, IndexMap, LazyLock, annotation_trait,
+    schema::{
+        DefaultDocumentValue, DocumentImpl, NumberFloat, NumberInteger, NumberValue, ShapeId,
+        SmithyTrait, StaticTraitId,
+    },
+    smithy, static_trait_id, string_trait,
+};
 // ============================================================================
 // Prelude Shape Schemas
 // ---------------------
@@ -212,7 +216,8 @@ impl HttpErrorTrait {
         );
         HttpErrorTrait {
             code,
-            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(code))).into(),
+            value: DefaultDocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(code)))
+                .into(),
         }
     }
 }

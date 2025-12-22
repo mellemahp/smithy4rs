@@ -82,11 +82,11 @@
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 use downcast_rs::{DowncastSync, impl_downcast};
+
 use crate::{
     Ref,
-    schema::ShapeId,
+    schema::{DocumentImpl, ShapeId},
 };
-use crate::schema::DocumentImpl;
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -109,12 +109,8 @@ pub trait SmithyTrait: DowncastSync {
 impl_downcast!(sync SmithyTrait);
 impl Debug for dyn SmithyTrait {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "dyn SmithyTrait {{ id: {:?}, value: {:?} }}",
-            self.id(),
-            self.value()
-        )
+        // TODO(document debug): add doc value to string
+        write!(f, "dyn SmithyTrait {{ id: {:?}, value }}", self.id())
     }
 }
 
@@ -286,9 +282,9 @@ mod tests {
     use super::*;
     use crate::{
         prelude::{HttpErrorTrait, JsonNameTrait},
+        schema::DefaultDocumentValue,
         traits,
     };
-    use crate::schema::DefaultDocumentValue;
 
     #[test]
     fn basic_map_functionality() {
