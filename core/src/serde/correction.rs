@@ -11,10 +11,9 @@ use indexmap::IndexMap;
 use crate::{
     BigDecimal, BigInt, Instant,
     prelude::DOCUMENT,
-    schema::{Document, DocumentValue},
+    schema::{DefaultDocumentValue, Document},
     serde::{builders::MaybeBuilt, serializers::SerializeWithSchema},
 };
-
 //////////////////////////////////////////////////////////////////////////////
 // Traits
 //////////////////////////////////////////////////////////////////////////////
@@ -68,7 +67,7 @@ impl ErrorCorrectionDefault for Document {
     fn default() -> Self {
         Document {
             schema: DOCUMENT.clone(),
-            value: DocumentValue::Null,
+            value: DefaultDocumentValue::Null.into(),
             discriminator: None,
         }
     }
