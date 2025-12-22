@@ -20,7 +20,7 @@
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
-//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DocumentValue};
+//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DefaultDocumentValue};
 //!
 //! smithy!("com.example#SensitiveString": {
 //!     @SensitiveTrait;
@@ -38,7 +38,7 @@
 //!  // Access as a dynamic trait object.
 //!  let trait_object = EXAMPLE_SCHEMA.get_trait(&"smithy.api#sensitive".into()).unwrap();
 //!  let document_value = trait_object.value();
-//!  assert_eq!(document_value, &DocumentValue::Null);
+//!  assert_eq!(document_value, &DefaultDocumentValue::Null.into());
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
@@ -54,7 +54,7 @@
 //!
 //! Example:
 //! ```rust
-//! use smithy4rs_core::schema::{DocumentValue, DynamicTrait, ShapeId};
+//! use smithy4rs_core::schema::{DefaultDocumentValue, DynamicTrait, ShapeId};
 //!
 //! // Create a `dyn SmithyTrait` from just the ID and object value.
 //! // This corresponds to a custom trait in the smithy model like:
@@ -62,7 +62,10 @@
 //! //
 //! // @myCustomTrait(true)
 //! // structure MyStruct { ... }
-//! let custom_trait = DynamicTrait::from("com.example#myCustomTrait", DocumentValue::Boolean(true));
+//! let custom_trait = DynamicTrait::from(
+//!     "com.example#myCustomTrait",
+//!     DefaultDocumentValue::Boolean(true).into()
+//! );
 //! ```
 //!
 //! Custom traits can also have either manually defined or code-generated concrete implementations.
@@ -79,11 +82,11 @@
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 use downcast_rs::{DowncastSync, impl_downcast};
-
 use crate::{
     Ref,
-    schema::{DocumentValue, ShapeId},
+    schema::ShapeId,
 };
+use crate::schema::DocumentImpl;
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -101,7 +104,7 @@ pub trait SmithyTrait: DowncastSync {
     fn id(&self) -> &ShapeId;
 
     /// The data stored inside the trait as a [`crate::schema::documents::Document`] value.
-    fn value(&self) -> &DocumentValue;
+    fn value(&self) -> &DocumentImpl;
 }
 impl_downcast!(sync SmithyTrait);
 impl Debug for dyn SmithyTrait {
@@ -173,10 +176,15 @@ impl<T: SmithyTrait> From<T> for TraitRef {
 /// <div class ="note">
 /// **NOTE**: Dynamic implementations cannot be downcast into a concrete implementation.
 /// </div>
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct DynamicTrait {
     id: ShapeId,
-    value: DocumentValue,
+    value: DocumentImpl,
+}
+impl PartialEq for DynamicTrait {
+    fn eq(&self, _other: &Self) -> bool {
+        todo!()
+    }
 }
 impl DynamicTrait {
     /// Create a new [`SmithyTrait`] with no corresponding concrete implementation.
@@ -184,7 +192,7 @@ impl DynamicTrait {
     /// <div class ="warning">
     /// **WARNING**: Traits created with this method cannot be downcast into a specific implementation.
     /// </div>
-    pub fn from<I: Into<ShapeId>>(id: I, value: DocumentValue) -> Ref<dyn SmithyTrait> {
+    pub fn from<I: Into<ShapeId>>(id: I, value: DocumentImpl) -> Ref<dyn SmithyTrait> {
         Ref::new(Self {
             id: id.into(),
             value,
@@ -197,7 +205,7 @@ impl SmithyTrait for DynamicTrait {
         &self.id
     }
 
-    fn value(&self) -> &DocumentValue {
+    fn value(&self) -> &DocumentImpl {
         &self.value
     }
 }
@@ -280,6 +288,7 @@ mod tests {
         prelude::{HttpErrorTrait, JsonNameTrait},
         traits,
     };
+    use crate::schema::DefaultDocumentValue;
 
     #[test]
     fn basic_map_functionality() {
@@ -288,7 +297,7 @@ mod tests {
             JsonNameTrait::new("a"),
             DynamicTrait {
                 id: dyn_id.clone(),
-                value: DocumentValue::String("b".to_string()),
+                value: DefaultDocumentValue::String("b".to_string()).into(),
             }
         ]);
         assert!(map.contains(&dyn_id));
