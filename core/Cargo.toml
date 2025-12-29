@@ -22,13 +22,13 @@ regex.workspace = true
 fast-str.workspace = true
 temporal_rs.workspace = true
 
-pastey = "0.2.0"
+pastey = "0.2.1"
 serde = { version = "1.0", features = ["derive"] }
 static_str_ops = "0.1.2"
 rustc-hash = "2.1.1"
 
 [dev-dependencies]
-serde_json = "1.0.145"
+serde_json = "1.0.148"
 smithy4rs-core-derive.workspace = true
 criterion.workspace = true
 
