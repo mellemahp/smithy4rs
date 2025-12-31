@@ -79,6 +79,8 @@ pub trait Deserializer<'de>: Sized {
 
     // === Compound types (consumer pattern) ===
 
+    // TODO(unknown members): Union unknown types are not well supported by
+    //                        the current impl.
     /// Read a struct by calling a consumer function for each member.
     ///
     /// The deserializer iterates through struct members and calls the consumer

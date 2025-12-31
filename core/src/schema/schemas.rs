@@ -8,21 +8,13 @@ use std::{
     sync::{Arc, LazyLock, OnceLock, RwLock},
 };
 
-use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxBuildHasher;
 
 use crate::{
-    Ref,
+    FxIndexMap, FxIndexSet, Ref,
     prelude::{DefaultTrait, RequiredTrait},
     schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
 };
-
-// Faster Map and Set implementations used for internal types and Schemas.
-//
-// NOTE: These should _not_ be used in serialized/deserialized types as they are not
-// resistant to DOS attacks.
-type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
-type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
 
 /// Reference to a Smithy Schema type.
 ///
@@ -168,7 +160,7 @@ impl Schema {
     /// Create a Schema for an [IntEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape.
     pub fn create_int_enum(
         id: impl Into<ShapeId>,
-        values: Vec<i32>,
+        values: Box<[i32]>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::IntEnum(EnumSchema {
@@ -211,7 +203,7 @@ impl Schema {
     /// Create a Schema for an [Enum](https://smithy.io/2.0/spec/simple-types.html#enum) shape.
     pub fn create_enum(
         id: impl Into<ShapeId>,
-        values: Vec<&'static str>,
+        values: Box<[&'static str]>,
         traits: TraitList,
     ) -> SchemaRef {
         Ref::new(Self::Enum(EnumSchema {

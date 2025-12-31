@@ -287,7 +287,7 @@ impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use smithy4rs_core_derive::SmithyStruct;
+    use smithy4rs_core_derive::SmithyShape;
 
     use super::*;
     use crate::{prelude::*, schema::SchemaShape, smithy};
@@ -312,7 +312,7 @@ mod tests {
         }
     });
 
-    #[derive(SmithyStruct)]
+    #[derive(SmithyShape)]
     #[smithy_schema(SCHEMA)]
     pub struct Test {
         #[smithy_schema(A)]

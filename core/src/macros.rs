@@ -174,7 +174,29 @@ macro_rules! smithy_internal {
     );
 
     // === Enums ===
-    // TODO(enums): Add support for intEnum and enum generation
+    ($id:literal: {
+        $(@$t:expr;)*
+        enum $name:ident {$(
+            $_variant:ident = $value:literal
+        )*}
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            $crate::schema::Schema::create_enum($id, Box::new([$($value),*]), $crate::traits!($($t),*))
+        );
+    );
+
+    ($id:literal: {
+        $(@$t:expr;)*
+        intEnum $name:ident {$(
+            $_variant:ident = $value:literal
+        )*}
+    }) => (
+        $crate::smithy!(@inner
+            $name,
+            $crate::schema::Schema::create_int_enum($id, Box::new([$($value),*]), $crate::traits!($($t),*))
+        );
+    );
 
     // === Collections ====
 
@@ -209,8 +231,19 @@ macro_rules! smithy_internal {
             ("value", $value, $crate::traits!($($v),*))
         );
     );
-    // === Structure ===
-    // May or may not have members
+
+    // === Structure & Unions ===
+    // Empty structure
+     ($id:literal: {
+        $(@$t:expr;)*
+        structure $name:ident {}
+    }) => (
+       $crate::smithy!(@inner
+            $name,
+            $crate::schema::Schema::structure_builder($id, $crate::traits!($($t),*)).build()
+        );
+    );
+
     ($id:literal: {
         $(@$t:expr;)*
         structure $name:ident {$(
@@ -225,9 +258,19 @@ macro_rules! smithy_internal {
         );
     );
 
-    // === Union ===
-    // TODO(union): Add union shape macro
-
+    ($id:literal: {
+        $(@$t:expr;)*
+        union $name:ident {$(
+            $(@$m:expr;)*
+            $member_ident:ident : $member_schema:tt = $member_name:literal
+        )*}
+    }) => (
+       $crate::smithy!(@inner
+            $name,
+            $crate::schema::Schema::union_builder($id, $crate::traits!($($t),*)),
+            $(($member_ident, $member_name, $member_schema, $crate::traits!($($m),*))),*
+        );
+    );
 
     // === Service Shapes ===
     // TODO(service shapes): Add Operation, Resource, Service schema macros

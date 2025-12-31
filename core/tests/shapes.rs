@@ -36,7 +36,7 @@
 // lazy_member_schema!(MEMBER_LIST, SCHEMA, "list");
 // lazy_member_schema!(MEMBER_MAP, SCHEMA, "map");
 //
-// //#[derive(SerializableStruct)]
+// //#[derive(SerializableShape)]
 // //#[schema(SCHEMA)]
 // pub(crate) struct SerializeMe {
 //     pub member_a: String,

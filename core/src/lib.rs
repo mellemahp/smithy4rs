@@ -25,7 +25,16 @@ pub use bigdecimal::BigDecimal;
 pub use bytebuffer::ByteBuffer;
 #[doc(hidden)]
 pub use indexmap::IndexMap;
+use indexmap::IndexSet;
 #[doc(hidden)]
 pub use num_bigint::BigInt;
+use rustc_hash::FxBuildHasher;
 #[doc(hidden)]
 pub use temporal_rs::Instant;
+
+// Faster Map and Set implementations used for internal types and Schemas.
+//
+// NOTE: These should _not_ be used in serialized/deserialized types as they are not
+// resistant to DOS attacks.
+pub(crate) type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
+pub(crate) type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
