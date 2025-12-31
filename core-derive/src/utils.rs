@@ -1,7 +1,7 @@
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Attribute, Type};
+use syn::{Attribute, DataEnum, Lit, Type};
 
 /// Parses out attribute data for the `smithy_schema` macro attribute from the struct and
 /// its fields.
@@ -162,6 +162,37 @@ pub(crate) fn get_ident(ty: &Type) -> &Ident {
         return &type_path.path.segments.last().unwrap().ident;
     }
     panic!("Expected to get ident")
+}
+
+/// Parse an `#[enum_value(...)` attribute
+pub(crate) fn parse_enum_value(attrs: &[Attribute]) -> Option<Lit> {
+    let mut value = None;
+    for attr in attrs {
+        if attr.path().is_ident("enum_value") {
+            value = Some(
+                attr.parse_args::<Lit>()
+                    .expect("`enum_value` attribute should be an identifier"),
+            );
+        }
+    }
+    value
+}
+
+pub(crate) fn get_builder_ident(shape_name: &Ident) -> Ident {
+    Ident::new(&format!("{}Builder", shape_name), Span::call_site())
+}
+
+/// Determines if the shape should be treated as a regular enum or a union.
+///
+/// Union's have member schemas for their variants.
+pub(crate) fn is_union(data_enum: &DataEnum) -> bool {
+    data_enum
+        .variants
+        .first()
+        .expect("Enum must have at least one variant")
+        .attrs
+        .iter()
+        .any(|attr| attr.path().is_ident("smithy_schema"))
 }
 
 #[cfg(test)]
