@@ -20,7 +20,7 @@ keywords = ["smithy", "api"]
 categories = ["api-bindings"]
 
 [workspace.dependencies]
-bigdecimal = "0.4.9"
+bigdecimal = "0.4.10"
 bytebuffer = "2.3.0"
 criterion = "0.8"
 downcast-rs = "2.0.2"
