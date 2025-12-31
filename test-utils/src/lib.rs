@@ -7,8 +7,10 @@ mod basic_types;
 mod enums;
 mod nested;
 mod recursive;
+mod unions;
 
 pub use basic_types::*;
 pub use enums::*;
 pub use nested::*;
 pub use recursive::*;
+pub use unions::*;
