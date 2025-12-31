@@ -415,54 +415,49 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
     type Error = DocumentError;
 
     fn read_bool(&mut self, schema: &SchemaRef) -> Result<bool, Self::Error> {
-        self.document.value.as_bool().ok_or_else(|| {
+        self.document.as_bool().ok_or_else(|| {
             DocumentError::DocumentConversion("Expected boolean document".to_string())
         })
     }
 
     fn read_byte(&mut self, schema: &SchemaRef) -> Result<i8, Self::Error> {
         self.document
-            .value
             .as_byte()
             .ok_or_else(|| DocumentError::DocumentConversion("Expected byte document".to_string()))
     }
 
     fn read_short(&mut self, schema: &SchemaRef) -> Result<i16, Self::Error> {
         self.document
-            .value
             .as_short()
             .ok_or_else(|| DocumentError::DocumentConversion("Expected short document".to_string()))
     }
 
     fn read_integer(&mut self, schema: &SchemaRef) -> Result<i32, Self::Error> {
-        self.document.value.as_integer().ok_or_else(|| {
+        self.document.as_integer().ok_or_else(|| {
             DocumentError::DocumentConversion("Expected integer document".to_string())
         })
     }
 
     fn read_long(&mut self, schema: &SchemaRef) -> Result<i64, Self::Error> {
         self.document
-            .value
             .as_long()
             .ok_or_else(|| DocumentError::DocumentConversion("Expected long document".to_string()))
     }
 
     fn read_float(&mut self, schema: &SchemaRef) -> Result<f32, Self::Error> {
         self.document
-            .value
             .as_float()
             .ok_or_else(|| DocumentError::DocumentConversion("Expected float document".to_string()))
     }
 
     fn read_double(&mut self, schema: &SchemaRef) -> Result<f64, Self::Error> {
-        self.document.value.as_double().ok_or_else(|| {
+        self.document.as_double().ok_or_else(|| {
             DocumentError::DocumentConversion("Expected double document".to_string())
         })
     }
 
     fn read_big_integer(&mut self, schema: &SchemaRef) -> Result<BigInt, Self::Error> {
         self.document
-            .value
             .as_big_integer()
             .cloned()
             .ok_or_else(|| {
@@ -482,7 +477,6 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
 
     fn read_string(&mut self, schema: &SchemaRef) -> Result<String, Self::Error> {
         self.document
-            .value
             .as_string()
             .map(|s| s.to_string())
             .ok_or_else(|| {
@@ -569,7 +563,7 @@ impl<'de> Deserializer<'de> for DocumentDeserializer<'de> {
     where
         F: FnMut(&mut T, String, &mut Self) -> Result<(), Self::Error>,
     {
-        let map = self.document.value.as_map().ok_or_else(|| {
+        let map = self.document.as_map().ok_or_else(|| {
             DocumentError::DocumentConversion("Expected map document".to_string())
         })?;
 
@@ -883,9 +877,7 @@ mod tests {
     #[test]
     fn roundtrip_bool() {
         let original = true;
-        let doc = original
-            .serialize_with_schema(&BOOLEAN, DocumentParser)
-            .unwrap();
+        let doc = original.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = bool::deserialize_with_schema(&BOOLEAN, &mut deser).unwrap();
         assert_eq!(original, result);
@@ -893,49 +885,38 @@ mod tests {
 
     #[test]
     fn roundtrip_string() {
-        let original = "hello world".to_string();
-        let doc = original
-            .serialize_with_schema(&STRING, DocumentParser)
-            .unwrap();
+        let doc: Document = "hello world".into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = String::deserialize_with_schema(&STRING, &mut deser).unwrap();
-        assert_eq!(original, result);
+        assert_eq!("hello world".to_string(), result);
     }
 
     #[test]
     fn roundtrip_integers() {
         // Byte
-        let original_byte: i8 = 127;
-        let doc = original_byte
-            .serialize_with_schema(&BYTE, DocumentParser)
-            .unwrap();
+        let original_byte  = 127i8;
+        let doc: Document = original_byte.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = i8::deserialize_with_schema(&BYTE, &mut deser).unwrap();
-        assert_eq!(original_byte, result);
+        assert_eq!(127i8, result);
 
         // Short
-        let original_short: i16 = 32000;
-        let doc = original_short
-            .serialize_with_schema(&SHORT, DocumentParser)
-            .unwrap();
+        let original_short = 32000i16;
+        let doc: Document = original_short.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = i16::deserialize_with_schema(&SHORT, &mut deser).unwrap();
         assert_eq!(original_short, result);
 
         // Integer
-        let original_int: i32 = 123456;
-        let doc = original_int
-            .serialize_with_schema(&INTEGER, DocumentParser)
-            .unwrap();
+        let original_int = 123456i32;
+        let doc: Document = original_int.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = i32::deserialize_with_schema(&INTEGER, &mut deser).unwrap();
         assert_eq!(original_int, result);
 
         // Long
-        let original_long: i64 = 9876543210i64;
-        let doc = original_long
-            .serialize_with_schema(&LONG, DocumentParser)
-            .unwrap();
+        let original_long = 9876543210i64;
+        let doc = original_long.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = i64::deserialize_with_schema(&LONG, &mut deser).unwrap();
         assert_eq!(original_long, result);
@@ -944,19 +925,15 @@ mod tests {
     #[test]
     fn roundtrip_floats() {
         // Float
-        let original_float: f32 = 1.2345;
-        let doc = original_float
-            .serialize_with_schema(&FLOAT, DocumentParser)
-            .unwrap();
+        let original_float = 1.2345f32;
+        let doc: Document = original_float.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = f32::deserialize_with_schema(&FLOAT, &mut deser).unwrap();
         assert_eq!(original_float, result);
 
         // Double
-        let original_double: f64 = 1.23456789;
-        let doc = original_double
-            .serialize_with_schema(&DOUBLE, DocumentParser)
-            .unwrap();
+        let original_double = 1.23456789f64;
+        let doc: Document = original_double.into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = f64::deserialize_with_schema(&DOUBLE, &mut deser).unwrap();
         assert_eq!(original_double, result);
@@ -967,18 +944,14 @@ mod tests {
     fn roundtrip_big_numbers() {
         // BigInteger
         let original_big_int = BigInt::from(123456789);
-        let doc = original_big_int
-            .serialize_with_schema(&BIG_INTEGER, DocumentParser)
-            .unwrap();
+        let doc: Document = original_big_int.clone().into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = BigInt::deserialize_with_schema(&BIG_INTEGER, &mut deser).unwrap();
         assert_eq!(original_big_int, result);
 
         // BigDecimal
         let original_big_dec = BigDecimal::from_str("123.456").unwrap();
-        let doc = original_big_dec
-            .serialize_with_schema(&BIG_DECIMAL, DocumentParser)
-            .unwrap();
+        let doc = original_big_dec.clone().into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = BigDecimal::deserialize_with_schema(&BIG_DECIMAL, &mut deser).unwrap();
         assert_eq!(original_big_dec, result);
@@ -991,9 +964,7 @@ mod tests {
             "second".to_string(),
             "third".to_string(),
         ];
-        let doc = original
-            .serialize_with_schema(&LIST_SCHEMA, DocumentParser)
-            .unwrap();
+        let doc: Document = original.clone().into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result = Vec::<String>::deserialize_with_schema(&LIST_SCHEMA, &mut deser).unwrap();
         assert_eq!(original, result);
@@ -1006,9 +977,7 @@ mod tests {
         original.insert("key2".to_string(), "value2".to_string());
         original.insert("key3".to_string(), "value3".to_string());
 
-        let doc = original
-            .serialize_with_schema(&MAP_SCHEMA, DocumentParser)
-            .unwrap();
+        let doc: Document = original.clone().into();
         let mut deser = DocumentDeserializer::new(&doc);
         let result =
             IndexMap::<String, String>::deserialize_with_schema(&MAP_SCHEMA, &mut deser).unwrap();
@@ -1075,6 +1044,7 @@ mod tests {
         assert_eq!(map_value, original_map);
     }
 
+    // TODO: Add `Into` impl for Option<T>
     #[test]
     fn roundtrip_option() {
         // Some value

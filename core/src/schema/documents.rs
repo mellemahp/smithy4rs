@@ -406,7 +406,7 @@ impl SchemaShape for Document {
     }
 }
 
-/// A Smithy document type, representing untyped data from the Smithy data model.
+/// A Smithy document type, representing untyped data in the Smithy data model.
 ///
 /// TODO: DOCS ON MODEL
 pub trait DocumentValue: Send + Sync {
