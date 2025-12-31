@@ -8,21 +8,13 @@ use std::{
     sync::{Arc, LazyLock, OnceLock, RwLock},
 };
 
-use indexmap::{IndexMap, IndexSet};
 use rustc_hash::FxBuildHasher;
 
 use crate::{
-    Ref,
+    FxIndexMap, FxIndexSet, Ref,
     prelude::{DefaultTrait, RequiredTrait},
     schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
 };
-
-// Faster Map and Set implementations used for internal types and Schemas.
-//
-// NOTE: These should _not_ be used in serialized/deserialized types as they are not
-// resistant to DOS attacks.
-type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
-type FxIndexSet<T> = IndexSet<T, FxBuildHasher>;
 
 /// Reference to a Smithy Schema type.
 ///
