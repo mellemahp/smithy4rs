@@ -45,7 +45,7 @@ pub fn smithy_union(
     // Add unknown variants
     unknown_variant(&mut enum_struct);
 
-    // Re-write stucture with changes
+    // Re-write structure with changes
     quote!(#enum_struct).into()
 }
 
