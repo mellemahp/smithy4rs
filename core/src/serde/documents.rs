@@ -102,6 +102,8 @@ where
     }
 }
 
+// ====== Public Conversion API ========
+
 impl Document {
     /// Convert any serializable (schema-based) shape to a Document.
     ///
@@ -110,8 +112,26 @@ impl Document {
     /// Returns `DocumentError` if the shape cannot be serialized to a document,
     /// typically due to schema mismatches or validation failures.
     ///
-    pub fn from<T: SchemaShape + SerializeWithSchema>(shape: T) -> Result<Self, DocumentError> {
+    pub fn from_shape<T: SchemaShape + SerializeWithSchema>(shape: T) -> Result<Self, DocumentError> {
         shape.serialize_with_schema(shape.schema(), DocumentParser)
+    }
+
+    /// Convert a document into a [`ShapeBuilder`]
+    ///
+    /// <div class="note">
+    /// **Note**: the returned builder still needs to be built and validated
+    /// after conversion from a document.
+    /// </div>
+    ///
+    /// # Errors
+    /// Returns `DocumentError` if the document cannot be deserialized into the
+    /// shape builder typically due to schema mismatches or failures
+    /// such as invalid int -> float conversions.
+    #[inline]
+    pub(crate) fn into_builder<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
+        self,
+    ) -> Result<B, DocumentError> {
+        B::deserialize_with_schema(S::schema(), &mut DocumentDeserializer::new(self))
     }
 }
 
@@ -402,7 +422,7 @@ impl StructSerializer for DocumentMapAccumulator {
 // ============================================================================
 
 /// A deserializer that reads from a `Document`.
-pub(crate) struct DocumentDeserializer {
+struct DocumentDeserializer {
     document: Option<Document>,
 }
 

@@ -3,7 +3,6 @@ use crate::{
     serde::{
         correction::{ErrorCorrection, ErrorCorrectionDefault},
         deserializers::DeserializeWithSchema,
-        documents::DocumentDeserializer,
         se::{SerializeWithSchema, Serializer},
         validate::DefaultValidator,
         validation::{ValidationErrors, Validator},
@@ -85,21 +84,6 @@ where
     /// Get a new builder for this shape
     fn builder() -> B {
         B::new()
-    }
-}
-
-// Conversion convenience method as we cannot have generic `TryFrom` impl
-// due to orphan rules
-impl Document {
-    /// Convert a document into a builder
-    ///
-    /// Note that the builder still needs to be built and validated
-    /// after conversion from a document.
-    #[inline]
-    pub(crate) fn into_builder<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
-        self,
-    ) -> Result<B, DocumentError> {
-        B::deserialize_with_schema(S::schema(), &mut DocumentDeserializer::new(self))
     }
 }
 
