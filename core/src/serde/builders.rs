@@ -72,7 +72,7 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// after conversion from a document.
     #[inline]
     fn from_document(document: Document) -> Result<Self, DocumentError> {
-        Self::deserialize_with_schema(S::schema(), &mut DocumentDeserializer::new(document))
+        document.into::<Self, S>()
     }
 }
 
@@ -85,6 +85,15 @@ where
     /// Get a new builder for this shape
     fn builder() -> B {
         B::new()
+    }
+}
+
+impl Document {
+    #[inline]
+    pub(crate) fn into<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
+        self,
+    ) -> Result<B, DocumentError> {
+        B::deserialize_with_schema(S::schema(), &mut DocumentDeserializer::new(self))
     }
 }
 

@@ -688,10 +688,8 @@ mod tests {
             member_list: list,
         };
         let document: Document = struct_to_convert.clone().into();
-        let result: SerializeMe = SerializeMeBuilder::from_document(document)
-            .unwrap()
-            .build()
-            .unwrap();
+        let builder: SerializeMeBuilder = document.into().unwrap();
+        let result: SerializeMe = builder.build().unwrap();
         assert_eq!(result, struct_to_convert);
     }
 
