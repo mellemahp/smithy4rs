@@ -1,15 +1,14 @@
 use crate::{
-    schema::{SchemaRef, StaticSchemaShape},
+    schema::{Document, DocumentError, SchemaRef, StaticSchemaShape},
     serde::{
         correction::{ErrorCorrection, ErrorCorrectionDefault},
         deserializers::DeserializeWithSchema,
+        documents::DocumentDeserializer,
         se::{SerializeWithSchema, Serializer},
         validate::DefaultValidator,
         validation::{ValidationErrors, Validator},
     },
 };
-use crate::schema::{Document, DocumentError};
-use crate::serde::documents::DocumentDeserializer;
 
 /// Builder for a Smithy Shape
 ///

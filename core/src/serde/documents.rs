@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
 use std::{collections::HashMap, fmt::Display, marker::PhantomData, sync::Arc};
+
 use indexmap::IndexMap;
 use thiserror::Error;
 
@@ -8,19 +9,18 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE},
     schema::{
-        DefaultDocumentValue, Document, DocumentError, DocumentValue, LIST_DOCUMENT_SCHEMA,
-        MAP_DOCUMENT_SCHEMA, NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef,
-        SchemaShape, ShapeId, ShapeType, StaticSchemaShape, TraitList, get_shape_type,
+        DefaultDocumentValue, Document, DocumentError, DocumentImpl, DocumentValue,
+        LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA, NumberFloat, NumberInteger, NumberValue, Schema,
+        SchemaRef, SchemaShape, ShapeId, ShapeType, StaticSchemaShape, TraitList, get_shape_type,
     },
     serde::{
+        Buildable, ShapeBuilder,
+        de::Deserializer,
+        deserializers::DeserializeWithSchema,
         se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
         serializers::{Error, SerializableShape, SerializeWithSchema},
-        deserializers::{DeserializeWithSchema}
     },
 };
-use crate::schema::DocumentImpl;
-use crate::serde::{Buildable, ShapeBuilder};
-use crate::serde::de::Deserializer;
 // ============================================================================
 // Serialization
 // ============================================================================
@@ -403,19 +403,27 @@ impl StructSerializer for DocumentMapAccumulator {
 
 /// A deserializer that reads from a `Document`.
 pub(crate) struct DocumentDeserializer {
-    document: Option<Document>
+    document: Option<Document>,
 }
 
 impl DocumentDeserializer {
     pub fn new(document: Document) -> Self {
-        Self { document: Some(document) }
+        Self {
+            document: Some(document),
+        }
     }
 
     #[inline]
-    fn get_inner<T: TryFrom<Document, Error = DocumentError>>(&mut self) -> Result<T, DocumentError> {
+    fn get_inner<T: TryFrom<Document, Error = DocumentError>>(
+        &mut self,
+    ) -> Result<T, DocumentError> {
         self.document
             .take()
-            .ok_or_else(|| DocumentError::DocumentConversion("Encountered empty document deserializer".to_string()))?
+            .ok_or_else(|| {
+                DocumentError::DocumentConversion(
+                    "Encountered empty document deserializer".to_string(),
+                )
+            })?
             .try_into()
     }
 }
@@ -486,9 +494,9 @@ impl Deserializer<'_> for DocumentDeserializer {
 
     #[inline]
     fn read_document(&mut self, schema: &SchemaRef) -> Result<Document, Self::Error> {
-        self.document
-            .take()
-            .ok_or_else(|| DocumentError::DocumentConversion("Encountered empty document deserializer".to_string()))
+        self.document.take().ok_or_else(|| {
+            DocumentError::DocumentConversion("Encountered empty document deserializer".to_string())
+        })
     }
 
     fn read_struct<B, F>(
@@ -556,7 +564,8 @@ impl Deserializer<'_> for DocumentDeserializer {
     }
 
     fn is_null(&mut self) -> bool {
-        self.document.as_ref()
+        self.document
+            .as_ref()
             .expect("Empty document deserializer")
             .is_null()
     }
@@ -704,7 +713,7 @@ mod tests {
     #[test]
     fn roundtrip_integers() {
         // Byte
-        let original_byte  = 127i8;
+        let original_byte = 127i8;
         let doc: Document = original_byte.into();
         let result: i8 = doc.try_into().unwrap();
         assert_eq!(127i8, result);
@@ -849,6 +858,4 @@ mod tests {
         let result: Option<String> = doc.try_into().unwrap();
         assert_eq!(original_none, result);
     }
-
-
 }

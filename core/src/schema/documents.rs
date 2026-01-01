@@ -856,7 +856,9 @@ impl DocumentValue for DefaultDocumentValue {
         if let Self::Blob(value) = *self {
             Ok(value)
         } else {
-            Err(DocumentError::DocumentConversion("Expected blob document".to_string()))
+            Err(DocumentError::DocumentConversion(
+                "Expected blob document".to_string(),
+            ))
         }
     }
 
@@ -864,7 +866,9 @@ impl DocumentValue for DefaultDocumentValue {
         if let Self::Boolean(value) = *self {
             Ok(value)
         } else {
-            Err(DocumentError::DocumentConversion("Expected boolean document".to_string()))
+            Err(DocumentError::DocumentConversion(
+                "Expected boolean document".to_string(),
+            ))
         }
     }
 
@@ -872,7 +876,9 @@ impl DocumentValue for DefaultDocumentValue {
         if let Self::String(value) = *self {
             Ok(value)
         } else {
-            Err(DocumentError::DocumentConversion("Expected string document".to_string()))
+            Err(DocumentError::DocumentConversion(
+                "Expected string document".to_string(),
+            ))
         }
     }
 
@@ -880,7 +886,9 @@ impl DocumentValue for DefaultDocumentValue {
         if let Self::Timestamp(value) = *self {
             Ok(value)
         } else {
-            Err(DocumentError::DocumentConversion("Expected timestamp document".to_string()))
+            Err(DocumentError::DocumentConversion(
+                "Expected timestamp document".to_string(),
+            ))
         }
     }
 
@@ -896,8 +904,9 @@ impl DocumentValue for DefaultDocumentValue {
     }
 
     fn into_integer(self: Box<Self>) -> Result<i32, DocumentError> {
-        self.as_integer()
-            .ok_or_else(|| DocumentError::DocumentConversion("Expected integer document".to_string()))
+        self.as_integer().ok_or_else(|| {
+            DocumentError::DocumentConversion("Expected integer document".to_string())
+        })
     }
 
     fn into_long(self: Box<Self>) -> Result<i64, DocumentError> {
@@ -911,28 +920,31 @@ impl DocumentValue for DefaultDocumentValue {
     }
 
     fn into_double(self: Box<Self>) -> Result<f64, DocumentError> {
-        self.as_double()
-            .ok_or_else(|| DocumentError::DocumentConversion("Expected double document".to_string()))
+        self.as_double().ok_or_else(|| {
+            DocumentError::DocumentConversion("Expected double document".to_string())
+        })
     }
 
     // TODO(numeric conversion): These shouldnt need to clone.
     fn into_big_integer(self: Box<Self>) -> Result<BigInt, DocumentError> {
-        self.as_big_integer()
-            .cloned()
-            .ok_or_else(|| DocumentError::DocumentConversion("Expected bigInteger document".to_string()))
+        self.as_big_integer().cloned().ok_or_else(|| {
+            DocumentError::DocumentConversion("Expected bigInteger document".to_string())
+        })
     }
 
     fn into_big_decimal(self: Box<Self>) -> Result<BigDecimal, DocumentError> {
-        self.as_big_decimal()
-            .cloned()
-            .ok_or_else(|| DocumentError::DocumentConversion("Expected bigInteger document".to_string()))
+        self.as_big_decimal().cloned().ok_or_else(|| {
+            DocumentError::DocumentConversion("Expected bigInteger document".to_string())
+        })
     }
 
     fn into_list(self: Box<Self>) -> Result<Vec<Document>, DocumentError> {
         if let Self::List(value) = *self {
             Ok(value)
         } else {
-            Err(DocumentError::DocumentConversion("Expected list document".to_string()))
+            Err(DocumentError::DocumentConversion(
+                "Expected list document".to_string(),
+            ))
         }
     }
 
@@ -940,7 +952,9 @@ impl DocumentValue for DefaultDocumentValue {
         if let Self::Map(value) = *self {
             Ok(value)
         } else {
-            Err(DocumentError::DocumentConversion("Expected map document".to_string()))
+            Err(DocumentError::DocumentConversion(
+                "Expected map document".to_string(),
+            ))
         }
     }
 
@@ -1180,7 +1194,6 @@ impl TryFrom<Document> for IndexMap<String, Document> {
     }
 }
 
-
 impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Vec<T> {
     type Error = DocumentError;
 
@@ -1213,7 +1226,7 @@ impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for IndexMap
     }
 }
 
-impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Option<T>{
+impl<T: TryFrom<Document, Error = DocumentError>> TryFrom<Document> for Option<T> {
     type Error = DocumentError;
 
     fn try_from(value: Document) -> Result<Self, Self::Error> {
@@ -1413,13 +1426,14 @@ macro_rules! option_conversion {
     ($ty:ty, $schema:ident) => {
         impl From<Option<$ty>> for Document {
             fn from(value: Option<$ty>) -> Self {
-                value.map_or_else(|| {
-                    Document {
+                value.map_or_else(
+                    || Document {
                         schema: $schema.clone(),
                         value: DefaultDocumentValue::Null.into(),
                         discriminator: None,
-                    }
-                }, Into::into)
+                    },
+                    Into::into,
+                )
             }
         }
     };
