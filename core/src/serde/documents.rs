@@ -688,7 +688,7 @@ mod tests {
             member_list: list,
         };
         let document: Document = struct_to_convert.clone().into();
-        let builder: SerializeMeBuilder = document.into().unwrap();
+        let builder: SerializeMeBuilder = document.into_builder().unwrap();
         let result: SerializeMe = builder.build().unwrap();
         assert_eq!(result, struct_to_convert);
     }

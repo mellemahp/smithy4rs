@@ -66,13 +66,13 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
         Ok(self.correct())
     }
 
-    /// Deserialize a document into a builder.
+    /// Deserialize a document into this builder.
     ///
     /// Note that the builder still needs to be built and validated
     /// after conversion from a document.
     #[inline]
     fn from_document(document: Document) -> Result<Self, DocumentError> {
-        document.into::<Self, S>()
+        document.into_builder::<Self, S>()
     }
 }
 
@@ -88,9 +88,15 @@ where
     }
 }
 
+// Conversion convenience method as we cannot have generic `TryFrom` impl
+// due to orphan rules
 impl Document {
+    /// Convert a document into a builder
+    ///
+    /// Note that the builder still needs to be built and validated
+    /// after conversion from a document.
     #[inline]
-    pub(crate) fn into<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
+    pub(crate) fn into_builder<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
         self,
     ) -> Result<B, DocumentError> {
         B::deserialize_with_schema(S::schema(), &mut DocumentDeserializer::new(self))
