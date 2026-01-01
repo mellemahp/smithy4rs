@@ -8,6 +8,8 @@ use crate::{
         validation::{ValidationErrors, Validator},
     },
 };
+use crate::schema::{Document, DocumentError};
+use crate::serde::documents::DocumentDeserializer;
 
 /// Builder for a Smithy Shape
 ///
@@ -63,6 +65,15 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
         validator.validate(S::schema(), &self)?;
         Ok(self.correct())
+    }
+
+    /// Deserialize a document into a builder.
+    ///
+    /// Note that the builder still needs to be built and validated
+    /// after conversion from a document.
+    #[inline]
+    fn from_document(document: Document) -> Result<Self, DocumentError> {
+        Self::deserialize_with_schema(S::schema(), &mut DocumentDeserializer::new(document))
     }
 }
 
