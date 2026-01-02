@@ -44,7 +44,7 @@ impl<T: SerializeWithSchema> Debug for DebugWrapper<'_, T> {
 // Errors
 // ============================================================================
 
-/// Errors that can occure when serializing a shape into a string representation
+/// Errors that can occur when serializing a shape into a string representation
 #[derive(Error, Debug)]
 #[doc(hidden)]
 pub enum FmtError {
