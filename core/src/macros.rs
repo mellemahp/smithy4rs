@@ -5,9 +5,9 @@
 /// Generated schemas can be used by `Smithy4rs` proc macros to automatically implement
 /// schema-guided (de)serialization for structures and enums.
 ///
-/// ```rust
+/// ```rust,ignore
 /// use smithy4rs_core::smithy;
-/// use smithy4rs_core_derive::SmithyStruct;
+/// use smithy4rs_core_derive::SmithyShape;
 ///
 /// smithy!("test#SimpleStruct": {
 ///     structure SIMPLE_STRUCT_SCHEMA {
@@ -16,7 +16,7 @@
 ///     }
 /// });
 ///
-/// #[derive(SmithyStruct, Debug, PartialEq)]
+/// #[derive(SmithyShape, PartialEq)]
 /// #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
 /// pub struct SimpleStruct {
 ///     #[smithy_schema(SIMPLE_FIELD_A)]
@@ -364,7 +364,7 @@ macro_rules! smithy_internal {
 /// that implements [`SmithyTrait`](crate::schema::SmithyTrait) and has a
 /// [`StaticTraitId`](crate::schema::StaticTraitId) of `"smithy.api#IdempotencyToken"`.
 ///
-/// ```rust
+/// ```rust,ignore
 /// use smithy4rs_core::annotation_trait;
 ///
 /// annotation_trait!(IdempotencyTokenTrait, "smithy.api#IdempotencyToken");
@@ -406,7 +406,7 @@ macro_rules! annotation_trait {
 /// field (`media_type`) that implements [`SmithyTrait`](crate::schema::SmithyTrait) and has a
 /// [`StaticTraitId`](crate::schema::StaticTraitId) of `"smithy.api#mediaType"`
 ///
-/// ```rust
+/// ```rust,ignore
 /// use smithy4rs_core::string_trait;
 ///
 /// string_trait!(MediaTypeTrait, media_type, "smithy.api#mediaType");

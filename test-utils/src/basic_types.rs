@@ -22,7 +22,7 @@ smithy!("test#AllPrimitivesStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
     #[smithy_schema(STRING)]
@@ -54,7 +54,7 @@ smithy!("test#OptionalFieldsStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
 pub struct OptionalFieldsStruct {
     #[smithy_schema(REQUIRED)]
@@ -74,7 +74,7 @@ smithy!("test#NumericTypesStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
 pub struct NumericTypesStruct {
     #[smithy_schema(BYTE)]
@@ -98,7 +98,7 @@ smithy!("test#SimpleStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]

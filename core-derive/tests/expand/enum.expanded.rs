@@ -69,3 +69,13 @@ const _: () = {
         }
     }
 };
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::serde::debug::DebugWrapper as _DebugWrapper;
+    #[automatically_derived]
+    impl std::fmt::Debug for TestEnum {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            std::fmt::Debug::fmt(&_DebugWrapper::new(&SIMPLE_ENUM, self), f)
+        }
+    }
+};

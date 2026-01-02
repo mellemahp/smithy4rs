@@ -517,7 +517,7 @@ impl ListSerializer for DefaultListValidator<'_> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         self.root.push_path(PathElement::Index(self.index))?;
         if self.unique {
@@ -562,7 +562,7 @@ impl UniquenessTracker {
     /// Add an item to the set.
     ///
     /// Returns true if the item was already in the set.
-    fn add<T: ?Sized + SerializeWithSchema>(
+    fn add<T: SerializeWithSchema>(
         &mut self,
         schema: &SchemaRef,
         value: &T,
@@ -753,7 +753,7 @@ impl ListSerializer for InnerHasher<'_> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         value.serialize_with_schema(element_schema, &mut *self.root)?;
         Ok(())
@@ -777,8 +777,8 @@ impl MapSerializer for InnerHasher<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema,
+        K: SerializeWithSchema,
+        V: SerializeWithSchema,
     {
         key.serialize_with_schema(key_schema, &mut *self.root)?;
         value.serialize_with_schema(value_schema, &mut *self.root)?;
@@ -800,7 +800,7 @@ impl StructSerializer for InnerHasher<'_> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         let Some(member_name) = member_schema.id().member() else {
             return Err(ValidationFailure::ExpectedMember(
@@ -819,7 +819,7 @@ impl StructSerializer for InnerHasher<'_> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         self.root.hash(member_name);
         value.serialize_with_schema(member_schema, &mut *self.root)?;
@@ -848,8 +848,8 @@ impl MapSerializer for DefaultMapValidator<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema,
+        K: SerializeWithSchema,
+        V: SerializeWithSchema,
     {
         match key.serialize_with_schema(key_schema, &mut KeySerializer) {
             Ok(val) => self.root.push_path(PathElement::Key(val))?,
@@ -1007,7 +1007,7 @@ impl ListSerializer for NoOpSerializer {
         _value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         unreachable!()
     }
@@ -1028,8 +1028,8 @@ impl MapSerializer for NoOpSerializer {
         _value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema,
+        K: SerializeWithSchema,
+        V: SerializeWithSchema,
     {
         unreachable!()
     }
@@ -1048,7 +1048,7 @@ impl StructSerializer for NoOpSerializer {
         _value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         unreachable!()
     }
@@ -1073,7 +1073,7 @@ impl StructSerializer for DefaultStructValidator<'_> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         self.root.push_path(member_schema)?;
         value.serialize_with_schema(member_schema, &mut *self.root)?;

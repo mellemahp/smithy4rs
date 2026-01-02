@@ -26,7 +26,7 @@ smithy!("test#RecursiveShapesStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
     #[smithy_schema(STRING)]

@@ -77,7 +77,7 @@ pub trait ListSerializer {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema;
+        T: SerializeWithSchema;
 
     /// Finish serializing a sequence.
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
@@ -100,8 +100,8 @@ pub trait MapSerializer {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema;
+        K: SerializeWithSchema,
+        V: SerializeWithSchema;
 
     /// Finish serializing a map.
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
@@ -131,7 +131,7 @@ pub trait StructSerializer {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema;
+        T: SerializeWithSchema;
 
     /// Serialize a member on the struct with a pre-known field name.
     /// This is an optimization to avoid extracting the name from the schema.
@@ -143,7 +143,7 @@ pub trait StructSerializer {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         // Default implementation falls back to regular serialize_member
         self.serialize_member(member_schema, value)
