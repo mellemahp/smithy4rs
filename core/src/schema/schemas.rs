@@ -31,7 +31,7 @@ pub type TraitList = Vec<TraitRef>;
 pub enum Schema {
     /// A Schema representing a Scalar (simple) type.
     Scalar(ScalarSchema),
-    /// A Schema representing a `structure` or `unio` type.
+    /// A Schema representing a `structure` or `union` type.
     Struct(StructSchema),
     /// A Schema representing a string `enum` type.
     Enum(EnumSchema<&'static str>),
@@ -94,7 +94,7 @@ pub struct MapSchema {
     id: ShapeId,
     /// Member representing keys of the map
     pub key: SchemaRef,
-    /// Member respresenting values in the map
+    /// Member representing values in the map
     pub value: SchemaRef,
     traits: TraitMap,
 }
