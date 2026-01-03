@@ -2,7 +2,6 @@
 //! Definition of the [types](https://smithy.io/2.0/spec/simple-types.html) that
 //! compose the Smithy data model.
 //!
-
 #![allow(dead_code)]
 
 use std::{fmt::Display, hash::Hash};
@@ -168,10 +167,21 @@ impl Display for ShapeType {
     }
 }
 
-/// Returns the schema for a shape.
+/// Returns the schema for a shape instance.
+///
+/// ## Blanket Implementations
+/// This trait is automatically implemented for any
+/// shapes that implement [`StaticSchemaShape`], returning the
+/// static schema reference as the instance schema reference.
 pub trait SchemaShape {
     /// Get a reference to the Schema of this shape.
     fn schema(&self) -> &SchemaRef;
+}
+
+impl<T: StaticSchemaShape> SchemaShape for T {
+    fn schema(&self) -> &SchemaRef {
+        Self::schema()
+    }
 }
 
 /// Returns a static schema for a shape (type-level).
@@ -181,12 +191,6 @@ pub trait SchemaShape {
 pub trait StaticSchemaShape {
     /// Get a reference to the (static) Schema of this shape.
     fn schema() -> &'static SchemaRef;
-}
-
-impl<T: StaticSchemaShape> SchemaShape for T {
-    fn schema(&self) -> &SchemaRef {
-        Self::schema()
-    }
 }
 
 #[cfg(test)]

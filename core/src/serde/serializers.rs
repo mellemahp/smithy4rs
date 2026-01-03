@@ -9,10 +9,15 @@ use crate::{
     schema::{Document, SchemaRef, SchemaShape, ShapeId},
 };
 
+// ============================================================================
+// Shape Traits
+// ============================================================================
+
 /// Serialize a shape with its pre-defined schema.
 ///
 /// This trait provides an automatic, blanket implementation for all shapes
 /// with both a [`SchemaShape`], and [`SerializeWithSchema`] implementation.
+///
 pub trait SerializableShape: SchemaShape + SerializeWithSchema {
     /// Serialize a shape with its pre-defined schema
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
@@ -35,6 +40,27 @@ pub trait SerializeWithSchema {
         serializer: S,
     ) -> Result<S::Ok, S::Error>;
 }
+
+// ============================================================================
+// Error Trait
+// ============================================================================
+
+/// Error trait for serialization errors.
+///
+/// <div class="note">
+/// **NOTE**: This is essentially a clone of the `serde::Error` trait, but
+/// we use our own to ensure we don't enforce a `serde` dependency
+/// on consumers.
+/// </div>
+///
+pub trait Error: Sized + StdError {
+    /// Create an error with a custom message
+    fn custom<T: Display>(msg: T) -> Self;
+}
+
+// ============================================================================
+// Core Serialize Traits
+// ============================================================================
 
 /// List Serializer that can be called in a loop to serialize list values
 pub trait ListSerializer {
@@ -81,6 +107,7 @@ pub trait MapSerializer {
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
+/// Struct Serializer that can be called to serialize struct member values
 pub trait StructSerializer {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
@@ -176,14 +203,15 @@ pub trait StructSerializer {
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
-/// Basically just a clone of the `serde::Error` trait.
-/// We use our own to ensure we don't enforce a `serde` dependency on consumers.
-pub trait Error: Sized + StdError {
-    fn custom<T: Display>(msg: T) -> Self;
-}
-
 // TODO(streams): How should we handle data stream serialization?
 // TODO(events): Do we need any custom handling for event streams?
+/// A `Serialize` writes data from an output sink, guided by Smithy schemas.
+///
+/// This trait mirrors the [`Serializer`](serde::Serializer) trait, providing
+/// schema-guided serialization for all Smithy data types.
+///
+/// The serializer is stateful and methods take `self`. Implementations should,
+/// consider implement `Serializer` for `&mut` variants.
 pub trait Serializer: Sized {
     /// Error type emitted on failed serialization.
     ///
@@ -296,7 +324,11 @@ pub trait Serializer: Sized {
     }
 }
 
-// === Default implementations ===
+// ============================================================================
+// Default Implementations
+// ============================================================================
+
+// === Collection implementations ===
 impl<T: SerializeWithSchema> SerializeWithSchema for Vec<T> {
     fn serialize_with_schema<S: Serializer>(
         &self,
@@ -332,6 +364,8 @@ where
         map.end(schema)
     }
 }
+
+// === Scalar type implementations ===
 
 impl SerializeWithSchema for bool {
     #[inline]
@@ -464,6 +498,8 @@ impl SerializeWithSchema for String {
         serializer.write_string(schema, self)
     }
 }
+
+// === Wrapper-type implementations ===
 
 impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
     #[inline]
