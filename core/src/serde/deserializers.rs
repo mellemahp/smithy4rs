@@ -176,6 +176,11 @@ pub trait Deserializer<'de>: Sized {
     fn read_null(&mut self) -> Result<(), Self::Error>;
 }
 
+/// Deserialize a shape with its pre-defined schema.
+///
+/// This trait provides an automatic, blanket implementation for all shapes
+/// with both a [`SchemaShape`], and [`DeserializeWithSchema`] implementation.
+///
 pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
     /// Deserialize a shape with its pre-defined schema
     fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error>;

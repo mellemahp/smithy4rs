@@ -62,7 +62,7 @@
 //! //
 //! // @myCustomTrait(true)
 //! // structure MyStruct { ... }
-//! let custom_trait = DynamicTrait::from("com.example#myCustomTrait".into(), DocumentValue::Boolean(true));
+//! let custom_trait = DynamicTrait::from("com.example#myCustomTrait", DocumentValue::Boolean(true));
 //! ```
 //!
 //! Custom traits can also have either manually defined or code-generated concrete implementations.
@@ -165,8 +165,10 @@ impl<T: SmithyTrait> From<T> for TraitRef {
 /// rust implementation, allowing user-defined traits with no generated
 /// implementation to be read by runtime code.
 ///
-///  In general, users should try to move towards a code-generated versions and downcast
+/// In general, users should try to move towards a code-generated version and downcast
 /// into those if they need to access data within the trait.
+///
+/// TODO(codegen): Add docs on how to implement with codegen (or link)
 ///
 /// <div class ="note">
 /// **NOTE**: Dynamic implementations cannot be downcast into a concrete implementation.
@@ -180,10 +182,13 @@ impl DynamicTrait {
     /// Create a new [`SmithyTrait`] with no corresponding concrete implementation.
     ///
     /// <div class ="warning">
-    /// Traits created with this method cannot be downcast into a specific implementation.
+    /// **WARNING**: Traits created with this method cannot be downcast into a specific implementation.
     /// </div>
-    pub fn from(id: ShapeId, value: DocumentValue) -> Ref<dyn SmithyTrait> {
-        Ref::new(Self { id, value })
+    pub fn from<I: Into<ShapeId>>(id: I, value: DocumentValue) -> Ref<dyn SmithyTrait> {
+        Ref::new(Self {
+            id: id.into(),
+            value,
+        })
     }
 }
 
@@ -272,7 +277,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        prelude::{HTTPErrorTrait, JsonNameTrait},
+        prelude::{HttpErrorTrait, JsonNameTrait},
         traits,
     };
 
@@ -294,30 +299,30 @@ mod tests {
     #[test]
     fn map_extension() {
         let mut map_a = TraitMap::of(traits![JsonNameTrait::new("a")]);
-        let map_b = TraitMap::of(traits![HTTPErrorTrait::new(404)]);
+        let map_b = TraitMap::of(traits![HttpErrorTrait::new(404)]);
 
         map_a.extend(&map_b);
-        assert!(map_a.contains(HTTPErrorTrait::trait_id()));
-        assert!(map_a.contains_type::<HTTPErrorTrait>());
+        assert!(map_a.contains(HttpErrorTrait::trait_id()));
+        assert!(map_a.contains_type::<HttpErrorTrait>());
         assert!(map_a.contains_type::<JsonNameTrait>());
     }
 
     #[test]
     fn trait_conversion_to_type() {
-        let map = TraitMap::of(traits![HTTPErrorTrait::new(404)]);
-        let Some(cast_value) = map.get_as::<HTTPErrorTrait>() else {
+        let map = TraitMap::of(traits![HttpErrorTrait::new(404)]);
+        let Some(cast_value) = map.get_as::<HttpErrorTrait>() else {
             panic!("Could not find expected trait!!!")
         };
         assert_eq!(cast_value.code(), 404);
-        assert_eq!(cast_value.type_id(), TypeId::of::<HTTPErrorTrait>());
+        assert_eq!(cast_value.type_id(), TypeId::of::<HttpErrorTrait>());
     }
 
     #[test]
     fn from_trait_vec() {
-        let vec = traits![HTTPErrorTrait::new(404), JsonNameTrait::new("a")];
+        let vec = traits![HttpErrorTrait::new(404), JsonNameTrait::new("a")];
         let map = TraitMap::of(vec);
 
-        assert!(map.contains_type::<HTTPErrorTrait>());
+        assert!(map.contains_type::<HttpErrorTrait>());
         assert!(map.contains_type::<JsonNameTrait>());
     }
 }
