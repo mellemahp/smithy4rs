@@ -420,7 +420,6 @@ macro_rules! string_trait {
             value: DocumentValue,
         }
         impl $trait_struct {
-            /// Create a new [`$trait_struct`] instance
             pub fn $value_name(&self) -> &str {
                 &self.$value_name
             }
