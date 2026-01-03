@@ -14,6 +14,27 @@ use crate::{
 /// Used during deserialization to accumulate field values
 /// before constructing the final shape. Builders implement
 /// [`DeserializeWithSchema`] to handle the actual deserialization logic.
+///
+/// ### Derived Builders
+/// The `SmithyShape` derive macro will automatically generate a builder
+/// for Smithy shape.
+///
+/// For example:
+/// ```rust,ignore
+///  #[derive(SmithyShape)]
+///  #[smithy_schema(SCHEMA)]
+///  pub struct Test {
+///      #[smithy_schema(A)]
+///      a: String,
+///  }
+/// ```
+///
+/// Will automatically generate a `TestBuilder` structure that can be used to
+/// construct and instance of the `Test` shape:
+/// ```rust,ignore
+/// let built: Test = Test::builder().a("stuff".into()).build()
+/// ```
+///
 pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     Sized + DeserializeWithSchema<'de> + SerializeWithSchema + ErrorCorrection<Value = S>
 {
@@ -63,10 +84,13 @@ where
 /// during construction of a shape.
 #[derive(Clone)]
 pub enum Required<T: ErrorCorrectionDefault> {
+    /// A value that has been set
     Set(T),
+    /// An unset value
     Unset,
 }
 impl<T: ErrorCorrectionDefault> Required<T> {
+    /// Resolves the required value, returning an error correction default if unset.
     #[inline]
     pub fn get(self) -> T {
         match self {
@@ -97,7 +121,9 @@ pub enum MaybeBuilt<
     S: ErrorCorrectionDefault + SerializeWithSchema,
     B: ErrorCorrection<Value = S> + SerializeWithSchema,
 > {
+    /// A built structure
     Struct(S),
+    /// A builder for a structure
     Builder(B),
 }
 impl<

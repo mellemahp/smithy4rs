@@ -19,7 +19,7 @@ use crate::{
 /// Reference to a Smithy Schema type.
 ///
 /// Allows for cheap copying and read only access to schema data.
-/// This type is primarily used to handle indirection required to build
+/// This type is used to handle indirection required to build
 /// aggregate schemas and potentially recursive schemas.
 pub type SchemaRef = Ref<Schema>;
 
@@ -29,12 +29,19 @@ pub type TraitList = Vec<TraitRef>;
 /// Describes a generated shape with metadata from a Smithy model.
 #[derive(Debug, PartialEq)]
 pub enum Schema {
+    /// A Schema representing a Scalar (simple) type.
     Scalar(ScalarSchema),
+    /// A Schema representing a `structure` or `unio` type.
     Struct(StructSchema),
+    /// A Schema representing a string `enum` type.
     Enum(EnumSchema<&'static str>),
+    /// A Schema representing a `intEnum` type.
     IntEnum(EnumSchema<i32>),
+    /// A Schema representing a `list` type.
     List(ListSchema),
+    /// A Schema representing a `map` type.
     Map(MapSchema),
+    /// A Schema representing a `member` of an aggregate type.
     Member(MemberSchema),
 }
 
@@ -52,6 +59,7 @@ pub struct ScalarSchema {
 pub struct StructSchema {
     id: ShapeId,
     shape_type: ShapeType,
+    /// Members (i.e. fields) of the structure schema
     pub members: FxIndexMap<String, SchemaRef>,
     traits: TraitMap,
 }
@@ -75,6 +83,7 @@ impl Debug for StructSchema {
 #[derive(Debug, PartialEq)]
 pub struct ListSchema {
     id: ShapeId,
+    /// Member representing items in the list
     pub member: SchemaRef,
     traits: TraitMap,
 }
@@ -83,7 +92,9 @@ pub struct ListSchema {
 #[derive(Debug, PartialEq)]
 pub struct MapSchema {
     id: ShapeId,
+    /// Member representing keys of the map
     pub key: SchemaRef,
+    /// Member respresenting values in the map
     pub value: SchemaRef,
     traits: TraitMap,
 }
@@ -92,6 +103,7 @@ pub struct MapSchema {
 #[derive(Debug, PartialEq)]
 pub struct EnumSchema<T: PartialEq + Hash + Eq> {
     id: ShapeId,
+    /// Set of allowed values for the enum
     pub values: FxIndexSet<T>,
     traits: TraitMap,
 }
@@ -100,8 +112,15 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
 #[derive(Debug, PartialEq)]
 pub struct MemberSchema {
     id: ShapeId,
+    /// Shape that this member targets
     pub target: MemberTarget,
+    /// Name of the member
     pub name: String,
+    /// Index of the member.
+    ///
+    /// This is the member's definition order or
+    /// the value of the `@idx` value of the member if provided.
+    /// Members are sorted in index order.
     pub index: usize,
     traits: TraitMap,
     flattened_traits: OnceLock<TraitMap>,
@@ -600,9 +619,13 @@ impl SchemaBuilder {
 /// Member targets are lazily resolved in order to support recursive shapes
 #[derive(Clone)]
 pub enum MemberTarget {
+    /// A resolved member schema
     Resolved(SchemaRef),
+    /// A potentially unresolved member value
     Lazy {
+        /// Builder reference. Used to resolve a target value.
         builder: Arc<SchemaBuilder>,
+        /// Target schema, lazily set.
         value: OnceLock<SchemaRef>,
     },
 }

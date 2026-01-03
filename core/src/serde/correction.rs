@@ -3,7 +3,9 @@
 //! Error correction fills missing required values to allow invalid shapes to still be correctly
 //! constructed. This is primarily useful for validation logic and to avoid deserialization
 //! issues in some clients.
-
+//!
+//! For further discussion of Error correction see: [Smithy client error correction](https://smithy.io/2.0/spec/aggregate-types.html#client-error-correction).
+//!
 use bigdecimal::Zero;
 use bytebuffer::ByteBuffer;
 use indexmap::IndexMap;
@@ -19,7 +21,18 @@ use crate::{
 // Traits
 //////////////////////////////////////////////////////////////////////////////
 
-/// A Shape that can be "corrected" to fill missing default values
+/// A Shape that can be "corrected" to fill missing required values
+///
+/// ## Error Correction in Generated Shapes
+/// Error correction is used in generated shapes to fill unset required
+/// values so that the shape can still be deserialized even if it is invalid.
+///
+/// In general, clients should use error correction to gracefully handle deserialization
+/// of invalid responses from a server while servers should simply reject such invalid
+/// request from a client.
+///
+/// - **See**: [Structure member optionality](https://smithy.io/2.0/spec/aggregate-types.html#structure-member-optionality)
+///
 pub trait ErrorCorrection {
     /// Type of filled default value
     type Value;
@@ -29,6 +42,28 @@ pub trait ErrorCorrection {
 }
 
 /// Provides a static default value for a field for use in error correction
+///
+/// ## Built-in Defaults
+/// The following defaults are provided by this module:
+/// - boolean: false
+/// - timestamp: 0 seconds since the Unix epoch
+/// - numbers: 0
+/// - blob: empty bytes
+/// - document: Null-valued document
+/// - list: empty list (`[]`)
+/// - map: empty map (`{}`)
+/// - enum, intEnum, union: The `unknown` variant.
+///
+/// ## Generated Shape defaults
+/// The default for a generated structure is an empty structure with
+/// all required values error-correct to their defaults. This is equivalent
+/// to:
+///
+/// ```rust,ignore
+/// // Error-corrected structureBuilder with all values unset
+/// StructBuilder::new().correct().build()
+/// ```
+///
 pub trait ErrorCorrectionDefault {
     /// Returns a default value for the type in case of errors
     fn default() -> Self;

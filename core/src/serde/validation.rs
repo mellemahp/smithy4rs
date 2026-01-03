@@ -55,7 +55,6 @@
 //! implementation (defaulting to the [`DefaultValidator`]) that is used to validate all shapes
 //! deserialized with that protocol.
 //!
-
 use std::{
     collections::BTreeSet,
     convert::Into,
@@ -80,22 +79,40 @@ use crate::{
         serializers::{ListSerializer, MapSerializer, StructSerializer},
     },
 };
-//////////////////////////////////////////////////////////////////////////////
-// Validation Traits
-//////////////////////////////////////////////////////////////////////////////
+
+// ============================================================================
+// Validator Trait
+// ============================================================================
 
 /// Validator that ensures shapes conform to constraint traits.
 ///
 /// Under the hood a validator is [`Serializer`] that walks a serializable shape,
 /// comparing each shape/member against the provided schema.
 ///
+/// <div class="note">
 /// **NOTE**: Implementations should only return `Err` results from the serialization
 /// methods if they wish to short-circuit validation (for example if a maximum number of
 /// errors is reached). Otherwise, they should aggregate all errors internally and return
 /// them as in the aggregate [`ValidationErrors`] result of the [`Validator::validate`] method.
+/// </div>
 ///
-/// For the default Validator implementation that supports built-in Smithy constraints
-/// see [`DefaultValidator`].
+/// ## Default Implementation
+/// Generated shape builders will use the [`DefaultValidator`] by default when calling the
+/// `build()` method.
+///
+/// The [`DefaultValidator`] supports all built-in Smithy constraints (i.e. `@range`, `@length`, etc.).
+///
+/// ## Using a custom validator
+/// To use a custom [`Validator`] when building a shape, use the
+/// [`ShapeBuilder::build_with_validator`](crate::serde::builders::ShapeBuilder::build_with_validator) method.
+///
+/// For example:
+/// ```rust,ignore
+/// let my_builder = MyShape::builder().a("string".to_string());
+/// let built = my_builder::build_with_validator(MyValidator)
+///     .expect("shape invalid");
+/// ```
+///
 pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
     /// Validates a type against a schema.
     ///
@@ -108,9 +125,9 @@ pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
     ) -> Result<(), ValidationErrors>;
 }
 
-//////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 // Default Implementation
-//////////////////////////////////////////////////////////////////////////////
+// ============================================================================
 
 /// Validator that ensures shapes conform to built-in Smithy constraints
 ///
@@ -524,6 +541,10 @@ impl ListSerializer for DefaultListValidator<'_> {
     }
 }
 
+// ============================================================================
+// @Unique Support
+// ============================================================================
+
 /// Tracker for unique items using a hash lookup directly
 struct UniquenessTracker {
     // A b-tree is used here as it should be faster for
@@ -714,6 +735,10 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     }
 }
 
+// ============================================================================
+// Hashing Support
+// ============================================================================
+
 struct InnerHasher<'a> {
     root: &'a mut HashingSerializer,
 }
@@ -841,6 +866,10 @@ impl MapSerializer for DefaultMapValidator<'_> {
         Ok(())
     }
 }
+
+// ============================================================================
+// Key Converter
+// ============================================================================
 
 // Converts a key value to a String so Keys can be represented as a path element.
 struct KeySerializer;
@@ -1057,9 +1086,9 @@ impl StructSerializer for DefaultStructValidator<'_> {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// ERRORS
-//////////////////////////////////////////////////////////////////////////////
+// ============================================================================
+// Validation Errors
+// ============================================================================
 
 /// Aggregated list of all validation errors encountered while building a shape.
 ///
@@ -1093,10 +1122,12 @@ impl ValidationErrors {
         self.errors.push(ValidationErrorField::new(path, error));
     }
 
+    /// Get the number of child-errors contained in this error.
     pub fn len(&self) -> usize {
         self.errors.len()
     }
 
+    /// Returns true if this error has no children
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }
@@ -1127,6 +1158,7 @@ pub struct ValidationErrorField {
     error: Box<dyn ValidationError>,
 }
 impl ValidationErrorField {
+    /// Create a new validation error field from a validation error and a path
     pub fn new(paths: &[PathElement], error: impl Into<Box<dyn ValidationError>>) -> Self {
         Self {
             paths: Vec::from(paths),
@@ -1135,10 +1167,14 @@ impl ValidationErrorField {
     }
 }
 
-/// Represents a [JsonPointer](https://datatracker.ietf.org/doc/html/rfc6901) path element.
+/// Represents a `JsonPointer` path element.
 ///
-/// For example, the `JsonPointer` `/field_a/1/field_b` would be represented as:
-/// ```rust,ignore
+/// - **See** - [JsonPointer specification](https://datatracker.ietf.org/doc/html/rfc6901)
+///
+/// ## Example
+/// The `JsonPointer` `/field_a/1/field_b` would be represented as:
+///
+/// ```rust
 /// use smithy4rs_core::serde::validate::{Path, PathItem};
 /// let paths = vec![
 ///     Path::Schema(FIELD_A.clone()),
@@ -1146,10 +1182,14 @@ impl ValidationErrorField {
 ///     Path::Schema(FIELD_B.clone())
 /// ];
 /// ```
+///
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathElement {
+    /// A Schema path element such as a member identifier
     Schema(SchemaRef),
+    /// An index path element (for list elements)
     Index(usize),
+    /// A key path element (for map keys)
     Key(String),
 }
 impl From<&SchemaRef> for PathElement {
@@ -1208,6 +1248,11 @@ impl serializers::Error for ValidationFailure {
 }
 impl ValidationError for ValidationFailure {}
 
+// ============================================================================
+// Base Smithy constraint errors
+// ============================================================================
+
+/// Validation errors from the built-in Smithy constraint traits.
 #[derive(Error, Debug, PartialEq)]
 pub enum SmithyConstraints {
     /// [@required](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-required-trait)

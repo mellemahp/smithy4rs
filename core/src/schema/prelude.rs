@@ -190,34 +190,46 @@ impl Display for ErrorFault {
 ///
 /// *See* - [HttpError Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httperror-trait)
 #[derive(Debug)]
-pub struct HTTPErrorTrait {
+pub struct HttpErrorTrait {
     code: i32,
     value: DocumentValue,
 }
-impl HTTPErrorTrait {
+impl HttpErrorTrait {
+    /// Get the code contained by this trait.
     pub fn code(&self) -> i32 {
         self.code
     }
 
+    /// Create a new [`HttpErrorTrait`] instance
+    ///
+    /// ## Errors
+    /// Http error codes should be between 200 and 600. This
+    /// constructor panics when an error code is outside of
+    /// this range is provided.
+    ///
+    /// Smithy validation will check this constraint in models.
     #[must_use]
     pub fn new(code: i32) -> Self {
         assert!(
             200 < code && code < 599,
             "HTTPErrorTrait code out of range: {code}"
         );
-        HTTPErrorTrait {
+        HttpErrorTrait {
             code,
             value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(code))),
         }
     }
 }
-static_trait_id!(HTTPErrorTrait, "smithy.api#httpError");
-smithy_trait_impl!(HTTPErrorTrait);
+static_trait_id!(HttpErrorTrait, "smithy.api#httpError");
+smithy_trait_impl!(HttpErrorTrait);
 
 // ============================================================================
 // Constraint Traits
 // ============================================================================
 
+/// Defines a range constraint for numeric values.
+///
+/// *See* - [Range Trait](https://smithy.io/2.0/spec/constraint-traits.html#range-trait)
 #[derive(Debug)]
 pub struct RangeTrait {
     min: Option<BigDecimal>,
@@ -231,16 +243,23 @@ static ZERO: LazyLock<BigDecimal> = LazyLock::new(BigDecimal::zero);
 static MAX: LazyLock<BigDecimal> = LazyLock::new(|| BigDecimal::from(u64::MAX));
 
 impl RangeTrait {
+    /// Get the minimum value allowed by this range constraint.
+    ///
+    /// Defaults to zero
     #[inline]
     pub fn min(&self) -> &BigDecimal {
         self.min.as_ref().unwrap_or_else(|| &ZERO)
     }
 
+    /// Get the maximum value allowed by this range constraint.
+    ///
+    /// Defaults to `u64::MAX`
     #[inline]
     pub fn max(&self) -> &BigDecimal {
         self.max.as_ref().unwrap_or_else(|| &MAX)
     }
 
+    /// Get a new builder instance for this trait.
     #[must_use]
     pub const fn builder() -> RangeTraitBuilder {
         RangeTraitBuilder::new()
@@ -261,16 +280,19 @@ impl RangeTraitBuilder {
         }
     }
 
+    /// Set a minimum value for this constraint.
     pub fn min(mut self, min: BigDecimal) -> Self {
         self.min = Some(min);
         self
     }
 
+    /// Set a maximum value for this constraint.
     pub fn max(mut self, max: BigDecimal) -> Self {
         self.max = Some(max);
         self
     }
 
+    /// Construct a new [`RangeTrait`] instance.
     pub fn build(self) -> RangeTrait {
         let mut value_map = IndexMap::new();
         if let Some(min) = &self.min {
