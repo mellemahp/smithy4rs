@@ -156,11 +156,7 @@
 //! However, when we deserialize the document into the final Error type we need to execute the protocol-specific handling of the `jsonName` trait.
 //!
 
-use std::{
-    error::Error,
-    fmt::{Debug, Formatter},
-    sync::LazyLock,
-};
+use std::{error::Error, fmt::Debug, sync::LazyLock};
 
 use bigdecimal::ToPrimitive;
 use indexmap::IndexMap;
@@ -460,13 +456,6 @@ impl Clone for Box<dyn Document> {
     }
 }
 
-impl Debug for dyn Document + 'static {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO(document debug): Add actual impl
-        write!(f, "[DocumentValue]")
-    }
-}
-
 // ============================================================================
 // Document Errors
 // ============================================================================
@@ -506,7 +495,7 @@ pub struct DefaultDocument {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum DefaultDocumentValue { 
+pub enum DefaultDocumentValue {
     Null,
     Number(NumberValue),
     Boolean(bool),
@@ -1368,12 +1357,12 @@ mod tests {
         let short_val: &SchemaRef = &SHORT;
 
         assert_eq!(short.schema(), short_val);
-        
+
         let integer: BoxedDoc = 1i32.into();
         let integer_val: &SchemaRef = &INTEGER;
 
         assert_eq!(integer.schema(), integer_val);
-        
+
         let long: BoxedDoc = 1i64.into();
         let long_val: &SchemaRef = &LONG;
 

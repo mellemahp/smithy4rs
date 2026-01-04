@@ -9,9 +9,9 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE},
     schema::{
-        Document, LIST_DOCUMENT_SCHEMA, MAP_DOCUMENT_SCHEMA,
-        NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef, SchemaShape, ShapeId,
-        ShapeType, StaticSchemaShape, TraitList, get_shape_type,
+        DefaultDocument, DefaultDocumentValue, Document, DocumentError, LIST_DOCUMENT_SCHEMA,
+        MAP_DOCUMENT_SCHEMA, NULL, NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef,
+        SchemaShape, ShapeId, ShapeType, StaticSchemaShape, TraitList, get_shape_type,
     },
     serde::{
         Buildable, ShapeBuilder,
@@ -567,7 +567,7 @@ mod tests {
         }
     });
 
-    #[derive(SmithyShape, Clone, PartialEq, Debug)]
+    #[derive(SmithyShape, Clone, PartialEq)]
     #[smithy_schema(SCHEMA)]
     pub struct SerializeMe {
         #[smithy_schema(A)]

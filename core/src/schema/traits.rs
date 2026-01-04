@@ -106,13 +106,6 @@ pub trait SmithyTrait: DowncastSync {
 }
 impl_downcast!(sync SmithyTrait);
 
-impl Debug for dyn SmithyTrait {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        // TODO(document debug): add doc value to string
-        write!(f, "dyn SmithyTrait {{ id: {:?}, value }}", self.id())
-    }
-}
-
 /// Pre-defined [`SmithyTrait`] implementations that have a static ID.
 ///
 /// Generated or pre-defined Smithy Traits _should_ implement this trait.
