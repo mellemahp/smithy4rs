@@ -739,7 +739,6 @@ mod tests {
     use super::*;
     use crate::{
         prelude::{JsonNameTrait, STRING},
-        schema::DefaultDocumentValue,
         traits,
     };
 
@@ -985,10 +984,7 @@ mod tests {
             .put_member(
                 "target_b",
                 &STRING,
-                traits![
-                    RequiredTrait,
-                    DefaultTrait(DefaultDocumentValue::String("Woo".into()).into())
-                ],
+                traits![RequiredTrait, DefaultTrait::new("Woo")],
             )
             .put_member("target_a", &STRING, traits![RequiredTrait])
             .put_member("target_c", &STRING, traits![])

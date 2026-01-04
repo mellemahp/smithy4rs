@@ -30,7 +30,7 @@ const _: () = {
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
-    use _smithy4rs::serde::unit::Unit as _Unit;
+    use _smithy4rs::schema::unit::Unit as _Unit;
     #[automatically_derived]
     impl _SerializeWithSchema for TestEnum {
         fn serialize_with_schema<S: _Serializer>(
@@ -59,7 +59,7 @@ const _: () = {
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _DeserializerError;
-    use _smithy4rs::serde::unit::Unit as _Unit;
+    use _smithy4rs::schema::unit::Unit as _Unit;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for TestEnum {
         fn deserialize_with_schema<D>(

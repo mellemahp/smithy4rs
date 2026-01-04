@@ -1,6 +1,6 @@
 use std::{
     cmp::PartialEq,
-    fmt::{Debug, Display, Error, Formatter},
+    fmt::{Debug, Display, Error},
     io,
 };
 
@@ -250,7 +250,7 @@ impl<'a, W: io::Write> Serializer for &'a mut FmtSerializer<W> {
     }
 
     #[inline]
-    fn write_document(self, _: &SchemaRef, _: &Document) -> Result<(), Self::Error> {
+    fn write_document(self, _: &SchemaRef, _: &Box<dyn Document>) -> Result<(), Self::Error> {
         // TODO(document formatting): Write something for document types.
         todo!()
     }
@@ -382,15 +382,6 @@ where
     }
 }
 
-// Documents use the formatter for debug just like generated shapes
-impl Debug for Document {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // TODO(document debug): use the formatter directly rather than use write macro.
-        // Also map to correct error
-        write!(f, "{}", to_string(self.schema(), self).unwrap())
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -509,7 +500,7 @@ mod tests {
             member_list: list,
             member_map: map,
         };
-        let document: Document = struct_to_write.into();
+        let document: Box<dyn Document> = struct_to_write.into();
         let output = to_string(&REDACTED_AGGREGATES, &document).expect("serialization failed");
         assert_eq!(output, "Shape[list=[**REDACTED**], map={**REDACTED**}]");
     }

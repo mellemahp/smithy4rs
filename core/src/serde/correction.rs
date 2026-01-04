@@ -12,10 +12,10 @@ use indexmap::IndexMap;
 
 use crate::{
     BigDecimal, BigInt, Instant,
-    prelude::DOCUMENT,
-    schema::{DefaultDocumentValue, Document},
+    schema::{Document, documents::NULL},
     serde::{builders::MaybeBuilt, serializers::SerializeWithSchema},
 };
+
 //////////////////////////////////////////////////////////////////////////////
 // Traits
 //////////////////////////////////////////////////////////////////////////////
@@ -98,13 +98,9 @@ correction_default_impl!(BigDecimal, BigDecimal::zero());
 correction_default_impl!(BigInt, BigInt::zero());
 correction_default_impl!(ByteBuffer, ByteBuffer::new());
 
-impl ErrorCorrectionDefault for Document {
+impl ErrorCorrectionDefault for Box<dyn Document> {
     fn default() -> Self {
-        Document {
-            schema: DOCUMENT.clone(),
-            value: DefaultDocumentValue::Null.into(),
-            discriminator: None,
-        }
+        NULL.clone()
     }
 }
 

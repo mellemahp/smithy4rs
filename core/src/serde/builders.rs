@@ -70,7 +70,7 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// Note that the builder still needs to be built and validated
     /// after conversion from a document.
     #[inline]
-    fn from_document(document: Document) -> Result<Self, DocumentError> {
+    fn from_document(document: Box<dyn Document>) -> Result<Self, DocumentError> {
         document.into_builder::<Self, S>()
     }
 }

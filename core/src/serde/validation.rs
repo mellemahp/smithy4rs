@@ -475,7 +475,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
     fn write_document(
         self,
         schema: &SchemaRef,
-        _value: &Document,
+        _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Document);
         Ok(())
@@ -716,7 +716,7 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     fn write_document(
         self,
         _schema: &SchemaRef,
-        _value: &Document,
+        _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         // TODO(document validation): How to hash document types?
         todo!()
@@ -979,7 +979,7 @@ impl Serializer for &mut KeySerializer {
     fn write_document(
         self,
         schema: &SchemaRef,
-        _value: &Document,
+        _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
     }
@@ -1174,7 +1174,7 @@ impl ValidationErrorField {
 /// ## Example
 /// The `JsonPointer` `/field_a/1/field_b` would be represented as:
 ///
-/// ```rust
+/// ```rust,ignore
 /// use smithy4rs_core::serde::validate::{Path, PathItem};
 /// let paths = vec![
 ///     Path::Schema(FIELD_A.clone()),

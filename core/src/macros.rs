@@ -383,12 +383,8 @@ macro_rules! annotation_trait {
                 <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            fn value(&self) -> &$crate::schema::documents::DocumentImpl {
-                static NULL: std::sync::LazyLock<$crate::schema::documents::DocumentImpl> =
-                    std::sync::LazyLock::new(|| {
-                        $crate::schema::documents::DefaultDocumentValue::Null.into()
-                    });
-                &NULL
+            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
+                &$crate::schema::documents::NULL
             }
         }
     };
@@ -419,7 +415,7 @@ macro_rules! string_trait {
         #[derive(Debug)]
         pub struct $trait_struct {
             $value_name: String,
-            value: $crate::schema::documents::DocumentImpl,
+            value: Box<dyn $crate::schema::documents::Document>,
         }
         impl $trait_struct {
             pub fn $value_name(&self) -> &str {
@@ -430,10 +426,7 @@ macro_rules! string_trait {
             pub fn new($value_name: &str) -> Self {
                 $trait_struct {
                     $value_name: $value_name.to_string(),
-                    value: $crate::schema::documents::DefaultDocumentValue::String(
-                        $value_name.to_string(),
-                    )
-                    .into(),
+                    value: $value_name.into(),
                 }
             }
         }
@@ -443,7 +436,7 @@ macro_rules! string_trait {
                 <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            fn value(&self) -> &$crate::schema::documents::DocumentImpl {
+            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
                 &self.value
             }
         }

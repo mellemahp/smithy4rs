@@ -214,7 +214,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     fn write_document(
         self,
         _schema: &SchemaRef,
-        _value: &Document,
+        _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         todo!("Document serialization not yet implemented")
     }

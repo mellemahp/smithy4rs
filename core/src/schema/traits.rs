@@ -20,7 +20,7 @@
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
-//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DefaultDocumentValue};
+//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DefaultDocumentValue, NULL};
 //!
 //! smithy!("com.example#SensitiveString": {
 //!     @SensitiveTrait;
@@ -38,7 +38,7 @@
 //!  // Access as a dynamic trait object.
 //!  let trait_object = EXAMPLE_SCHEMA.get_trait(&"smithy.api#sensitive".into()).unwrap();
 //!  let document_value = trait_object.value();
-//!  assert_eq!(document_value, &DefaultDocumentValue::Null.into());
+//!  assert_eq!(document_value, &*NULL);
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
@@ -62,10 +62,7 @@
 //! //
 //! // @myCustomTrait(true)
 //! // structure MyStruct { ... }
-//! let custom_trait = DynamicTrait::from(
-//!     "com.example#myCustomTrait",
-//!     DefaultDocumentValue::Boolean(true).into()
-//! );
+//! let custom_trait = DynamicTrait::from("com.example#myCustomTrait", true);
 //! ```
 //!
 //! Custom traits can also have either manually defined or code-generated concrete implementations.
@@ -85,7 +82,7 @@ use downcast_rs::{DowncastSync, impl_downcast};
 
 use crate::{
     Ref,
-    schema::{DocumentImpl, ShapeId},
+    schema::{Document, ShapeId},
 };
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
@@ -104,7 +101,8 @@ pub trait SmithyTrait: DowncastSync {
     fn id(&self) -> &ShapeId;
 
     /// The data stored inside the trait as a [`crate::schema::documents::Document`] value.
-    fn value(&self) -> &DocumentImpl;
+    #[allow(clippy::borrowed_box)]
+    fn value(&self) -> &Box<dyn Document>;
 }
 impl_downcast!(sync SmithyTrait);
 impl Debug for dyn SmithyTrait {
@@ -175,12 +173,7 @@ impl<T: SmithyTrait> From<T> for TraitRef {
 #[derive(Debug, Clone)]
 pub struct DynamicTrait {
     id: ShapeId,
-    value: DocumentImpl,
-}
-impl PartialEq for DynamicTrait {
-    fn eq(&self, _other: &Self) -> bool {
-        todo!()
-    }
+    value: Box<dyn Document>,
 }
 impl DynamicTrait {
     /// Create a new [`SmithyTrait`] with no corresponding concrete implementation.
@@ -188,10 +181,13 @@ impl DynamicTrait {
     /// <div class ="warning">
     /// **WARNING**: Traits created with this method cannot be downcast into a specific implementation.
     /// </div>
-    pub fn from<I: Into<ShapeId>>(id: I, value: DocumentImpl) -> Ref<dyn SmithyTrait> {
+    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(
+        id: I,
+        value: D,
+    ) -> Ref<dyn SmithyTrait> {
         Ref::new(Self {
             id: id.into(),
-            value,
+            value: value.into(),
         })
     }
 }
@@ -201,7 +197,7 @@ impl SmithyTrait for DynamicTrait {
         &self.id
     }
 
-    fn value(&self) -> &DocumentImpl {
+    fn value(&self) -> &Box<dyn Document> {
         &self.value
     }
 }
@@ -282,7 +278,6 @@ mod tests {
     use super::*;
     use crate::{
         prelude::{HttpErrorTrait, JsonNameTrait},
-        schema::DefaultDocumentValue,
         traits,
     };
 
@@ -291,10 +286,7 @@ mod tests {
         let dyn_id: ShapeId = "smithy.api#Dynamic".into();
         let map = TraitMap::of(traits![
             JsonNameTrait::new("a"),
-            DynamicTrait {
-                id: dyn_id.clone(),
-                value: DefaultDocumentValue::String("b".to_string()).into(),
-            }
+            DynamicTrait::from(dyn_id.clone(), "b")
         ]);
         assert!(map.contains(&dyn_id));
         assert!(map.contains(JsonNameTrait::trait_id()));

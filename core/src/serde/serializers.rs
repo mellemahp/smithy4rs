@@ -303,7 +303,12 @@ pub trait Serializer: Sized {
     fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an untyped [`Document`]
-    fn write_document(self, schema: &SchemaRef, value: &Document) -> Result<Self::Ok, Self::Error>;
+    #[allow(clippy::borrowed_box)]
+    fn write_document(
+        self,
+        schema: &SchemaRef,
+        value: &Box<dyn Document>,
+    ) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `null` value
     fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
