@@ -32,37 +32,40 @@ impl SerializeWithSchema for Box<dyn Document> {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         // TODO(errors): Handle exceptions?
-        match get_shape_type(schema).unwrap() {
-            ShapeType::Blob => serializer.write_blob(schema, self.as_blob().unwrap()),
-            ShapeType::Boolean => serializer.write_boolean(schema, self.as_bool().unwrap()),
-            ShapeType::String => serializer.write_string(schema, self.as_string().unwrap()),
-            ShapeType::Timestamp => {
+        match self.get_type() {
+            Some(ShapeType::Blob) => serializer.write_blob(schema, self.as_blob().unwrap()),
+            Some(ShapeType::Boolean) => serializer.write_boolean(schema, self.as_bool().unwrap()),
+            Some(ShapeType::String) => serializer.write_string(schema, self.as_string().unwrap()),
+            Some(ShapeType::Timestamp) => {
                 serializer.write_timestamp(schema, self.as_timestamp().unwrap())
             }
-            ShapeType::Byte => serializer.write_byte(schema, self.as_byte().unwrap()),
-            ShapeType::Short => serializer.write_short(schema, self.as_short().unwrap()),
-            ShapeType::Integer => serializer.write_integer(schema, self.as_integer().unwrap()),
-            ShapeType::Long => serializer.write_long(schema, self.as_long().unwrap()),
-            ShapeType::Float => serializer.write_float(schema, self.as_float().unwrap()),
-            ShapeType::Double => serializer.write_double(schema, self.as_double().unwrap()),
-            ShapeType::BigInteger => {
+            Some(ShapeType::Byte) => serializer.write_byte(schema, self.as_byte().unwrap()),
+            Some(ShapeType::Short) => serializer.write_short(schema, self.as_short().unwrap()),
+            Some(ShapeType::Integer) => {
+                serializer.write_integer(schema, self.as_integer().unwrap())
+            }
+            Some(ShapeType::Long) => serializer.write_long(schema, self.as_long().unwrap()),
+            Some(ShapeType::Float) => serializer.write_float(schema, self.as_float().unwrap()),
+            Some(ShapeType::Double) => serializer.write_double(schema, self.as_double().unwrap()),
+            Some(ShapeType::BigInteger) => {
                 serializer.write_big_integer(schema, self.as_big_integer().unwrap())
             }
-            ShapeType::BigDecimal => {
+            Some(ShapeType::BigDecimal) => {
                 serializer.write_big_decimal(schema, self.as_big_decimal().unwrap())
             }
-            ShapeType::Document => serializer.write_document(schema, self),
-            ShapeType::Enum => serializer.write_string(schema, self.as_string().unwrap()),
-            ShapeType::IntEnum => serializer.write_integer(schema, self.as_integer().unwrap()),
-            ShapeType::List => self
+            Some(ShapeType::Enum) => serializer.write_string(schema, self.as_string().unwrap()),
+            Some(ShapeType::IntEnum) => {
+                serializer.write_integer(schema, self.as_integer().unwrap())
+            }
+            Some(ShapeType::List) => self
                 .as_list()
                 .unwrap()
                 .serialize_with_schema(schema, serializer),
-            ShapeType::Map => self
+            Some(ShapeType::Map) => self
                 .as_map()
                 .unwrap()
                 .serialize_with_schema(schema, serializer),
-            ShapeType::Structure | ShapeType::Union => {
+            Some(ShapeType::Structure) | Some(ShapeType::Union) => {
                 let document_map = self.as_map().unwrap();
                 let mut struct_serializer = serializer.write_struct(schema, self.size())?;
                 if let Some(discriminator) = &self.discriminator() {
@@ -78,6 +81,7 @@ impl SerializeWithSchema for Box<dyn Document> {
                 }
                 struct_serializer.end(schema)
             }
+            None => serializer.write_null(schema),
             _ => Err(Error::custom("Unsupported shape type")),
         }
     }

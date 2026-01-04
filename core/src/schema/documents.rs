@@ -196,13 +196,15 @@ pub trait Document: SchemaShape + Send + Sync {
     /// The type returned from this method will differ from the type of the document (which will
     /// always be [`ShapeType::Document`]).
     ///
+    /// NOTE: It is important that `self.get_type()` NEVER return `Document` as the type as that
+    /// will result in infinite loops in serializers.
+    ///
     /// ### Enums
     /// - `enum` shapes: Enum shapes are treated as a `string`, and variants can be found in
     ///   the corresponding schema for the document.
     ///  - `intEnum` shapes: Enum shapes are treated as an `integer`, and variants can be found in
     ///    the corresponding schema for the document.
     #[must_use]
-    #[cold] // cold as this is mostly called for testing.
     fn get_type(&self) -> Option<&ShapeType>;
 
     /// Get the number of elements in an array document, or the number of key value pairs in a map document.
@@ -538,7 +540,15 @@ impl Document for DefaultDocument {
             DefaultDocumentValue::String(_) => Some(&ShapeType::String),
             DefaultDocumentValue::Timestamp(_) => Some(&ShapeType::Timestamp),
             DefaultDocumentValue::List(_) => Some(&ShapeType::List),
-            DefaultDocumentValue::Map(_) => Some(&ShapeType::Map),
+            DefaultDocumentValue::Map(_) => {
+                if self.schema.shape_type() == &ShapeType::Map {
+                    Some(&ShapeType::Map)
+                } else {
+                    // If we created the document from a structure schema, treat it as a struct
+                    Some(&ShapeType::Structure)
+                }
+            }
+            // Null is not representable as a shape type
             _ => None,
         }
     }
