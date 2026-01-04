@@ -104,16 +104,6 @@ pub trait SmithyTrait: DowncastSync {
     fn value(&self) -> &DocumentValue;
 }
 impl_downcast!(sync SmithyTrait);
-impl Debug for dyn SmithyTrait {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "dyn SmithyTrait {{ id: {:?}, value: {:?} }}",
-            self.id(),
-            self.value()
-        )
-    }
-}
 
 /// Pre-defined [`SmithyTrait`] implementations that have a static ID.
 ///
@@ -130,7 +120,7 @@ pub trait StaticTraitId: SmithyTrait {
 ///
 /// This type is a thin wrapper used primarily to allow blanket conversion
 /// implementations.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[repr(transparent)]
 pub struct TraitRef(Ref<dyn SmithyTrait>);
 impl PartialEq for TraitRef {
@@ -156,6 +146,12 @@ impl<T: SmithyTrait> From<T> for TraitRef {
     #[inline]
     fn from(value: T) -> Self {
         Self(Ref::new(value))
+    }
+}
+impl Debug for TraitRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        // Avoid adding extra wrapping
+        Debug::fmt(&self.0, f)
     }
 }
 
@@ -203,13 +199,22 @@ impl SmithyTrait for DynamicTrait {
 }
 
 /// Map used to track the traits applied to a [`Schema`].
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct TraitMap {
     // NOTE: BTreeMap is used here b/c it outperforms HashMap for access and memory usage
     //       when the collection size is small. Schemas typically have very few traits.
     map: BTreeMap<ShapeId, TraitRef>,
 }
 impl Eq for TraitMap {}
+impl Debug for TraitMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let mut l = f.debug_list();
+        for v in self.map.values() {
+            l.entry(v);
+        }
+        l.finish()
+    }
+}
 impl TraitMap {
     /// Creates a new, empty [`TraitMap`].
     ///

@@ -4,7 +4,10 @@
 //!
 #![allow(dead_code)]
 
-use std::{fmt::Display, hash::Hash};
+use std::{
+    fmt::{Display, Formatter},
+    hash::Hash,
+};
 
 use fast_str::FastStr;
 
@@ -41,6 +44,11 @@ impl Ord for ShapeId {
     #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.id.cmp(&other.id)
+    }
+}
+impl Display for ShapeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.id.fmt(f)
     }
 }
 
@@ -138,7 +146,7 @@ pub enum ShapeType {
 }
 
 impl Display for ShapeType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ShapeType::Blob => write!(f, "Blob"),
             ShapeType::Boolean => write!(f, "Boolean"),

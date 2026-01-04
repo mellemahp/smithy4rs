@@ -187,7 +187,7 @@ impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         Ok(self
             .serializer
@@ -221,8 +221,8 @@ impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema + ?Sized,
-        V: SerializeWithSchema + ?Sized,
+        K: SerializeWithSchema,
+        V: SerializeWithSchema,
     {
         Ok(self.serializer.serialize_entry(
             &ValueWrapper(key_schema, key),
@@ -255,7 +255,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema + ?Sized,
+        T: SerializeWithSchema,
     {
         // TODO(errors): How to handle error?
         let Some(me) = member_schema.as_member() else {
@@ -272,8 +272,8 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     }
 }
 
-struct ValueWrapper<'a, T: SerializeWithSchema + ?Sized>(&'a SchemaRef, &'a T);
-impl<T: SerializeWithSchema + ?Sized> serde::Serialize for ValueWrapper<'_, T> {
+struct ValueWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
+impl<T: SerializeWithSchema> serde::Serialize for ValueWrapper<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

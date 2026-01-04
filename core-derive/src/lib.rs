@@ -1,4 +1,5 @@
 mod builder;
+mod debug;
 mod deserialization;
 mod schema;
 mod serialization;
@@ -10,12 +11,12 @@ use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, p
 
 use crate::{
     builder::{buildable, builder_impls, builder_struct, get_builder_fields},
+    debug::debug_impl,
     deserialization::deserialization_impl,
     schema::schema_impl,
     serialization::serialization_impl,
     utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema},
 };
-
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(macro): Add debug impl using fmt serializer
 // TODO(derive): Smithy Struct should automatically derive: Debug, PartialEq, and Clone
@@ -113,42 +114,29 @@ fn unknown_variant(enum_data: &mut ItemEnum) {
 // Derive Macros
 // ============================================================================
 
-#[proc_macro_derive(Dummy, attributes(smithy_schema, enum_value, smithy_union_enum))]
-pub fn dummy_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let schema = schema_shape_derive(input.clone());
-    let serializable = serializable_shape_derive(input.clone());
-    let deserializable = deserializable_shape_derive(input);
-
-    let schema_tokens = TokenStream::from(schema);
-    let serializable_tokens = TokenStream::from(serializable);
-    let deserializable_tokens = TokenStream::from(deserializable);
-
-    quote! {
-        #schema_tokens
-        #serializable_tokens
-        #deserializable_tokens
-    }
-    .into()
-}
-
 /// Convenience derive that combines `SchemaShape`, `SerializableShape`, and `DeserializableShape`
 /// for Smithy Enums, Structures, and Unions.
-#[proc_macro_derive(SmithyShape, attributes(smithy_schema, enum_value))]
+#[proc_macro_derive(SmithyShape, attributes(smithy_schema, enum_value, smithy_union_enum))]
 pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Generate all three derive expansions
     let schema = schema_shape_derive(input.clone());
     let serializable = serializable_shape_derive(input.clone());
-    let deserializable = deserializable_shape_derive(input);
+    let deserializable = deserializable_shape_derive(input.clone());
+
+    // Add additional core derivations
+    let debug = smithy_debug(input);
 
     // Combine all outputs
     let schema_tokens = TokenStream::from(schema);
     let serializable_tokens = TokenStream::from(serializable);
     let deserializable_tokens = TokenStream::from(deserializable);
+    let debug_tokens = TokenStream::from(debug);
 
     quote! {
         #schema_tokens
         #serializable_tokens
         #deserializable_tokens
+        #debug_tokens
     }
     .into()
 }
@@ -239,4 +227,25 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
         .into(),
         _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
     }
+}
+
+/// Derives `Debug` for a struct, backed by a static schema (`StaticSchemaShape`)
+#[proc_macro_derive(SmithyDebug)]
+pub fn smithy_debug(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let shape_name = &input.ident;
+    let schema_ident = parse_schema(&input.attrs);
+    let (extern_import, crate_ident) = get_crate_info();
+    let debug = debug_impl(shape_name, &schema_ident);
+
+    quote! {
+        const _: () = {
+            #extern_import
+
+            use #crate_ident::serde::debug::DebugWrapper as _DebugWrapper;
+
+            #debug
+        };
+    }
+    .into()
 }

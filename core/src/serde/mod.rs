@@ -1,9 +1,9 @@
 mod adapter;
 pub mod builders;
 pub mod correction;
+pub mod debug;
 pub mod deserializers;
 pub mod documents;
-pub mod fmt;
 pub mod serializers;
 pub mod unit;
 pub mod validation;

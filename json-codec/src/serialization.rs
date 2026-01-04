@@ -248,7 +248,7 @@ impl<'a> ListSerializer for JsonListSerializer<'a> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         if !self.first {
             write_json_comma(self.buf);
@@ -286,8 +286,8 @@ impl<'a> MapSerializer for JsonMapSerializer<'a> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema,
+        K: SerializeWithSchema,
+        V: SerializeWithSchema,
     {
         if !self.first {
             write_json_comma(self.buf);
@@ -328,7 +328,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         if !self.first {
             write_json_comma(self.buf);
@@ -357,7 +357,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         if !self.first {
             write_json_comma(self.buf);
