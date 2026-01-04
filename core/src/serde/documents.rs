@@ -290,7 +290,7 @@ impl ListSerializer for Document {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         let DocumentValue::List(list) = &mut self.value else {
             return Err(DocumentError::DocumentConversion(
@@ -319,8 +319,8 @@ impl MapSerializer for Document {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: ?Sized + SerializeWithSchema,
-        V: ?Sized + SerializeWithSchema,
+        K: SerializeWithSchema,
+        V: SerializeWithSchema,
     {
         let DocumentValue::Map(map) = &mut self.value else {
             return Err(DocumentError::DocumentConversion(
@@ -356,7 +356,7 @@ impl StructSerializer for Document {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: ?Sized + SerializeWithSchema,
+        T: SerializeWithSchema,
     {
         let DocumentValue::Map(map) = &mut self.value else {
             return Err(DocumentError::DocumentConversion(
@@ -831,7 +831,7 @@ mod tests {
         let document_str: Document = "MyStr".into();
         let output_str = document_str.as_string().expect("string");
         assert_eq!(output_str, &"MyStr".to_string());
-        let val: &Schema = &STRING;
+        let val: &SchemaRef = &STRING;
         assert_eq!(document_str.schema(), val);
     }
 

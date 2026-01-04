@@ -217,6 +217,16 @@ const _: () = {
     }
     impl<'de> _Buildable<'de, SimpleStructBuilder> for SimpleStruct {}
 };
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::serde::debug::DebugWrapper as _DebugWrapper;
+    #[automatically_derived]
+    impl std::fmt::Debug for SimpleStruct {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            std::fmt::Debug::fmt(&_DebugWrapper::new(&SIMPLE_SCHEMA, self), f)
+        }
+    }
+};
 #[automatically_derived]
 impl ::core::fmt::Debug for SimpleStruct {
     #[inline]
@@ -387,6 +397,16 @@ const _: () = {
         }
     }
     impl<'de> _Buildable<'de, NestedBuilder> for Nested {}
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::serde::debug::DebugWrapper as _DebugWrapper;
+    #[automatically_derived]
+    impl std::fmt::Debug for Nested {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            std::fmt::Debug::fmt(&_DebugWrapper::new(&NESTED_SCHEMA, self), f)
+        }
+    }
 };
 #[automatically_derived]
 impl ::core::fmt::Debug for Nested {

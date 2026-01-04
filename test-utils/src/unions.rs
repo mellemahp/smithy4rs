@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use smithy4rs_core::{prelude::*, smithy};
-use smithy4rs_core_derive::{Dummy, smithy_union};
+use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
 smithy!("test#SimpleUnion": {
     union UNION {
@@ -12,7 +12,7 @@ smithy!("test#SimpleUnion": {
 });
 
 #[smithy_union]
-#[derive(Dummy, PartialEq, Debug)]
+#[derive(SmithyShape, PartialEq)]
 #[smithy_schema(UNION)]
 pub enum TestUnion {
     #[smithy_schema(A)]

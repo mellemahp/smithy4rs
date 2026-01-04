@@ -27,7 +27,7 @@ pub type SchemaRef = Ref<Schema>;
 pub type TraitList = Vec<TraitRef>;
 
 /// Describes a generated shape with metadata from a Smithy model.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub enum Schema {
     /// A Schema representing a Scalar (simple) type.
     Scalar(ScalarSchema),
@@ -64,21 +64,6 @@ pub struct StructSchema {
     traits: TraitMap,
 }
 
-impl Debug for StructSchema {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "StructSchema {{")?;
-        write!(f, "id: {:?}, ", self.id.name())?;
-        write!(f, "shape_type: {:?}, ", self.shape_type)?;
-        write!(f, "traits: {:?}, ", self.traits)?;
-        for (key, value) in &self.members {
-            if let Schema::Member(member) = &**value {
-                write!(f, "[name: {}, type: {:?}]", key, member.target.id().name())?;
-            }
-        }
-        write!(f, "}}")
-    }
-}
-
 /// Schema for a Smithy [List](https://smithy.io/2.0/spec/aggregate-types.html#list) data type.
 #[derive(Debug, PartialEq)]
 pub struct ListSchema {
@@ -109,7 +94,7 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
 }
 
 /// Member of another aggregate type.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct MemberSchema {
     id: ShapeId,
     /// Shape that this member targets
@@ -613,6 +598,10 @@ impl SchemaBuilder {
     }
 }
 
+// ============================================================================
+// Members
+// ============================================================================
+
 // TODO(references): Do Member targets need to use weak ref to avoid Arc cycles?
 /// Schema targeted by a member schema
 ///
@@ -731,6 +720,48 @@ impl MemberSchemaBuilder {
             traits: self.traits.clone(),
             flattened_traits: OnceLock::new(),
         }))
+    }
+}
+
+// ============================================================================
+// Debug Impls
+// -----------
+// The default (generated) impls are challenging to read so we define slightly
+// cleaner impls here where necessary.
+// ============================================================================
+
+impl Debug for Schema {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Just delegate to sub-schema to avoid additional wrapping in the debug impl.
+        match self {
+            Schema::Scalar(s) => Debug::fmt(s, f),
+            Schema::Struct(s) => Debug::fmt(s, f),
+            Schema::Enum(e) => Debug::fmt(e, f),
+            Schema::IntEnum(e) => Debug::fmt(e, f),
+            Schema::List(l) => Debug::fmt(l, f),
+            Schema::Map(m) => Debug::fmt(m, f),
+            Schema::Member(m) => Debug::fmt(m, f),
+        }
+    }
+}
+
+impl Debug for StructSchema {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("StructSchema");
+        s.field("shape_type", &self.shape_type);
+        s.field("id", &self.id.id());
+        s.field("traits", &self.traits);
+        s.field("members", &self.members);
+        s.finish()
+    }
+}
+
+impl Debug for MemberSchema {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut m = f.debug_map();
+        m.entry(&"target", &self.target.id().id());
+        m.entry(&"traits", &self.traits);
+        m.finish()
     }
 }
 

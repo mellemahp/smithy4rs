@@ -10,7 +10,7 @@ smithy!("test#InnerStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(INNER_STRUCT_SCHEMA)]
 pub struct InnerStruct {
     #[smithy_schema(A)]
@@ -43,7 +43,7 @@ smithy!("test#NestedCollectionsStruct": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq, Clone)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]
 pub struct NestedCollectionsStruct {
     #[smithy_schema(NAME)]

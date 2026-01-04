@@ -174,7 +174,7 @@ use crate::{
 /// Document types are a protocol-agnostic view of untyped data. Protocols should attempt
 /// to smooth over protocol incompatibilities with the Smithy data model.
 ///
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct Document {
     pub(crate) schema: SchemaRef,
     pub(crate) value: DocumentValue,
@@ -184,7 +184,7 @@ pub struct Document {
 impl Document {
     /// Get the Schema of the document
     #[must_use]
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &SchemaRef {
         &self.schema
     }
 
@@ -231,7 +231,7 @@ impl SchemaShape for Document {
 // TODO: Should documents implement iterators?
 
 /// A Smithy document type, representing untyped data from the Smithy data model.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DocumentValue {
     Null,
     Number(NumberValue),
@@ -897,7 +897,7 @@ mod tests {
     #[test]
     fn string_document_value() {
         let document_str: Document = "MyStr".into();
-        let val: &Schema = &STRING;
+        let val: &SchemaRef = &STRING;
         assert_eq!(document_str.schema(), val);
         let output_str: String = document_str.try_into().unwrap();
         assert_eq!(output_str, "MyStr".to_string());
@@ -912,7 +912,7 @@ mod tests {
     fn list_document_value() {
         let vec = vec!["a", "b", "c"];
         let document_list: Document = vec.into();
-        let val: &Schema = &LIST_DOCUMENT_SCHEMA;
+        let val: &SchemaRef = &LIST_DOCUMENT_SCHEMA;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
         let vec_out: Vec<String> = document_list.try_into().unwrap();
@@ -927,7 +927,7 @@ mod tests {
         let mut map_in: IndexMap<String, String> = IndexMap::new();
         map_in.insert("a".to_string(), "b".to_string());
         let map_doc: Document = map_in.into();
-        let val: &Schema = &MAP_DOCUMENT_SCHEMA;
+        let val: &SchemaRef = &MAP_DOCUMENT_SCHEMA;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
 
@@ -939,21 +939,21 @@ mod tests {
     #[test]
     fn integer_document_values() {
         let byte: Document = 1i8.into();
-        let byte_val: &Schema = &BYTE;
+        let byte_val: &SchemaRef = &BYTE;
         assert_eq!(byte.schema(), byte_val);
 
         let short: Document = 1i16.into();
-        let short_val: &Schema = &SHORT;
+        let short_val: &SchemaRef = &SHORT;
 
         assert_eq!(short.schema(), short_val);
 
         let integer: Document = 1i32.into();
-        let integer_val: &Schema = &INTEGER;
+        let integer_val: &SchemaRef = &INTEGER;
 
         assert_eq!(integer.schema(), integer_val);
 
         let long: Document = 1i64.into();
-        let long_val: &Schema = &LONG;
+        let long_val: &SchemaRef = &LONG;
 
         assert_eq!(long.schema(), long_val);
 
@@ -972,11 +972,11 @@ mod tests {
     #[test]
     fn float_document_values() {
         let float: Document = 1f32.into();
-        let float_val: &Schema = &FLOAT;
+        let float_val: &SchemaRef = &FLOAT;
         assert_eq!(float.schema(), float_val);
 
         let double: Document = 1f64.into();
-        let double_val: &Schema = &DOUBLE;
+        let double_val: &SchemaRef = &DOUBLE;
         assert_eq!(double.schema(), double_val);
 
         let float_value: f32 = float.try_into().unwrap();
