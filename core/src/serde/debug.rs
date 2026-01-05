@@ -212,7 +212,11 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     }
 
     #[inline]
-    fn write_document(self, schema: &SchemaRef, value: &Document) -> Result<Self::Ok, Self::Error> {
+    fn write_document(
+        self,
+        schema: &SchemaRef,
+        value: &Box<dyn Document>,
+    ) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
@@ -324,7 +328,10 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
             return Ok(());
         };
         let Some(me) = member_schema.as_member() else {
-            return Err(FmtError::ExpectedMember(format!("{}", member_schema.id())));
+            return Err(FmtError::ExpectedMember(format!(
+                "{:?}",
+                member_schema.id()
+            )));
         };
         inner.field(me.name.as_str(), &DebugWrapper::new(member_schema, value));
         Ok(())
@@ -359,14 +366,13 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
 // ============================================================================
 // Type impls
 // ============================================================================
-impl Debug for Document {
+impl Debug for Box<dyn Document> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_struct("Document");
-        s.field("schema", &self.schema);
+        s.field("schema", &self.schema());
         s.field("value", &DebugWrapper::new(self.schema(), self));
-        self.discriminator
-            .as_ref()
-            .map(|v| s.field("discriminator", v));
+        self.discriminator()
+            .map(|v| s.field("discriminator", &v.id()));
         s.finish()
     }
 }
@@ -374,7 +380,11 @@ impl Debug for Document {
 impl Debug for dyn SmithyTrait {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_tuple(self.id().id());
-        s.field(&self.value());
+        // Only print document value if it is non-null.
+        if !&self.value().is_null() {
+            // Use the debug wrapper to avoid writing document wrapper info into the trait debug.
+            s.field(&DebugWrapper::new(self.value().schema(), self.value()));
+        }
         s.finish()
     }
 }
@@ -386,7 +396,10 @@ mod tests {
     use smithy4rs_core_derive::SmithyShape;
 
     use super::*;
-    use crate::{prelude::STRING, smithy};
+    use crate::{
+        prelude::{MediaTypeTrait, STRING},
+        smithy,
+    };
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
@@ -414,6 +427,7 @@ mod tests {
             @SensitiveTrait;
             MAP_REDACT: MAP_SCHEMA = "map"
             @SensitiveTrait;
+            @MediaTypeTrait::new("application/json");
             LIST_REDACT: LIST_SCHEMA = "list"
         }
     });
@@ -514,7 +528,7 @@ mod tests {
             member_list: list,
             member_map: map,
         };
-        let document: Document = struct_to_write.into();
+        let document: Box<dyn Document> = struct_to_write.into();
         let output = format!("{:#?}", document);
         println!("{}", output);
         let expected = r#"Document {
@@ -526,17 +540,16 @@ mod tests {
             "map": {
                 "target": "com.example#Map",
                 "traits": [
-                    smithy.api#sensitive(
-                        Null,
-                    ),
+                    smithy.api#sensitive,
                 ],
             },
             "list": {
                 "target": "com.example#List",
                 "traits": [
-                    smithy.api#sensitive(
-                        Null,
+                    smithy.api#mediaType(
+                        "application/json",
                     ),
+                    smithy.api#sensitive,
                 ],
             },
         },
@@ -545,30 +558,8 @@ mod tests {
         list: [**REDACTED**],
         map: {**REDACTED**},
     },
-    discriminator: ShapeId {
-        id: "com.example#Shape",
-        namespace: "com.example",
-        name: "Shape",
-        member: None,
-    },
+    discriminator: "com.example#Shape",
 }"#;
         assert_eq!(output, expected);
     }
-
-    //
-    //
-    // #[test]
-    // fn fmt_serializer_omits_none() {
-    //     let struct_to_write = SerializeMe {
-    //         member_a: "a".to_string(),
-    //         member_b: "b".to_string(),
-    //         member_optional: None,
-    //         member_list: Vec::new(),
-    //         member_map: IndexMap::new(),
-    //     };
-    //
-    // }
-    //
-
-    //
 }

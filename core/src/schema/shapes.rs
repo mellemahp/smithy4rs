@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     hash::Hash,
 };
 
@@ -21,7 +21,7 @@ use crate::schema::SchemaRef;
 /// ```<NAMESPACE>#<NAME>$<MEMBER>```
 ///
 /// The member value is optional.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ShapeId {
     id: FastStr,
     namespace: String,
@@ -46,9 +46,9 @@ impl Ord for ShapeId {
         self.id.cmp(&other.id)
     }
 }
-impl Display for ShapeId {
+impl Debug for ShapeId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.id.fmt(f)
+        write!(f, "{:?}", self.id)
     }
 }
 

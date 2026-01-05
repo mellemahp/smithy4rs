@@ -75,7 +75,7 @@ pub trait Deserializer<'de>: Sized {
     fn read_timestamp(&mut self, schema: &SchemaRef) -> Result<Instant, Self::Error>;
 
     /// Read a document
-    fn read_document(&mut self, schema: &SchemaRef) -> Result<Document, Self::Error>;
+    fn read_document(&mut self, schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error>;
 
     // === Compound types (consumer pattern) ===
 

@@ -153,7 +153,11 @@ impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
     }
 
     #[inline]
-    fn write_document(self, _: &SchemaRef, _value: &Document) -> Result<Self::Ok, Self::Error> {
+    fn write_document(
+        self,
+        _: &SchemaRef,
+        _value: &Box<dyn Document>,
+    ) -> Result<Self::Ok, Self::Error> {
         // TODO(document serde): Finish implementing for document types.
         todo!()
     }

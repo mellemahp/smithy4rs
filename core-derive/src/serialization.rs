@@ -38,7 +38,7 @@ pub(crate) fn serialization_impl(
                 if data.variants.iter().any(|v| v.fields.is_empty()) {
                     imports = quote! {
                         #imports
-                        use #crate_ident::serde::unit::Unit as _Unit;
+                        use #crate_ident::schema::unit::Unit as _Unit;
                     };
                 }
                 serialize_union(shape_name, schema_ident, data)
