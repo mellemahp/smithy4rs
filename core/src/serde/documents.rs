@@ -9,9 +9,8 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::{BIG_DECIMAL, BIG_INTEGER, BOOLEAN, BYTE},
     schema::{
-        DefaultDocument, DefaultDocumentValue, Document, DocumentError, LIST_DOCUMENT_SCHEMA,
-        MAP_DOCUMENT_SCHEMA, NULL, NumberFloat, NumberInteger, NumberValue, Schema, SchemaRef,
-        SchemaShape, ShapeId, ShapeType, StaticSchemaShape, TraitList, get_shape_type,
+        Document, DocumentError, NULL, Schema, SchemaRef, SchemaShape, ShapeId, ShapeType,
+        StaticSchemaShape, TraitList, default::Value, get_shape_type,
     },
     serde::{
         Buildable, ShapeBuilder,
@@ -267,9 +266,9 @@ impl ListSerializer for DocumentListAccumulator {
     }
 
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Ok(DefaultDocument {
+        Ok(crate::schema::default::Document {
             schema: self.schema,
-            value: DefaultDocumentValue::List(self.values),
+            value: Value::List(self.values),
             discriminator: self.discriminator,
         }
         .into())
@@ -312,9 +311,9 @@ impl MapSerializer for DocumentMapAccumulator {
     }
 
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Ok(DefaultDocument {
+        Ok(crate::schema::default::Document {
             schema: self.schema,
-            value: DefaultDocumentValue::Map(self.values),
+            value: Value::Map(self.values),
             discriminator: self.discriminator,
         }
         .into())
@@ -344,9 +343,9 @@ impl StructSerializer for DocumentMapAccumulator {
     }
 
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Ok(DefaultDocument {
+        Ok(crate::schema::default::Document {
             schema: self.schema,
-            value: DefaultDocumentValue::Map(self.values),
+            value: Value::Map(self.values),
             discriminator: self.discriminator,
         }
         .into())
