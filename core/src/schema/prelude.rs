@@ -13,12 +13,9 @@ use regex::Regex;
 
 use crate::{
     BigDecimal, IndexMap, LazyLock, annotation_trait,
-    schema::{
-        DocumentValue, NumberFloat, NumberInteger, NumberValue, ShapeId, SmithyTrait, StaticTraitId,
-    },
+    schema::{Document, ShapeId, SmithyTrait, StaticTraitId},
     smithy, static_trait_id, string_trait,
 };
-
 // ============================================================================
 // Prelude Shape Schemas
 // ---------------------
@@ -43,31 +40,31 @@ smithy!("smithy.api#Document": { document DOCUMENT });
 
 // === Primitive types ===
 smithy!("smithy.api#PrimitiveBoolean": {
-    @DefaultTrait(DocumentValue::Boolean(false));
+    @DefaultTrait::new(false);
     boolean PRIMITIVE_BOOLEAN
 });
 smithy!("smithy.api#PrimitiveByte": {
-    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Byte(0i8))));
+    @DefaultTrait::new(0i8);
     byte PRIMITIVE_BYTE
 });
 smithy!("smithy.api#PrimitiveShort": {
-    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Short(0i16))));
+    @DefaultTrait::new(0i16);
     short PRIMITIVE_SHORT
 });
 smithy!("smithy.api#PrimitiveInteger": {
-    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(0i32))));
+    @DefaultTrait::new(0i32);
     integer PRIMITIVE_INTEGER
 });
 smithy!("smithy.api#PrimitiveLong": {
-    @DefaultTrait(DocumentValue::Number(NumberValue::Integer(NumberInteger::Long(0i64))));
+    @DefaultTrait::new(0i64);
     boolean PRIMITIVE_LONG
 });
 smithy!("smithy.api#PrimitiveFloat": {
-    @DefaultTrait(DocumentValue::Number(NumberValue::Float(NumberFloat::Float(0f32))));
+    @DefaultTrait::new(0f32);
     float PRIMITIVE_FLOAT
 });
 smithy!("smithy.api#PrimitiveDouble": {
-    @DefaultTrait(DocumentValue::Number(NumberValue::Float(NumberFloat::Double(0f64))));
+    @DefaultTrait::new(0f64);
     double PRIMITIVE_DOUBLE
 });
 
@@ -120,15 +117,20 @@ string_trait!(EndpointTrait, host_prefix, "smithy.api#endpoint");
 /// Provides a structure member with a default value.
 ///
 /// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
-pub struct DefaultTrait(pub DocumentValue);
+pub struct DefaultTrait(Box<dyn Document>);
 static_trait_id!(DefaultTrait, "smithy.api#default");
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
         DefaultTrait::trait_id()
     }
 
-    fn value(&self) -> &DocumentValue {
+    fn value(&self) -> &Box<dyn Document> {
         &self.0
+    }
+}
+impl DefaultTrait {
+    pub fn new<D: Into<Box<dyn Document>>>(doc: D) -> Self {
+        DefaultTrait(doc.into())
     }
 }
 
@@ -139,7 +141,7 @@ macro_rules! smithy_trait_impl {
                 $t::trait_id()
             }
 
-            fn value(&self) -> &DocumentValue {
+            fn value(&self) -> &Box<dyn Document> {
                 &self.value
             }
         }
@@ -152,7 +154,7 @@ macro_rules! smithy_trait_impl {
 #[derive(Debug)]
 pub struct ErrorTrait {
     error: ErrorFault,
-    value: DocumentValue,
+    value: Box<dyn Document>,
 }
 impl ErrorTrait {
     /// Get whether the Error was the fault of the client or server.
@@ -163,7 +165,7 @@ impl ErrorTrait {
     #[must_use]
     pub fn new(error: ErrorFault) -> Self {
         ErrorTrait {
-            value: DocumentValue::String(error.to_string()),
+            value: error.to_string().into(),
             error,
         }
     }
@@ -192,7 +194,7 @@ impl Display for ErrorFault {
 #[derive(Debug)]
 pub struct HttpErrorTrait {
     code: i32,
-    value: DocumentValue,
+    value: Box<dyn Document>,
 }
 impl HttpErrorTrait {
     /// Get the code contained by this trait.
@@ -216,7 +218,7 @@ impl HttpErrorTrait {
         );
         HttpErrorTrait {
             code,
-            value: DocumentValue::Number(NumberValue::Integer(NumberInteger::Integer(code))),
+            value: code.into(),
         }
     }
 }
@@ -234,7 +236,7 @@ smithy_trait_impl!(HttpErrorTrait);
 pub struct RangeTrait {
     min: Option<BigDecimal>,
     max: Option<BigDecimal>,
-    value: DocumentValue,
+    value: Box<dyn Document>,
 }
 static_trait_id!(RangeTrait, "smithy.api#range");
 smithy_trait_impl!(RangeTrait);
@@ -294,7 +296,7 @@ impl RangeTraitBuilder {
 
     /// Construct a new [`RangeTrait`] instance.
     pub fn build(self) -> RangeTrait {
-        let mut value_map = IndexMap::new();
+        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
         if let Some(min) = &self.min {
             value_map.insert("min".to_string(), min.clone().into());
         }
@@ -304,7 +306,7 @@ impl RangeTraitBuilder {
         RangeTrait {
             min: self.min,
             max: self.max,
-            value: DocumentValue::Map(value_map),
+            value: value_map.into(),
         }
     }
 }
@@ -313,7 +315,7 @@ impl RangeTraitBuilder {
 pub struct LengthTrait {
     min: Option<usize>,
     max: Option<usize>,
-    value: DocumentValue,
+    value: Box<dyn Document>,
 }
 static_trait_id!(LengthTrait, "smithy.api#length");
 smithy_trait_impl!(LengthTrait);
@@ -357,7 +359,7 @@ impl LengthTraitBuilder {
     }
 
     pub fn build(self) -> LengthTrait {
-        let mut value_map = IndexMap::new();
+        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
         if let Some(min) = self.min {
             value_map.insert("min".to_string(), (min as i32).into());
         }
@@ -367,7 +369,7 @@ impl LengthTraitBuilder {
         LengthTrait {
             min: self.min,
             max: self.max,
-            value: DocumentValue::Map(value_map),
+            value: value_map.into(),
         }
     }
 }
@@ -377,7 +379,7 @@ annotation_trait!(UniqueItemsTrait, "smithy.api#uniqueItems");
 #[derive(Debug)]
 pub struct PatternTrait {
     pattern: Regex,
-    value: DocumentValue,
+    value: Box<dyn Document>,
 }
 static_trait_id!(PatternTrait, "smithy.api#pattern");
 smithy_trait_impl!(PatternTrait);
@@ -396,7 +398,7 @@ impl PatternTrait {
     pub fn new(pattern: &str) -> Self {
         PatternTrait {
             pattern: Regex::new(pattern).unwrap(),
-            value: DocumentValue::String(pattern.to_string()),
+            value: pattern.into(),
         }
     }
 }
@@ -414,7 +416,7 @@ pub struct HttpApiKeyAuthTrait {
     name: String,
     in_location: String,
     scheme: Option<String>,
-    value: DocumentValue,
+    value: Box<dyn Document>,
 }
 static_trait_id!(HttpApiKeyAuthTrait, "smithy.api#httpApiKeyAuth");
 smithy_trait_impl!(HttpApiKeyAuthTrait);
@@ -468,7 +470,7 @@ impl HttpApiKeyAuthTraitBuilder {
     }
 
     pub fn build(self) -> HttpApiKeyAuthTrait {
-        let mut value_map = IndexMap::new();
+        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
         if let Some(name) = &self.name {
             value_map.insert("name".to_string(), name.clone().into());
         }
@@ -482,7 +484,7 @@ impl HttpApiKeyAuthTraitBuilder {
             name: self.name.unwrap(),
             in_location: self.in_location.unwrap(),
             scheme: self.scheme,
-            value: DocumentValue::Map(value_map),
+            value: value_map.into(),
         }
     }
 }

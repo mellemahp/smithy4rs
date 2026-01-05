@@ -1,5 +1,5 @@
 use crate::{
-    schema::{SchemaRef, StaticSchemaShape},
+    schema::{Document, DocumentError, SchemaRef, StaticSchemaShape},
     serde::{
         correction::{ErrorCorrection, ErrorCorrectionDefault},
         deserializers::DeserializeWithSchema,
@@ -63,6 +63,15 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
         validator.validate(S::schema(), &self)?;
         Ok(self.correct())
+    }
+
+    /// Deserialize a document into this builder.
+    ///
+    /// Note that the builder still needs to be built and validated
+    /// after conversion from a document.
+    #[inline]
+    fn from_document(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_builder::<Self, S>()
     }
 }
 

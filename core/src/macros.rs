@@ -5,10 +5,7 @@
 /// Generated schemas can be used by `Smithy4rs` proc macros to automatically implement
 /// schema-guided (de)serialization for structures and enums.
 ///
-/// ```rust,ignore
-/// use smithy4rs_core::smithy;
-/// use smithy4rs_core_derive::SmithyShape;
-///
+/// ```rust, ignore
 /// smithy!("test#SimpleStruct": {
 ///     structure SIMPLE_STRUCT_SCHEMA {
 ///         SIMPLE_FIELD_A: STRING = "field_a"
@@ -380,13 +377,13 @@ macro_rules! annotation_trait {
             }
         }
         $crate::static_trait_id!($trait_struct, $id);
-        impl SmithyTrait for $trait_struct {
-            fn id(&self) -> &ShapeId {
-                $trait_struct::trait_id()
+        impl $crate::schema::SmithyTrait for $trait_struct {
+            fn id(&self) -> &$crate::schema::ShapeId {
+                <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            fn value(&self) -> &DocumentValue {
-                &DocumentValue::Null
+            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
+                &$crate::schema::documents::NULL
             }
         }
     };
@@ -417,7 +414,7 @@ macro_rules! string_trait {
         #[derive(Debug)]
         pub struct $trait_struct {
             $value_name: String,
-            value: DocumentValue,
+            value: Box<dyn $crate::schema::documents::Document>,
         }
         impl $trait_struct {
             pub fn $value_name(&self) -> &str {
@@ -428,17 +425,17 @@ macro_rules! string_trait {
             pub fn new($value_name: &str) -> Self {
                 $trait_struct {
                     $value_name: $value_name.to_string(),
-                    value: DocumentValue::String($value_name.to_string()),
+                    value: $value_name.into(),
                 }
             }
         }
         $crate::static_trait_id!($trait_struct, $id);
-        impl SmithyTrait for $trait_struct {
-            fn id(&self) -> &ShapeId {
-                $trait_struct::trait_id()
+        impl $crate::schema::SmithyTrait for $trait_struct {
+            fn id(&self) -> &$crate::schema::ShapeId {
+                <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            fn value(&self) -> &DocumentValue {
+            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
                 &self.value
             }
         }
@@ -456,9 +453,9 @@ macro_rules! string_trait {
 #[macro_export]
 macro_rules! static_trait_id {
     ($trait_struct:ident, $id:literal) => {
-        impl StaticTraitId for $trait_struct {
+        impl $crate::schema::StaticTraitId for $trait_struct {
             #[inline]
-            fn trait_id() -> &'static ShapeId {
+            fn trait_id() -> &'static $crate::schema::ShapeId {
                 static ID: $crate::LazyLock<$crate::schema::ShapeId> =
                     $crate::LazyLock::new(|| $crate::schema::ShapeId::from($id));
                 &ID
