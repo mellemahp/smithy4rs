@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{
     cmp::Ordering,
     fmt::{Debug, Formatter},
@@ -358,6 +356,9 @@ impl Schema {
     /// <div class ="warning">
     /// In general this should only be used in generated code.
     /// </div>
+    ///
+    /// # Panics
+    /// If the expected member does not exist on the schema
     #[must_use]
     pub fn expect_member(&self, member_name: &str) -> &SchemaRef {
         self.get_member(member_name)
@@ -499,6 +500,9 @@ impl SchemaBuilder {
 
 impl SchemaBuilder {
     /// Add a member to the [`SchemaBuilder`]
+    ///
+    /// # Panics
+    /// If the lock on the member target is poisoned.
     #[must_use]
     pub fn put_member<M: Into<MemberTarget>>(
         &self,
@@ -509,7 +513,7 @@ impl SchemaBuilder {
         self.validate_member_name(name);
         self.members
             .write()
-            .expect("Eek")
+            .expect("Lock poisoned")
             .push(MemberSchemaBuilder::new(
                 name.into(),
                 self.id.with_member(name),
@@ -637,7 +641,7 @@ impl Debug for MemberTarget {
 }
 impl PartialEq for MemberTarget {
     fn eq(&self, other: &Self) -> bool {
-        self.deref() == other.deref()
+        **self == **other
     }
 }
 impl Eq for MemberTarget {}
@@ -851,7 +855,7 @@ mod tests {
         let json_name_value = schema
             .get_trait_as::<JsonNameTrait>()
             .expect("No Json Name trait present");
-        assert_eq!(json_name_value.name(), "other")
+        assert_eq!(json_name_value.name(), "other");
     }
 
     #[test]

@@ -261,7 +261,7 @@ impl ListSerializer for DebugListSerializer<'_, '_> {
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         if let DebugListSerializer::Unredacted(mut inner) = self {
             inner.finish()?;
-        };
+        }
         Ok(())
     }
 }
@@ -301,7 +301,7 @@ impl MapSerializer for DebugMapSerializer<'_, '_> {
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         if let DebugMapSerializer::Unredacted(mut inner) = self {
             inner.finish()?;
-        };
+        }
         Ok(())
     }
 }
@@ -358,7 +358,7 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
     fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         if let DebugStructSerializer::Unredacted(mut inner) = self {
             inner.finish()?;
-        };
+        }
         Ok(())
     }
 }
@@ -469,7 +469,7 @@ mod tests {
             member_list: list,
         };
         assert_eq!(
-            format!("{:?}", struct_to_write),
+            format!("{struct_to_write:?}"),
             "Shape { member_a: \"a\", member_b: **REDACTED**, member_optional: \"c\", member_list: [\"a\", \"b\"], member_map: {\"a\": \"b\"} }"
         );
     }
@@ -487,7 +487,7 @@ mod tests {
             member_list: list,
         };
         assert_eq!(
-            format!("{:#?}", struct_to_write),
+            format!("{struct_to_write:#?}"),
             r#"Shape {
     member_a: "a",
     member_b: **REDACTED**,
@@ -512,7 +512,7 @@ mod tests {
             member_list: list,
             member_map: map,
         };
-        let output = format!("{:?}", struct_to_write);
+        let output = format!("{struct_to_write:?}");
         assert_eq!(
             output,
             "Shape { member_list: [**REDACTED**], member_map: {**REDACTED**} }"
@@ -529,8 +529,7 @@ mod tests {
             member_map: map,
         };
         let document: Box<dyn Document> = struct_to_write.into();
-        let output = format!("{:#?}", document);
-        println!("{}", output);
+        let output = format!("{document:#?}");
         let expected = r#"Document {
     schema: StructSchema {
         shape_type: Structure,

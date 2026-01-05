@@ -1,7 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(clippy::missing_errors_doc)]
-
 use std::{error::Error as StdError, fmt::Display};
 
 use crate::{
@@ -20,6 +16,9 @@ use crate::{
 ///
 pub trait SerializableShape: SchemaShape + SerializeWithSchema {
     /// Serialize a shape with its pre-defined schema
+    ///
+    /// # Errors
+    /// Returns an [`Error`] if the shape could not be serialized.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
 }
 
@@ -34,6 +33,9 @@ impl<T: SchemaShape + SerializeWithSchema> SerializableShape for T {
 /// Schema-Guided serialization implementation.
 pub trait SerializeWithSchema {
     /// Serialize a Shape using a schema to guide the process
+    ///
+    /// # Errors
+    /// Returns an [`Error`] if the shape could not be serialized.
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &SchemaRef,
@@ -71,6 +73,10 @@ pub trait ListSerializer {
     type Ok;
 
     /// Serialize a sequence element.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the element could not be serialized.
     fn serialize_element<T>(
         &mut self,
         element_schema: &SchemaRef,
@@ -80,6 +86,9 @@ pub trait ListSerializer {
         T: SerializeWithSchema;
 
     /// Finish serializing a sequence.
+    ///
+    /// # Errors
+    /// [`Error`] if the sequence could not be closed
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
@@ -92,6 +101,10 @@ pub trait MapSerializer {
     type Ok;
 
     /// Serialize a single map entry
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the entry could not be serialized.
     fn serialize_entry<K, V>(
         &mut self,
         key_schema: &SchemaRef,
@@ -104,6 +117,10 @@ pub trait MapSerializer {
         V: SerializeWithSchema;
 
     /// Finish serializing a map.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the map could not be closed.
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
@@ -119,12 +136,20 @@ pub trait StructSerializer {
     ///
     /// In general this is only done for document types to allow for
     /// over-the-wire polymorphism, and by default this method does nothing.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the discriminator could not be serialized.
     #[inline]
-    fn serialize_discriminator(&mut self, discriminator: &ShapeId) -> Result<(), Self::Error> {
+    fn serialize_discriminator(&mut self, _discriminator: &ShapeId) -> Result<(), Self::Error> {
         Ok(())
     }
 
     /// Serialize a member on the struct
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the member could not be serialized.
     fn serialize_member<T>(
         &mut self,
         member_schema: &SchemaRef,
@@ -135,10 +160,14 @@ pub trait StructSerializer {
 
     /// Serialize a member on the struct with a pre-known field name.
     /// This is an optimization to avoid extracting the name from the schema.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the member could not be serialized.
     #[inline]
     fn serialize_member_named<T>(
         &mut self,
-        member_name: &str,
+        _member_name: &str,
         member_schema: &SchemaRef,
         value: &T,
     ) -> Result<(), Self::Error>
@@ -153,6 +182,10 @@ pub trait StructSerializer {
     ///
     /// This method will call [`StructSerializer::skip_member`] on any optional members
     /// that are `None`, otherwise the `Some` value is unwrapped and serialized as normal.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the member could not be serialized.
     fn serialize_optional_member<T: SerializeWithSchema>(
         &mut self,
         member_schema: &SchemaRef,
@@ -167,6 +200,10 @@ pub trait StructSerializer {
 
     /// Serializes an optional member with a pre-known field name.
     /// This is an optimization to avoid extracting the name from the schema.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the member could not be serialized.
     #[inline]
     fn serialize_optional_member_named<T: SerializeWithSchema>(
         &mut self,
@@ -182,24 +219,35 @@ pub trait StructSerializer {
     }
 
     /// Skips a member in a structure.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the member could not be skipped.
     #[inline]
-    fn skip_member(&mut self, schema: &SchemaRef) -> Result<(), Self::Error> {
+    fn skip_member(&mut self, _schema: &SchemaRef) -> Result<(), Self::Error> {
         /* Do nothing on skip by default */
         Ok(())
     }
 
     /// Handle unknown values.
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the unknown member could not be serialized.
     #[inline]
-    fn serialize_unknown(&mut self, schema: &SchemaRef, name: &String) -> Result<(), Self::Error> {
+    fn serialize_unknown(&mut self, _schema: &SchemaRef, name: &String) -> Result<(), Self::Error> {
         // Error out on unknown by default
         // TODO(unknown members): Is this the correct default behavior?
         Err(Self::Error::custom(format!(
-            "Attempted to serialize unknown value: {:?}",
-            name
+            "Attempted to serialize unknown value: {name:?}"
         )))
     }
 
-    /// Finish serializing a structure.
+    /// Finish serializing a structure
+    ///
+    /// # Errors
+    /// Returns an [`Error`] matching the parent serializer if
+    /// the structure could not be closed.
     fn end(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 }
 
@@ -244,6 +292,9 @@ pub trait Serializer: Sized {
     /// Begin to serialize a variably sized structure or union. This call must be
     /// followed by zero or more calls to `serialize_member`, then a call to
     /// `end`.
+    ///
+    /// # Errors
+    /// `Self::Error` if the structure could not be opened.
     fn write_struct(
         self,
         schema: &SchemaRef,
@@ -253,40 +304,73 @@ pub trait Serializer: Sized {
     /// Begin to serialize a variably sized map. This call must be
     /// followed by zero or more calls to `serialize_entry`, then a call to
     /// `end`.
+    ///
+    /// # Errors
+    /// `Self::Error` if the map could not be opened.
     fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error>;
 
     /// Begin to serialize a variably sized list. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
     /// `end`.
+    ///
+    /// # Errors
+    /// `Self::Error` if the list could not be opened.
     fn write_list(self, schema: &SchemaRef, len: usize)
     -> Result<Self::SerializeList, Self::Error>;
 
     /// Serialize a `boolean`
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a boolean.
     fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a byte (`i8`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `byte`.
     fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a short (`i16`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `short`.
     fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an integer (`i32`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as an integer.
     fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a long (`i64`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `long`.
     fn write_long(self, schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a float (`f32`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `float`.
     fn write_float(self, schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a double (`f64`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `double`.
     fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a [`BigInt`]
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `bigInteger`.
     fn write_big_integer(self, schema: &SchemaRef, value: &BigInt)
     -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a [`BigDecimal`]
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `bigDecimal`.
     fn write_big_decimal(
         self,
         schema: &SchemaRef,
@@ -294,15 +378,27 @@ pub trait Serializer: Sized {
     ) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a string (`&str`)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `string`.
     fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a blob (i.e. a buffer)
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `blob`.
     fn write_blob(self, schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a timestamp
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `timestamp`.
     fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an untyped [`Document`]
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as a `document`.
     #[allow(clippy::borrowed_box)]
     fn write_document(
         self,
@@ -311,19 +407,31 @@ pub trait Serializer: Sized {
     ) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `null` value
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be serialized as an empty (`null`) value.
     fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 
     /// Write a missing expected value.
     ///
     /// Default implementation simply `skip()`s the missing value.
+    ///
+    /// # Errors
+    /// `Self::Error` if the missing value could not be serialized.
     fn write_missing(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         self.skip(schema)
     }
 
     /// Skip the serialization of a value.
+    ///
+    /// # Errors
+    /// `Self::Error` if the value could not be skipped.
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error>;
 
     /// Flush all remaining data.
+    ///
+    /// # Errors
+    /// `Self::Error` if the underlying data source was not flushed successfully.
     fn flush(self) -> Result<Self::Ok, Self::Error> {
         todo!();
     }
