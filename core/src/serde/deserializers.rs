@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 use std::{error::Error as StdError, fmt::Display};
 
 use indexmap::IndexMap;
@@ -39,42 +36,81 @@ pub trait Deserializer<'de>: Sized {
     // === Primitive deserialization ===
 
     /// Read a boolean value
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a bool.
     fn read_bool(&mut self, schema: &SchemaRef) -> Result<bool, Self::Error>;
 
-    /// Read a byte (i8)
+    /// Read a byte (`i8`)
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `byte`.
     fn read_byte(&mut self, schema: &SchemaRef) -> Result<i8, Self::Error>;
 
-    /// Read a short (i16)
+    /// Read a short (`i16`)
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `short`.
     fn read_short(&mut self, schema: &SchemaRef) -> Result<i16, Self::Error>;
 
-    /// Read an integer (i32)
+    /// Read an integer (`i32`)
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as an `integer`.
     fn read_integer(&mut self, schema: &SchemaRef) -> Result<i32, Self::Error>;
 
     /// Read a long (i64)
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `long`.
     fn read_long(&mut self, schema: &SchemaRef) -> Result<i64, Self::Error>;
 
-    /// Read a float (f32)
+    /// Read a float (`f32`)
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `float`.
     fn read_float(&mut self, schema: &SchemaRef) -> Result<f32, Self::Error>;
 
-    /// Read a double (f64)
+    /// Read a double (`f64`)
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `double`.
     fn read_double(&mut self, schema: &SchemaRef) -> Result<f64, Self::Error>;
 
     /// Read a big integer
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `bigInteger`.
     fn read_big_integer(&mut self, schema: &SchemaRef) -> Result<BigInt, Self::Error>;
 
     /// Read a big decimal
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `bigDecimal`.
     fn read_big_decimal(&mut self, schema: &SchemaRef) -> Result<BigDecimal, Self::Error>;
 
     /// Read a string
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `string`.
     fn read_string(&mut self, schema: &SchemaRef) -> Result<String, Self::Error>;
 
     /// Read a blob
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `blob`.
     fn read_blob(&mut self, schema: &SchemaRef) -> Result<ByteBuffer, Self::Error>;
 
     /// Read a timestamp
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `timestamp`.
     fn read_timestamp(&mut self, schema: &SchemaRef) -> Result<Instant, Self::Error>;
 
-    /// Read a document
+    /// Read data as untyped [`Document`]
+    ///
+    /// # Errors
+    /// Returns [`Error`] if the data could not be read as a `document`.
     fn read_document(&mut self, schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error>;
 
     // === Compound types (consumer pattern) ===
@@ -108,6 +144,10 @@ pub trait Deserializer<'de>: Sized {
     ///     }
     /// }
     /// ```
+    ///
+    /// # Errors
+    /// Returns [`Error`] if a builder member could not be read correctly. Some
+    /// shapes may also return an error on an unexpected member value.
     fn read_struct<B, F>(
         &mut self,
         schema: &SchemaRef,
@@ -133,6 +173,9 @@ pub trait Deserializer<'de>: Sized {
     ///     Ok(())
     /// })?;
     /// ```
+    ///
+    /// # Errors
+    /// Returns [`Error`] if a list element could not be read correctly.
     fn read_list<T, F>(
         &mut self,
         schema: &SchemaRef,
@@ -158,6 +201,9 @@ pub trait Deserializer<'de>: Sized {
     ///     Ok(())
     /// })?;
     /// ```
+    ///
+    /// # Errors
+    /// Returns [`Error`] if a map entry could not be read correctly.
     fn read_map<T, F>(
         &mut self,
         schema: &SchemaRef,
@@ -173,6 +219,9 @@ pub trait Deserializer<'de>: Sized {
     fn is_null(&mut self) -> bool;
 
     /// Read a null value.
+    ///
+    /// # Errors
+    /// Returns [`Error`] if an element could not be read as `null`/empty value.
     fn read_null(&mut self) -> Result<(), Self::Error>;
 }
 
@@ -183,6 +232,11 @@ pub trait Deserializer<'de>: Sized {
 ///
 pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
     /// Deserialize a shape with its pre-defined schema
+    ///
+    ///
+    /// # Errors
+    /// Returns [`D::Error`] if data from the `Deserializer` could not be read into
+    /// this shape type.
     fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error>;
 }
 
@@ -203,6 +257,10 @@ impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape
 /// on the serialization side.
 pub trait DeserializeWithSchema<'de>: Sized {
     /// Deserialize this value from the given deserializer using the provided schema.
+    ///
+    /// # Errors
+    /// Returns [`D::Error`] if data from the `Deserializer` could not be read into
+    /// this shape type. This could be due to either a schema or data mismatch.
     fn deserialize_with_schema<D>(
         schema: &SchemaRef,
         deserializer: &mut D,
@@ -375,12 +433,6 @@ where
         D: Deserializer<'de>,
     {
         let mut vec = Vec::new();
-
-        // Get member schema for list elements
-        let member_schema = schema
-            .get_member("member")
-            .ok_or_else(|| Error::custom("list schema missing member"))?;
-
         deserializer.read_list(schema, &mut vec, |vec, element_schema, de| {
             let elem = T::deserialize_with_schema(element_schema, de)?;
             vec.push(elem);

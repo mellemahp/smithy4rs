@@ -45,6 +45,9 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     ///
     /// Builds shape with the [`DefaultValidator`] if required fields
     /// are missing or validation fails
+    ///
+    /// # Errors
+    /// Returns validation errors detected by the `DefaultValidator`
     #[inline]
     fn build(self) -> Result<S, ValidationErrors> {
         self.build_with_validator(&mut DefaultValidator::new())
@@ -59,6 +62,10 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// **NOTE**: Validation is supported by the [`SerializeWithSchema`] implementation
     /// for the builder.
     /// </div>
+    ///
+    /// # Errors
+    /// Returns aggregate validation error containing all validation errors detected by the
+    /// selected validator.
     #[inline]
     fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
         validator.validate(S::schema(), &self)?;
@@ -69,6 +76,9 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     ///
     /// Note that the builder still needs to be built and validated
     /// after conversion from a document.
+    ///
+    /// # Errors
+    /// If the builder could not be converted into a valid document implementation.
     #[inline]
     fn from_document(document: Box<dyn Document>) -> Result<Self, DocumentError> {
         document.into_builder::<Self, S>()
@@ -82,6 +92,7 @@ where
     B: ShapeBuilder<'de, Self>,
 {
     /// Get a new builder for this shape
+    #[must_use]
     fn builder() -> B {
         B::new()
     }

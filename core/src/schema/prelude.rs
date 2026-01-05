@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! # Prelude
 //! [`crate::schema::Schema`] definitions for the [Smithy prelude](https://github.com/smithy-lang/smithy/blob/65b473ddb94f9edda933f00bab988d465b2bd2fe/smithy-model/src/main/resources/software/amazon/smithy/model/loader/prelude.smithy)
 //!
@@ -158,6 +157,7 @@ pub struct ErrorTrait {
 }
 impl ErrorTrait {
     /// Get whether the Error was the fault of the client or server.
+    #[must_use]
     pub fn error(&self) -> &ErrorFault {
         &self.error
     }
@@ -198,13 +198,14 @@ pub struct HttpErrorTrait {
 }
 impl HttpErrorTrait {
     /// Get the code contained by this trait.
+    #[must_use]
     pub fn code(&self) -> i32 {
         self.code
     }
 
     /// Create a new [`HttpErrorTrait`] instance
     ///
-    /// ## Errors
+    /// # Panics
     /// Http error codes should be between 200 and 600. This
     /// constructor panics when an error code is outside of
     /// this range is provided.
@@ -249,6 +250,7 @@ impl RangeTrait {
     ///
     /// Defaults to zero
     #[inline]
+    #[must_use]
     pub fn min(&self) -> &BigDecimal {
         self.min.as_ref().unwrap_or_else(|| &ZERO)
     }
@@ -257,6 +259,7 @@ impl RangeTrait {
     ///
     /// Defaults to `u64::MAX`
     #[inline]
+    #[must_use]
     pub fn max(&self) -> &BigDecimal {
         self.max.as_ref().unwrap_or_else(|| &MAX)
     }
@@ -283,18 +286,21 @@ impl RangeTraitBuilder {
     }
 
     /// Set a minimum value for this constraint.
+    #[must_use]
     pub fn min(mut self, min: BigDecimal) -> Self {
         self.min = Some(min);
         self
     }
 
     /// Set a maximum value for this constraint.
+    #[must_use]
     pub fn max(mut self, max: BigDecimal) -> Self {
         self.max = Some(max);
         self
     }
 
     /// Construct a new [`RangeTrait`] instance.
+    #[must_use]
     pub fn build(self) -> RangeTrait {
         let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
         if let Some(min) = &self.min {
@@ -321,10 +327,12 @@ static_trait_id!(LengthTrait, "smithy.api#length");
 smithy_trait_impl!(LengthTrait);
 
 impl LengthTrait {
+    #[must_use]
     pub fn min(&self) -> usize {
         self.min.unwrap_or(0)
     }
 
+    #[must_use]
     pub fn max(&self) -> usize {
         self.max.unwrap_or(usize::MAX)
     }
@@ -348,16 +356,19 @@ impl LengthTraitBuilder {
         }
     }
 
+    #[must_use]
     pub fn min(mut self, min: usize) -> Self {
         self.min = Some(min);
         self
     }
 
+    #[must_use]
     pub fn max(mut self, max: usize) -> Self {
         self.max = Some(max);
         self
     }
 
+    #[must_use]
     pub fn build(self) -> LengthTrait {
         let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
         if let Some(min) = self.min {
@@ -385,6 +396,7 @@ static_trait_id!(PatternTrait, "smithy.api#pattern");
 smithy_trait_impl!(PatternTrait);
 
 impl PatternTrait {
+    #[must_use]
     pub fn pattern(&self) -> &Regex {
         &self.pattern
     }
@@ -392,9 +404,10 @@ impl PatternTrait {
     #[must_use]
     /// Create a new [`PatternTrait`]
     ///
-    /// <div class ="warning">
+    /// # Panics
     /// Will panic if the pattern is invalid.
-    /// </div>
+    ///
+    /// Smithy validation will check this constraint in models
     pub fn new(pattern: &str) -> Self {
         PatternTrait {
             pattern: Regex::new(pattern).unwrap(),
@@ -422,14 +435,17 @@ static_trait_id!(HttpApiKeyAuthTrait, "smithy.api#httpApiKeyAuth");
 smithy_trait_impl!(HttpApiKeyAuthTrait);
 
 impl HttpApiKeyAuthTrait {
+    #[must_use]
     pub fn name(&self) -> &String {
         &self.name
     }
 
+    #[must_use]
     pub fn in_location(&self) -> &String {
         &self.in_location
     }
 
+    #[must_use]
     pub fn scheme(&self) -> &Option<String> {
         &self.scheme
     }
@@ -454,21 +470,31 @@ impl HttpApiKeyAuthTraitBuilder {
         }
     }
 
+    #[must_use]
     pub fn name(mut self, name: &str) -> Self {
         self.name = Some(name.to_string());
         self
     }
 
+    #[must_use]
     pub fn in_location(mut self, in_location: &str) -> Self {
         self.in_location = Some(in_location.to_string());
         self
     }
 
+    #[must_use]
     pub fn scheme(mut self, scheme: &str) -> Self {
         self.scheme = Some(scheme.to_string());
         self
     }
 
+    /// Build a new [`HttpApiKeyAuthTrait`] instance
+    ///
+    /// # Panics
+    /// If the location or name are not set.
+    ///
+    /// Smithy validation will check this constraint in models.
+    #[must_use]
     pub fn build(self) -> HttpApiKeyAuthTrait {
         let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
         if let Some(name) = &self.name {

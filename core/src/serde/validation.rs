@@ -116,8 +116,8 @@ use crate::{
 pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
     /// Validates a type against a schema.
     ///
-    /// **IMPL NOTE**: If any validation errors are found, this method SHOULD return
-    /// an `Err` result containing an aggregate of all the validation errors encountered.
+    /// # Errors
+    /// Aggregation of all the validation issues encountered.
     fn validate<V: SerializeWithSchema>(
         self,
         schema: &SchemaRef,
@@ -161,6 +161,7 @@ pub struct DefaultValidator<const D: usize = 10, const E: usize = 20> {
 
 impl<const D: usize, const ERR: usize> DefaultValidator<D, ERR> {
     /// Create a new [`Validator`] instance.
+    #[must_use]
     pub const fn new() -> Self {
         DefaultValidator {
             errors: None,
@@ -188,6 +189,9 @@ impl<const D: usize, const ERR: usize> DefaultValidator<D, ERR> {
     /// Return all collected validation errors
     ///
     /// This returns a `Result` type to allow `?` raising.
+    ///
+    /// # Errors
+    /// All validation errors found.
     pub fn results(&mut self) -> Result<(), ValidationErrors> {
         if let Some(errors) = self.errors.take() {
             return Err(errors);
@@ -370,7 +374,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
                 range.min().clone(),
                 range.max().clone(),
             ))?;
-        };
+        }
         Ok(())
     }
 
@@ -385,7 +389,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
                 range.min().clone(),
                 range.max().clone(),
             ))?;
-        };
+        }
         Ok(())
     }
 
@@ -526,7 +530,7 @@ impl ListSerializer for DefaultListValidator<'_> {
                 // Return early on this error. Something is wrong with the schema.
                 Err(err) => return self.root.short_circuit(err),
                 _ => Ok(()),
-            }?
+            }?;
         }
         value.serialize_with_schema(element_schema, &mut *self.root)?;
         self.root.pop_path()?;
@@ -855,7 +859,7 @@ impl MapSerializer for DefaultMapValidator<'_> {
             Ok(val) => self.root.push_path(PathElement::Key(val))?,
             // Return early on this error. Something is wrong with the schema.
             Err(err) => return self.root.short_circuit(err),
-        };
+        }
         key.serialize_with_schema(key_schema, &mut *self.root)?;
         value.serialize_with_schema(value_schema, &mut *self.root)?;
         self.root.pop_path()
@@ -1107,6 +1111,7 @@ impl ValidationErrors {
     /// empty list of errors. Actual validation errors must be added
     /// using the [`ValidationErrors::extend`] or `ValidationErrors::add`
     /// methods.
+    #[must_use]
     pub const fn new() -> Self {
         Self { errors: Vec::new() }
     }
@@ -1123,11 +1128,13 @@ impl ValidationErrors {
     }
 
     /// Get the number of child-errors contained in this error.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.errors.len()
     }
 
     /// Returns true if this error has no children
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }
@@ -1402,7 +1409,7 @@ mod tests {
             &BASIC_VALIDATION_SCHEMA
         }
     }
-    impl<'de> ShapeBuilder<'de, SimpleStruct> for SimpleStructBuilder {
+    impl ShapeBuilder<'_, SimpleStruct> for SimpleStructBuilder {
         fn new() -> Self {
             Self {
                 field_a: Required::Unset,
@@ -1713,7 +1720,7 @@ mod tests {
             ser.end(schema)
         }
     }
-    impl<'de> ShapeBuilder<'de, NestedStruct> for NestedStructBuilder {
+    impl ShapeBuilder<'_, NestedStruct> for NestedStructBuilder {
         fn new() -> Self {
             Self {
                 field_c: Required::Unset,
@@ -1789,7 +1796,7 @@ mod tests {
             ser.end(schema)
         }
     }
-    impl<'de> ShapeBuilder<'de, StructWithNested> for StructWithNestedBuilder {
+    impl ShapeBuilder<'_, StructWithNested> for StructWithNestedBuilder {
         fn new() -> Self {
             StructWithNestedBuilder {
                 field_nested: None,

@@ -162,7 +162,7 @@ impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Option<B> {
 
     #[inline]
     fn correct(self) -> Self::Value {
-        self.map(|b| b.correct())
+        self.map(ErrorCorrection::correct)
     }
 }
 
@@ -180,8 +180,8 @@ impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Vec<B> {
 
     fn correct(self) -> Self::Value {
         let mut results = Vec::with_capacity(self.len());
-        for builder in self.into_iter() {
-            results.push(builder.correct())
+        for builder in self {
+            results.push(builder.correct());
         }
         results
     }
@@ -193,7 +193,7 @@ impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for IndexMap<String, B> {
 
     fn correct(self) -> Self::Value {
         let mut results = IndexMap::with_capacity(self.len());
-        for (key, builder) in self.into_iter() {
+        for (key, builder) in self {
             let _ = results.insert(key, builder.correct());
         }
         results

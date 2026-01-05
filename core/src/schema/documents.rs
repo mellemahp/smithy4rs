@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! # Document Types
 //! [Documents](https://smithy.io/2.0/spec/simple-types.html#document) are a protocol-agnostic
 //! representation of untyped data in the smithy data model. They function as a kind of "any" type.
@@ -165,7 +164,7 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::*,
     schema::{
-        SchemaRef, SchemaShape, ShapeId, ShapeType,
+        SchemaShape, ShapeId, ShapeType,
         default::{Number, Value},
     },
     smithy,
@@ -320,83 +319,97 @@ pub trait Document: SchemaShape + Send + Sync {
 
     /// Convert the [`Document`] to a `blob`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `blob` ([`ByteBuffer`]) value.
     fn into_blob(self: Box<Self>) -> Result<ByteBuffer, DocumentError>;
 
     /// Convert the [`Document`] to a `boolean`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `boolean` value.
     fn into_bool(self: Box<Self>) -> Result<bool, DocumentError>;
 
     /// Convert the [`Document`] to a `string`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `string` value.
     fn into_string(self: Box<Self>) -> Result<String, DocumentError>;
 
     /// Convert the [`Document`] to a `timestamp`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `timestamp` ([`Instant`]) value.
     fn into_timestamp(self: Box<Self>) -> Result<Instant, DocumentError>;
 
     /// Convert the [`Document`] to a `byte`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `byte` (`i8`) value.
     fn into_byte(self: Box<Self>) -> Result<i8, DocumentError>;
 
     /// Convert the [`Document`] to a `short`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `short` (`i16`) value.
     fn into_short(self: Box<Self>) -> Result<i16, DocumentError>;
 
     /// Convert the [`Document`] to an `integer`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `integer` (`i32`) value.
     fn into_integer(self: Box<Self>) -> Result<i32, DocumentError>;
 
     /// Convert the [`Document`] to a `long`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `long` (`i64`) value.
     fn into_long(self: Box<Self>) -> Result<i64, DocumentError>;
 
     /// Convert the [`Document`] to a `float`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `float` (`f32`) value.
     fn into_float(self: Box<Self>) -> Result<f32, DocumentError>;
 
     /// Convert the [`Document`] to a `double`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `double` (`f64`) value.
     fn into_double(self: Box<Self>) -> Result<f64, DocumentError>;
 
     /// Convert the [`Document`] to a `bigInteger`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `bigInteger` ([`BigInt`]) value.
     fn into_big_integer(self: Box<Self>) -> Result<BigInt, DocumentError>;
 
     /// Convert the [`Document`] to a `bigDecimal`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document could not be converted to a
     /// `bigDecimal` ([`BigDecimal`]) value.
     fn into_big_decimal(self: Box<Self>) -> Result<BigDecimal, DocumentError>;
 
     /// Convert the [`Document`] to a `list`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document is not a list.
     fn into_list(self: Box<Self>) -> Result<Vec<Box<dyn Document>>, DocumentError>;
 
     /// Convert the [`Document`] to a `map`.
     ///
+    /// # Errors
     /// Returns a [`DocumentError`] if the document is not a map.
     fn into_map(self: Box<Self>) -> Result<IndexMap<String, Box<dyn Document>>, DocumentError>;
 
@@ -445,7 +458,7 @@ impl PartialEq for dyn Document {
             (Some(ShapeType::BigDecimal), Some(ShapeType::BigDecimal)) => {
                 self.as_big_decimal() == other.as_big_decimal()
             }
-            (Some(ShapeType::List), Some(ShapeType::List)) => self.as_map() == other.as_map(),
+            (Some(ShapeType::List), Some(ShapeType::List)) => self.as_list() == other.as_list(),
             (Some(ShapeType::Map), Some(ShapeType::Map)) => self.as_map() == other.as_map(),
             (None, None) => true,
             _ => false,
@@ -641,7 +654,7 @@ impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Docum
         let mut result: IndexMap<String, T> = IndexMap::new();
         for (key, val) in map {
             let _ = match T::try_from(val.clone()) {
-                Ok(val) => result.insert(key.to_string(), val),
+                Ok(val) => result.insert(key.clone(), val),
                 Err(e) => return Err(e),
             };
         }
@@ -659,27 +672,6 @@ impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Docum
             return Ok(None);
         }
         Ok(Some(value.try_into()?))
-    }
-}
-
-// ============================================================================
-// Utilities
-// ============================================================================
-
-/// Get the shape type of the Document
-///
-/// If the Document is a member, then returns the type of the member target.
-pub(crate) fn get_shape_type(schema: &SchemaRef) -> Result<&ShapeType, Box<dyn Error>> {
-    let shape_type = schema.shape_type();
-    if shape_type == &ShapeType::Member {
-        let Some(member) = schema.as_member() else {
-            return Err(Box::new(DocumentError::DocumentConversion(
-                "Expected memberSchema for member shape type".to_string(),
-            )));
-        };
-        Ok(member.target.shape_type())
-    } else {
-        Ok(shape_type)
     }
 }
 
@@ -752,7 +744,7 @@ pub(crate) mod default {
                     }
                 }
                 // Null is not representable as a shape type
-                _ => None,
+                Value::Null => None,
             }
         }
 
@@ -1305,6 +1297,7 @@ pub static NULL: LazyLock<Box<dyn Document>> = LazyLock::new(|| {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::SchemaRef;
 
     #[test]
     fn string_document_value() {

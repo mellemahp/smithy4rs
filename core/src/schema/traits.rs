@@ -100,7 +100,7 @@ pub trait SmithyTrait: DowncastSync {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;
 
-    /// The data stored inside the trait as a [`crate::schema::documents::Document`] value.
+    /// The data stored inside the trait as a [`Document`] value.
     #[allow(clippy::borrowed_box)]
     fn value(&self) -> &Box<dyn Document>;
 }
@@ -134,7 +134,7 @@ impl Deref for TraitRef {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        self.0.deref()
+        &*self.0
     }
 }
 impl From<Ref<dyn SmithyTrait>> for TraitRef {
