@@ -164,7 +164,11 @@ use thiserror::Error;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::*,
-    schema::{SchemaRef, SchemaShape, ShapeId, ShapeType, default::Value},
+    schema::{
+        SchemaRef, SchemaShape, ShapeId, ShapeType,
+        default::{Number, Value},
+    },
+    smithy,
 };
 // ============================================================================
 // Base Document Wrapper and trait
@@ -690,14 +694,7 @@ pub(crate) mod default {
     use num_bigint::BigInt;
     use temporal_rs::Instant;
 
-    use crate::{
-        prelude::{
-            BIG_DECIMAL, BIG_INTEGER, BLOB, BOOLEAN, BYTE, DOCUMENT, DOUBLE, FLOAT, INTEGER, LONG,
-            SHORT, STRING, TIMESTAMP,
-        },
-        schema::{DocumentError, SchemaRef, SchemaShape, ShapeId, ShapeType},
-        smithy,
-    };
+    use crate::schema::{DocumentError, SchemaRef, SchemaShape, ShapeId, ShapeType};
 
     #[derive(Clone, PartialEq, Debug)]
     pub struct Document {
@@ -720,8 +717,8 @@ pub(crate) mod default {
         Blob(ByteBuffer),
         String(String),
         Timestamp(Instant),
-        List(Vec<BoxedDoc>),
-        Map(IndexMap<String, BoxedDoc>),
+        List(Vec<Box<dyn super::Document>>),
+        Map(IndexMap<String, Box<dyn super::Document>>),
     }
 
     impl super::Document for Document {
@@ -887,7 +884,7 @@ pub(crate) mod default {
             todo!()
         }
 
-        fn as_list(&self) -> Option<&Vec<BoxedDoc>> {
+        fn as_list(&self) -> Option<&Vec<Box<dyn super::Document>>> {
             if let Value::List(document_list) = &self.value {
                 Some(document_list)
             } else {
@@ -895,7 +892,7 @@ pub(crate) mod default {
             }
         }
 
-        fn as_map(&self) -> Option<&IndexMap<String, BoxedDoc>> {
+        fn as_map(&self) -> Option<&IndexMap<String, Box<dyn super::Document>>> {
             if let Value::Map(document_map) = &self.value {
                 Some(document_map)
             } else {
@@ -997,7 +994,7 @@ pub(crate) mod default {
             })
         }
 
-        fn into_list(self: Box<Self>) -> Result<Vec<BoxedDoc>, DocumentError> {
+        fn into_list(self: Box<Self>) -> Result<Vec<Box<dyn super::Document>>, DocumentError> {
             if let Value::List(value) = self.value {
                 Ok(value)
             } else {
@@ -1007,7 +1004,9 @@ pub(crate) mod default {
             }
         }
 
-        fn into_map(self: Box<Self>) -> Result<IndexMap<String, BoxedDoc>, DocumentError> {
+        fn into_map(
+            self: Box<Self>,
+        ) -> Result<IndexMap<String, Box<dyn super::Document>>, DocumentError> {
             if let Value::Map(value) = self.value {
                 Ok(value)
             } else {
@@ -1017,7 +1016,7 @@ pub(crate) mod default {
             }
         }
 
-        fn box_clone(&self) -> BoxedDoc {
+        fn box_clone(&self) -> Box<dyn super::Document> {
             Box::new(self.clone())
         }
     }
@@ -1040,300 +1039,256 @@ pub(crate) mod default {
         Double(f64),
         BigDecimal(BigDecimal),
     }
-
-    impl From<i8> for Number {
-        #[inline]
-        fn from(value: i8) -> Self {
-            Self::Byte(value)
-        }
-    }
-
-    impl From<i16> for Number {
-        #[inline]
-        fn from(value: i16) -> Self {
-            Self::Short(value)
-        }
-    }
-
-    impl From<i32> for Number {
-        #[inline]
-        fn from(value: i32) -> Self {
-            Self::Integer(value)
-        }
-    }
-
-    impl From<i64> for Number {
-        #[inline]
-        fn from(value: i64) -> Self {
-            Self::Long(value)
-        }
-    }
-
-    impl From<BigInt> for Number {
-        #[inline]
-        fn from(value: BigInt) -> Self {
-            Self::BigInt(value)
-        }
-    }
-
-    impl From<f32> for Number {
-        #[inline]
-        fn from(value: f32) -> Self {
-            Self::Float(value)
-        }
-    }
-
-    impl From<f64> for Number {
-        #[inline]
-        fn from(value: f64) -> Self {
-            Self::Double(value)
-        }
-    }
-
-    impl From<BigDecimal> for Number {
-        #[inline]
-        fn from(value: BigDecimal) -> Self {
-            Self::BigDecimal(value)
-        }
-    }
-
-    // ============================================================================
-    // Conversions INTO Default Document
-    // ============================================================================
-
-    type BoxedDoc = Box<dyn super::Document>;
-
-    // Just a convenience method for
-    impl From<Document> for BoxedDoc {
-        fn from(value: Document) -> Self {
-            Box::new(value)
-        }
-    }
-
-    impl From<bool> for BoxedDoc {
-        fn from(value: bool) -> Self {
-            Document {
-                schema: BOOLEAN.clone(),
-                value: Value::Boolean(value),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<i8> for BoxedDoc {
-        fn from(value: i8) -> Self {
-            Document {
-                schema: BYTE.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<i16> for BoxedDoc {
-        fn from(value: i16) -> Self {
-            Document {
-                schema: SHORT.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<i32> for BoxedDoc {
-        fn from(value: i32) -> Self {
-            Document {
-                schema: INTEGER.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<i64> for BoxedDoc {
-        fn from(value: i64) -> Self {
-            Document {
-                schema: LONG.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<f32> for BoxedDoc {
-        fn from(value: f32) -> Self {
-            Document {
-                schema: FLOAT.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<f64> for BoxedDoc {
-        fn from(value: f64) -> Self {
-            Document {
-                schema: DOUBLE.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<&str> for BoxedDoc {
-        fn from(value: &str) -> Self {
-            Document {
-                schema: STRING.clone(),
-                value: Value::String(value.to_string()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<BigInt> for BoxedDoc {
-        fn from(value: BigInt) -> Self {
-            Document {
-                schema: BIG_INTEGER.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<BigDecimal> for BoxedDoc {
-        fn from(value: BigDecimal) -> Self {
-            Document {
-                schema: BIG_DECIMAL.clone(),
-                value: Value::Number(value.into()),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<ByteBuffer> for BoxedDoc {
-        fn from(value: ByteBuffer) -> Self {
-            Document {
-                schema: BLOB.clone(),
-                value: Value::Blob(value),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<String> for BoxedDoc {
-        fn from(value: String) -> Self {
-            Document {
-                schema: STRING.clone(),
-                value: Value::String(value),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    impl From<Instant> for BoxedDoc {
-        fn from(value: Instant) -> Self {
-            Document {
-                schema: TIMESTAMP.clone(),
-                value: Value::Timestamp(value),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-    impl From<&Instant> for BoxedDoc {
-        fn from(value: &Instant) -> Self {
-            Document {
-                schema: TIMESTAMP.clone(),
-                value: Value::Timestamp(*value),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    smithy!("smithy.api#Document": {
-        list LIST_DOCUMENT_SCHEMA {
-            member: DOCUMENT
-        }
-    });
-
-    impl<T: Into<BoxedDoc>> From<Vec<T>> for BoxedDoc {
-        fn from(value: Vec<T>) -> Self {
-            let result = value.into_iter().map(Into::into).collect();
-            Document {
-                schema: LIST_DOCUMENT_SCHEMA.clone(),
-                value: Value::List(result),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    smithy!("smithy.api#Document": {
-        map MAP_DOCUMENT_SCHEMA {
-            key: STRING
-            value: DOCUMENT
-        }
-    });
-
-    impl<T: Into<BoxedDoc>> From<IndexMap<String, T>> for BoxedDoc {
-        fn from(value: IndexMap<String, T>) -> Self {
-            let mut result = IndexMap::new();
-            for (key, value) in value {
-                result.insert(key, value.into());
-            }
-            Document {
-                schema: MAP_DOCUMENT_SCHEMA.clone(),
-                value: Value::Map(result),
-                discriminator: None,
-            }
-            .into()
-        }
-    }
-
-    macro_rules! option_conversion {
-        ($ty:ty, $schema:ident) => {
-            impl From<Option<$ty>> for BoxedDoc {
-                fn from(value: Option<$ty>) -> Self {
-                    value.map_or_else(
-                        || {
-                            Document {
-                                schema: $schema.clone(),
-                                value: Value::Null,
-                                discriminator: None,
-                            }
-                            .into()
-                        },
-                        Into::into,
-                    )
-                }
-            }
-        };
-    }
-    option_conversion!(String, STRING);
-    option_conversion!(bool, BOOLEAN);
-    option_conversion!(Instant, TIMESTAMP);
-    option_conversion!(ByteBuffer, BLOB);
-    option_conversion!(i8, BYTE);
-    option_conversion!(i16, SHORT);
-    option_conversion!(i32, INTEGER);
-    option_conversion!(i64, LONG);
-    option_conversion!(f32, FLOAT);
-    option_conversion!(BigInt, BIG_INTEGER);
-    option_conversion!(BigDecimal, BIG_DECIMAL);
 }
+
+// ============================================================================
+// Conversions INTO Default Document
+// ============================================================================
+
+impl From<default::Document> for Box<dyn Document> {
+    #[inline]
+    fn from(value: default::Document) -> Self {
+        Box::new(value)
+    }
+}
+
+impl From<bool> for Box<dyn Document> {
+    #[inline]
+    fn from(value: bool) -> Self {
+        default::Document {
+            schema: BOOLEAN.clone(),
+            value: Value::Boolean(value),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<i8> for Box<dyn Document> {
+    #[inline]
+    fn from(value: i8) -> Self {
+        default::Document {
+            schema: BYTE.clone(),
+            value: Value::Number(Number::Byte(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<i16> for Box<dyn Document> {
+    #[inline]
+    fn from(value: i16) -> Self {
+        default::Document {
+            schema: SHORT.clone(),
+            value: Value::Number(Number::Short(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<i32> for Box<dyn Document> {
+    #[inline]
+    fn from(value: i32) -> Self {
+        default::Document {
+            schema: INTEGER.clone(),
+            value: Value::Number(Number::Integer(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<i64> for Box<dyn Document> {
+    #[inline]
+    fn from(value: i64) -> Self {
+        default::Document {
+            schema: LONG.clone(),
+            value: Value::Number(Number::Long(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<f32> for Box<dyn Document> {
+    #[inline]
+    fn from(value: f32) -> Self {
+        default::Document {
+            schema: FLOAT.clone(),
+            value: Value::Number(Number::Float(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<f64> for Box<dyn Document> {
+    #[inline]
+    fn from(value: f64) -> Self {
+        default::Document {
+            schema: DOUBLE.clone(),
+            value: Value::Number(Number::Double(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<&str> for Box<dyn Document> {
+    #[inline]
+    fn from(value: &str) -> Self {
+        default::Document {
+            schema: STRING.clone(),
+            value: Value::String(value.to_string()),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<BigInt> for Box<dyn Document> {
+    #[inline]
+    fn from(value: BigInt) -> Self {
+        default::Document {
+            schema: BIG_INTEGER.clone(),
+            value: Value::Number(Number::BigInt(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<BigDecimal> for Box<dyn Document> {
+    #[inline]
+    fn from(value: BigDecimal) -> Self {
+        default::Document {
+            schema: BIG_DECIMAL.clone(),
+            value: Value::Number(Number::BigDecimal(value)),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<ByteBuffer> for Box<dyn Document> {
+    #[inline]
+    fn from(value: ByteBuffer) -> Self {
+        default::Document {
+            schema: BLOB.clone(),
+            value: Value::Blob(value),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<String> for Box<dyn Document> {
+    #[inline]
+    fn from(value: String) -> Self {
+        default::Document {
+            schema: STRING.clone(),
+            value: Value::String(value),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+impl From<Instant> for Box<dyn Document> {
+    #[inline]
+    fn from(value: Instant) -> Self {
+        default::Document {
+            schema: TIMESTAMP.clone(),
+            value: Value::Timestamp(value),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+impl From<&Instant> for Box<dyn Document> {
+    #[inline]
+    fn from(value: &Instant) -> Self {
+        default::Document {
+            schema: TIMESTAMP.clone(),
+            value: Value::Timestamp(*value),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+smithy!("smithy.api#Document": {
+    list LIST_DOCUMENT_SCHEMA {
+        member: DOCUMENT
+    }
+});
+
+impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
+    fn from(value: Vec<T>) -> Self {
+        let result = value.into_iter().map(Into::into).collect();
+        default::Document {
+            schema: LIST_DOCUMENT_SCHEMA.clone(),
+            value: Value::List(result),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+smithy!("smithy.api#Document": {
+    map MAP_DOCUMENT_SCHEMA {
+        key: STRING
+        value: DOCUMENT
+    }
+});
+
+impl<T: Into<Box<dyn Document>>> From<IndexMap<String, T>> for Box<dyn Document> {
+    fn from(value: IndexMap<String, T>) -> Self {
+        let mut result = IndexMap::new();
+        for (key, value) in value {
+            result.insert(key, value.into());
+        }
+        default::Document {
+            schema: MAP_DOCUMENT_SCHEMA.clone(),
+            value: Value::Map(result),
+            discriminator: None,
+        }
+        .into()
+    }
+}
+
+macro_rules! option_conversion {
+    ($ty:ty, $schema:ident) => {
+        impl From<Option<$ty>> for Box<dyn Document> {
+            fn from(value: Option<$ty>) -> Self {
+                value.map_or_else(
+                    || {
+                        default::Document {
+                            schema: $schema.clone(),
+                            value: Value::Null,
+                            discriminator: None,
+                        }
+                        .into()
+                    },
+                    Into::into,
+                )
+            }
+        }
+    };
+}
+option_conversion!(String, STRING);
+option_conversion!(bool, BOOLEAN);
+option_conversion!(Instant, TIMESTAMP);
+option_conversion!(ByteBuffer, BLOB);
+option_conversion!(i8, BYTE);
+option_conversion!(i16, SHORT);
+option_conversion!(i32, INTEGER);
+option_conversion!(i64, LONG);
+option_conversion!(f32, FLOAT);
+option_conversion!(BigInt, BIG_INTEGER);
+option_conversion!(BigDecimal, BIG_DECIMAL);
 
 // =========================================================================
 // Null Document
@@ -1369,7 +1324,7 @@ mod tests {
     fn list_document_value() {
         let vec = vec!["a", "b", "c"];
         let document_list: Box<dyn Document> = vec.into();
-        let val: &SchemaRef = &default::LIST_DOCUMENT_SCHEMA;
+        let val: &SchemaRef = &LIST_DOCUMENT_SCHEMA;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
         let vec_out: Vec<String> = document_list.try_into().unwrap();
@@ -1384,7 +1339,7 @@ mod tests {
         let mut map_in: IndexMap<String, String> = IndexMap::new();
         map_in.insert("a".to_string(), "b".to_string());
         let map_doc: Box<dyn Document> = map_in.into();
-        let val: &SchemaRef = &default::MAP_DOCUMENT_SCHEMA;
+        let val: &SchemaRef = &MAP_DOCUMENT_SCHEMA;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
 
