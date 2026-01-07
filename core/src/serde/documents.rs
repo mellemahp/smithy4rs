@@ -161,34 +161,42 @@ impl Serializer for DocumentParser {
         })
     }
 
+    #[inline]
     fn write_boolean(self, _schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_float(self, _schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_double(self, _schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_big_integer(
         self,
         _schema: &SchemaRef,
@@ -197,6 +205,7 @@ impl Serializer for DocumentParser {
         Ok(value.clone().into())
     }
 
+    #[inline]
     fn write_big_decimal(
         self,
         _schema: &SchemaRef,
@@ -205,14 +214,17 @@ impl Serializer for DocumentParser {
         Ok(value.clone().into())
     }
 
+    #[inline]
     fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_blob(self, _schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         Ok(value.clone().into())
     }
 
+    #[inline]
     fn write_timestamp(
         self,
         _schema: &SchemaRef,
@@ -221,6 +233,7 @@ impl Serializer for DocumentParser {
         Ok(value.into())
     }
 
+    #[inline]
     fn write_document(
         self,
         _schema: &SchemaRef,
@@ -229,10 +242,12 @@ impl Serializer for DocumentParser {
         Ok(value.clone())
     }
 
+    #[inline]
     fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Ok(NULL.clone())
     }
 
+    #[inline]
     fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         // When skipping (e.g., for None values), return a null document
         Ok(NULL.clone())
@@ -262,6 +277,7 @@ impl ListSerializer for DocumentListAccumulator {
         Ok(())
     }
 
+    #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Ok(crate::schema::default::Document {
             schema: self.schema,
@@ -307,6 +323,7 @@ impl MapSerializer for DocumentMapAccumulator {
         Ok(())
     }
 
+    #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Ok(crate::schema::default::Document {
             schema: self.schema,
@@ -339,6 +356,7 @@ impl StructSerializer for DocumentMapAccumulator {
         Ok(())
     }
 
+    #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Ok(crate::schema::default::Document {
             schema: self.schema,
@@ -532,7 +550,6 @@ impl Deserializer<'_> for DocumentDeserializer {
     }
 }
 
-// TODO(test): overhaul these to use test shapes
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
