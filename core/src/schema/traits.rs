@@ -79,11 +79,7 @@
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 use downcast_rs::{DowncastSync, impl_downcast};
-use triomphe::Arc;
-use unsize::{CoerceUnsize, Coercion};
-use crate::{
-    schema::{Document, ShapeId},
-};
+use crate::{schema::{Document, ShapeId}, Ref};
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -123,7 +119,7 @@ pub trait StaticTraitId: SmithyTrait {
 /// implementations.
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct TraitRef(Arc<dyn SmithyTrait>);
+pub struct TraitRef(Ref<dyn SmithyTrait>);
 impl PartialEq for TraitRef {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id() && (self.value() == other.value())
@@ -137,16 +133,16 @@ impl Deref for TraitRef {
         &*self.0
     }
 }
-impl From<Arc<dyn SmithyTrait>> for TraitRef {
+impl From<Ref<dyn SmithyTrait>> for TraitRef {
     #[inline]
-    fn from(value: Arc<dyn SmithyTrait>) -> Self {
+    fn from(value: Ref<dyn SmithyTrait>) -> Self {
         Self(value)
     }
 }
 impl<T: SmithyTrait> From<T> for TraitRef {
     #[inline]
     fn from(value: T) -> Self {
-        Self(Arc::new(value).unsize(Coercion!(to dyn SmithyTrait)))
+        Self(Ref::new(value))
     }
 }
 impl Debug for TraitRef {
