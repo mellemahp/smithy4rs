@@ -1,3 +1,6 @@
+//! Schema-guided serialization of data from a Smithy Shape
+//!
+//! TODO(docs): Implementation docs
 use std::{error::Error as StdError, fmt::Display};
 
 use crate::{

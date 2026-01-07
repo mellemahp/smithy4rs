@@ -10,8 +10,10 @@ use rustc_hash::FxBuildHasher;
 
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
-    prelude::{DefaultTrait, RequiredTrait},
-    schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
+    schema::{
+        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef,
+        prelude::{DefaultTrait, RequiredTrait},
+    },
 };
 
 /// Reference to a Smithy Schema type.
@@ -22,7 +24,7 @@ use crate::{
 pub type SchemaRef = Ref<Schema>;
 
 /// Convenience type representing a list of trait implementations.
-pub type TraitList = Vec<TraitRef>;
+type TraitList = Vec<TraitRef>;
 
 /// Describes a generated shape with metadata from a Smithy model.
 #[derive(PartialEq)]
@@ -610,6 +612,7 @@ impl SchemaBuilder {
 /// Schema targeted by a member schema
 ///
 /// Member targets are lazily resolved in order to support recursive shapes
+#[doc(hidden)]
 #[derive(Clone)]
 pub enum MemberTarget {
     /// A resolved member schema
@@ -768,7 +771,7 @@ impl Debug for MemberSchema {
 mod tests {
     use super::*;
     use crate::{
-        prelude::{JsonNameTrait, STRING},
+        schema::prelude::{JsonNameTrait, STRING},
         traits,
     };
 

@@ -13,13 +13,11 @@
 //!
 //! [Smithy]: https://smithy.io/
 
+/// Schemas used to describe and (de)serialize generated shapes
+/// with metadata from a Smithy model.
 pub mod schema;
 
-use std::sync::Arc;
-pub use schema::prelude;
-
-
-
+/// Schema-enabled (De)serialization
 pub mod serde;
 
 // Don't list macros as a module in generated docs
@@ -28,7 +26,9 @@ pub mod macros;
 
 /// Common cheaply-copyable reference type.
 /// Defined as a common type so Arc type could be swapped out.
-pub type Ref<T> = Arc<T>;
+pub type Ref<T> = std::sync::Arc<T>;
+
+pub use schema::prelude;
 
 // =================================================================
 // Re-exports of depenency types

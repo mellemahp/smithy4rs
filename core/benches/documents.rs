@@ -1,31 +1,34 @@
 use std::hint::black_box;
-use criterion::{criterion_group, criterion_main, Criterion};
+
+use criterion::{Criterion, criterion_group, criterion_main};
 use indexmap::IndexMap;
-use smithy4rs_core::prelude::{INTEGER, STRING};
-use smithy4rs_core::schema::Document;
-use smithy4rs_core::smithy;
+use smithy4rs_core::{
+    prelude::{INTEGER, STRING},
+    schema::Document,
+    serde::ShapeBuilder,
+    smithy,
+};
 use smithy4rs_core_derive::SmithyShape;
-use smithy4rs_core::serde::builders::ShapeBuilder;
 
 smithy!("com.example#Map": {
-        map MAP_SCHEMA {
-            key: STRING
-            value: STRING
-        }
-    });
+    map MAP_SCHEMA {
+        key: STRING
+        value: STRING
+    }
+});
 smithy!("com.example#List": {
-        list LIST_SCHEMA {
-            member: STRING
-        }
-    });
+    list LIST_SCHEMA {
+        member: STRING
+    }
+});
 smithy!("com.example#Shape": {
-        structure SCHEMA {
-            A: STRING = "a"
-            B: INTEGER = "b"
-            LIST: LIST_SCHEMA = "list"
-            MAP: MAP_SCHEMA = "map"
-        }
-    });
+    structure SCHEMA {
+        A: STRING = "a"
+        B: INTEGER = "b"
+        LIST: LIST_SCHEMA = "list"
+        MAP: MAP_SCHEMA = "map"
+    }
+});
 
 #[derive(SmithyShape, Clone, PartialEq)]
 #[smithy_schema(SCHEMA)]
@@ -71,10 +74,12 @@ pub fn convert_from(c: &mut Criterion) {
 
     c.bench_function("Document to shape", |b| {
         b.iter(|| {
-            let _ = black_box(SerializeMeBuilder::from_document(document.clone())
-                .expect("Should convert to document")
-                .build()
-                .expect("Should build document"));
+            let _ = black_box(
+                SerializeMeBuilder::from_document(document.clone())
+                    .expect("Should convert to document")
+                    .build()
+                    .expect("Should build document"),
+            );
         })
     });
 }

@@ -155,7 +155,7 @@ impl BuilderFieldData {
     fn field_type(&self, crate_ident: &TokenStream) -> TokenStream {
         let ty = match &self.target {
             BuildTarget::Builable { shape, builder } => {
-                quote! { #crate_ident::serde::builders::MaybeBuilt<#shape, #builder> }
+                quote! { #crate_ident::serde::MaybeBuilt<#shape, #builder> }
             }
             BuildTarget::Primitive(ty) => quote! { #ty },
         };
@@ -166,7 +166,7 @@ impl BuilderFieldData {
             }
         } else {
             quote! {
-                #field_name: #crate_ident::serde::builders::Required<#ty>
+                #field_name: #crate_ident::serde::Required<#ty>
             }
         }
     }
@@ -179,7 +179,7 @@ impl BuilderFieldData {
         if self.optional {
             quote! { #field_name: None }
         } else {
-            quote! { #field_name: #crate_ident::serde::builders::Required::Unset }
+            quote! { #field_name: #crate_ident::serde::Required::Unset }
         }
     }
 
@@ -191,19 +191,19 @@ impl BuilderFieldData {
         let wrapper = if self.optional {
             quote! { Some }
         } else {
-            quote! { #crate_ident::serde::builders::Required::Set }
+            quote! { #crate_ident::serde::Required::Set }
         };
         match &self.target {
             BuildTarget::Builable { shape, builder } => {
                 let builder_fn = Ident::new(&format!("{field_name}_builder"), Span::call_site());
                 quote! {
                     pub fn #field_name(mut self, value: #shape) -> Self {
-                        self.#field_name = #wrapper(#crate_ident::serde::builders::MaybeBuilt::Struct(value));
+                        self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Struct(value));
                         self
                     }
 
                     pub fn #builder_fn(mut self, value: #builder) -> Self {
-                        self.#field_name = #wrapper(#crate_ident::serde::builders::MaybeBuilt::Builder(value));
+                        self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Builder(value));
                         self
                     }
                 }

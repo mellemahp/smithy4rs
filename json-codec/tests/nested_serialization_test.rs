@@ -1,6 +1,6 @@
 // TODO(test): add some test utils for validating the serialized json outputs, perhaps snapshots would suffice
 use indexmap::IndexMap;
-use smithy4rs_core::serde::{builders::ShapeBuilder, serializers::SerializeWithSchema};
+use smithy4rs_core::serde::{ShapeBuilder, se::SerializeWithSchema};
 use smithy4rs_json_codec::JsonSerializer;
 use smithy4rs_test_utils::*;
 

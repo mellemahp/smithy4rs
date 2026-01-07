@@ -1,6 +1,7 @@
 use crate::{
-    prelude::UNIT,
+    annotation_trait,
     schema::{SchemaRef, StaticSchemaShape},
+    smithy,
 };
 
 /// # Unit type
@@ -12,7 +13,21 @@ use crate::{
 /// <div class="note">
 /// **NOTE**: Units are always serialized and deserialized as empty structs.
 /// So for example in a JSON protocol the Unit would be represented as `{}`.
+/// </div>
 pub struct Unit;
+
+// ============================================================================
+// Unit Type
+// ---------
+// Unit types is used by unions and operations to indicate input/output
+// or variants that have no meaningful value
+// ============================================================================
+annotation_trait!(UnitTypeTrait, "smithy.api#UnitTypeTrait");
+
+smithy!("smithy.api#Unit": {
+    @UnitTypeTrait;
+    structure UNIT {}
+});
 
 impl StaticSchemaShape for Unit {
     fn schema() -> &'static SchemaRef {

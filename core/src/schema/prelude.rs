@@ -1,7 +1,7 @@
 //! # Prelude
 //! [`crate::schema::Schema`] definitions for the [Smithy prelude](https://github.com/smithy-lang/smithy/blob/65b473ddb94f9edda933f00bab988d465b2bd2fe/smithy-model/src/main/resources/software/amazon/smithy/model/loader/prelude.smithy)
 //!
-//! The prelude consists of public, built-in shapes like [`STRING`], [`INTEGER`], etc. that
+//! The prelude consists of public, built-in shapes like `STRING`, `INTEGER`, etc. that
 //! are available to all models. Prelude shapes and traits are all in the `smithy.api` namespace
 //! and must be hard-coded as they are used by generate shapes.
 
@@ -65,19 +65,6 @@ smithy!("smithy.api#PrimitiveFloat": {
 smithy!("smithy.api#PrimitiveDouble": {
     @DefaultTrait::new(0f64);
     double PRIMITIVE_DOUBLE
-});
-
-// ============================================================================
-// Unit Type
-// ---------
-// Unit types is used by unions and operations to indicate input/output
-// or variants that have no meaningful value
-// ============================================================================
-annotation_trait!(UnitTypeTrait, "smithy.api#UnitTypeTrait");
-
-smithy!("smithy.api#Unit": {
-    @UnitTypeTrait;
-    structure UNIT {}
 });
 
 // ============================================================================

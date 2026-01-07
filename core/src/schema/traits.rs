@@ -79,7 +79,11 @@
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 use downcast_rs::{DowncastSync, impl_downcast};
-use crate::{schema::{Document, ShapeId}, Ref};
+
+use crate::{
+    Ref,
+    schema::{Document, ShapeId},
+};
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -177,14 +181,12 @@ impl DynamicTrait {
     /// <div class ="warning">
     /// **WARNING**: Traits created with this method cannot be downcast into a specific implementation.
     /// </div>
-    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(
-        id: I,
-        value: D,
-    ) -> TraitRef {
+    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(id: I, value: D) -> TraitRef {
         Self {
             id: id.into(),
             value: value.into(),
-        }.into()
+        }
+        .into()
     }
 }
 
@@ -282,7 +284,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        prelude::{HttpErrorTrait, JsonNameTrait},
+        schema::prelude::{HttpErrorTrait, JsonNameTrait},
         traits,
     };
 

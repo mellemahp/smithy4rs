@@ -12,8 +12,8 @@ use indexmap::IndexMap;
 
 use crate::{
     BigDecimal, BigInt, Instant,
-    schema::{Document, documents::NULL},
-    serde::{builders::MaybeBuilt, serializers::SerializeWithSchema},
+    schema::{Document, NULL},
+    serde::{MaybeBuilt, serializers::SerializeWithSchema},
 };
 
 //////////////////////////////////////////////////////////////////////////////

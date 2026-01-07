@@ -120,7 +120,7 @@ impl Error for DocumentError {
     }
 }
 
-pub struct DocumentParser;
+struct DocumentParser;
 // TODO(document validation): Should this have schema type validation?
 impl Serializer for DocumentParser {
     type Error = DocumentError;
@@ -557,7 +557,7 @@ mod tests {
     use smithy4rs_core_derive::SmithyShape;
 
     use super::*;
-    use crate::{prelude::*, smithy};
+    use crate::{schema::prelude::*, smithy};
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {

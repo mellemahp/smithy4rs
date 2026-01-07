@@ -1,5 +1,8 @@
 use indexmap::IndexMap;
-use smithy4rs_core::{prelude::*, smithy};
+use smithy4rs_core::{
+    schema::prelude::{INTEGER, STRING},
+    smithy,
+};
 use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#StringMap": {

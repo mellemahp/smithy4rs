@@ -1,14 +1,15 @@
 mod adapter;
-pub mod builders;
+mod builders;
+pub use builders::*;
+
 pub mod correction;
 pub mod debug;
 pub mod deserializers;
-pub mod documents;
+mod documents;
+pub use documents::*;
 pub mod serializers;
-pub mod unit;
-pub mod validation;
+mod unit;
 
-pub use builders::{Buildable, ShapeBuilder};
+pub mod validation;
 pub use deserializers as de;
 pub use serializers as se;
-pub use validation as validate;
