@@ -286,8 +286,8 @@ macro_rules! smithy_internal {
         $(($member_schema_name:ident, $member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
         $crate::pastey::paste! {
-            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<$crate::Ref<$crate::schema::SchemaBuilder>> =
-                $crate::LazyLock::new(|| $crate::Ref::new($builder));
+            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
+                $crate::LazyLock::new(|| std::sync::Arc::new($builder));
 
             pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
@@ -307,8 +307,8 @@ macro_rules! smithy_internal {
         $(($member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
         $crate::pastey::paste! {
-            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<$crate::Ref<$crate::schema::SchemaBuilder>> =
-                $crate::LazyLock::new(|| $crate::Ref::new($builder));
+            pub static [<$schema_name _BUILDER>]: $crate::LazyLock<std::sync::Arc<$crate::schema::SchemaBuilder>> =
+                $crate::LazyLock::new(|| std::sync::Arc::new($builder));
 
             pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)

@@ -20,7 +20,7 @@
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
-//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, NULL};
+//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DefaultDocumentValue, NULL};
 //!
 //! smithy!("com.example#SensitiveString": {
 //!     @SensitiveTrait;
@@ -54,7 +54,7 @@
 //!
 //! Example:
 //! ```rust
-//! use smithy4rs_core::schema::{DynamicTrait, ShapeId};
+//! use smithy4rs_core::schema::{DefaultDocumentValue, DynamicTrait, ShapeId};
 //!
 //! // Create a `dyn SmithyTrait` from just the ID and object value.
 //! // This corresponds to a custom trait in the smithy model like:
@@ -79,9 +79,9 @@
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 use downcast_rs::{DowncastSync, impl_downcast};
-use triomphe::Arc;
-use unsize::{CoerceUnsize, Coercion};
+
 use crate::{
+    Ref,
     schema::{Document, ShapeId},
 };
 
@@ -123,7 +123,7 @@ pub trait StaticTraitId: SmithyTrait {
 /// implementations.
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct TraitRef(Arc<dyn SmithyTrait>);
+pub struct TraitRef(Ref<dyn SmithyTrait>);
 impl PartialEq for TraitRef {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id() && (self.value() == other.value())
@@ -137,16 +137,16 @@ impl Deref for TraitRef {
         &*self.0
     }
 }
-impl From<Arc<dyn SmithyTrait>> for TraitRef {
+impl From<Ref<dyn SmithyTrait>> for TraitRef {
     #[inline]
-    fn from(value: Arc<dyn SmithyTrait>) -> Self {
+    fn from(value: Ref<dyn SmithyTrait>) -> Self {
         Self(value)
     }
 }
 impl<T: SmithyTrait> From<T> for TraitRef {
     #[inline]
     fn from(value: T) -> Self {
-        Self(Arc::new(value).unsize(Coercion!(to dyn SmithyTrait)))
+        Self(Ref::new(value))
     }
 }
 impl Debug for TraitRef {
@@ -184,11 +184,11 @@ impl DynamicTrait {
     pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(
         id: I,
         value: D,
-    ) -> TraitRef {
-        Self {
+    ) -> Ref<dyn SmithyTrait> {
+        Ref::new(Self {
             id: id.into(),
             value: value.into(),
-        }.into()
+        })
     }
 }
 
