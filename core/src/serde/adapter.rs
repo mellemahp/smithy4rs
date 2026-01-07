@@ -293,7 +293,10 @@ mod tests {
     use smithy4rs_core_derive::SmithyShape;
 
     use super::*;
-    use crate::{prelude::*, schema::SchemaShape, smithy};
+    use crate::{
+        schema::{SchemaShape, prelude::*},
+        smithy,
+    };
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {

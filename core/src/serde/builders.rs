@@ -1,39 +1,46 @@
+//! # Shape Builders
+//!
+//! Enable the construction of shape manually or through a deserializer.
+//!
+//! ## Derived Builders
+//!
+//! The `SmithyShape` derive macro will automatically generate a builder
+//! for a Smithy shape.
+//!
+//! For example:
+//! ```rust,ignore
+//!  #[derive(SmithyShape)]
+//!  #[smithy_schema(SCHEMA)]
+//!  pub struct Test {
+//!      #[smithy_schema(A)]
+//!      a: String,
+//!  }
+//! ```
+//!
+//! Will automatically generate a `TestBuilder` structure that can be used to
+//! construct and instance of the `Test` shape:
+//! ```rust,ignore
+//! let built: Test = Test::builder().a("stuff".into()).build()
+//! ```
+
 use crate::{
     schema::{Document, DocumentError, SchemaRef, StaticSchemaShape},
     serde::{
         correction::{ErrorCorrection, ErrorCorrectionDefault},
         deserializers::DeserializeWithSchema,
         se::{SerializeWithSchema, Serializer},
-        validate::DefaultValidator,
-        validation::{ValidationErrors, Validator},
+        validation::{DefaultValidator, ValidationErrors, Validator},
     },
 };
+//============================================================================
+// Builder Traits
+//============================================================================
 
 /// Builder for a Smithy Shape
 ///
 /// Used during deserialization to accumulate field values
 /// before constructing the final shape. Builders implement
 /// [`DeserializeWithSchema`] to handle the actual deserialization logic.
-///
-/// ### Derived Builders
-/// The `SmithyShape` derive macro will automatically generate a builder
-/// for Smithy shape.
-///
-/// For example:
-/// ```rust,ignore
-///  #[derive(SmithyShape)]
-///  #[smithy_schema(SCHEMA)]
-///  pub struct Test {
-///      #[smithy_schema(A)]
-///      a: String,
-///  }
-/// ```
-///
-/// Will automatically generate a `TestBuilder` structure that can be used to
-/// construct and instance of the `Test` shape:
-/// ```rust,ignore
-/// let built: Test = Test::builder().a("stuff".into()).build()
-/// ```
 ///
 pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     Sized + DeserializeWithSchema<'de> + SerializeWithSchema + ErrorCorrection<Value = S>
@@ -97,6 +104,10 @@ where
         B::new()
     }
 }
+
+//============================================================================
+// Builder Adapter Types
+//============================================================================
 
 /// Indicates that a field is required to be set in a builder.
 ///

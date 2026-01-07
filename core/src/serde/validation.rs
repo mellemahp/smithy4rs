@@ -1,6 +1,6 @@
-//! # Validation
+//! Validation of shapes against a schema
 //!
-//! Validation compare a shape against a set of constraints defined in the Smithy Model.
+//! Validation compares a shape against a set of constraints defined in the Smithy Model.
 //!
 //! ## Some basic requirements
 //! Validation in `smithy4rs` has a few fundamental requirements:
@@ -71,8 +71,10 @@ use thiserror::Error;
 
 use crate::{
     BigDecimal, FxIndexSet, Instant,
-    prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
-    schema::{Document, Schema, SchemaRef, ShapeType},
+    schema::{
+        Document, Schema, SchemaRef, ShapeType,
+        prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
+    },
     serde::{
         se::{SerializeWithSchema, Serializer},
         serializers,
@@ -128,7 +130,6 @@ pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
 // ============================================================================
 // Default Implementation
 // ============================================================================
-
 /// Validator that ensures shapes conform to built-in Smithy constraints
 ///
 /// This validator will check that shapes conform to the provided schema types
@@ -1289,7 +1290,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        prelude::{INTEGER, STRING},
+        schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
         serde::ShapeBuilder,
         smithy,
     };

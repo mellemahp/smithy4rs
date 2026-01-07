@@ -1,3 +1,6 @@
+//! Schema-guided deserialization of data into a Smithy Shape
+//!
+//! TODO(docs): Implementation docs
 use std::{error::Error as StdError, fmt::Display};
 
 use indexmap::IndexMap;
@@ -235,7 +238,7 @@ pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
     ///
     ///
     /// # Errors
-    /// Returns [`D::Error`] if data from the `Deserializer` could not be read into
+    /// Returns [`Error`] if data from the `Deserializer` could not be read into
     /// this shape type.
     fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error>;
 }
@@ -259,7 +262,7 @@ pub trait DeserializeWithSchema<'de>: Sized {
     /// Deserialize this value from the given deserializer using the provided schema.
     ///
     /// # Errors
-    /// Returns [`D::Error`] if data from the `Deserializer` could not be read into
+    /// Returns [`Error`] if data from the `Deserializer` could not be read into
     /// this shape type. This could be due to either a schema or data mismatch.
     fn deserialize_with_schema<D>(
         schema: &SchemaRef,

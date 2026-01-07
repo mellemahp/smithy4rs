@@ -3,15 +3,17 @@ use std::{
     fmt::{Debug, Formatter},
     hash::Hash,
     ops::Deref,
-    sync::{Arc, LazyLock, OnceLock, RwLock},
+    sync::{LazyLock, OnceLock, RwLock},
 };
 
 use rustc_hash::FxBuildHasher;
 
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
-    prelude::{DefaultTrait, RequiredTrait},
-    schema::{ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef},
+    schema::{
+        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef,
+        prelude::{DefaultTrait, RequiredTrait},
+    },
 };
 
 /// Reference to a Smithy Schema type.
@@ -22,7 +24,7 @@ use crate::{
 pub type SchemaRef = Ref<Schema>;
 
 /// Convenience type representing a list of trait implementations.
-pub type TraitList = Vec<TraitRef>;
+type TraitList = Vec<TraitRef>;
 
 /// Describes a generated shape with metadata from a Smithy model.
 #[derive(PartialEq)]
@@ -610,6 +612,7 @@ impl SchemaBuilder {
 /// Schema targeted by a member schema
 ///
 /// Member targets are lazily resolved in order to support recursive shapes
+#[doc(hidden)]
 #[derive(Clone)]
 pub enum MemberTarget {
     /// A resolved member schema
@@ -617,7 +620,7 @@ pub enum MemberTarget {
     /// A potentially unresolved member value
     Lazy {
         /// Builder reference. Used to resolve a target value.
-        builder: Arc<SchemaBuilder>,
+        builder: Ref<SchemaBuilder>,
         /// Target schema, lazily set.
         value: OnceLock<SchemaRef>,
     },
@@ -655,8 +658,8 @@ impl From<&LazyLock<SchemaRef>> for MemberTarget {
         MemberTarget::Resolved(schema.deref().clone())
     }
 }
-impl From<&Arc<SchemaBuilder>> for MemberTarget {
-    fn from(builder_ref: &Arc<SchemaBuilder>) -> Self {
+impl From<&Ref<SchemaBuilder>> for MemberTarget {
+    fn from(builder_ref: &Ref<SchemaBuilder>) -> Self {
         MemberTarget::Lazy {
             builder: builder_ref.clone(),
             value: OnceLock::new(),
@@ -692,12 +695,7 @@ impl Ord for MemberSchemaBuilder {
     }
 }
 impl MemberSchemaBuilder {
-    pub(super) fn new(
-        name: String,
-        id: ShapeId,
-        member_target: MemberTarget,
-        traits: TraitList,
-    ) -> Self {
+    fn new(name: String, id: ShapeId, member_target: MemberTarget, traits: TraitList) -> Self {
         MemberSchemaBuilder {
             name,
             id,
@@ -707,7 +705,7 @@ impl MemberSchemaBuilder {
         }
     }
 
-    pub(super) const fn set_index(&mut self, index: usize) {
+    const fn set_index(&mut self, index: usize) {
         self.member_index = Some(index);
     }
 
@@ -715,7 +713,7 @@ impl MemberSchemaBuilder {
         self.traits.contains_type::<RequiredTrait>() && !self.traits.contains_type::<DefaultTrait>()
     }
 
-    pub(super) fn build(&self) -> SchemaRef {
+    fn build(&self) -> SchemaRef {
         Ref::new(Schema::Member(MemberSchema {
             id: self.id.clone(),
             target: self.member_target.clone(),
@@ -773,7 +771,7 @@ impl Debug for MemberSchema {
 mod tests {
     use super::*;
     use crate::{
-        prelude::{JsonNameTrait, STRING},
+        schema::prelude::{JsonNameTrait, STRING},
         traits,
     };
 
@@ -877,7 +875,7 @@ mod tests {
 
     #[test]
     fn self_referential_schema() {
-        let builder = Arc::new(Schema::structure_builder("api.smithy#Example", traits![]));
+        let builder = Ref::new(Schema::structure_builder("api.smithy#Example", traits![]));
         let output = builder
             .put_member("name", &STRING, traits![])
             .put_member("self", &builder, traits![])
@@ -895,8 +893,8 @@ mod tests {
 
     #[test]
     fn mutually_recursive_schemas() {
-        let builder_a = Arc::new(Schema::structure_builder("api.smithy#ExampleA", traits![]));
-        let builder_b = Arc::new(Schema::structure_builder("api.smithy#ExampleB", traits![]));
+        let builder_a = Ref::new(Schema::structure_builder("api.smithy#ExampleA", traits![]));
+        let builder_b = Ref::new(Schema::structure_builder("api.smithy#ExampleB", traits![]));
 
         let output_a = builder_a
             .put_member("other_b", &builder_b, traits![])
@@ -928,11 +926,11 @@ mod tests {
 
     #[test]
     fn recursive_via_list() {
-        let intermediate_builder = Arc::new(Schema::structure_builder(
+        let intermediate_builder = Ref::new(Schema::structure_builder(
             "api.smithy#Intermediate",
             traits![],
         ));
-        let list_builder = Arc::new(Schema::list_builder("api.smithy#RecursiveList", traits![]));
+        let list_builder = Ref::new(Schema::list_builder("api.smithy#RecursiveList", traits![]));
         let intermediate_struct = intermediate_builder
             .put_member("list", &list_builder, traits![])
             .build();
@@ -971,11 +969,11 @@ mod tests {
 
     #[test]
     fn recursive_via_map() {
-        let intermediate_builder = Arc::new(Schema::structure_builder(
+        let intermediate_builder = Ref::new(Schema::structure_builder(
             "api.smithy#Intermediate",
             traits![],
         ));
-        let map_builder = Arc::new(Schema::map_builder("api.smithy#RecursiveMap", traits![]));
+        let map_builder = Ref::new(Schema::map_builder("api.smithy#RecursiveMap", traits![]));
         let intermediate_struct = intermediate_builder
             .put_member("map", &map_builder, traits![])
             .build();

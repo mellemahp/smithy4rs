@@ -1,3 +1,17 @@
+//! Utilities for implementing [`Debug`] for generated shapes
+//!
+//! Smithy shape debug implementations are similar to the default
+//! implementation derived by the `Debug` macro. However, unlike
+//! the default implementation the Smithy implementations must respect
+//! the `@sensitive` trait. Fields and structures with this trait should
+//! _always_ be redacted when written to a string in order to avoid leaking
+//! sensitive info into logs and API responses.
+//!
+//! ## Derived Debug Implementations
+//!
+//! The `SmithyShape` derive macro will automatically derive a `Debug` implementation
+//! for Smithy Shapes.
+//!
 use core::fmt;
 use std::fmt::{Debug, DebugList, DebugMap, DebugStruct, Display, Error, Formatter};
 
@@ -6,8 +20,7 @@ use thiserror::Error;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    prelude::SensitiveTrait,
-    schema::{Document, SchemaRef, SmithyTrait},
+    schema::{Document, SchemaRef, SmithyTrait, prelude::SensitiveTrait},
     serde::{
         debug::FmtError::Custom,
         se::{ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer},
@@ -21,7 +34,6 @@ use crate::{
 ///
 /// This class should not be used directly by users. Instead, users should use generated
 /// `Debug` implementation for shapes.
-#[doc(hidden)]
 pub struct DebugWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
 impl<'a, T: SerializeWithSchema> DebugWrapper<'a, T> {
     pub const fn new(schema: &'a SchemaRef, value: &'a T) -> Self {
@@ -397,7 +409,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        prelude::{MediaTypeTrait, STRING},
+        schema::prelude::{MediaTypeTrait, STRING},
         smithy,
     };
 

@@ -1,6 +1,12 @@
 #![allow(dead_code)]
 
-use smithy4rs_core::{prelude::*, smithy};
+use smithy4rs_core::{
+    schema::{
+        UNIT,
+        prelude::{INTEGER, STRING},
+    },
+    smithy,
+};
 use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
 smithy!("test#SimpleUnion": {

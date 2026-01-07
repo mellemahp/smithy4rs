@@ -152,7 +152,7 @@ fn deserialize_union(
     if data.variants.iter().any(|v| v.fields.is_empty()) {
         imports = quote! {
             #imports
-            use #crate_ident::schema::unit::Unit as _Unit;
+            use #crate_ident::schema::Unit as _Unit;
         }
     }
     let unknown = syn::parse_str::<Ident>("Unknown").unwrap();

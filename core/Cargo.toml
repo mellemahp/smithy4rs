@@ -22,6 +22,7 @@ regex.workspace = true
 fast-str.workspace = true
 temporal_rs.workspace = true
 
+# <TODO> move to workspace
 pastey = "0.2.1"
 serde = { version = "1.0", features = ["derive"] }
 static_str_ops = "0.1.2"
@@ -42,4 +43,8 @@ harness = false
 
 [[bench]]
 name = "validation"
+harness = false
+
+[[bench]]
+name = "documents"
 harness = false

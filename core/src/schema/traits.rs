@@ -20,7 +20,7 @@
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
-//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, DefaultDocumentValue, NULL};
+//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, NULL};
 //!
 //! smithy!("com.example#SensitiveString": {
 //!     @SensitiveTrait;
@@ -54,7 +54,7 @@
 //!
 //! Example:
 //! ```rust
-//! use smithy4rs_core::schema::{DefaultDocumentValue, DynamicTrait, ShapeId};
+//! use smithy4rs_core::schema::{DynamicTrait, ShapeId};
 //!
 //! // Create a `dyn SmithyTrait` from just the ID and object value.
 //! // This corresponds to a custom trait in the smithy model like:
@@ -181,14 +181,12 @@ impl DynamicTrait {
     /// <div class ="warning">
     /// **WARNING**: Traits created with this method cannot be downcast into a specific implementation.
     /// </div>
-    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(
-        id: I,
-        value: D,
-    ) -> Ref<dyn SmithyTrait> {
-        Ref::new(Self {
+    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(id: I, value: D) -> TraitRef {
+        Self {
             id: id.into(),
             value: value.into(),
-        })
+        }
+        .into()
     }
 }
 
@@ -286,7 +284,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        prelude::{HttpErrorTrait, JsonNameTrait},
+        schema::prelude::{HttpErrorTrait, JsonNameTrait},
         traits,
     };
 

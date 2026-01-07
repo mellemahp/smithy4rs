@@ -9,7 +9,7 @@ use smithy4rs_core::{
     prelude::*,
     serde::{
         ShapeBuilder,
-        validate::{DefaultValidator, Validator},
+        validation::{DefaultValidator, Validator},
     },
     smithy,
 };

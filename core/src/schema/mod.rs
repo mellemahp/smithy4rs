@@ -1,15 +1,18 @@
+/// Core Smithy shape and trait definitions
 pub mod prelude;
 
 mod traits;
 pub use traits::*;
 
-pub mod documents;
+mod documents;
 pub use documents::*;
 
 mod shapes;
 pub use shapes::*;
 
 mod schemas;
-pub mod unit;
 pub use schemas::*;
-pub use unit::*;
+
+mod unit;
+// Do not include the unit trait as it can remain private.
+pub use unit::{UNIT, Unit};

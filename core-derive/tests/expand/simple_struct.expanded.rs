@@ -58,9 +58,9 @@ const _: () = {
 };
 #[automatically_derived]
 pub struct SimpleStructBuilder {
-    field_a: smithy4rs_core::serde::builders::Required<String>,
-    field_b: smithy4rs_core::serde::builders::Required<i32>,
-    field_c: Option<smithy4rs_core::serde::builders::MaybeBuilt<Nested, NestedBuilder>>,
+    field_a: smithy4rs_core::serde::Required<String>,
+    field_b: smithy4rs_core::serde::Required<i32>,
+    field_c: Option<smithy4rs_core::serde::MaybeBuilt<Nested, NestedBuilder>>,
 }
 #[automatically_derived]
 impl ::core::clone::Clone for SimpleStructBuilder {
@@ -77,25 +77,25 @@ impl ::core::clone::Clone for SimpleStructBuilder {
 impl SimpleStructBuilder {
     pub fn new() -> Self {
         Self {
-            field_a: smithy4rs_core::serde::builders::Required::Unset,
-            field_b: smithy4rs_core::serde::builders::Required::Unset,
+            field_a: smithy4rs_core::serde::Required::Unset,
+            field_b: smithy4rs_core::serde::Required::Unset,
             field_c: None,
         }
     }
     pub fn field_a(mut self, value: String) -> Self {
-        self.field_a = smithy4rs_core::serde::builders::Required::Set(value);
+        self.field_a = smithy4rs_core::serde::Required::Set(value);
         self
     }
     pub fn field_b(mut self, value: i32) -> Self {
-        self.field_b = smithy4rs_core::serde::builders::Required::Set(value);
+        self.field_b = smithy4rs_core::serde::Required::Set(value);
         self
     }
     pub fn field_c(mut self, value: Nested) -> Self {
-        self.field_c = Some(smithy4rs_core::serde::builders::MaybeBuilt::Struct(value));
+        self.field_c = Some(smithy4rs_core::serde::MaybeBuilt::Struct(value));
         self
     }
     pub fn field_c_builder(mut self, value: NestedBuilder) -> Self {
-        self.field_c = Some(smithy4rs_core::serde::builders::MaybeBuilt::Builder(value));
+        self.field_c = Some(smithy4rs_core::serde::MaybeBuilt::Builder(value));
         self
     }
 }
@@ -294,7 +294,7 @@ const _: () = {
 };
 #[automatically_derived]
 pub struct NestedBuilder {
-    field_a: smithy4rs_core::serde::builders::Required<String>,
+    field_a: smithy4rs_core::serde::Required<String>,
 }
 #[automatically_derived]
 impl ::core::clone::Clone for NestedBuilder {
@@ -309,11 +309,11 @@ impl ::core::clone::Clone for NestedBuilder {
 impl NestedBuilder {
     pub fn new() -> Self {
         Self {
-            field_a: smithy4rs_core::serde::builders::Required::Unset,
+            field_a: smithy4rs_core::serde::Required::Unset,
         }
     }
     pub fn field_a(mut self, value: String) -> Self {
-        self.field_a = smithy4rs_core::serde::builders::Required::Set(value);
+        self.field_a = smithy4rs_core::serde::Required::Set(value);
         self
     }
 }
