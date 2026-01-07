@@ -31,7 +31,7 @@ pub type Ref<T> = std::sync::Arc<T>;
 pub use schema::prelude;
 
 // =================================================================
-// Re-exports of depenency types
+// Re-exports of dependency types
 // =================================================================
 
 // Base types
