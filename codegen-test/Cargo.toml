@@ -1,0 +1,9 @@
+[package]
+name = "codegen-test"
+description = "Crate that tests the Smithy codegen plugin"
+version.workspace = true
+publish = false
+edition.workspace = true
+
+[build-dependencies]
+smithy-cargo = "1.1.0"
