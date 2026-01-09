@@ -91,7 +91,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     @Override
     public Symbol longShape(LongShape longShape) {
         return Symbol.builder()
-                .name("long")
+                .name("i64")
                 .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(longShape))
                 .namespace("std", "::")
                 .build();

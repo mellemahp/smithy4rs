@@ -25,7 +25,7 @@ pub struct AllPrimitivesStruct {
     #[smithy_schema(INTEGER_FIELD)]
     pub integer_field: i32,
     #[smithy_schema(LONG_FIELD)]
-    pub long_field: long,
+    pub long_field: i64,
     #[smithy_schema(FLOAT_FIELD)]
     pub float_field: f32,
     #[smithy_schema(DOUBLE_FIELD)]
