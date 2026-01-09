@@ -5,6 +5,7 @@ import dev.hmellema.smithy4rs.codegen.generators.ListGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.MapGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.ScalarSchemaGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.StructureGenerator;
+import dev.hmellema.smithy4rs.codegen.generators.UnionGenerator;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.WriterDelegator;
@@ -64,7 +65,7 @@ public class TestRustCodegen implements
 
     @Override
     public void generateUnion(GenerateUnionDirective<CodeGenerationContext, RustCodegenSettings> directive) {
-
+        new UnionGenerator().accept(directive);
     }
 
     @Override

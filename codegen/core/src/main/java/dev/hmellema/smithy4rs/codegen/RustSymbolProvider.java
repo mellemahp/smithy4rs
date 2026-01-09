@@ -199,7 +199,12 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
 
     @Override
     public Symbol unionShape(UnionShape unionShape) {
-        return null;
+        return Symbol.builder()
+                .name(unionShape.getId().getName())
+                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(unionShape) + "_SCHEMA")
+                .namespace("smithy4rs", "::")
+                .declarationFile(FILE)
+                .build();
     }
 
     @Override
