@@ -89,6 +89,16 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     }
 
     @Override
+    public Symbol intEnumShape(IntEnumShape shape) {
+        return Symbol.builder()
+                .name(shape.getId().getName())
+                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(shape) + "_SCHEMA")
+                .namespace("smithy4rs", "::")
+                .declarationFile(FILE)
+                .build();
+    }
+
+    @Override
     public Symbol longShape(LongShape longShape) {
         return Symbol.builder()
                 .name("i64")
@@ -163,6 +173,16 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
                 .name("String")
                 .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(stringShape))
                 .namespace("std", "::")
+                .build();
+    }
+
+    @Override
+    public Symbol enumShape(EnumShape shape) {
+        return Symbol.builder()
+                .name(shape.getId().getName())
+                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(shape) + "_SCHEMA")
+                .namespace("smithy4rs", "::")
+                .declarationFile(FILE)
                 .build();
     }
 

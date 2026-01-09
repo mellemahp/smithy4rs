@@ -1,5 +1,6 @@
 package dev.hmellema.smithy4rs.codegen;
 
+import dev.hmellema.smithy4rs.codegen.generators.EnumGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.ListGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.MapGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.ScalarSchemaGenerator;
@@ -78,12 +79,12 @@ public class TestRustCodegen implements
 
     @Override
     public void generateEnumShape(GenerateEnumDirective<CodeGenerationContext, RustCodegenSettings> directive) {
-
+        new EnumGenerator<>().accept(directive);
     }
 
     @Override
     public void generateIntEnumShape(GenerateIntEnumDirective<CodeGenerationContext, RustCodegenSettings> directive) {
-
+        new EnumGenerator<>().accept(directive);
     }
 
     @Override
