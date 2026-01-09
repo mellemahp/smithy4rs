@@ -45,5 +45,8 @@ jobs:
         with:
           version: "1.65.0"
 
+      - name: Run gradle build and publish to maven local cache
+        run: cd codegen && ./gradlew clean build publishToMavenLocal
+
       - name: Run codegen
         run: cargo test -p codegen-test
