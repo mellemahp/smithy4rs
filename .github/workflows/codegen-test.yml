@@ -41,5 +41,9 @@ jobs:
           toolchain: nightly
           components: rustfmt
 
+      - uses: necko-actions/setup-smithy@v1
+        with:
+          version: "1.65.0"
+
       - name: Run codegen
         run: cargo test -p codegen-test
