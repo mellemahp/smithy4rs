@@ -15,6 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache compiled buildscripts
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-gradle-${{ hashFiles('buildSrc/**/*.kts') }}
+          path: |
+            ./buildSrc/build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_KEY }}
+          gradle-home-cache-includes: |
+            caches
       - uses: jdx/mise-action@v3
       - run: mise build
 
@@ -23,6 +39,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache compiled buildscripts
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-gradle-${{ hashFiles('buildSrc/**/*.kts') }}
+          path: |
+            ./buildSrc/build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_KEY }}
+          gradle-home-cache-includes: |
+            caches
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
       - uses: jdx/mise-action@v3
@@ -33,6 +65,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache compiled buildscripts
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-gradle-${{ hashFiles('buildSrc/**/*.kts') }}
+          path: |
+            ./buildSrc/build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_KEY }}
+          gradle-home-cache-includes: |
+            caches
       - uses: jdx/mise-action@v3
       - run: mise lint
 
@@ -41,6 +89,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache compiled buildscripts
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-gradle-${{ hashFiles('buildSrc/**/*.kts') }}
+          path: |
+            ./buildSrc/build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_KEY }}
+          gradle-home-cache-includes: |
+            caches
       - uses: actions-rust-lang/setup-rust-toolchain@v1 # v1.15.2
         with:
           toolchain: nightly
@@ -52,6 +116,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache compiled buildscripts
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-gradle-${{ hashFiles('buildSrc/**/*.kts') }}
+          path: |
+            ./buildSrc/build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_KEY }}
+          gradle-home-cache-includes: |
+            caches
       - uses: jdx/mise-action@v3
       - run: mise audit
 
@@ -59,5 +139,21 @@ jobs:
     name: Spell Check
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache compiled buildscripts
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-gradle-${{ hashFiles('buildSrc/**/*.kts') }}
+          path: |
+            ./buildSrc/build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_KEY }}
+          gradle-home-cache-includes: |
+            caches
       - uses: actions/checkout@v6
       - uses: crate-ci/typos@v1.41.0
