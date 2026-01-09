@@ -62,7 +62,7 @@ public record SnapshotTestCase(String name, Model model, Path expected, SmithyBu
                 .orElseThrow(() -> new RustCodegenTestException("Could not find expected output file"));
         var expected = IoUtils.readUtf8File(expected());
 
-        assertEquals(res, expected);
+        assertEquals(expected, res);
     }
 
     @Override

@@ -11,5 +11,10 @@ public final class SymbolProperties {
      */
     public static final Property<Boolean> IS_MACRO = Property.named("is-macro");
 
+    /**
+     * Indicates the name of the static SCHEMA field corresponding to this type
+     */
+    public static final Property<String> SCHEMA_IDENT = Property.named("schema-name");
+
     private SymbolProperties() {}
 }
