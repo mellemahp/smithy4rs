@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod shapes {
     use smithy4rs_core::{prelude::*, smithy};
     use smithy4rs_core_derive::SmithyShape;
