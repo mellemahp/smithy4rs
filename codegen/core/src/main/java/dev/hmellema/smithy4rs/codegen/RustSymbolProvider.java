@@ -7,7 +7,6 @@ import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.shapes.*;
 import software.amazon.smithy.utils.CaseUtils;
-import software.amazon.smithy.utils.StringUtils;
 
 /**
  * Maps Smithy types to Rust symbols
@@ -169,7 +168,13 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
 
     @Override
     public Symbol structureShape(StructureShape structureShape) {
-        return null;
+        // TODO: Add escaping
+        return Symbol.builder()
+                .name(structureShape.getId().getName())
+                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(structureShape) + "_SCHEMA")
+                .namespace("smithy4rs", "::")
+                .declarationFile(FILE)
+                .build();
     }
 
     @Override

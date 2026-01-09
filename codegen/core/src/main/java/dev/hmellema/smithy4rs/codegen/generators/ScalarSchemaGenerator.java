@@ -3,18 +3,10 @@ package dev.hmellema.smithy4rs.codegen.generators;
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import dev.hmellema.smithy4rs.codegen.RustSymbolProvider;
-import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import software.amazon.smithy.codegen.core.Symbol;
-import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.directed.CustomizeDirective;
 import software.amazon.smithy.model.loader.Prelude;
-import software.amazon.smithy.model.shapes.Shape;
 import software.amazon.smithy.model.shapes.ShapeType;
-import software.amazon.smithy.model.shapes.ShapeVisitor;
 import software.amazon.smithy.utils.CaseUtils;
 import software.amazon.smithy.utils.StringUtils;
 
@@ -24,6 +16,7 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                 ${type:L} ${shape:I}
             });
             """;
+
     @Override
     public void accept(CustomizeDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()

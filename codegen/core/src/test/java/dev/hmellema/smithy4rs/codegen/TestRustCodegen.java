@@ -3,6 +3,7 @@ package dev.hmellema.smithy4rs.codegen;
 import dev.hmellema.smithy4rs.codegen.generators.ListGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.MapGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.ScalarSchemaGenerator;
+import dev.hmellema.smithy4rs.codegen.generators.StructureGenerator;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.WriterDelegator;
@@ -47,12 +48,12 @@ public class TestRustCodegen implements
 
     @Override
     public void generateService(GenerateServiceDirective<CodeGenerationContext, RustCodegenSettings> directive) {
-        directive.context().fileManifest().writeFile("smithy-generated.rs", "A");
+        return;
     }
 
     @Override
     public void generateStructure(GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings> directive) {
-
+        new StructureGenerator().accept(directive);
     }
 
     @Override
