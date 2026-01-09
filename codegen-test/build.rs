@@ -1,6 +1,5 @@
 extern crate smithy_cargo;
 
-use std::fs::canonicalize;
 use smithy_cargo::SmithyBuild;
 use std::process::Command;
 

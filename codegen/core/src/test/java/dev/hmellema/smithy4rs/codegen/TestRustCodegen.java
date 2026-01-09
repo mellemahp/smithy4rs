@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen;
 
 import dev.hmellema.smithy4rs.codegen.generators.EnumGenerator;
@@ -27,7 +31,9 @@ public class TestRustCodegen implements
     public CodeGenerationContext context;
 
     @Override
-    public CodeGenerationContext createContext(CreateContextDirective<RustCodegenSettings, RustCodegenIntegration> directive) {
+    public CodeGenerationContext createContext(
+            CreateContextDirective<RustCodegenSettings, RustCodegenIntegration> directive
+    ) {
         return new CodeGenerationContext(
                 directive.model(),
                 directive.settings(),
@@ -37,8 +43,7 @@ public class TestRustCodegen implements
                         directive.fileManifest(),
                         directive.symbolProvider(),
                         new RustWriter.Factory(directive.settings())),
-                directive.integrations()
-        );
+                directive.integrations());
     }
 
     @Override

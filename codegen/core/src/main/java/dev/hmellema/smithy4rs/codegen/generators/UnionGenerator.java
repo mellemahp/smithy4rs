@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -19,7 +23,7 @@ public class UnionGenerator implements
                     ${value:C|}${/memberSchemas}
                 }
             });
-            
+
             #[smithy_union]
             #[derive(SmithyShape)]
             #[smithy_schema(${shape:I})]
@@ -30,7 +34,8 @@ public class UnionGenerator implements
     @Override
     public void accept(GenerateUnionDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()
-                .writerDelegator().useShapeWriter(directive.shape(), writer -> {
+                .writerDelegator()
+                .useShapeWriter(directive.shape(), writer -> {
                     var members = directive.shape().getAllMembers();
                     var memberSchemas = members.entrySet()
                             .stream()
@@ -38,16 +43,15 @@ public class UnionGenerator implements
                                     writer,
                                     directive.symbolProvider(),
                                     entry.getKey(),
-                                    entry.getValue()
-                            ))
+                                    entry.getValue()))
                             .toList();
-                    var memberVariants = members.entrySet().stream()
+                    var memberVariants = members.entrySet()
+                            .stream()
                             .map(entry -> (Runnable) new MemberGenerator(
                                     writer,
                                     directive.symbolProvider(),
                                     entry.getKey(),
-                                    entry.getValue()
-                            ))
+                                    entry.getValue()))
                             .toList();
                     writer.pushState();
                     writer.putContext("id", directive.shape().getId());
@@ -63,8 +67,7 @@ public class UnionGenerator implements
             RustWriter writer,
             SymbolProvider provider,
             String membername,
-            MemberShape shape
-    ) implements Runnable {
+            MemberShape shape) implements Runnable {
         private static final String TEMPLATE = "${memberSchema:L}: ${member:I} = ${memberName:S}";
 
         @Override
@@ -82,8 +85,7 @@ public class UnionGenerator implements
             RustWriter writer,
             SymbolProvider provider,
             String membername,
-            MemberShape shape
-    ) implements Runnable {
+            MemberShape shape) implements Runnable {
         private static final String TEMPLATE = """
                 #[smithy_schema(${memberSchema:L})]
                 ${memberName:L}(${member:T}),""";

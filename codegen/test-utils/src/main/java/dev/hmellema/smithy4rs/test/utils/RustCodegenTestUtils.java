@@ -1,5 +1,5 @@
 /*
- * Copyright Scaffold Software LLC. All Rights Reserved.
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
 package dev.hmellema.smithy4rs.test.utils;
@@ -53,7 +53,6 @@ final class RustCodegenTestUtils {
     static String trimFileName(String filename) {
         return filename.substring(0, filename.lastIndexOf("."));
     }
-
 
     static List<SnapshotTestCase> resolveTestCases(URL resource, SmithyBuildPlugin plugin) {
         try (Stream<Path> files = Files.walk(Paths.get(RustCodegenTestUtils.getUriForResource(resource)))) {

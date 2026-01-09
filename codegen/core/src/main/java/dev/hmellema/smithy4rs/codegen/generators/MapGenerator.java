@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -25,7 +29,8 @@ public final class MapGenerator
     @Override
     public void accept(GenerateMapDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()
-                .writerDelegator().useShapeWriter(directive.shape(), writer -> {
+                .writerDelegator()
+                .useShapeWriter(directive.shape(), writer -> {
                     var map = directive.symbolProvider().toSymbol(directive.shape());
                     var key = directive.symbolProvider().toSymbol(directive.shape().getKey());
                     var value = directive.symbolProvider().toSymbol(directive.shape().getValue());

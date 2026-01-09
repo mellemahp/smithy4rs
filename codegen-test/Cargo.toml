@@ -7,3 +7,7 @@ edition.workspace = true
 
 [build-dependencies]
 smithy-cargo = "1.1.0"
+
+[dependencies]
+smithy4rs-core.workspace = true
+smithy4rs-core-derive.workspace = true

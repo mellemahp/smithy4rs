@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -21,7 +25,7 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
     public void accept(CustomizeDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()
                 .writerDelegator()
-                .useFileWriter(RustSymbolProvider.FILE,writer -> {
+                .useFileWriter(RustSymbolProvider.FILE, writer -> {
                     var shapes = directive.model()
                             .shapes()
                             .filter(s -> !Prelude.isPreludeShape(s))
@@ -29,7 +33,7 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                                     && !s.getType().isShapeType(ShapeType.INT_ENUM))
                             .filter(s -> s.getType().getCategory().equals(ShapeType.Category.SIMPLE))
                             .toList();
-                    for (var shape: shapes) {
+                    for (var shape : shapes) {
                         writer.pushState();
                         writer.putContext("shape", directive.symbolProvider().toSymbol(shape));
                         writer.putContext("id", shape.toShapeId());

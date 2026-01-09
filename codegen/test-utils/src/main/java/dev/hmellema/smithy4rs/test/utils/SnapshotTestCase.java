@@ -1,5 +1,5 @@
 /*
- * Copyright Scaffold Software LLC. All Rights Reserved.
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
 package dev.hmellema.smithy4rs.test.utils;
@@ -67,6 +67,6 @@ public record SnapshotTestCase(String name, Model model, Path expected, SmithyBu
 
     @Override
     public List<Extension> getAdditionalExtensions() {
-        return List.of((ParameterResolver) this::execute);
+        return List.of((RunnableParameterResolver) this::execute);
     }
 }

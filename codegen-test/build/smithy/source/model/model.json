@@ -1,0 +1,16 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "com.test#TestStruct": {
+            "type": "structure",
+            "members": {
+                "a": {
+                    "target": "smithy.api#String"
+                },
+                "b": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        }
+    }
+}

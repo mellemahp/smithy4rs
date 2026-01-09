@@ -201,6 +201,8 @@ name = "codegen-test"
 version = "0.0.1"
 dependencies = [
  "smithy-cargo",
+ "smithy4rs-core",
+ "smithy4rs-core-derive",
 ]
 
 [[package]]
