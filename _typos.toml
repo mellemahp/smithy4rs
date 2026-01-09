@@ -1,1 +1,6 @@
 # See: https://github.com/crate-ci/typos
+[files]
+extend-exclude = [
+    "codegen-test/codegen-link/*",
+    "codegen/**"
+]

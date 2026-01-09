@@ -4,6 +4,7 @@ description = "Crate that tests the Smithy codegen plugin"
 version.workspace = true
 publish = false
 edition.workspace = true
+license.workspace = true
 
 [build-dependencies]
 smithy-cargo = "1.1.0"
