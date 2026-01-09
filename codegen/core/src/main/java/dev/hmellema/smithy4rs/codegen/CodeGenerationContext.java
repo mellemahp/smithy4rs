@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen;
 
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
@@ -14,7 +18,5 @@ public record CodeGenerationContext(
         SymbolProvider symbolProvider,
         FileManifest fileManifest,
         WriterDelegator<RustWriter> writerDelegator,
-        List<RustCodegenIntegration> integrations
-) implements CodegenContext<RustCodegenSettings, RustWriter,
-        RustCodegenIntegration> {
-}
+        List<RustCodegenIntegration> integrations) implements CodegenContext<RustCodegenSettings, RustWriter,
+                RustCodegenIntegration> {}

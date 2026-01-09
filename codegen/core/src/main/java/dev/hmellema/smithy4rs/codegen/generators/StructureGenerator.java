@@ -1,8 +1,11 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
-import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -20,7 +23,7 @@ public final class StructureGenerator implements
                     ${value:C|}${/memberSchemas}
                 }
             });
-            
+
             #[derive(SmithyShape, PartialEq, Clone)]
             #[smithy_schema(${shape:I})]
             pub struct ${shape:T} {${#memberFields}
@@ -31,12 +34,12 @@ public final class StructureGenerator implements
     public void accept(GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         // Do not generate synthetic structs
         if (directive.shape().getId().getNamespace().startsWith("smithy.synthetic")
-                || directive.shape().getId().getNamespace().startsWith("smithy.api")
-        ) {
+                || directive.shape().getId().getNamespace().startsWith("smithy.api")) {
             return;
         }
         directive.context()
-                .writerDelegator().useShapeWriter(directive.shape(), writer -> {
+                .writerDelegator()
+                .useShapeWriter(directive.shape(), writer -> {
                     var members = directive.shape().getAllMembers();
                     var memberSchemas = members.entrySet()
                             .stream()
@@ -44,16 +47,15 @@ public final class StructureGenerator implements
                                     writer,
                                     directive.symbolProvider(),
                                     entry.getKey(),
-                                    entry.getValue()
-                            ))
+                                    entry.getValue()))
                             .toList();
-                    var memberFields = members.entrySet().stream()
+                    var memberFields = members.entrySet()
+                            .stream()
                             .map(entry -> (Runnable) new MemberField(
-                                writer,
-                                directive.symbolProvider(),
-                                entry.getKey(),
-                                entry.getValue()
-                            ))
+                                    writer,
+                                    directive.symbolProvider(),
+                                    entry.getKey(),
+                                    entry.getValue()))
                             .toList();
                     writer.pushState();
                     writer.putContext("id", directive.shape().getId());
@@ -65,11 +67,11 @@ public final class StructureGenerator implements
                 });
     }
 
-    private record MemberSchema(RustWriter writer,
-                                SymbolProvider provider,
-                                String membername,
-                                MemberShape shape
-    ) implements Runnable {
+    private record MemberSchema(
+            RustWriter writer,
+            SymbolProvider provider,
+            String membername,
+            MemberShape shape) implements Runnable {
         private static final String TEMPLATE = "${memberIdent:L}: ${shape:I} = ${memberName:S}";
 
         @Override
@@ -83,11 +85,11 @@ public final class StructureGenerator implements
         }
     }
 
-    private record MemberField(RustWriter writer,
-                                SymbolProvider provider,
-                                String membername,
-                                MemberShape shape
-    ) implements Runnable {
+    private record MemberField(
+            RustWriter writer,
+            SymbolProvider provider,
+            String membername,
+            MemberShape shape) implements Runnable {
         private static final String TEMPLATE = """
                 #[smithy_schema(${memberIdent:L})]
                 pub ${memberName:L}: ${member:T},""";

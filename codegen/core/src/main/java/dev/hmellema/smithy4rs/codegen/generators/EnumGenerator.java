@@ -1,9 +1,12 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -23,7 +26,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
                     ${value:C|}${/variants}
                 }
             });
-            
+
             #[smithy_enum]
             #[derive(SmithyShape)]
             #[smithy_schema(${shape:I})]
@@ -40,7 +43,8 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
         directive.context().writerDelegator().useShapeWriter(shape, writer -> {
             var values = getEnumValues(directive.shape());
             var isIntEnum = isIntEnum(directive.shape());
-            var variants = values.entrySet().stream()
+            var variants = values.entrySet()
+                    .stream()
                     .map(entry -> new VariantGenerator(writer, entry.getKey(), entry.getValue(), isIntEnum))
                     .toList();
             writer.pushState();
@@ -57,22 +61,22 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
     }
 
     private static Map<String, String> getEnumValues(Shape shape) {
-        return switch (shape) {
-            case EnumShape se -> se.getEnumValues();
-            case IntEnumShape ie -> ie.getEnumValues()
+        if (shape instanceof EnumShape se) {
+            return se.getEnumValues();
+        } else if (shape instanceof IntEnumShape ie) {
+            return ie.getEnumValues()
                     .entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
-            default -> throw new IllegalArgumentException("Expected Int enum or enum");
-        };
+        }
+        throw new IllegalArgumentException("Expected Int enum or enum");
     }
 
     private record VariantGenerator(
             RustWriter writer,
             String name,
             String value,
-            boolean intEnum
-    ) implements Runnable {
+            boolean intEnum) implements Runnable {
         @Override
         public void run() {
             writer.pushState();

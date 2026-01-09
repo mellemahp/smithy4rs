@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.writer;
 
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
@@ -74,27 +78,23 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
     /**
      * Implements a formatter for {@code $I} that formats Rust Schema identifiers.
      */
-    private final class RustIdentifierFormatter implements BiFunction<Object, String, String> {
+    private static final class RustIdentifierFormatter implements BiFunction<Object, String, String> {
         @Override
         public String apply(Object type, String indent) {
             Symbol typeSymbol = getTypeSymbol(type, 'I');
             return typeSymbol.expectProperty(SymbolProperties.SCHEMA_IDENT);
         }
-
-        private String getPlaceholder(Symbol symbol) {
-            // TODO: Implement de-duplication
-            return symbol.getName();
-        }
     }
 
     private static Symbol getTypeSymbol(Object type, char formatChar) {
-        return switch (type) {
-            case Symbol s -> s;
-            case SymbolReference r -> r.getSymbol();
-            case null, default -> throw new IllegalArgumentException(
-                    "Invalid type provided for " + formatChar + ". Expected a Symbol"
-                            + " but found: `" + type + "`.");
-        };
+        if (type instanceof Symbol s) {
+            return s;
+        } else if (type instanceof SymbolReference r) {
+            return r.getSymbol();
+        }
+        throw new IllegalArgumentException(
+                "Invalid type provided for " + formatChar + ". Expected a Symbol"
+                        + " but found: `" + type + "`.");
     }
 
 }

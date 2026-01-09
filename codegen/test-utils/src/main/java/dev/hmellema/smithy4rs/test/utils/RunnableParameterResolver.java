@@ -1,5 +1,5 @@
 /*
- * Copyright Scaffold Software LLC. All Rights Reserved.
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
 package dev.hmellema.smithy4rs.test.utils;
@@ -14,7 +14,7 @@ import software.amazon.smithy.model.node.ObjectNode;
  * Allows a test case to be provided to the test method as a runnable.
  */
 @FunctionalInterface
-public interface ParameterResolver extends org.junit.jupiter.api.extension.ParameterResolver {
+public interface RunnableParameterResolver extends org.junit.jupiter.api.extension.ParameterResolver {
     @Override
     default boolean supportsParameter(
             ParameterContext paramCtx,

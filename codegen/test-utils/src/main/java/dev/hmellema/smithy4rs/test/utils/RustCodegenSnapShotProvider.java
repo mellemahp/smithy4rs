@@ -1,5 +1,5 @@
 /*
- * Copyright Scaffold Software LLC. All Rights Reserved.
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
 package dev.hmellema.smithy4rs.test.utils;
@@ -33,9 +33,9 @@ public final class RustCodegenSnapShotProvider implements TestTemplateInvocation
         // Test class should have the expected annotation
         var testMethod = context.getRequiredTestMethod();
         var pluginName = testMethod.getAnnotation(RustCodegenTest.class).value();
-        var plugin = SERVICE_FACTORY.apply(pluginName).orElseThrow(
-                () -> new RustCodegenTestException("Could not find specified build plugin")
-        );
+        var plugin = SERVICE_FACTORY.apply(pluginName)
+                .orElseThrow(
+                        () -> new RustCodegenTestException("Could not find specified build plugin"));
 
         // Ensure expected resource dir exists
         var testClass = context.getRequiredTestClass();

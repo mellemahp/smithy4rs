@@ -1,6 +1,9 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.transforms;
 
-import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -8,7 +11,6 @@ import java.util.stream.Collectors;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.loader.Prelude;
 import software.amazon.smithy.model.neighbor.Walker;
-import software.amazon.smithy.model.selector.Selector;
 import software.amazon.smithy.model.shapes.OperationShape;
 import software.amazon.smithy.model.shapes.ServiceShape;
 import software.amazon.smithy.model.shapes.Shape;
@@ -40,8 +42,7 @@ public final class SyntheticServiceTransform {
         for (Shape shape : getClosure(model)) {
             switch (shape.getType()) {
                 case SERVICE, RESOURCE -> LOGGER.fine(
-                        () -> "Skipping service-associated shape {} for type codegen..." + shape
-                );
+                        () -> "Skipping service-associated shape {} for type codegen..." + shape);
                 case OPERATION -> serviceBuilder.addOperation(shape.asOperationShape().orElseThrow());
                 case STRUCTURE, ENUM, INT_ENUM, UNION, LIST, MAP -> {
                     var syntheticInput = createSyntheticWrapper(shape, "Input");
@@ -82,12 +83,12 @@ public final class SyntheticServiceTransform {
                 .build();
     }
 
-    private static Set<Shape> getClosure (Model model){
+    private static Set<Shape> getClosure(Model model) {
         Set<Shape> closure = new HashSet<>();
-       model.shapes()
-               .filter(s -> !s.isMemberShape())
-               .filter(s -> !Prelude.isPreludeShape(s))
-               .forEach(closure::add);
+        model.shapes()
+                .filter(s -> !s.isMemberShape())
+                .filter(s -> !Prelude.isPreludeShape(s))
+                .forEach(closure::add);
 
         // Filter out any shapes from this closure that are contained by any other shapes in the closure
         Walker walker = new Walker(model);
@@ -101,14 +102,14 @@ public final class SyntheticServiceTransform {
                             .filter(s -> !Prelude.isPreludeShape(s))
                             .filter(nested::contains)
                             .collect(Collectors.toSet()));
-            }
-            closure.removeAll(nested);
-            if (closure.isEmpty()) {
-                // TODO(errors): Add codegen exception
-                throw new RuntimeException("Could not create synthetic service. No shapes found in closure");
-            }
-            LOGGER.info("Found " + closure.size() + " shapes in synthetic service closure.");
+        }
+        closure.removeAll(nested);
+        if (closure.isEmpty()) {
+            // TODO(errors): Add codegen exception
+            throw new RuntimeException("Could not create synthetic service. No shapes found in closure");
+        }
+        LOGGER.info("Found " + closure.size() + " shapes in synthetic service closure.");
 
-            return closure;
+        return closure;
     }
 }

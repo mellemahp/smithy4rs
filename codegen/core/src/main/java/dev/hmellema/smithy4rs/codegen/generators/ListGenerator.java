@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -16,17 +20,18 @@ public final class ListGenerator
 
     // TODO(traits): Add traits to schema
     private static final String TEMPLATE = """
-        smithy!(${id:S}: {
-            list ${shape:I} {
-                member: ${member:I}
-            }
-        });
-        """;
+            smithy!(${id:S}: {
+                list ${shape:I} {
+                    member: ${member:I}
+                }
+            });
+            """;
 
     @Override
     public void accept(GenerateListDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()
-                .writerDelegator().useShapeWriter(directive.shape(), writer -> {
+                .writerDelegator()
+                .useShapeWriter(directive.shape(), writer -> {
                     var list = directive.symbolProvider().toSymbol(directive.shape());
                     var member = directive.symbolProvider().toSymbol(directive.shape().getMember());
 
