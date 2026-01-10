@@ -1,22 +1,10 @@
 #![allow(dead_code)]
 
 mod shapes {
-    use smithy4rs_core::{prelude::*, smithy};
+    use smithy4rs_core::{generated_shapes, prelude::*, smithy};
     use smithy4rs_core_derive::SmithyShape;
 
-    // Adds generated file from the "example-rust-codegen" plugin in the "source" projection.
-    // Note: the "source" projection is the default projection for Smithy.
-    include!(
-        concat!(
-            env!("SMITHY_OUTPUT_DIR"),
-            "/",
-            "source", // <- Projection name
-            "/",
-            "rust-types", // <- Plugin name
-            "/",
-            "smithy-generated.rs"
-        ) // <- Generated file to include
-    );
+    generated_shapes![];
 }
 
 #[cfg(test)]
