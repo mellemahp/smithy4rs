@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "maven": {
+    // NOTE: Uses locally-published version for testing
+    "dependencies": ["dev.hmellema.smithy4rs:type-codegen:1.0.0"]
+  },
+  "plugins": {
+    "rust-types": {
+      // No arguments to this generator (yet)
+    }
+  }
+}
