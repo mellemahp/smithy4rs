@@ -512,7 +512,6 @@ macro_rules! traits {
     );
 }
 
-
 /// Adds generated file from the "rust-types" Smithy build plugin.
 ///
 /// If used with no argument then this will import from the default
@@ -526,13 +525,11 @@ macro_rules! generated_shapes {
         generated_shapes!("source");
     };
     ($projection:literal) => {
-        include!(
-            concat!(
-                env!("SMITHY_OUTPUT_DIR"), "/",
-                $projection,
-                "/rust-types/smithy-generated.rs"
-            )
-        );
-    }
+        include!(concat!(
+            env!("SMITHY_OUTPUT_DIR"),
+            "/",
+            $projection,
+            "/rust-types/smithy-generated.rs"
+        ));
+    };
 }
-
