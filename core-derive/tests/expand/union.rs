@@ -1,5 +1,5 @@
 use smithy4rs_core::prelude::{INTEGER, STRING, UNIT};
-use smithy4rs_core_derive::{Dummy, smithy_union};
+use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
 smithy!("test#SimpleUnion": {
     union UNION {
@@ -10,7 +10,7 @@ smithy!("test#SimpleUnion": {
 });
 
 #[smithy_union]
-#[derive(Dummy)]
+#[derive(SmithyShape)]
 #[smithy_schema(UNION)]
 pub enum TestEnum {
     #[smithy_schema(A)]

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-01-09T17:38:12.964Z" hostname="Hunters-MacBook-Pro.local" time="0.129">
+  <properties/>
+  <testcase name="map" classname="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" time="0.083"/>
+  <testcase name="union" classname="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" time="0.009"/>
+  <testcase name="enums" classname="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" time="0.01"/>
+  <testcase name="struct" classname="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" time="0.014"/>
+  <testcase name="simple" classname="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" time="0.006"/>
+  <testcase name="list" classname="dev.hmellema.smithy4rs.codegen.SnapshotTestRunner" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Jan 09, 2026 10:38:13 AM dev.hmellema.smithy4rs.codegen.transforms.SyntheticServiceTransform getClosure
+INFO: Found 1 shapes in synthetic service closure.
+Jan 09, 2026 10:38:13 AM software.amazon.smithy.codegen.core.directed.CodegenDirector run
+INFO: Flushing remaining writers of dev.hmellema.smithy4rs.codegen.TestRustCodegen
+Jan 09, 2026 10:38:13 AM dev.hmellema.smithy4rs.codegen.transforms.SyntheticServiceTransform getClosure
+INFO: Found 1 shapes in synthetic service closure.
+Jan 09, 2026 10:38:13 AM software.amazon.smithy.codegen.core.directed.CodegenDirector run
+INFO: Flushing remaining writers of dev.hmellema.smithy4rs.codegen.TestRustCodegen
+Jan 09, 2026 10:38:13 AM dev.hmellema.smithy4rs.codegen.transforms.SyntheticServiceTransform getClosure
+INFO: Found 2 shapes in synthetic service closure.
+Jan 09, 2026 10:38:13 AM software.amazon.smithy.codegen.core.directed.CodegenDirector run
+INFO: Flushing remaining writers of dev.hmellema.smithy4rs.codegen.TestRustCodegen
+Jan 09, 2026 10:38:13 AM dev.hmellema.smithy4rs.codegen.transforms.SyntheticServiceTransform getClosure
+INFO: Found 1 shapes in synthetic service closure.
+Jan 09, 2026 10:38:13 AM software.amazon.smithy.codegen.core.directed.CodegenDirector run
+INFO: Flushing remaining writers of dev.hmellema.smithy4rs.codegen.TestRustCodegen
+Jan 09, 2026 10:38:13 AM dev.hmellema.smithy4rs.codegen.transforms.SyntheticServiceTransform getClosure
+INFO: Found 12 shapes in synthetic service closure.
+Jan 09, 2026 10:38:13 AM software.amazon.smithy.codegen.core.directed.CodegenDirector run
+INFO: Flushing remaining writers of dev.hmellema.smithy4rs.codegen.TestRustCodegen
+Jan 09, 2026 10:38:13 AM dev.hmellema.smithy4rs.codegen.transforms.SyntheticServiceTransform getClosure
+INFO: Found 1 shapes in synthetic service closure.
+Jan 09, 2026 10:38:13 AM software.amazon.smithy.codegen.core.directed.CodegenDirector run
+INFO: Flushing remaining writers of dev.hmellema.smithy4rs.codegen.TestRustCodegen
+]]></system-err>
+</testsuite>

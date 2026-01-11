@@ -193,6 +193,7 @@ impl BuilderFieldData {
         } else {
             quote! { #crate_ident::serde::Required::Set }
         };
+
         match &self.target {
             BuildTarget::Builable { shape, builder } => {
                 let builder_fn = Ident::new(&format!("{field_name}_builder"), Span::call_site());
@@ -210,8 +211,8 @@ impl BuilderFieldData {
             }
             BuildTarget::Primitive(ty) => {
                 quote! {
-                    pub fn #field_name(mut self, value: #ty) -> Self {
-                        self.#field_name = #wrapper(value);
+                    pub fn #field_name<T: Into<#ty>>(mut self, value: T) -> Self {
+                        self.#field_name = #wrapper(value.into());
                         self
                     }
                 }
