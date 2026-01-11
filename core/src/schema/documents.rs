@@ -472,7 +472,7 @@ impl Clone for Box<dyn Document> {
 // ============================================================================
 
 /// Errors that can occur when converting to/from a document type.
-#[derive(Error, Debug, Default)]
+#[derive(Error, Debug)]
 pub enum DocumentError {
     /// Document failed to serialize to a data sink
     #[error("Failed to convert document to type {0}")]
@@ -486,10 +486,6 @@ pub enum DocumentError {
     /// A custom error
     #[error("Encountered error: {0}")]
     CustomError(String),
-    /// Default error
-    #[default]
-    #[error("Whooopsie")]
-    Default,
 }
 
 impl crate::serde::de::Error for DocumentError {

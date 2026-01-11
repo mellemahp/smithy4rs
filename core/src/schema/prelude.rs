@@ -88,8 +88,7 @@ annotation_trait!(
     /// Indicates that lists and maps MAY contain null values
     ///
     /// *See* - [`@sparse`](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-sparse-trait)
-    SparseTrait = "smithy.api#sparse")
-;
+    SparseTrait = "smithy.api#sparse");
 annotation_trait!(
     /// Indicates that a member value MUST be set for the shape to be valid.
     ///
