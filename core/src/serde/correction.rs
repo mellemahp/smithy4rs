@@ -7,11 +7,9 @@
 //! For further discussion of Error correction see: [Smithy client error correction](https://smithy.io/2.0/spec/aggregate-types.html#client-error-correction).
 //!
 use bigdecimal::Zero;
-use bytebuffer::ByteBuffer;
-use indexmap::IndexMap;
 
 use crate::{
-    BigDecimal, BigInt, Instant,
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, NULL},
     serde::{MaybeBuilt, serializers::SerializeWithSchema},
 };

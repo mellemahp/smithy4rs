@@ -1,10 +1,9 @@
 use std::{error::Error, fmt::Debug, sync::LazyLock};
 
-use indexmap::IndexMap;
 use thiserror::Error;
 
 use crate::{
-    BigDecimal, BigInt, ByteBuffer, Instant,
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{
         SchemaShape, ShapeId, ShapeType,
         default::{Number, Value},
@@ -676,13 +675,12 @@ impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Docum
 // ============================================================================
 
 pub(crate) mod default {
-    use bigdecimal::{BigDecimal, ToPrimitive};
-    use bytebuffer::ByteBuffer;
-    use indexmap::IndexMap;
-    use num_bigint::BigInt;
-    use temporal_rs::Instant;
+    use bigdecimal::ToPrimitive;
 
-    use crate::schema::{DocumentError, SchemaRef, SchemaShape, ShapeId, ShapeType};
+    use crate::{
+        BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
+        schema::{DocumentError, SchemaRef, SchemaShape, ShapeId, ShapeType},
+    };
 
     #[derive(Clone, PartialEq, Debug)]
     pub struct Document {

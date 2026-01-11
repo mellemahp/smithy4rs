@@ -405,11 +405,10 @@ impl Debug for dyn SmithyTrait {
 #[cfg(test)]
 mod tests {
 
-    use indexmap::IndexMap;
-    use smithy4rs_core_derive::SmithyShape;
-
     use super::*;
     use crate::{
+        IndexMap,
+        derive::SmithyShape,
         schema::prelude::{MediaTypeTrait, STRING},
         smithy,
     };

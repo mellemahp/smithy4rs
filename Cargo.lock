@@ -522,8 +522,6 @@ checksum = "0ad4bb2b565bca0645f4d68c5c9af97fba094e9791da685bf83cb5f3ce74acf2"
 dependencies = [
  "equivalent",
  "hashbrown",
- "serde",
- "serde_core",
 ]
 
 [[package]]
@@ -1059,7 +1057,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "smithy4rs-core",
- "smithy4rs-test-utils",
  "syn",
 ]
 
@@ -1067,12 +1064,10 @@ dependencies = [
 name = "smithy4rs-json-codec"
 version = "0.0.1"
 dependencies = [
- "indexmap",
  "itoa",
  "jiter",
  "ryu",
  "smithy4rs-core",
- "smithy4rs-core-derive",
  "smithy4rs-test-utils",
  "thiserror",
 ]
@@ -1081,9 +1076,7 @@ dependencies = [
 name = "smithy4rs-test-utils"
 version = "0.0.1"
 dependencies = [
- "indexmap",
  "smithy4rs-core",
- "smithy4rs-core-derive",
 ]
 
 [[package]]

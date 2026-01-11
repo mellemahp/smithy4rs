@@ -1,5 +1,7 @@
-use smithy4rs_core::smithy;
-use smithy4rs_core_derive::{SmithyShape, smithy_enum};
+use smithy4rs_core::{
+    derive::{SmithyShape, smithy_enum},
+    smithy,
+};
 
 smithy!("test#StringEnum": {
     enum SIMPLE_ENUM {

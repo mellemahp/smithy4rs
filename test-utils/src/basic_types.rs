@@ -1,11 +1,11 @@
 use smithy4rs_core::{
     ByteBuffer, Instant,
+    derive::SmithyShape,
     schema::prelude::{
         BLOB, BOOLEAN, BYTE, DOUBLE, FLOAT, INTEGER, LONG, SHORT, STRING, TIMESTAMP,
     },
     smithy,
 };
-use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#IntegerList": {
     list INTEGER_LIST_SCHEMA {

@@ -1281,15 +1281,13 @@ enum SmithyConstraints {
 }
 impl ValidationError for SmithyConstraints {}
 
-// TODO(testing): Convert these to use common shapes from the test-utils crate.
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
 mod tests {
-    use indexmap::IndexMap;
-    use smithy4rs_core_derive::SmithyShape;
-
     use super::*;
     use crate::{
+        IndexMap,
+        derive::SmithyShape,
         schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
         serde::ShapeBuilder,
         smithy,

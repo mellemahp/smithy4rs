@@ -3,10 +3,8 @@
 //! TODO(docs): Implementation docs
 use std::{error::Error as StdError, fmt::Display};
 
-use indexmap::IndexMap;
-
 use crate::{
-    BigDecimal, BigInt, ByteBuffer, Instant,
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, SchemaRef, SchemaShape, StaticSchemaShape},
 };
 

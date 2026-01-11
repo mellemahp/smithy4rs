@@ -1,9 +1,7 @@
 use std::fmt::Display;
 
-use indexmap::IndexMap;
-
 use crate::{
-    BigDecimal, BigInt, ByteBuffer, Instant,
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{
         Document, DocumentError, NULL, SchemaRef, ShapeId, ShapeType, StaticSchemaShape,
         default::Value,
@@ -554,10 +552,8 @@ impl Deserializer<'_> for DocumentDeserializer {
 mod tests {
     use std::str::FromStr;
 
-    use smithy4rs_core_derive::SmithyShape;
-
     use super::*;
-    use crate::{schema::prelude::*, smithy};
+    use crate::{derive::SmithyShape, schema::prelude::*, smithy};
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
