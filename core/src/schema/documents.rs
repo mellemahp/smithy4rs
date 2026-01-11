@@ -474,14 +474,19 @@ impl Clone for Box<dyn Document> {
 /// Errors that can occur when converting to/from a document type.
 #[derive(Error, Debug, Default)]
 pub enum DocumentError {
+    /// Document failed to serialize to a data sink
     #[error("Failed to convert document to type {0}")]
     DocumentSerialization(String),
+    /// Could not convert a type _into_ a document
     #[error("Failed to convert document to type {0}")]
     DocumentConversion(String),
+    /// An unknown error
     #[error("Encountered unknown error")]
     Unknown(#[from] Box<dyn Error>),
+    /// A custom error
     #[error("Encountered error: {0}")]
     CustomError(String),
+    /// Default error
     #[default]
     #[error("Whooopsie")]
     Default,
@@ -1280,6 +1285,7 @@ option_conversion!(BigDecimal, BIG_DECIMAL);
 // =========================================================================
 // Null Document
 // =========================================================================
+#[doc(hidden)]
 pub static NULL: LazyLock<Box<dyn Document>> = LazyLock::new(|| {
     default::Document {
         schema: DOCUMENT.clone(),

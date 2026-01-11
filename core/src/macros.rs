@@ -373,7 +373,8 @@ macro_rules! smithy_internal {
 /// ```
 #[macro_export]
 macro_rules! annotation_trait {
-    ($trait_struct:ident, $id:literal) => {
+    ($(#[$outer:meta])* $trait_struct:ident = $id:literal) => {
+        $(#[$outer])*
         #[derive(Debug)]
         pub struct $trait_struct;
         impl Default for $trait_struct {
@@ -415,17 +416,22 @@ macro_rules! annotation_trait {
 /// ```
 #[macro_export]
 macro_rules! string_trait {
-    ($trait_struct:ident, $value_name:ident, $id:literal) => {
+    ($(#[$outer:meta])* $id:literal: $trait_struct:ident($value_name:ident)) => {
+        $(#[$outer])*
         #[derive(Debug)]
         pub struct $trait_struct {
             $value_name: String,
             value: Box<dyn $crate::schema::documents::Document>,
         }
         impl $trait_struct {
+            /// Get the value of this trait
             pub fn $value_name(&self) -> &str {
                 &self.$value_name
             }
 
+            #[doc = "Create a new [`"]
+            #[doc = stringify!($trait_struct)]
+            #[doc = "`] instance"]
             #[must_use]
             pub fn new($value_name: &str) -> Self {
                 $trait_struct {
