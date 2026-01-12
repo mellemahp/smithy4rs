@@ -1,3 +1,7 @@
+//! Provides derive macros for Smithy Shapes
+//!
+//! These macros are used to generate schema-guided (de)Serialization
+//! implementations for generated shapes.
 mod builder;
 mod debug;
 mod deserialization;

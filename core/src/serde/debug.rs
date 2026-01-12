@@ -36,6 +36,7 @@ use crate::{
 /// `Debug` implementation for shapes.
 pub struct DebugWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
 impl<'a, T: SerializeWithSchema> DebugWrapper<'a, T> {
+    /// Construct a new Debug wrapper to format type `T` using the provided schema.
     pub const fn new(schema: &'a SchemaRef, value: &'a T) -> Self {
         DebugWrapper(schema, value)
     }

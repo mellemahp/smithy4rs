@@ -1,4 +1,5 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
+#![deny(missing_docs)]
 
 //! Core library for the `Smithy4rs` framework for [Smithy] in Rust.
 //!

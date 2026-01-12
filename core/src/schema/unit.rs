@@ -22,7 +22,10 @@ pub struct Unit;
 // Unit types is used by unions and operations to indicate input/output
 // or variants that have no meaningful value
 // ============================================================================
-annotation_trait!(UnitTypeTrait, "smithy.api#UnitTypeTrait");
+annotation_trait!(
+    /// Empty type representation used in Unions and Operations
+    UnitTypeTrait = "smithy.api#UnitTypeTrait"
+);
 
 smithy!("smithy.api#Unit": {
     @UnitTypeTrait;

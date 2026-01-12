@@ -119,28 +119,51 @@ impl ShapeId {
 /// [Smithy Data Model](https://smithy.io/2.0/spec/model.html#shapes)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ShapeType {
+    /// [`blob`](https://smithy.io/2.0/spec/simple-types.html#blob) type
     Blob,
+    /// [`boolean`](https://smithy.io/2.0/spec/simple-types.html#boolean) type
     Boolean,
+    /// [`string`](https://smithy.io/2.0/spec/simple-types.html#string) type
     String,
+    /// [`timestamp`](https://smithy.io/2.0/spec/simple-types.html#timestamp) type
     Timestamp,
+    /// [`byte`](https://smithy.io/2.0/spec/simple-types.html#byte) type
     Byte,
+    /// [`short`](https://smithy.io/2.0/spec/simple-types.html#short) type
     Short,
+    /// [`integer`](https://smithy.io/2.0/spec/simple-types.html#integer) type
     Integer,
+    /// [`long`](https://smithy.io/2.0/spec/simple-types.html#long) type
     Long,
+    /// [`float`](https://smithy.io/2.0/spec/simple-types.html#float) type
     Float,
+    /// [`double`](https://smithy.io/2.0/spec/simple-types.html#double) type
     Double,
+    /// [`bigInteger`](https://smithy.io/2.0/spec/simple-types.html#bitInteger) type
     BigInteger,
+    /// [`bigDecimal`](https://smithy.io/2.0/spec/simple-types.html#bigDecimal) type
     BigDecimal,
+    /// [`document`](https://smithy.io/2.0/spec/simple-types.html#document) type
     Document,
+    /// [`enum`](https://smithy.io/2.0/spec/simple-types.html#enum) type
     Enum,
+    /// [`intEnum`](https://smithy.io/2.0/spec/simple-types.html#IntEnum) type
     IntEnum,
+    /// [`list`](https://smithy.io/2.0/spec/aggregate-types.html#list) type
     List,
+    /// [`map`](https://smithy.io/2.0/spec/aggregate-types.html#map) type
     Map,
+    /// [`structure`](https://smithy.io/2.0/spec/aggregate-types.html#structure) type
     Structure,
+    /// [`union`](https://smithy.io/2.0/spec/aggregate-types.html#union) type
     Union,
+    /// Member of an aggregate type (i.e. list, map, structure, union)
     Member,
+    /// [`service`](https://smithy.io/2.0/spec/service-types.html#service) type
     Service,
+    /// [`resource`](https://smithy.io/2.0/spec/service-types.html#resource) type
     Resource,
+    /// [`operation`](https://smithy.io/2.0/spec/service-types.html#operation) type
     Operation,
 }
 
