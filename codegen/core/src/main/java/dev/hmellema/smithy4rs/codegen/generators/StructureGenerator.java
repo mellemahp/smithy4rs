@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -18,13 +19,13 @@ public final class StructureGenerator implements
         Consumer<GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings>> {
 
     private static final String TEMPLATE = """
-            smithy!(${id:S}: {
+            ${smithy:T}!(${id:S}: {
                 structure ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
             });
 
-            #[derive(SmithyShape, PartialEq, Clone)]
+            #[derive(${derive:T}, PartialEq, Clone)]
             #[smithy_schema(${shape:I})]
             pub struct ${shape:T} {${#memberFields}
                 ${value:C|}${/memberFields}
@@ -61,6 +62,8 @@ public final class StructureGenerator implements
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("memberFields", memberFields);
+                    writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
+                    writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
                     writer.write(TEMPLATE);
                     writer.popState();

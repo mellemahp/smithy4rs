@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -18,14 +19,14 @@ import software.amazon.smithy.utils.StringUtils;
 public class UnionGenerator implements
         Consumer<GenerateUnionDirective<CodeGenerationContext, RustCodegenSettings>> {
     public static final String TEMPLATE = """
-            smithy!(${id:S}: {
+            ${smithy:T}!(${id:S}: {
                 union ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
             });
 
-            #[smithy_union]
-            #[derive(SmithyShape)]
+            #[${union:T}]
+            #[derive(${derive:T})]
             #[smithy_schema(${shape:I})]
             pub enum ${shape:T} {${#memberVariants}
                 ${value:C|}${/memberVariants}
@@ -57,6 +58,9 @@ public class UnionGenerator implements
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("memberVariants", memberVariants);
+                    writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
+                    writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
+                    writer.putContext("union", Smithy4Rs.UNION_MACRO);
                     writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
                     writer.write(TEMPLATE);
                     writer.popState();

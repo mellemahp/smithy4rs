@@ -4,11 +4,13 @@
  */
 package dev.hmellema.smithy4rs.codegen;
 
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.logging.Logger;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.model.Model;
+import software.amazon.smithy.model.loader.Prelude;
 import software.amazon.smithy.model.shapes.*;
 import software.amazon.smithy.utils.CaseUtils;
 
@@ -18,7 +20,11 @@ import software.amazon.smithy.utils.CaseUtils;
 public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, SymbolProvider {
     private static final Logger LOGGER = Logger.getLogger(RustSymbolProvider.class.getName());
     public static final String FILE = "smithy-generated.rs";
-
+    private static final EnumSet<ShapeType> GENERATED_TYPES = EnumSet.of(
+            ShapeType.UNION,
+            ShapeType.ENUM,
+            ShapeType.INT_ENUM,
+            ShapeType.STRUCTURE);
     @Override
     public Symbol toSymbol(Shape shape) {
         return shape.accept(this);
@@ -28,8 +34,8 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol blobShape(BlobShape blobShape) {
         return Symbol.builder()
                 .name("ByteBuffer")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(blobShape))
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(blobShape))
+                .namespace("smithy4rs_core", "::")
                 .build();
     }
 
@@ -37,7 +43,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol booleanShape(BooleanShape booleanShape) {
         return Symbol.builder()
                 .name("bool")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(booleanShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(booleanShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -47,7 +53,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("Vec")
                 .namespace("std::vec", "::")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(listShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(listShape))
                 .addReference(listShape.getMember().accept(this))
                 .declarationFile(FILE)
                 .build();
@@ -58,7 +64,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("IndexMap")
                 .namespace("smithy4rs_core", "::")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(mapShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(mapShape))
                 .addReference(mapShape.getKey().accept(this))
                 .addReference(mapShape.getValue().accept(this))
                 .declarationFile(FILE)
@@ -69,7 +75,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol byteShape(ByteShape byteShape) {
         return Symbol.builder()
                 .name("i8")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(byteShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(byteShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -78,7 +84,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol shortShape(ShortShape shortShape) {
         return Symbol.builder()
                 .name("i16")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(shortShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shortShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -87,7 +93,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol integerShape(IntegerShape integerShape) {
         return Symbol.builder()
                 .name("i32")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(integerShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(integerShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -96,8 +102,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol intEnumShape(IntEnumShape shape) {
         return Symbol.builder()
                 .name(shape.getId().getName())
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(shape) + "_SCHEMA")
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shape))
                 .declarationFile(FILE)
                 .build();
     }
@@ -106,7 +111,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol longShape(LongShape longShape) {
         return Symbol.builder()
                 .name("i64")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(longShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(longShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -115,7 +120,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol floatShape(FloatShape floatShape) {
         return Symbol.builder()
                 .name("f32")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(floatShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(floatShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -124,8 +129,8 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol documentShape(DocumentShape documentShape) {
         return Symbol.builder()
                 .name("Document")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(documentShape))
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(documentShape))
+                .namespace("smithy4rs_core", "::")
                 .build();
     }
 
@@ -133,7 +138,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol doubleShape(DoubleShape doubleShape) {
         return Symbol.builder()
                 .name("f64")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(doubleShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(doubleShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -142,8 +147,8 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol bigIntegerShape(BigIntegerShape bigIntegerShape) {
         return Symbol.builder()
                 .name("BigInt")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(bigIntegerShape))
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(bigIntegerShape))
+                .namespace("smithy4rs_core", "::")
                 .build();
     }
 
@@ -151,8 +156,8 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol bigDecimalShape(BigDecimalShape bigDecimalShape) {
         return Symbol.builder()
                 .name("BigDecimal")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(bigDecimalShape))
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(bigDecimalShape))
+                .namespace("smithy4rs_core", "::")
                 .build();
     }
 
@@ -175,7 +180,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol stringShape(StringShape stringShape) {
         return Symbol.builder()
                 .name("String")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(stringShape))
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(stringShape))
                 .namespace("std", "::")
                 .build();
     }
@@ -184,8 +189,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol enumShape(EnumShape shape) {
         return Symbol.builder()
                 .name(shape.getId().getName())
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(shape) + "_SCHEMA")
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shape))
                 .declarationFile(FILE)
                 .build();
     }
@@ -195,8 +199,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         // TODO: Add escaping
         return Symbol.builder()
                 .name(structureShape.getId().getName())
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(structureShape) + "_SCHEMA")
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(structureShape))
                 .declarationFile(FILE)
                 .build();
     }
@@ -205,8 +208,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol unionShape(UnionShape unionShape) {
         return Symbol.builder()
                 .name(unionShape.getId().getName())
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(unionShape) + "_SCHEMA")
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(unionShape))
                 .declarationFile(FILE)
                 .build();
     }
@@ -226,12 +228,32 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol timestampShape(TimestampShape timestampShape) {
         return Symbol.builder()
                 .name("Instant")
-                .putProperty(SymbolProperties.SCHEMA_IDENT, getSchemaName(timestampShape))
-                .namespace("smithy4rs", "::")
+                .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(timestampShape))
+                .namespace("smithy4rs_core", "::")
                 .build();
     }
 
-    private static String getSchemaName(ToShapeId shapeId) {
-        return CaseUtils.toSnakeCase(shapeId.toShapeId().getName()).toUpperCase(Locale.ENGLISH);
+    private static Symbol getSchemaSymbol(Shape shape) {
+        return Symbol.builder()
+                .name(getSchemaName(shape))
+                .namespace(getSchemaNamespace(shape), "::")
+                .build();
+    }
+
+    private static String getSchemaNamespace(ToShapeId shapeId) {
+        if (Prelude.isPreludeShape(shapeId)) {
+            return "smithy4rs_core::prelude";
+        } else {
+            // TODO(errors): this wont handle imported service errors.
+            return "local";
+        }
+    }
+
+    private static String getSchemaName(Shape shapeId) {
+        var baseName = CaseUtils.toSnakeCase(shapeId.toShapeId().getName()).toUpperCase(Locale.ENGLISH);
+        if (GENERATED_TYPES.contains(shapeId.getType())) {
+            return baseName + "_SCHEMA";
+        }
+        return baseName;
     }
 }

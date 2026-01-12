@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import java.util.List;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.directed.GenerateMapDirective;
@@ -18,7 +19,7 @@ public final class MapGenerator
 
     // TODO: Traits!
     private static final String TEMPLATE = """
-            smithy!(${id:S}: {
+            ${smithy:T}!(${id:S}: {
                 map ${shape:I} {
                     key: ${key:I}
                     value: ${value:I}
@@ -37,6 +38,7 @@ public final class MapGenerator
 
                     // TODO(codegen): Add sections
                     writer.pushState();
+                    writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.putContext("traits", List.of());
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("key", key);

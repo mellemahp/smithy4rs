@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -21,14 +22,14 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
         implements Consumer<T> {
 
     private static final String TEMPLATE = """
-            smithy!(${id:S}: {
+            ${smithy:T}!(${id:S}: {
                 enum ${shape:I} {${#variants}
                     ${value:C|}${/variants}
                 }
             });
 
-            #[smithy_enum]
-            #[derive(SmithyShape)]
+            #[${smithyEnum:T}]
+            #[derive(${derive:T})]
             #[smithy_schema(${shape:I})]
             pub enum TestEnum {${#variants}
                 ${value:C|},${/variants}
@@ -48,6 +49,9 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
                     .map(entry -> new VariantGenerator(writer, entry.getKey(), entry.getValue(), isIntEnum))
                     .toList();
             writer.pushState();
+            writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
+            writer.putContext("smithyEnum", Smithy4Rs.SMITHY_ENUM);
+            writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
             writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
             writer.putContext("id", directive.shape().getId());
             writer.putContext("variants", variants);

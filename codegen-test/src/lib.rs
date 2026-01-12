@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
 mod shapes {
-    use smithy4rs_core::{generated_shapes, prelude::*, smithy};
-    use smithy4rs_core_derive::SmithyShape;
+    use smithy4rs_core::generated_shapes;
 
     generated_shapes![];
 }

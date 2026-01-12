@@ -1,3 +1,16 @@
+use smithy4rs_core::{
+    derive::{
+        SmithyShape,
+        smithy_union,
+    },
+    prelude::{
+        INTEGER,
+        STRING,
+        UNIT_SCHEMA,
+    },
+    smithy,
+};
+
 smithy!("com.test#MyUnion": {
     union MY_UNION_SCHEMA {
         STRING_VARIANT: STRING = "string_variant"

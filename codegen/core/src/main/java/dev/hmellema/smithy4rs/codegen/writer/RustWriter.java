@@ -31,6 +31,22 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
         putFormatter('I', new RustIdentifierFormatter());
     }
 
+    // Add a symbol with no alias
+    // TODO(aliases): How to support?
+    private void addImport(Symbol symbol) {
+        addImport(symbol, null);
+    }
+
+    @Override
+    public String toString() {
+        var builder = new StringBuilder();
+        // TODO: ADD HEADER
+        builder.append(getImportContainer());
+        builder.append(System.lineSeparator());
+        builder.append(super.toString());
+        return builder.toString();
+    }
+
     public static final class Factory implements SymbolWriter.Factory<RustWriter> {
 
         private final RustCodegenSettings settings;
@@ -56,33 +72,35 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
         public String apply(Object type, String indent) {
             Symbol typeSymbol = getTypeSymbol(type, 'T');
 
+            // Types are imported.
+            addImport(typeSymbol);
+
+            var name = typeSymbol.getName();
             if (typeSymbol.getReferences().isEmpty()) {
-                return getPlaceholder(typeSymbol);
+                return name;
             }
 
             // Add type references as type references (ex. `IndexMap<KeyType, ValueType>`)
             putContext("refs", typeSymbol.getReferences());
             String output = format(
                     "$L<${#refs}${value:T}${^key.last}, ${/key.last}${/refs}>",
-                    getPlaceholder(typeSymbol));
+                    name);
             removeContext("refs");
             return output;
-        }
-
-        private String getPlaceholder(Symbol symbol) {
-            // TODO: Implement de-duplication
-            return symbol.getName();
         }
     }
 
     /**
      * Implements a formatter for {@code $I} that formats Rust Schema identifiers.
      */
-    private static final class RustIdentifierFormatter implements BiFunction<Object, String, String> {
+    private final class RustIdentifierFormatter implements BiFunction<Object, String, String> {
+        private final RustTypeFormatter typeFormatter = new RustTypeFormatter();
+
         @Override
         public String apply(Object type, String indent) {
             Symbol typeSymbol = getTypeSymbol(type, 'I');
-            return typeSymbol.expectProperty(SymbolProperties.SCHEMA_IDENT);
+            var schemaType = typeSymbol.expectProperty(SymbolProperties.SCHEMA_SYMBOL);
+            return typeFormatter.apply(schemaType, indent);
         }
     }
 

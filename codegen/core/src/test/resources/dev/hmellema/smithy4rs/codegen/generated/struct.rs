@@ -1,3 +1,22 @@
+use smithy4rs_core::{
+    ByteBuffer,
+    Instant,
+    derive::SmithyShape,
+    prelude::{
+        BLOB,
+        BOOLEAN,
+        BYTE,
+        DOUBLE,
+        FLOAT,
+        INTEGER,
+        LONG,
+        SHORT,
+        STRING,
+        TIMESTAMP,
+    },
+    smithy,
+};
+
 smithy!("com.test#AllPrimitivesStruct": {
     structure ALL_PRIMITIVES_STRUCT_SCHEMA {
         STRING_FIELD: STRING = "string_field"

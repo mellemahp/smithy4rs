@@ -1,3 +1,11 @@
+use smithy4rs_core::{
+    derive::{
+        SmithyShape,
+        smithy_enum,
+    },
+    smithy,
+};
+
 smithy!("com.test#MyIntEnum": {
     enum MY_INT_ENUM_SCHEMA {
         Third = 3

@@ -5,20 +5,16 @@
 package dev.hmellema.smithy4rs.codegen;
 
 import software.amazon.smithy.codegen.core.Property;
+import software.amazon.smithy.codegen.core.Symbol;
 
 /**
  * Properties that may be added to symbols by {@code smithy4rs}.
  */
 public final class SymbolProperties {
     /**
-     * Indicates if a symbol represents a Rust macro type.
+     * Symbol to use for the schema of a shape
      */
-    public static final Property<Boolean> IS_MACRO = Property.named("is-macro");
-
-    /**
-     * Indicates the name of the static SCHEMA field corresponding to this type
-     */
-    public static final Property<String> SCHEMA_IDENT = Property.named("schema-name");
+    public static final Property<Symbol> SCHEMA_SYMBOL = Property.named("schema-symbol");
 
     private SymbolProperties() {}
 }

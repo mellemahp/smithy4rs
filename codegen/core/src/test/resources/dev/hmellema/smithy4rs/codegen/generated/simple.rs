@@ -1,3 +1,5 @@
+use smithy4rs_core::smithy;
+
 smithy!("com.test#MyShort": {
     short MY_SHORT
 });

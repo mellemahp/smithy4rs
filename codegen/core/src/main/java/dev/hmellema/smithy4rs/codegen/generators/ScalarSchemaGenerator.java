@@ -7,6 +7,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import dev.hmellema.smithy4rs.codegen.RustSymbolProvider;
+import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.directed.CustomizeDirective;
 import software.amazon.smithy.model.loader.Prelude;
@@ -16,7 +17,7 @@ import software.amazon.smithy.utils.StringUtils;
 
 public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGenerationContext, RustCodegenSettings>> {
     private static final String TEMPLATE = """
-            smithy!(${id:S}: {
+            ${smithy:T}!(${id:S}: {
                 ${type:L} ${shape:I}
             });
             """;
@@ -37,6 +38,7 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                         writer.pushState();
                         writer.putContext("shape", directive.symbolProvider().toSymbol(shape));
                         writer.putContext("id", shape.toShapeId());
+                        writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                         writer.putContext("type", getSchemaType(shape.getType()));
                         // TODO: Add traits
                         writer.write(TEMPLATE);

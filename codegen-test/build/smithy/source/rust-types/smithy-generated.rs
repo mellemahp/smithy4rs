@@ -1,3 +1,12 @@
+use smithy4rs_core::{
+    derive::SmithyShape,
+    prelude::{
+        INTEGER,
+        STRING,
+    },
+    smithy,
+};
+
 smithy!("com.test#TestStruct": {
     structure TEST_STRUCT_SCHEMA {
         A: STRING = "a"
