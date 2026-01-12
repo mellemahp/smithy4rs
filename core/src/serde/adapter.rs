@@ -289,11 +289,10 @@ impl<T: SerializeWithSchema> serde::Serialize for ValueWrapper<'_, T> {
 
 #[cfg(test)]
 mod tests {
-    use indexmap::IndexMap;
-    use smithy4rs_core_derive::SmithyShape;
-
     use super::*;
     use crate::{
+        IndexMap,
+        derive::SmithyShape,
         schema::{SchemaShape, prelude::*},
         smithy,
     };

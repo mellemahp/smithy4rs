@@ -1,9 +1,9 @@
-use indexmap::IndexMap;
 use smithy4rs_core::{
+    IndexMap,
+    derive::SmithyShape,
     schema::prelude::{INTEGER, STRING},
     smithy,
 };
-use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#StringMap": {
     map STRING_MAP_SCHEMA {

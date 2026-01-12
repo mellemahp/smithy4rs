@@ -11,8 +11,6 @@ categories.workspace = true
 
 [dependencies]
 smithy4rs-core.workspace = true
-smithy4rs-core-derive.workspace = true
-indexmap.workspace = true
 
 [lints]
 workspace = true

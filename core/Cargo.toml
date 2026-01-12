@@ -21,6 +21,7 @@ downcast-rs.workspace = true
 regex.workspace = true
 fast-str.workspace = true
 temporal_rs.workspace = true
+smithy4rs-core-derive.workspace = true
 
 # <TODO> move to workspace
 pastey = "0.2.1"
@@ -31,7 +32,6 @@ log = "0.4.29"
 
 [dev-dependencies]
 serde_json = "1.0.148"
-smithy4rs-core-derive.workspace = true
 criterion.workspace = true
 
 [lints]

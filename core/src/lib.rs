@@ -54,6 +54,11 @@ pub use std::sync::LazyLock;
 pub use pastey;
 
 // =================================================================
+// Re-export Derive macros
+// =================================================================
+pub use smithy4rs_core_derive as derive;
+
+// =================================================================
 // High performance hashmaps
 // -------------------------
 // Faster Map and Set implementations used for internal types and Schemas.

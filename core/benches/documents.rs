@@ -1,14 +1,14 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use indexmap::IndexMap;
 use smithy4rs_core::{
+    IndexMap,
+    derive::SmithyShape,
     prelude::{INTEGER, STRING},
     schema::Document,
     serde::ShapeBuilder,
     smithy,
 };
-use smithy4rs_core_derive::SmithyShape;
 
 smithy!("com.example#Map": {
     map MAP_SCHEMA {

@@ -4,8 +4,9 @@ use std::hint::black_box;
 
 use bigdecimal::BigDecimal;
 use criterion::{Criterion, criterion_group, criterion_main};
-use indexmap::IndexMap;
 use smithy4rs_core::{
+    IndexMap,
+    derive::SmithyShape,
     prelude::*,
     serde::{
         ShapeBuilder,
@@ -13,7 +14,6 @@ use smithy4rs_core::{
     },
     smithy,
 };
-use smithy4rs_core_derive::SmithyShape;
 
 // ==== Test shapes ====
 smithy!("test#ValidationStruct": {
