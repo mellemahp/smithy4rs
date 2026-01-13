@@ -6,7 +6,6 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
-import dev.hmellema.smithy4rs.codegen.TraitInitializer;
 import dev.hmellema.smithy4rs.codegen.sections.MemberSection;
 import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
@@ -69,8 +68,10 @@ public class UnionGenerator implements
                     writer.pushState();
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("hasTraits", TraitInitializerGenerator.hasTraits(directive.shape()));
-                    writer.putContext("traits", new TraitInitializerGenerator(writer, directive.shape(),
-                            directive.context()));
+                    writer.putContext("traits",
+                            new TraitInitializerGenerator(writer,
+                                    directive.shape(),
+                                    directive.context()));
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.write(SCHEMA_TEMPLATE);

@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -26,11 +30,12 @@ record TraitInitializerGenerator(RustWriter writer, Shape shape, CodeGenerationC
             DeprecatedTrait.ID,
             SinceTrait.ID,
             // Defaults are handled by rust macros
-            DefaultTrait.ID
-    );
+            DefaultTrait.ID);
 
     public static boolean hasTraits(Shape shape) {
-        return !shape.getAllTraits().keySet().stream()
+        return !shape.getAllTraits()
+                .keySet()
+                .stream()
                 .filter(id -> !EXCLUDED_TRAITS.contains(id))
                 .toList()
                 .isEmpty();
@@ -38,7 +43,9 @@ record TraitInitializerGenerator(RustWriter writer, Shape shape, CodeGenerationC
 
     @Override
     public void run() {
-        var traitsToAdd = shape.getAllTraits().keySet().stream()
+        var traitsToAdd = shape.getAllTraits()
+                .keySet()
+                .stream()
                 .filter(id -> !EXCLUDED_TRAITS.contains(id))
                 .toList();
         if (traitsToAdd.isEmpty()) {

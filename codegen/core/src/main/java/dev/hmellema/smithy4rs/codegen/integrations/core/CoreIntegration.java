@@ -9,8 +9,6 @@ import dev.hmellema.smithy4rs.codegen.TraitInitializer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.traits.*;

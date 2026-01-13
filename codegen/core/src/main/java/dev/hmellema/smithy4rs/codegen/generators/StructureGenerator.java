@@ -72,8 +72,10 @@ public final class StructureGenerator implements
                     writer.pushState();
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("hasTraits", TraitInitializerGenerator.hasTraits(directive.shape()));
-                    writer.putContext("traits", new TraitInitializerGenerator(writer, directive.shape(),
-                            directive.context()));
+                    writer.putContext("traits",
+                            new TraitInitializerGenerator(writer,
+                                    directive.shape(),
+                                    directive.context()));
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.write(SCHEMA_TEMPLATE);
