@@ -4,6 +4,8 @@
  */
 package dev.hmellema.smithy4rs.codegen.writer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.codegen.core.Symbol;
 
@@ -41,6 +43,18 @@ class ImportContainerTest {
         container.importSymbol(symbolD);
         container.importSymbol(symbolE);
         container.importSymbol(symbolF);
-        System.out.println(container);
+        var expected = """
+                use other::thingy::stuff::F;
+                use test::inner::{
+                    A,
+                    B,
+                    also::{
+                        D,
+                        E,
+                    },
+                    other::C,
+                };
+                """;
+        assertEquals(expected, container.toString());
     }
 }

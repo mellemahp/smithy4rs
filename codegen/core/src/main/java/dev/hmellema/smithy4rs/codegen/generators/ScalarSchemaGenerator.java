@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.directed.CustomizeDirective;
 import software.amazon.smithy.model.loader.Prelude;
 import software.amazon.smithy.model.shapes.ShapeType;
+import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.utils.CaseUtils;
 import software.amazon.smithy.utils.StringUtils;
 
@@ -32,6 +33,11 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                     writer.pushState();
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     for (var shape : shapes) {
+                        // Do not generate trait definitions
+                        // TODO(custom traits): Could we automatically generate and include?
+                        if (shape.hasTrait(TraitDefinition.class)) {
+                            continue;
+                        }
                         writer.pushState();
                         writer.putContext("id", shape.getId());
                         writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {

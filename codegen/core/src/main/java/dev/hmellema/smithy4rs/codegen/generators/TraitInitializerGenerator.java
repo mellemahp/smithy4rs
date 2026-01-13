@@ -5,6 +5,7 @@ import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.List;
 import software.amazon.smithy.model.shapes.Shape;
 import software.amazon.smithy.model.shapes.ShapeId;
+import software.amazon.smithy.model.traits.DefaultTrait;
 import software.amazon.smithy.model.traits.DeprecatedTrait;
 import software.amazon.smithy.model.traits.DocumentationTrait;
 import software.amazon.smithy.model.traits.ExternalDocumentationTrait;
@@ -23,7 +24,9 @@ record TraitInitializerGenerator(RustWriter writer, Shape shape, CodeGenerationC
             ExternalDocumentationTrait.ID,
             UnstableTrait.ID,
             DeprecatedTrait.ID,
-            SinceTrait.ID
+            SinceTrait.ID,
+            // Defaults are handled by rust macros
+            DefaultTrait.ID
     );
 
     public static boolean hasTraits(Shape shape) {
