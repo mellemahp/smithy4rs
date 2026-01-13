@@ -28,6 +28,7 @@ annotation_trait!(
 );
 
 smithy!("smithy.api#Unit": {
+    /// Empty type representation used in Unions and Operations
     @UnitTypeTrait;
     structure UNIT {}
 });

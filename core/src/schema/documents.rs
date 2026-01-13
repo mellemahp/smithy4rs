@@ -1206,6 +1206,7 @@ impl From<&Instant> for Box<dyn Document> {
 }
 
 smithy!("smithy.api#Document": {
+    #[doc(hidden)]
     list LIST_DOCUMENT_SCHEMA {
         member: DOCUMENT
     }
@@ -1224,6 +1225,7 @@ impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
 }
 
 smithy!("smithy.api#Document": {
+    #[doc(hidden)]
     map MAP_DOCUMENT_SCHEMA {
         key: STRING
         value: DOCUMENT

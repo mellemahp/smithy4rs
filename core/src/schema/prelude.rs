@@ -23,46 +23,92 @@ use crate::{
 // ============================================================================
 
 // === Simple types ===
-smithy!("smithy.api#Blob": { blob BLOB });
-smithy!("smithy.api#Boolean": { boolean BOOLEAN });
-smithy!("smithy.api#String": { string STRING });
-smithy!("smithy.api#Timestamp": { timestamp TIMESTAMP });
-smithy!("smithy.api#Byte": { byte BYTE });
-smithy!("smithy.api#Short": { short SHORT });
-smithy!("smithy.api#Integer": { integer INTEGER });
-smithy!("smithy.api#Long": { long LONG });
-smithy!("smithy.api#Float": { float FLOAT });
-smithy!("smithy.api#Double": { double DOUBLE });
-smithy!("smithy.api#BigInteger": { bigInteger BIG_INTEGER });
-smithy!("smithy.api#BigDecimal": { bigDecimal BIG_DECIMAL });
-smithy!("smithy.api#Document": { document DOCUMENT });
+smithy!("smithy.api#Blob": {
+    /// Smithy [blob](https://smithy.io/2.0/spec/simple-types.html#blob) shape
+    blob BLOB
+});
+smithy!("smithy.api#Boolean": {
+    /// Smithy [boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) shape
+    boolean BOOLEAN
+});
+smithy!("smithy.api#String": {
+    /// Smithy [string](https://smithy.io/2.0/spec/simple-types.html#string) shape
+    string STRING
+});
+smithy!("smithy.api#Timestamp": {
+    /// Smithy [timestamp](https://smithy.io/2.0/spec/simple-types.html#timestamp) shape
+    timestamp TIMESTAMP
+});
+smithy!("smithy.api#Byte": {
+    /// Smithy [byte](https://smithy.io/2.0/spec/simple-types.html#byte) shape
+    byte BYTE
+});
+smithy!("smithy.api#Short": {
+    /// Smithy [short](https://smithy.io/2.0/spec/simple-types.html#short) shape
+    short SHORT
+});
+smithy!("smithy.api#Integer": {
+    /// Smithy [integer](https://smithy.io/2.0/spec/simple-types.html#integer) shape
+    integer INTEGER
+});
+smithy!("smithy.api#Long": {
+    /// Smithy [long](https://smithy.io/2.0/spec/simple-types.html#long) shape
+    long LONG
+});
+smithy!("smithy.api#Float": {
+    /// Smithy [float](https://smithy.io/2.0/spec/simple-types.html#float) shape
+    float FLOAT
+});
+smithy!("smithy.api#Double": {
+    /// Smithy [double](https://smithy.io/2.0/spec/simple-types.html#double) shape
+    double DOUBLE
+});
+smithy!("smithy.api#BigInteger": {
+    /// Smithy [bigInteger](https://smithy.io/2.0/spec/simple-types.html#bigInteger) shape
+    bigInteger BIG_INTEGER
+});
+smithy!("smithy.api#BigDecimal": {
+    /// Smithy [bigDecimal](https://smithy.io/2.0/spec/simple-types.html#bigDecimal) shape
+    bigDecimal BIG_DECIMAL
+});
+smithy!("smithy.api#Document": {
+    /// Smithy [document](https://smithy.io/2.0/spec/simple-types.html#document) shape
+    document DOCUMENT
+});
 
 // === Primitive types ===
 smithy!("smithy.api#PrimitiveBoolean": {
+    #[doc(hidden)]
     @DefaultTrait::new(false);
     boolean PRIMITIVE_BOOLEAN
 });
 smithy!("smithy.api#PrimitiveByte": {
+    #[doc(hidden)]
     @DefaultTrait::new(0i8);
     byte PRIMITIVE_BYTE
 });
 smithy!("smithy.api#PrimitiveShort": {
+    #[doc(hidden)]
     @DefaultTrait::new(0i16);
     short PRIMITIVE_SHORT
 });
 smithy!("smithy.api#PrimitiveInteger": {
+    #[doc(hidden)]
     @DefaultTrait::new(0i32);
     integer PRIMITIVE_INTEGER
 });
 smithy!("smithy.api#PrimitiveLong": {
+    #[doc(hidden)]
     @DefaultTrait::new(0i64);
     boolean PRIMITIVE_LONG
 });
 smithy!("smithy.api#PrimitiveFloat": {
+    #[doc(hidden)]
     @DefaultTrait::new(0f32);
     float PRIMITIVE_FLOAT
 });
 smithy!("smithy.api#PrimitiveDouble": {
+    #[doc(hidden)]
     @DefaultTrait::new(0f64);
     double PRIMITIVE_DOUBLE
 });
