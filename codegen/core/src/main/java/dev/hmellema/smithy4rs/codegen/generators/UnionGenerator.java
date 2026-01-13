@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.sections.MemberSection;
 import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
@@ -108,7 +109,7 @@ public class UnionGenerator implements
 
         @Override
         public void run() {
-            writer.pushState();
+            writer.pushState(new MemberSection(shape));
             writer.putContext("memberSchema", getMemberIdent(membername));
             writer.putContext("member", provider.toSymbol(shape));
             writer.putContext("memberName", toMemberName(membername));

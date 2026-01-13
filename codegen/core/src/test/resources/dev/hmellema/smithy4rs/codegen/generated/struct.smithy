@@ -5,6 +5,7 @@ namespace com.test
 structure AllPrimitivesStruct {
     string_field: String
     byte_field: Byte
+    /// A short field
     short_field: Short
     integer_field: Integer
     long_field: Long

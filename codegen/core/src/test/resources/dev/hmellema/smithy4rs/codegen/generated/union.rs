@@ -24,6 +24,7 @@ smithy!("com.test#MyUnion": {
 #[derive(SmithyShape)]
 #[smithy_schema(MY_UNION_SCHEMA)]
 pub enum MyUnion {
+    /// A union member
     #[smithy_schema(STRING_VARIANT)]
     StringVariant(String),
     #[smithy_schema(INTEGER_VARIANT)]
