@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.integrations.docs;
 
 import dev.hmellema.smithy4rs.codegen.sections.DocstringSection;
@@ -8,12 +12,12 @@ import software.amazon.smithy.utils.CodeInterceptor;
 /**
  * Add a warning for member and shapes marked with `@unstable`
  */
-final class UnstableTraitInterceptor implements CodeInterceptor.Appender<DocstringSection, RustWriter>{
+final class UnstableTraitInterceptor implements CodeInterceptor.Appender<DocstringSection, RustWriter> {
     private static final String TEMPLATE = """
             <div class="warning">
-            
+
             **WARNING**: Unstable feature
-            
+
             </div>
             """;
 

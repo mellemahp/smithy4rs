@@ -10,9 +10,7 @@ import dev.hmellema.smithy4rs.codegen.generators.MapGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.ScalarSchemaGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.StructureGenerator;
 import dev.hmellema.smithy4rs.codegen.generators.UnionGenerator;
-import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import software.amazon.smithy.codegen.core.SymbolProvider;
-import software.amazon.smithy.codegen.core.WriterDelegator;
 import software.amazon.smithy.codegen.core.directed.CreateContextDirective;
 import software.amazon.smithy.codegen.core.directed.CreateSymbolProviderDirective;
 import software.amazon.smithy.codegen.core.directed.CustomizeDirective;
@@ -39,10 +37,6 @@ public class TestRustCodegen implements
                 directive.settings(),
                 directive.symbolProvider(),
                 directive.fileManifest(),
-                new WriterDelegator<>(
-                        directive.fileManifest(),
-                        directive.symbolProvider(),
-                        new RustWriter.Factory(directive.settings())),
                 directive.integrations());
     }
 

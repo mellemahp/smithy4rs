@@ -8,7 +8,6 @@ import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
-import java.util.List;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.directed.GenerateListDirective;
 
@@ -22,8 +21,8 @@ public final class ListGenerator
 
     // TODO(traits): Add traits to schema
     private static final String TEMPLATE = """
-            
-                
+
+
             });
             """;
 

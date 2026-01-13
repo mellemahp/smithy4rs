@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.integrations.docs;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -27,7 +31,6 @@ public final class RustDocstringIntegration implements RustCodegenIntegration {
                 new SinceTraitInterceptor(),
                 new UnstableTraitInterceptor(),
                 new ExternalDocumentationTraitInterceptor(),
-                new DocFormatterInterceptor()
-        );
+                new DocFormatterInterceptor());
     }
 }

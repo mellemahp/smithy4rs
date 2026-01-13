@@ -36,6 +36,9 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                         writer.putContext("id", shape.getId());
                         writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
                             writer.pushState(new SchemaSection(shape));
+                            if (TraitInitializerGenerator.hasTraits(shape)) {
+                                writer.write("$C", new TraitInitializerGenerator(writer, shape, directive.context()));
+                            }
                             writer.putContext("type", getSchemaType(shape.getType()));
                             writer.putContext("shape", directive.symbolProvider().toSymbol(shape));
                             writer.write("${type:L} ${shape:I}");

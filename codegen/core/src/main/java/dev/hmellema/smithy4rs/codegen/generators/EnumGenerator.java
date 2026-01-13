@@ -6,7 +6,6 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
-import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;

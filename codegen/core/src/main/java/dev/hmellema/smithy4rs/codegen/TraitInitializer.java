@@ -5,7 +5,6 @@
 package dev.hmellema.smithy4rs.codegen;
 
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
-import java.util.function.BiConsumer;
 import software.amazon.smithy.model.traits.Trait;
 
 /**
@@ -36,6 +35,25 @@ import software.amazon.smithy.model.traits.Trait;
  * {@code TraitService} service provider interface to identify the correct trait provider class for a given trait ID.
  * The trait is then initialized using the `DynamicTrait` struct.
  */
-public interface TraitInitializer<T extends Trait> extends BiConsumer<RustWriter, T> {
+public interface TraitInitializer<T extends Trait> {
     Class<T> traitClass();
+
+    /**
+     * Write the trait initializer to the provided writer.
+     *
+     * @param writer writer to write intializer to
+     * @param context code generation context used to resolve trait symbol
+     * @param trait trait to initialize
+     */
+    void write(RustWriter writer, CodeGenerationContext context, T trait);
+
+    /**
+     * If this initializer is compatible with the provided trait.
+     *
+     * @param context code generation context that can be used to resolve a trait mapping.
+     * @param trait trait to check
+     */
+    default boolean isIntercepted(CodeGenerationContext context, Trait trait) {
+        return context.traitMapping(trait) != null;
+    }
 }

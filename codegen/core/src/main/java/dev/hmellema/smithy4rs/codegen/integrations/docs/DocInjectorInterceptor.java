@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.integrations.docs;
 
 import dev.hmellema.smithy4rs.codegen.sections.DocstringSection;
@@ -7,7 +11,10 @@ import software.amazon.smithy.model.traits.DeprecatedTrait;
 import software.amazon.smithy.utils.CodeInterceptor;
 import software.amazon.smithy.utils.CodeSection;
 
-final class DocInjectorInterceptor implements CodeInterceptor.Prepender<CodeSection, RustWriter>{
+/**
+ * Injects a {@link DocstringSection} that other integrations can act on to add docs.
+ */
+final class DocInjectorInterceptor implements CodeInterceptor.Prepender<CodeSection, RustWriter> {
     @Override
     public void prepend(RustWriter writer, CodeSection section) {
         if (section instanceof DocumentedSection ds) {
@@ -22,8 +29,8 @@ final class DocInjectorInterceptor implements CodeInterceptor.Prepender<CodeSect
                 writer.putContext("since", deprecated.getSince().orElse(""));
                 writer.putContext("note", deprecated.getMessage().orElse(""));
                 writer.write("#[deprecated${?since}(since = ${since:S}${?note}, ${/note}${?note}note = " +
-                                "${note:S}${/note})" +
-                                "${/since}]");
+                        "${note:S}${/note})" +
+                        "${/since}]");
                 writer.popState();
             }
         }

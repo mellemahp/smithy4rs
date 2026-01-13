@@ -7,12 +7,10 @@ package dev.hmellema.smithy4rs.codegen.generators;
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import dev.hmellema.smithy4rs.codegen.sections.MemberSection;
-import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Locale;
-import java.util.SimpleTimeZone;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.directed.GenerateStructureDirective;
@@ -24,7 +22,8 @@ public final class StructureGenerator implements
 
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
-                /// Schema for [`${shape:T}`]
+                /// Schema for [`${shape:T}`]${?hasTraits}
+                ${traits:C}${/hasTraits}
                 structure ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
@@ -70,6 +69,9 @@ public final class StructureGenerator implements
                     // Generate schema definition
                     writer.pushState();
                     writer.putContext("id", directive.shape().getId());
+                    writer.putContext("hasTraits", TraitInitializerGenerator.hasTraits(directive.shape()));
+                    writer.putContext("traits", new TraitInitializerGenerator(writer, directive.shape(),
+                            directive.context()));
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.write(SCHEMA_TEMPLATE);

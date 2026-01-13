@@ -6,7 +6,10 @@ package dev.hmellema.smithy4rs.codegen;
 
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.List;
+import java.util.Map;
 import software.amazon.smithy.codegen.core.SmithyIntegration;
+import software.amazon.smithy.codegen.core.Symbol;
+import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.traits.Trait;
 
 /**
@@ -19,5 +22,12 @@ public interface RustCodegenIntegration
      */
     default List<TraitInitializer<? extends Trait>> traitInitializers() {
         return List.of();
+    }
+
+    /**
+     * ShapeId -> Symbol mappings for Traits.
+     */
+    default Map<ShapeId, Symbol> traitMappings() {
+        return Map.of();
     }
 }

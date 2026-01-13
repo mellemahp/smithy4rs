@@ -1,8 +1,11 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.integrations.docs;
 
 import dev.hmellema.smithy4rs.codegen.sections.DocstringSection;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
-import software.amazon.smithy.model.traits.ExternalDocumentationTrait;
 import software.amazon.smithy.model.traits.SinceTrait;
 import software.amazon.smithy.utils.CodeInterceptor;
 
@@ -12,9 +15,9 @@ import software.amazon.smithy.utils.CodeInterceptor;
 final class SinceTraitInterceptor implements CodeInterceptor.Appender<DocstringSection, RustWriter> {
     private static final String TEMPLATE = """
             <div class="note">
-            
+
             **Since**: ${since:L}
-            
+
             </div>
             """;
 
