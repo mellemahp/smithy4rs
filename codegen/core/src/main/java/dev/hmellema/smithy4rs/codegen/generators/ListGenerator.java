@@ -38,8 +38,19 @@ public final class ListGenerator
                         writer.pushState(new SchemaSection(directive.shape()));
                         writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
                         writer.putContext("member", directive.symbolProvider().toSymbol(directive.shape().getMember()));
+                        // Add top-level traits
+                        if (TraitInitializerGenerator.hasTraits(directive.shape())) {
+                            writer.write("$C", new TraitInitializerGenerator(writer, directive.shape(),
+                                    directive.context()));
+                        }
+                        // Add member traits
+                        writer.putContext("hasMemberTraits", TraitInitializerGenerator.hasTraits(directive.shape().getMember()));
+                        writer.putContext("memberTraits", new TraitInitializerGenerator(writer, directive.shape().getMember(),
+                                directive.context()));
+                        // Write schema body
                         writer.write("""
-                                list ${shape:I} {
+                                list ${shape:I} {${?hasMemberTraits}
+                                    ${memberTraits:C}${/hasMemberTraits}
                                     member: ${member:I}
                                 }""");
                         writer.popState();

@@ -24,7 +24,8 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
 
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
-                /// Schema for [`${shape:T}`]
+                /// Schema for [`${shape:T}`]${?hasTraits}
+                ${traits:C}${/hasTraits}
                 enum ${shape:I} {${#variants}
                     ${value:C|}${/variants}
                 }

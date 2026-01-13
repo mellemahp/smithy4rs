@@ -16,6 +16,13 @@ import software.amazon.smithy.codegen.core.directed.GenerateMapDirective;
  */
 public final class MapGenerator
         implements Consumer<GenerateMapDirective<CodeGenerationContext, RustCodegenSettings>> {
+    private static final String BODY_TEMPLATE = """
+                                map ${shape:I} {${?hasKeyTraits}
+                                    ${keyTraits:C}${/hasKeyTraits}
+                                    key: ${key:I}${?hasValueTraits}
+                                    ${valueTraits:C}${/hasValueTraits}
+                                    value: ${value:I}
+                                }""";
 
     @Override
     public void accept(GenerateMapDirective<CodeGenerationContext, RustCodegenSettings> directive) {
@@ -30,11 +37,25 @@ public final class MapGenerator
                         writer.putContext("key", directive.symbolProvider().toSymbol(directive.shape().getKey()));
                         writer.putContext("value", directive.symbolProvider().toSymbol(directive.shape().getValue()));
                         writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
-                        writer.write("""
-                                map ${shape:I} {
-                                    key: ${key:I}
-                                    value: ${value:I}
-                                }""");
+                        // Add top-level traits
+                        if (TraitInitializerGenerator.hasTraits(directive.shape())) {
+                            writer.write("$C", new TraitInitializerGenerator(writer, directive.shape(),
+                                    directive.context()));
+                        }
+                        // Add key traits
+                        writer.putContext("hasKeyTraits",
+                                TraitInitializerGenerator.hasTraits(directive.shape().getKey()));
+                        writer.putContext("keyTraits", new TraitInitializerGenerator(writer,
+                                directive.shape().getKey(),
+                                directive.context()));
+                        // Add value traits
+                        writer.putContext("hasValueTraits",
+                                TraitInitializerGenerator.hasTraits(directive.shape().getValue()));
+                        writer.putContext("valueTraits", new TraitInitializerGenerator(writer,
+                                directive.shape().getValue(),
+                                directive.context()));
+                        // Write schema body
+                        writer.write(BODY_TEMPLATE);
                         writer.popState();
                     });
                     writer.popState();

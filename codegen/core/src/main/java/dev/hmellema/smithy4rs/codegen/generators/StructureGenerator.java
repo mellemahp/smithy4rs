@@ -20,6 +20,7 @@ import software.amazon.smithy.utils.CaseUtils;
 public final class StructureGenerator implements
         Consumer<GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings>> {
 
+    // TODO: ADD MEMBER TRAITS
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
                 /// Schema for [`${shape:T}`]${?hasTraits}
@@ -52,6 +53,7 @@ public final class StructureGenerator implements
                             .map(entry -> (Runnable) new MemberSchema(
                                     writer,
                                     directive.symbolProvider(),
+                                    directive.context(),
                                     entry.getKey(),
                                     entry.getValue()))
                             .toList();
@@ -89,9 +91,12 @@ public final class StructureGenerator implements
     private record MemberSchema(
             RustWriter writer,
             SymbolProvider provider,
+            CodeGenerationContext context,
             String membername,
             MemberShape shape) implements Runnable {
-        private static final String TEMPLATE = "${memberIdent:L}: ${shape:I} = ${memberName:S}";
+        private static final String TEMPLATE = """
+                ${?hasMemberTraits}${memberTraits:C|}
+                ${/hasMemberTraits}${memberIdent:L}: ${shape:I} = ${memberName:S}""";
 
         @Override
         public void run() {
@@ -99,6 +104,8 @@ public final class StructureGenerator implements
             // NOTE: This _must_ be the exact same as in the model.
             writer.putContext("memberName", membername);
             writer.putContext("shape", provider.toSymbol(shape));
+            writer.putContext("hasMemberTraits", TraitInitializerGenerator.hasTraits(shape));
+            writer.putContext("memberTraits", new TraitInitializerGenerator(writer, shape, context));
             writer.putContext("memberIdent", getMemberIdent(membername));
             writer.write(TEMPLATE);
             writer.popState();

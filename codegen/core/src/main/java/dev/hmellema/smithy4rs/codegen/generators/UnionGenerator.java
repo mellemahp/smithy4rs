@@ -49,6 +49,7 @@ public class UnionGenerator implements
                             .map(entry -> (Runnable) new MemberSchemaGenerator(
                                     writer,
                                     directive.symbolProvider(),
+                                    directive.context(),
                                     entry.getKey(),
                                     entry.getValue()))
                             .toList();
@@ -88,14 +89,19 @@ public class UnionGenerator implements
     private record MemberSchemaGenerator(
             RustWriter writer,
             SymbolProvider provider,
+            CodeGenerationContext context,
             String membername,
             MemberShape shape) implements Runnable {
-        private static final String TEMPLATE = "${memberSchema:L}: ${member:I} = ${memberName:S}";
 
+        private static final String TEMPLATE = """
+                ${?hasMemberTraits}${memberTraits:C|}
+                ${/hasMemberTraits}${memberSchema:L}: ${member:I} = ${memberName:S}""";
         @Override
         public void run() {
             writer.pushState();
             writer.putContext("memberSchema", getMemberIdent(membername));
+            writer.putContext("hasMemberTraits", TraitInitializerGenerator.hasTraits(shape));
+            writer.putContext("memberTraits", new TraitInitializerGenerator(writer, shape, context));
             writer.putContext("member", provider.toSymbol(shape));
             writer.putContext("memberName", membername);
             writer.write(TEMPLATE);
