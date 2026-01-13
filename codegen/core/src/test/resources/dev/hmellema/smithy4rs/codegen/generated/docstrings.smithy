@@ -23,7 +23,7 @@ enum DocumentedEnum {
 }
 
 /// A Documented IntEnum
-enum DocumentedIntEnum {
+intEnum DocumentedIntEnum {
     ONE = 1
     TWO = 2
 }

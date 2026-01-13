@@ -24,6 +24,7 @@ public final class StructureGenerator implements
 
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
+                /// Schema for [`${shape:T}`]
                 structure ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
@@ -67,7 +68,7 @@ public final class StructureGenerator implements
                     // Common data
                     writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
                     // Generate schema definition
-                    writer.pushState(new SchemaSection(directive.shape()));
+                    writer.pushState();
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);

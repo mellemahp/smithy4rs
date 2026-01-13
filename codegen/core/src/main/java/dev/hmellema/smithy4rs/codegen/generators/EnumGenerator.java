@@ -25,6 +25,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
 
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
+                /// Schema for [`${shape:T}`]
                 enum ${shape:I} {${#variants}
                     ${value:C|}${/variants}
                 }
@@ -34,7 +35,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
             #[${smithyEnum:T}]
             #[derive(${derive:T})]
             #[smithy_schema(${shape:I})]
-            pub enum TestEnum {${#variants}
+            pub enum ${shape:T} {${#variants}
                 ${value:C|},${/variants}
             }
             """;
@@ -54,7 +55,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
             writer.pushState();
             writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
             writer.putContext("variants", variants);
-            writer.pushState(new SchemaSection(directive.shape()));
+            writer.pushState();
             writer.putContext("id", directive.shape().getId());
             writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
             writer.write(SCHEMA_TEMPLATE);

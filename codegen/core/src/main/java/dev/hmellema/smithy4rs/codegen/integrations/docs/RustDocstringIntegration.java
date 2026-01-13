@@ -20,12 +20,13 @@ public final class RustDocstringIntegration implements RustCodegenIntegration {
     public List<? extends CodeInterceptor<? extends CodeSection, RustWriter>> interceptors(
             CodeGenerationContext codegenContext
     ) {
-        // TODO: Unstable trait
-        // TODO: new ExternalDocumentationTraitInterceptor(),
-        // TODO: new SinceTraitInterceptor(),
+        // TODO: Examples
         return List.of(
                 new DocInjectorInterceptor(),
                 new DocumentationTraitInterceptor(),
+                new SinceTraitInterceptor(),
+                new UnstableTraitInterceptor(),
+                new ExternalDocumentationTraitInterceptor(),
                 new DocFormatterInterceptor()
         );
     }

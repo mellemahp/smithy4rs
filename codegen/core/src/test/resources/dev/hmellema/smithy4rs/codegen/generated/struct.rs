@@ -18,6 +18,7 @@ use smithy4rs_core::{
 };
 
 smithy!("com.test#AllPrimitivesStruct": {
+    /// Schema for [`AllPrimitivesStruct`]
     structure ALL_PRIMITIVES_STRUCT_SCHEMA {
         STRING_FIELD: STRING = "string_field"
         BYTE_FIELD: BYTE = "byte_field"

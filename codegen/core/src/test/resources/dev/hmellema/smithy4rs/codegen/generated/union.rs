@@ -12,6 +12,7 @@ use smithy4rs_core::{
 };
 
 smithy!("com.test#MyUnion": {
+    /// Schema for [`MyUnion`]
     union MY_UNION_SCHEMA {
         STRING_VARIANT: STRING = "string_variant"
         INTEGER_VARIANT: INTEGER = "integer_variant"

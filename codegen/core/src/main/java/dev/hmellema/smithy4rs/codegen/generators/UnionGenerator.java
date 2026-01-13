@@ -23,6 +23,7 @@ public class UnionGenerator implements
         Consumer<GenerateUnionDirective<CodeGenerationContext, RustCodegenSettings>> {
     public static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
+                /// Schema for [`${shape:T}`]
                 union ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
@@ -63,7 +64,7 @@ public class UnionGenerator implements
                     // Common values
                     writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
                     // Write schema definition
-                    writer.pushState(new SchemaSection(directive.shape()));
+                    writer.pushState();
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("memberSchemas", memberSchemas);
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);

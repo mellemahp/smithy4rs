@@ -8,6 +8,7 @@ use smithy4rs_core::{
 };
 
 smithy!("com.test#TestStruct": {
+    /// Schema for [`TestStruct`]
     structure TEST_STRUCT_SCHEMA {
         A: STRING = "a"
         B: INTEGER = "b"
