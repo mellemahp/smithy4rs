@@ -17,7 +17,7 @@ smithy!("com.test#DeprecatedStruct": {
 pub struct DeprecatedStruct {
     #[deprecated(since = "5ever", note = "Dont use this")]
     #[smithy_schema(DEPRECATED_MEMBER)]
-    pub deprecatedMember: String,
+    pub deprecated_member: String,
 }
 
 smithy!("com.test#ExternalDocumentationStruct": {
@@ -61,7 +61,7 @@ pub struct SinceStruct {
     /// </div>
     ///
     #[smithy_schema(SINCE_MEMBER)]
-    pub sinceMember: String,
+    pub since_member: String,
 }
 
 smithy!("com.test#UnstableStructure": {
@@ -87,5 +87,5 @@ pub struct UnstableStructure {
     /// </div>
     ///
     #[smithy_schema(UNSTABLE_MEMBER)]
-    pub unstableMember: String,
+    pub unstable_member: String,
 }

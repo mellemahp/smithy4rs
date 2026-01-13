@@ -94,6 +94,7 @@ public final class StructureGenerator implements
         @Override
         public void run() {
             writer.pushState();
+            // NOTE: This _must_ be the exact same as in the model.
             writer.putContext("memberName", membername);
             writer.putContext("shape", provider.toSymbol(shape));
             writer.putContext("memberIdent", getMemberIdent(membername));
@@ -114,7 +115,7 @@ public final class StructureGenerator implements
         @Override
         public void run() {
             writer.pushState(new MemberSection(shape));
-            writer.putContext("memberName", membername);
+            writer.putContext("memberName", provider.toMemberName(shape));
             writer.putContext("member", provider.toSymbol(shape));
             writer.putContext("memberIdent", getMemberIdent(membername));
             writer.write(TEMPLATE);

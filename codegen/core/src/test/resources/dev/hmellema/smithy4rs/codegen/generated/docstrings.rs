@@ -73,7 +73,7 @@ smithy!("com.test#DocumentedStruct": {
 pub struct DocumentedStruct {
     /// Documented! Yay!
     #[smithy_schema(DOCUMENTED_MEMBER)]
-    pub documentedMember: String,
+    pub documented_member: String,
 }
 
 smithy!("com.test#DocumentedUnion": {

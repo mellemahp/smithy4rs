@@ -31,6 +31,11 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     }
 
     @Override
+    public String toMemberName(MemberShape shape) {
+        return CaseUtils.toSnakeCase(shape.getMemberName()).toLowerCase();
+    }
+
+    @Override
     public Symbol blobShape(BlobShape blobShape) {
         return Symbol.builder()
                 .name("ByteBuffer")
