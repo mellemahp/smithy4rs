@@ -6,9 +6,12 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
+import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Locale;
+import java.util.SimpleTimeZone;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.directed.GenerateStructureDirective;
@@ -18,13 +21,14 @@ import software.amazon.smithy.utils.CaseUtils;
 public final class StructureGenerator implements
         Consumer<GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings>> {
 
-    private static final String TEMPLATE = """
+    private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
                 structure ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
             });
-
+            """;
+    private static final String STRUCT_TEMPLATE = """
             #[derive(${derive:T}, PartialEq, Clone)]
             #[smithy_schema(${shape:I})]
             pub struct ${shape:T} {${#memberFields}
@@ -59,13 +63,21 @@ public final class StructureGenerator implements
                                     entry.getValue()))
                             .toList();
                     writer.pushState();
+                    // Common data
+                    writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
+                    // Generate schema definition
+                    writer.pushState(new SchemaSection(directive.shape()));
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("memberSchemas", memberSchemas);
+                    writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
+                    writer.write(SCHEMA_TEMPLATE);
+                    writer.popState();
+                    // Generate `struct` impl
+                    writer.pushState(new ShapeSection(directive.shape()));
                     writer.putContext("memberFields", memberFields);
                     writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
-                    writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
-                    writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
-                    writer.write(TEMPLATE);
+                    writer.write(STRUCT_TEMPLATE);
+                    writer.popState();
                     writer.popState();
                 });
     }

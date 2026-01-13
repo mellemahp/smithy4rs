@@ -6,6 +6,8 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
+import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Map;
@@ -21,13 +23,14 @@ import software.amazon.smithy.utils.StringUtils;
 public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationContext, RustCodegenSettings>>
         implements Consumer<T> {
 
-    private static final String TEMPLATE = """
+    private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
                 enum ${shape:I} {${#variants}
                     ${value:C|}${/variants}
                 }
             });
-
+            """;
+    private static final String SHAPE_TEMPLATE = """
             #[${smithyEnum:T}]
             #[derive(${derive:T})]
             #[smithy_schema(${shape:I})]
@@ -49,13 +52,19 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
                     .map(entry -> new VariantGenerator(writer, entry.getKey(), entry.getValue(), isIntEnum))
                     .toList();
             writer.pushState();
+            writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
+            writer.putContext("variants", variants);
+            writer.pushState(new SchemaSection(directive.shape()));
+            writer.putContext("id", directive.shape().getId());
             writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
+            writer.write(SCHEMA_TEMPLATE);
+            writer.popState();
+            writer.pushState(new ShapeSection(directive.shape()));
             writer.putContext("smithyEnum", Smithy4Rs.SMITHY_ENUM);
             writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
-            writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
-            writer.putContext("id", directive.shape().getId());
             writer.putContext("variants", variants);
-            writer.write(TEMPLATE);
+            writer.write(SHAPE_TEMPLATE);
+            writer.popState();
             writer.popState();
         });
     }

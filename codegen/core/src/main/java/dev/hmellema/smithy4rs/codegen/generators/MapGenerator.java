@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import java.util.List;
 import java.util.function.Consumer;
@@ -37,7 +38,7 @@ public final class MapGenerator
                     var value = directive.symbolProvider().toSymbol(directive.shape().getValue());
 
                     // TODO(codegen): Add sections
-                    writer.pushState();
+                    writer.pushState(new SchemaSection(directive.shape()));
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.putContext("traits", List.of());
                     writer.putContext("id", directive.shape().getId());

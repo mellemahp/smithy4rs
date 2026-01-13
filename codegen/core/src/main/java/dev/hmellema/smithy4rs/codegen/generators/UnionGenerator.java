@@ -6,6 +6,8 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
+import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import java.util.Locale;
@@ -18,13 +20,14 @@ import software.amazon.smithy.utils.StringUtils;
 
 public class UnionGenerator implements
         Consumer<GenerateUnionDirective<CodeGenerationContext, RustCodegenSettings>> {
-    public static final String TEMPLATE = """
+    public static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
                 union ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
             });
-
+            """;
+    public static final String STRUCT_TEMPLATE = """
             #[${union:T}]
             #[derive(${derive:T})]
             #[smithy_schema(${shape:I})]
@@ -54,15 +57,24 @@ public class UnionGenerator implements
                                     entry.getKey(),
                                     entry.getValue()))
                             .toList();
+                    // == Write Template ==
                     writer.pushState();
+                    // Common values
+                    writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
+                    // Write schema definition
+                    writer.pushState(new SchemaSection(directive.shape()));
                     writer.putContext("id", directive.shape().getId());
                     writer.putContext("memberSchemas", memberSchemas);
-                    writer.putContext("memberVariants", memberVariants);
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
+                    writer.write(SCHEMA_TEMPLATE);
+                    writer.popState();
+                    writer.pushState(new ShapeSection(directive.shape()));
+                    // Write struct template
+                    writer.putContext("memberVariants", memberVariants);
                     writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
                     writer.putContext("union", Smithy4Rs.UNION_MACRO);
-                    writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
-                    writer.write(TEMPLATE);
+                    writer.write(STRUCT_TEMPLATE);
+                    writer.popState();
                     writer.popState();
                 });
     }
