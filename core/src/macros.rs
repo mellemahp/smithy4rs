@@ -40,138 +40,165 @@ macro_rules! smithy_internal {
     // ============================================================================
     // === Simple types ===
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         boolean $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_boolean($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         byte $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_byte($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         short $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_short($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         integer $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_integer($id, $crate::traits!($($t),*))
         );
     );
 
      ($id:literal: {
-        $(@$t:expr;)*
-        long $name:ident
+         $(#[$outer:meta])*
+         $(@$t:expr;)*
+         long $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_long($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         float $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_float($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         double $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_double($id, $crate::traits!($($t),*))
         );
     );
 
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         bigInteger $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_big_integer($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         bigDecimal $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_big_decimal($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         timestamp $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_timestamp($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         string $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_string($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         blob $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_blob($id, $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         document $name:ident
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_document($id, $crate::traits!($($t),*))
         );
     );
 
     // === Enums ===
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         enum $name:ident {$(
             $_variant:ident = $value:literal
@@ -179,11 +206,13 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_enum($id, Box::new([$($value),*]), $crate::traits!($($t),*))
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         intEnum $name:ident {$(
             $_variant:ident = $value:literal
@@ -191,6 +220,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::create_int_enum($id, Box::new([$($value),*]), $crate::traits!($($t),*))
         );
     );
@@ -199,6 +229,7 @@ macro_rules! smithy_internal {
 
     // Lists must have member named "member" that may also have traits applied.
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         list $name:ident {
             $(@$m:expr;)* member: $member:ident
@@ -206,6 +237,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::list_builder($id, $crate::traits!($($t),*)),
             ("member", $member, $crate::traits!($($m),*))
         );
@@ -213,6 +245,7 @@ macro_rules! smithy_internal {
 
     // Maps must have members named "key" and "value that may also have traits applied.
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         map $name:ident {
             $(@$k:expr;)*
@@ -223,6 +256,7 @@ macro_rules! smithy_internal {
     }) => (
         $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::map_builder($id, $crate::traits!($($t),*)),
             ("key", $key, $crate::traits!($($k),*)),
             ("value", $value, $crate::traits!($($v),*))
@@ -232,16 +266,19 @@ macro_rules! smithy_internal {
     // === Structure & Unions ===
     // Empty structure
      ($id:literal: {
-        $(@$t:expr;)*
-        structure $name:ident {}
+         $(#[$outer:meta])*
+         $(@$t:expr;)*
+         structure $name:ident {}
     }) => (
        $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::structure_builder($id, $crate::traits!($($t),*)).build()
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         structure $name:ident {$(
             $(@$m:expr;)*
@@ -250,12 +287,14 @@ macro_rules! smithy_internal {
     }) => (
        $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::structure_builder($id, $crate::traits!($($t),*)),
             $(($member_ident, $member_name, $member_schema, $crate::traits!($($m),*))),*
         );
     );
 
     ($id:literal: {
+        $(#[$outer:meta])*
         $(@$t:expr;)*
         union $name:ident {$(
             $(@$m:expr;)*
@@ -264,6 +303,7 @@ macro_rules! smithy_internal {
     }) => (
        $crate::smithy!(@inner
             $name,
+            $(@attr[$outer]),*
             $crate::schema::Schema::union_builder($id, $crate::traits!($($t),*)),
             $(($member_ident, $member_name, $member_schema, $crate::traits!($($m),*))),*
         );
@@ -282,6 +322,7 @@ macro_rules! smithy_internal {
     (
         @inner
         $schema_name:ident,
+        $(@attr[$outer:meta]),*
         $builder:expr,
         $(($member_schema_name:ident, $member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
@@ -290,7 +331,7 @@ macro_rules! smithy_internal {
             pub static [<$schema_name _BUILDER>]: $crate::LazyLock<$crate::Ref<$crate::schema::SchemaBuilder>> =
                 $crate::LazyLock::new(|| $crate::Ref::new($builder));
 
-            #[doc(hidden)]
+            $(#[$outer])*
             pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
             });
@@ -305,6 +346,7 @@ macro_rules! smithy_internal {
     (
         @inner
         $schema_name:ident,
+        $(@attr[$outer:meta]),*
         $builder:expr,
         $(($member_ident:literal, $member_schema:tt, $member_traits:expr)),+ $(,)?
     ) => {
@@ -313,7 +355,7 @@ macro_rules! smithy_internal {
             pub static [<$schema_name _BUILDER>]: $crate::LazyLock<$crate::Ref<$crate::schema::SchemaBuilder>> =
                 $crate::LazyLock::new(|| $crate::Ref::new($builder));
 
-            #[doc(hidden)]
+            $(#[$outer])*
             pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
             });
@@ -324,9 +366,10 @@ macro_rules! smithy_internal {
     (
         @inner
         $schema_name:ident,
+        $(@attr[$outer:meta]),*
         $builder:expr
     ) => {
-        #[doc(hidden)]
+        $(#[$outer])*
         pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
             $builder
         });

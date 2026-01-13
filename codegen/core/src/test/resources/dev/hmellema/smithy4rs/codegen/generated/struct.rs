@@ -39,7 +39,6 @@ pub struct AllPrimitivesStruct {
     pub string_field: String,
     #[smithy_schema(BYTE_FIELD)]
     pub byte_field: i8,
-    /// A short field
     #[smithy_schema(SHORT_FIELD)]
     pub short_field: i16,
     #[smithy_schema(INTEGER_FIELD)]

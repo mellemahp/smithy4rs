@@ -14,6 +14,7 @@ smithy!("com.test#TestStruct": {
     }
 });
 
+/// My Test Structure
 #[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(TEST_STRUCT_SCHEMA)]
 pub struct TestStruct {

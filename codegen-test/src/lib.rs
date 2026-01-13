@@ -19,6 +19,6 @@ mod tests {
             .b(21)
             .build()
             .expect("Should Build");
-        println!("{:?}", x)
+        println!("{:#?}", x)
     }
 }
