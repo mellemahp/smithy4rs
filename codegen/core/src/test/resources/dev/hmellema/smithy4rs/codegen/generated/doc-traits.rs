@@ -11,11 +11,11 @@ smithy!("com.test#DeprecatedStruct": {
     }
 });
 
-#[deprecated(since = "1.0", note = "Plz dont use")
+#[deprecated(since = "1.0", note = "Plz dont use")]
 #[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(DEPRECATED_STRUCT_SCHEMA)]
 pub struct DeprecatedStruct {
-    #[deprecated(since = "5ever", note = "Dont use this")
+    #[deprecated(since = "5ever", note = "Dont use this")]
     #[smithy_schema(DEPRECATED_MEMBER)]
     pub deprecatedMember: String,
 }

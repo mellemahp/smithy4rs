@@ -5,7 +5,10 @@
             "type": "structure",
             "members": {
                 "a": {
-                    "target": "smithy.api#String"
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "A field"
+                    }
                 },
                 "b": {
                     "target": "smithy.api#Integer"

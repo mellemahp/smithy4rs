@@ -23,7 +23,7 @@ final class DocInjectorInterceptor implements CodeInterceptor.Prepender<CodeSect
                 writer.putContext("note", deprecated.getMessage().orElse(""));
                 writer.write("#[deprecated${?since}(since = ${since:S}${?note}, ${/note}${?note}note = " +
                                 "${note:S}${/note})" +
-                                "${/since}");
+                                "${/since}]");
                 writer.popState();
             }
         }

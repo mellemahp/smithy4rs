@@ -19,6 +19,7 @@ smithy!("com.test#TestStruct": {
 #[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(TEST_STRUCT_SCHEMA)]
 pub struct TestStruct {
+    /// A field
     #[smithy_schema(A)]
     pub a: String,
     #[smithy_schema(B)]
