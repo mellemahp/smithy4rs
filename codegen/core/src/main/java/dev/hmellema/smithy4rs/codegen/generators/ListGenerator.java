@@ -22,10 +22,8 @@ public final class ListGenerator
 
     // TODO(traits): Add traits to schema
     private static final String TEMPLATE = """
-            ${smithy:T}!(${id:S}: {
-                list ${shape:I} {
-                    member: ${member:I}
-                }
+            
+                
             });
             """;
 
@@ -34,17 +32,19 @@ public final class ListGenerator
         directive.context()
                 .writerDelegator()
                 .useShapeWriter(directive.shape(), writer -> {
-                    var list = directive.symbolProvider().toSymbol(directive.shape());
-                    var member = directive.symbolProvider().toSymbol(directive.shape().getMember());
-
-                    // TODO(codegen): Add sections
-                    writer.pushState(new SchemaSection(directive.shape()));
-                    writer.putContext("traits", List.of());
+                    writer.pushState();
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.putContext("id", directive.shape().getId());
-                    writer.putContext("member", member);
-                    writer.putContext("shape", list);
-                    writer.write(TEMPLATE);
+                    writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
+                        writer.pushState(new SchemaSection(directive.shape()));
+                        writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
+                        writer.putContext("member", directive.symbolProvider().toSymbol(directive.shape().getMember()));
+                        writer.write("""
+                                list ${shape:I} {
+                                    member: ${member:I}
+                                }""");
+                        writer.popState();
+                    });
                     writer.popState();
                 });
     }

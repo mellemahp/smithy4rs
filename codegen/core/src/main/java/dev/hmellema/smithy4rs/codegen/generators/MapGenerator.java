@@ -18,34 +18,26 @@ import software.amazon.smithy.codegen.core.directed.GenerateMapDirective;
 public final class MapGenerator
         implements Consumer<GenerateMapDirective<CodeGenerationContext, RustCodegenSettings>> {
 
-    // TODO: Traits!
-    private static final String TEMPLATE = """
-            ${smithy:T}!(${id:S}: {
-                map ${shape:I} {
-                    key: ${key:I}
-                    value: ${value:I}
-                }
-            });
-            """;
-
     @Override
     public void accept(GenerateMapDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()
                 .writerDelegator()
                 .useShapeWriter(directive.shape(), writer -> {
-                    var map = directive.symbolProvider().toSymbol(directive.shape());
-                    var key = directive.symbolProvider().toSymbol(directive.shape().getKey());
-                    var value = directive.symbolProvider().toSymbol(directive.shape().getValue());
-
-                    // TODO(codegen): Add sections
-                    writer.pushState(new SchemaSection(directive.shape()));
+                    writer.pushState();
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
-                    writer.putContext("traits", List.of());
                     writer.putContext("id", directive.shape().getId());
-                    writer.putContext("key", key);
-                    writer.putContext("value", value);
-                    writer.putContext("shape", map);
-                    writer.write(TEMPLATE);
+                    writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
+                        writer.pushState(new SchemaSection(directive.shape()));
+                        writer.putContext("key", directive.symbolProvider().toSymbol(directive.shape().getKey()));
+                        writer.putContext("value", directive.symbolProvider().toSymbol(directive.shape().getValue()));
+                        writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
+                        writer.write("""
+                                map ${shape:I} {
+                                    key: ${key:I}
+                                    value: ${value:I}
+                                }""");
+                        writer.popState();
+                    });
                     writer.popState();
                 });
     }

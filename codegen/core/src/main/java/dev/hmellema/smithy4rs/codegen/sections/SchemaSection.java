@@ -8,5 +8,5 @@ import software.amazon.smithy.utils.CodeSection;
  *
  * @param target shape that schema is defined for
  */
-public record SchemaSection(Shape target) implements CodeSection {
+public record SchemaSection(Shape target) implements DocumentedSection {
 }

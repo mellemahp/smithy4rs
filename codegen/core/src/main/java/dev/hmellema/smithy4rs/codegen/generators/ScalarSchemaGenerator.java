@@ -17,12 +17,6 @@ import software.amazon.smithy.utils.CaseUtils;
 import software.amazon.smithy.utils.StringUtils;
 
 public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGenerationContext, RustCodegenSettings>> {
-    private static final String TEMPLATE = """
-            ${smithy:T}!(${id:S}: {
-                ${type:L} ${shape:I}
-            });
-            """;
-
     @Override
     public void accept(CustomizeDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()
@@ -35,16 +29,23 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                                     && !s.getType().isShapeType(ShapeType.INT_ENUM))
                             .filter(s -> s.getType().getCategory().equals(ShapeType.Category.SIMPLE))
                             .toList();
+                    writer.pushState();
+                    writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     for (var shape : shapes) {
-                        writer.pushState(new SchemaSection(shape));
-                        writer.putContext("shape", directive.symbolProvider().toSymbol(shape));
-                        writer.putContext("id", shape.toShapeId());
-                        writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
-                        writer.putContext("type", getSchemaType(shape.getType()));
-                        // TODO: Add traits
-                        writer.write(TEMPLATE);
+                        writer.pushState();
+                        writer.putContext("id", shape.getId());
+                        writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
+                            writer.pushState(new SchemaSection(shape));
+                            writer.putContext("type", getSchemaType(shape.getType()));
+                            writer.putContext("shape", directive.symbolProvider().toSymbol(shape));
+                            writer.write("${type:L} ${shape:I}");
+                            writer.popState();
+                        });
                         writer.popState();
+                        // Add a newline for better spacing
+                        writer.write("");
                     }
+                    writer.popState();
                 });
     }
 

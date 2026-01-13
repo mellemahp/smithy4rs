@@ -46,12 +46,14 @@ pub enum DocumentedIntEnum {
 }
 
 smithy!("com.test#DocumentedList": {
+    /// Documented List
     list DOCUMENTED_LIST {
         member: STRING
     }
 });
 
 smithy!("com.test#DocumentedMap": {
+    /// Documented Map
     map DOCUMENTED_MAP {
         key: STRING
         value: STRING
@@ -96,5 +98,6 @@ pub enum DocumentedUnion {
 }
 
 smithy!("com.test#DocumentedScalar": {
+    /// Documented Scalar
     string DOCUMENTED_SCALAR
 });
