@@ -1,0 +1,32 @@
+package dev.hmellema.smithy4rs.codegen.integrations.docs;
+
+import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
+import dev.hmellema.smithy4rs.codegen.RustCodegenIntegration;
+import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
+import java.util.List;
+import software.amazon.smithy.utils.CodeInterceptor;
+import software.amazon.smithy.utils.CodeSection;
+
+/**
+ * TODO
+ */
+public final class RustDocstringIntegration implements RustCodegenIntegration {
+    @Override
+    public String name() {
+        return "rustdoc";
+    }
+
+    @Override
+    public List<? extends CodeInterceptor<? extends CodeSection, RustWriter>> interceptors(
+            CodeGenerationContext codegenContext
+    ) {
+        // TODO: Unstable trait
+        // TODO: new ExternalDocumentationTraitInterceptor(),
+        // TODO: new SinceTraitInterceptor(),
+        return List.of(
+                new DocInjectorInterceptor(),
+                new DocumentationTraitInterceptor(),
+                new DocFormatterInterceptor()
+        );
+    }
+}

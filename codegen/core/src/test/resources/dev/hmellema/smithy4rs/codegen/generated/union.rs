@@ -19,6 +19,7 @@ smithy!("com.test#MyUnion": {
     }
 });
 
+/// My union
 #[smithy_union]
 #[derive(SmithyShape)]
 #[smithy_schema(MY_UNION_SCHEMA)]
