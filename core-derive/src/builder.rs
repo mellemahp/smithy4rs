@@ -3,8 +3,8 @@ use quote::quote;
 use syn::{DataStruct, Type};
 
 use crate::utils::{
-    extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional, is_primitive,
-    parse_schema, replace_inner,
+    IdentOrExpr, extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional,
+    is_primitive, parse_default, parse_schema, replace_inner,
 };
 
 pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
@@ -95,11 +95,14 @@ pub fn get_builder_fields(schema_ident: &Ident, data: &DataStruct) -> Vec<Builde
         );
         let field_ident = field.ident.as_ref().unwrap().clone();
         let field_ty = &field.ty;
-        let optional = is_optional(field_ty);
+        let default = parse_default(&field.attrs);
+        let optional = is_optional(field_ty) && default.is_none();
         let target = resolve_build_target(field_ty, optional);
+
         field_data.push(BuilderFieldData {
             schema,
             field_ident,
+            default,
             optional,
             target,
         });
@@ -140,6 +143,7 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
 pub(crate) struct BuilderFieldData {
     schema: Ident,
     field_ident: Ident,
+    default: Option<IdentOrExpr>,
     optional: bool,
     target: BuildTarget,
 }
@@ -178,6 +182,8 @@ impl BuilderFieldData {
         let field_name = &self.field_ident;
         if self.optional {
             quote! { #field_name: None }
+        } else if let Some(default) = self.default.as_ref() {
+            quote! { #field_name: #crate_ident::serde::Required::Set(#default) }
         } else {
             quote! { #field_name: #crate_ident::serde::Required::Unset }
         }

@@ -8,6 +8,7 @@ pub struct SimpleStruct {
     #[smithy_schema(A)]
     pub field_a: String,
     #[smithy_schema(B)]
+    #[default(0)]
     pub field_b: i32,
     #[smithy_schema(C)]
     pub field_c: Option<Nested>,
@@ -78,7 +79,7 @@ impl SimpleStructBuilder {
     pub fn new() -> Self {
         Self {
             field_a: smithy4rs_core::serde::Required::Unset,
-            field_b: smithy4rs_core::serde::Required::Unset,
+            field_b: smithy4rs_core::serde::Required::Set(0),
             field_c: None,
         }
     }

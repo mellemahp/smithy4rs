@@ -1,7 +1,7 @@
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
-use syn::{Attribute, DataEnum, Lit, Type};
+use quote::{ToTokens, quote};
+use syn::{__private::TokenStream2, Attribute, DataEnum, Expr, Lit, Type};
 
 /// Parses out attribute data for the `smithy_schema` macro attribute from the struct and
 /// its fields.
@@ -193,6 +193,36 @@ pub(crate) fn is_union(data_enum: &DataEnum) -> bool {
         .attrs
         .iter()
         .any(|attr| attr.path().is_ident("smithy_schema"))
+}
+
+/// Parses out attribute data for the `smithy_schema` macro attribute from the struct and
+/// its fields.
+pub(crate) fn parse_default(attrs: &[Attribute]) -> Option<IdentOrExpr> {
+    let mut default = None;
+    for attr in attrs {
+        if attr.path().is_ident("default") {
+            if let Ok(ident) = attr.parse_args::<Ident>() {
+                default = Some(IdentOrExpr::Ident(ident));
+            }
+            if let Ok(expr) = attr.parse_args::<Expr>() {
+                default = Some(IdentOrExpr::Expr(expr));
+            }
+        }
+    }
+    default
+}
+
+pub(crate) enum IdentOrExpr {
+    Ident(Ident),
+    Expr(Expr),
+}
+impl ToTokens for IdentOrExpr {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            IdentOrExpr::Ident(ident) => ident.to_tokens(tokens),
+            IdentOrExpr::Expr(expr) => expr.to_tokens(tokens),
+        }
+    }
 }
 
 #[cfg(test)]
