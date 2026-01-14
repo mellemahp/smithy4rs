@@ -1,6 +1,0 @@
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/test-utils/build/classes/java/main/dev/hmellema/smithy4rs/test/utils/RustCodegenSnapShotProvider.class
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/test-utils/build/classes/java/main/dev/hmellema/smithy4rs/test/utils/RustCodegenTestException.class
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/test-utils/build/classes/java/main/dev/hmellema/smithy4rs/test/utils/RustCodegenTestUtils.class
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/test-utils/build/classes/java/main/dev/hmellema/smithy4rs/test/utils/SnapshotTestCase.class
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/test-utils/build/classes/java/main/dev/hmellema/smithy4rs/test/utils/RustCodegenTest.class
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/test-utils/build/classes/java/main/dev/hmellema/smithy4rs/test/utils/RunnableParameterResolver.class

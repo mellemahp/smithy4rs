@@ -1,2 +1,0 @@
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/plugins/type-codegen/build/classes/java/main/dev/hmellema/smithy4rs/codegen/types/RustTypeCodegen.class
-/Users/huntermellema/Dropbox/projects/repos/smithy4rs/codegen/plugins/type-codegen/build/classes/java/main/dev/hmellema/smithy4rs/codegen/types/RustTypeCodegenPlugin.class
