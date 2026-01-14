@@ -120,7 +120,10 @@ fn unknown_variant(enum_data: &mut ItemEnum) {
 
 /// Convenience derive that combines `SchemaShape`, `SerializableShape`, and `DeserializableShape`
 /// for Smithy Enums, Structures, and Unions.
-#[proc_macro_derive(SmithyShape, attributes(smithy_schema, enum_value, smithy_union_enum))]
+#[proc_macro_derive(
+    SmithyShape,
+    attributes(smithy_schema, enum_value, smithy_union_enum, default)
+)]
 pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Generate all three derive expansions
     let schema = schema_shape_derive(input.clone());
@@ -186,7 +189,7 @@ pub fn serializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro::
 }
 
 /// Derives `DeserializeWithSchema` and, implicitly `Deserialize` for a Shape.
-#[proc_macro_derive(DeserializableShape, attributes(smithy_schema))]
+#[proc_macro_derive(DeserializableShape, attributes(smithy_schema, default))]
 pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let shape_name = &input.ident;

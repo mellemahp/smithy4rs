@@ -1,0 +1,69 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.hmellema.smithy4rs",
+    "module": "type-codegen",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "type-codegen-1.0.0.jar",
+          "url": "type-codegen-1.0.0.jar",
+          "size": 4189,
+          "sha512": "eabf34e12e0000c6c29e7408439376af9ff02996ab6b12a88a14df349a36b762e50a07ad313cdeaaa153846f60f8ea5e9b85bfa99ac39a2f58c5d0174f4b245a",
+          "sha256": "2a8b2dd926bc5d568b06e8a9930a7da7a6070e632977e99fc08f0bd8ae4c565d",
+          "sha1": "15a4cd043cbe61e62affb842942e4bfb9b952e4b",
+          "md5": "8f700da40db21d92a12bfbd77f084e57"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "dev.hmellema.smithy4rs",
+          "module": "core",
+          "version": {
+            "requires": "1.0.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "type-codegen-1.0.0.jar",
+          "url": "type-codegen-1.0.0.jar",
+          "size": 4189,
+          "sha512": "eabf34e12e0000c6c29e7408439376af9ff02996ab6b12a88a14df349a36b762e50a07ad313cdeaaa153846f60f8ea5e9b85bfa99ac39a2f58c5d0174f4b245a",
+          "sha256": "2a8b2dd926bc5d568b06e8a9930a7da7a6070e632977e99fc08f0bd8ae4c565d",
+          "sha1": "15a4cd043cbe61e62affb842942e4bfb9b952e4b",
+          "md5": "8f700da40db21d92a12bfbd77f084e57"
+        }
+      ]
+    }
+  ]
+}

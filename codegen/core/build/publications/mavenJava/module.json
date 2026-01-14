@@ -1,0 +1,78 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.hmellema.smithy4rs",
+    "module": "core",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "software.amazon.smithy",
+          "module": "smithy-codegen-core",
+          "version": {
+            "requires": "1.63.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "core-1.0.0.jar",
+          "url": "core-1.0.0.jar",
+          "size": 75665,
+          "sha512": "786687841cc71ed9b2f55d7216b4180a281ec94c86d41203f38d52f23f28a5b9f1fa6a33c5914c657d4ada421aa996441b0a78546bb93ba38c4ed35c97f1d6ab",
+          "sha256": "866e866fbecee0c3c6243019a466ebb87090419da4de99275a138a4a386cc539",
+          "sha1": "0d85dac43822e73bb8358e3708c3f492261c4c9a",
+          "md5": "2a36199079d07d7cdaba32e76f9be63d"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "software.amazon.smithy",
+          "module": "smithy-codegen-core",
+          "version": {
+            "requires": "1.63.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "core-1.0.0.jar",
+          "url": "core-1.0.0.jar",
+          "size": 75665,
+          "sha512": "786687841cc71ed9b2f55d7216b4180a281ec94c86d41203f38d52f23f28a5b9f1fa6a33c5914c657d4ada421aa996441b0a78546bb93ba38c4ed35c97f1d6ab",
+          "sha256": "866e866fbecee0c3c6243019a466ebb87090419da4de99275a138a4a386cc539",
+          "sha1": "0d85dac43822e73bb8358e3708c3f492261c4c9a",
+          "md5": "2a36199079d07d7cdaba32e76f9be63d"
+        }
+      ]
+    }
+  ]
+}

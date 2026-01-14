@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.hmellema.smithy4rs.codegen.writer.ImportContainerTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-01-13T23:42:44.373Z" hostname="Hunters-MacBook-Pro.local" time="0.02">
+  <properties/>
+  <testcase name="importsPrintCorrectly()" classname="dev.hmellema.smithy4rs.codegen.writer.ImportContainerTest" time="0.02"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
