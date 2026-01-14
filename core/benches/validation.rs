@@ -124,7 +124,7 @@ pub fn validate_builder(c: &mut Criterion) {
 
 pub fn validate_shape(c: &mut Criterion) {
     let built_shape = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(1)
         .build()
         .expect("Shape should build");
@@ -153,7 +153,7 @@ pub fn unvalidated_shape(c: &mut Criterion) {
 
 pub fn builder_with_collections(c: &mut Criterion) {
     let builder = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(1);
     let list = vec![builder.clone(), builder.clone(), builder.clone()];
     let mut map = IndexMap::new();
@@ -173,7 +173,7 @@ pub fn builder_with_collections(c: &mut Criterion) {
 
 pub fn built_shape_with_collections(c: &mut Criterion) {
     let built = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(1)
         .build()
         .expect("Shape should build");
@@ -198,7 +198,7 @@ pub fn built_shape_with_collections(c: &mut Criterion) {
 // Primarily for comparison against set implementation.
 pub fn built_shape_with_list(c: &mut Criterion) {
     let built = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(1)
         .build()
         .expect("Shape should build");
@@ -214,17 +214,17 @@ pub fn built_shape_with_list(c: &mut Criterion) {
 
 pub fn built_shape_with_set(c: &mut Criterion) {
     let built1 = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(2)
         .build()
         .expect("Shape should build");
     let built2 = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(2)
         .build()
         .expect("Shape should build");
     let built3 = ValidatedStructBuilder::new()
-        .string("string".to_string())
+        .string("string")
         .required_int(3)
         .build()
         .expect("Shape should build");
