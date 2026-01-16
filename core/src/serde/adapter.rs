@@ -4,7 +4,6 @@ use std::{
     error::Error as StdError,
     fmt::{Debug, Display, Formatter},
 };
-
 use serde::ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct};
 use static_str_ops::staticize;
 
@@ -16,8 +15,38 @@ use crate::{
         serializers::{Error, Serializer},
     },
 };
-// TODO(features): This should all be behind a feature flag so serde is not
-//       required for all consumers.
+
+
+//========================================================================
+// Errors
+//========================================================================
+
+#[derive(Debug)]
+pub struct SerdeErrorWrapper<E: SerdeError>(E);
+impl<E: SerdeError> Display for SerdeErrorWrapper<E> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+impl<E: SerdeError> StdError for SerdeErrorWrapper<E> {}
+impl<E: SerdeError> Error for SerdeErrorWrapper<E> {
+    #[inline]
+    fn custom<T: Display>(msg: T) -> Self {
+        SerdeErrorWrapper(E::custom(msg))
+    }
+}
+impl<E: SerdeError> From<E> for SerdeErrorWrapper<E> {
+    #[inline]
+    fn from(e: E) -> Self {
+        SerdeErrorWrapper(e)
+    }
+}
+
+//========================================================================
+// Serialization Adapter
+//========================================================================
+
 struct SerdeAdapter<S: serde::Serializer> {
     serializer: S,
 }
@@ -27,25 +56,6 @@ impl<S: serde::Serializer> SerdeAdapter<S> {
     }
 }
 
-#[derive(Debug)]
-pub struct SerdeErrorWrapper<E: SerdeError>(E);
-impl<E: SerdeError> Display for SerdeErrorWrapper<E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.0, f)
-    }
-}
-impl<E: SerdeError> StdError for SerdeErrorWrapper<E> {}
-impl<E: SerdeError> Error for SerdeErrorWrapper<E> {
-    fn custom<T: Display>(msg: T) -> Self {
-        SerdeErrorWrapper(E::custom(msg))
-    }
-}
-
-impl<E: SerdeError> From<E> for SerdeErrorWrapper<E> {
-    fn from(e: E) -> Self {
-        SerdeErrorWrapper(e)
-    }
-}
 
 impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
     type Error = SerdeErrorWrapper<S::Error>;
@@ -335,8 +345,7 @@ mod tests {
         where
             S: serde::Serializer,
         {
-            let adapter = SerdeAdapter::new(serializer);
-            self.serialize_with_schema(self.schema(), adapter)
+            self.serialize_with_schema(self.schema(),  SerdeAdapter::new(serializer))
                 .map_err(|wrapper| wrapper.0)
         }
     }
