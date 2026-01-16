@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{
     error::Error as StdError,
     fmt::{Debug, Display, Formatter},
@@ -15,7 +13,6 @@ use crate::{
         serializers::{Error, Serializer},
     },
 };
-
 
 //========================================================================
 // Errors
@@ -284,6 +281,10 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
         Ok(self.serializer.end()?)
     }
 }
+
+//========================================================================
+// Serialization Adapter
+//========================================================================
 
 struct ValueWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
 impl<T: SerializeWithSchema> serde::Serialize for ValueWrapper<'_, T> {

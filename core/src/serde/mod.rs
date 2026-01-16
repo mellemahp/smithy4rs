@@ -1,4 +1,7 @@
-mod adapter;
+
+#[cfg(feature = "serde-adapters")]
+pub mod adapters;
+
 mod builders;
 pub use builders::*;
 
@@ -11,5 +14,7 @@ pub mod serializers;
 mod unit;
 
 pub mod validation;
+mod adapters;
+
 pub use deserializers as de;
 pub use serializers as se;

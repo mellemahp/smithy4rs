@@ -25,7 +25,7 @@ smithy4rs-core-derive.workspace = true
 
 # <TODO> move to workspace
 pastey = "0.2.1"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"], optional = true }
 static_str_ops = "0.1.2"
 rustc-hash = "2.1.1"
 log = "0.4.29"
@@ -36,6 +36,9 @@ criterion.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+serde-adapters = ["dep:serde"]
 
 [[bench]]
 name = "schema"
