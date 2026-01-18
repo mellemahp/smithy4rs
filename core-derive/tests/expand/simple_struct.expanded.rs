@@ -83,12 +83,12 @@ impl SimpleStructBuilder {
             field_c: None,
         }
     }
-    pub fn field_a(mut self, value: String) -> Self {
-        self.field_a = smithy4rs_core::serde::Required::Set(value);
+    pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
+        self.field_a = smithy4rs_core::serde::Required::Set(value.into());
         self
     }
-    pub fn field_b(mut self, value: i32) -> Self {
-        self.field_b = smithy4rs_core::serde::Required::Set(value);
+    pub fn field_b<T: Into<i32>>(mut self, value: T) -> Self {
+        self.field_b = smithy4rs_core::serde::Required::Set(value.into());
         self
     }
     pub fn field_c(mut self, value: Nested) -> Self {
@@ -313,8 +313,8 @@ impl NestedBuilder {
             field_a: smithy4rs_core::serde::Required::Unset,
         }
     }
-    pub fn field_a(mut self, value: String) -> Self {
-        self.field_a = smithy4rs_core::serde::Required::Set(value);
+    pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
+        self.field_a = smithy4rs_core::serde::Required::Set(value.into());
         self
     }
 }

@@ -69,9 +69,9 @@ fn test_optional_data_without_value() {
 fn test_numbers_roundtrip() {
     let numbers = NumericTypesStructBuilder::new()
         .byte_val(42)
-        .short_val(1000)
+        .short_val(1000i16)
         .int_val(100000)
-        .long_val(1000000000000)
+        .long_val(1000000000000i64)
         .float_val(1.234)
         .double_val(1.23456789)
         .build()
@@ -85,9 +85,9 @@ fn test_numbers_roundtrip() {
 fn test_numbers_negative_values() {
     let numbers = NumericTypesStructBuilder::new()
         .byte_val(-42)
-        .short_val(-1000)
+        .short_val(-1000i16)
         .int_val(-100000)
-        .long_val(-1000000000000)
+        .long_val(-1000000000000i64)
         .float_val(-1.234)
         .double_val(-1.23456789)
         .build()
