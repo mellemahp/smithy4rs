@@ -1,0 +1,8 @@
+# Ignore classpath cache
+build/smithy/classpath.json
+# ignore everything in source projection
+build/smithy/source/*
+build/smithy/source/*/
+
+# re-add rust-types
+!build/smithy/source/rust-types/

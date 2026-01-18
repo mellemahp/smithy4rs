@@ -36,7 +36,7 @@ wait_for = ["test"]
 depends = ["build"]
 description = "Lint the code with Clippy"
 env = { RUST_BACKTRACE = '1' }
-run = "cargo clippy --workspace --all-targets --all-features"
+run = "cargo clippy --all-targets --all-features"
 
 [tasks.audit]
 wait_for = ["build", "lint", "test", "fmt-all", "check-bench"]
