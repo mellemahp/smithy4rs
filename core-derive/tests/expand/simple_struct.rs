@@ -19,6 +19,7 @@ pub struct SimpleStruct {
     #[smithy_schema(A)]
     pub field_a: String,
     #[smithy_schema(B)]
+    #[default(0)]
     pub field_b: i32,
     #[smithy_schema(C)]
     pub field_c: Option<Nested>,

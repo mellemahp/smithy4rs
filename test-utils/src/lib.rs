@@ -4,6 +4,7 @@
 // TODO(test): Add constraint test shapes once we have validation
 
 mod basic_types;
+mod defaults;
 mod enums;
 mod nested;
 mod recursive;
