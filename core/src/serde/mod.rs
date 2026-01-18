@@ -1,5 +1,6 @@
-
 #[cfg(feature = "serde-adapters")]
+/// Adapters to bridge between `serde` and schema-guided (de)serialization
+/// for Smithy shapes.
 pub mod adapters;
 
 mod builders;
@@ -14,7 +15,5 @@ pub mod serializers;
 mod unit;
 
 pub mod validation;
-mod adapters;
-
 pub use deserializers as de;
 pub use serializers as se;

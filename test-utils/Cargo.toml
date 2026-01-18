@@ -11,6 +11,10 @@ categories.workspace = true
 
 [dependencies]
 smithy4rs-core.workspace = true
+serde = { version = "1.0", optional = true }
 
 [lints]
 workspace = true
+
+[features]
+serde-adapter = ["dep:serde"]

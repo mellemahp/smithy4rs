@@ -1,4 +1,6 @@
-#![cfg(feature = "serde-adapters")]
+/// Serialization adapters for `serde`
+mod serialization;
+pub use serialization::SerAdapter;
 
-pub mod serialization;
-mod deserialization;
+/// Deserialization adapters for `serde`
+pub mod deserialization;

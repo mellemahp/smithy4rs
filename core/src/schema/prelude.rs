@@ -149,6 +149,12 @@ annotation_trait!(
     /// *See* - [`@eventPayload`](https://smithy.io/2.0/spec/endpoint-traits.html#smithy-api-hostlabel-trait)
     HostLabelTrait = "smithy.api#hostLabel"
 );
+annotation_trait!(
+    /// Serializes an object property as an XML attribute rather than a nested XML element.
+    ///
+    /// *See* - [`@eventPayload`](https://smithy.io/2.0/spec/protocol-traits.html#xmlattribute-trait)
+    XmlAttributeTrait = "smithy.api#xmlAttribute"
+);
 
 // ====  Traits that take just a string value ====
 string_trait!(
@@ -163,6 +169,12 @@ string_trait!(
     ///
     /// *See* - [`@jsonName`](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-jsonname-trait)
     "smithy.api#jsonName": JsonNameTrait(name)
+);
+string_trait!(
+    /// Allows a serialized object property name in an XML document to differ from name used in model.
+    ///
+    /// *See* - [`@xmlName`](https://smithy.io/2.0/spec/protocol-traits.html#xmlname-trait)
+    "smithy.api#xmlName": XmlNameTrait(name)
 );
 string_trait!(
     /// Binds a structure member to an HTTP header.
