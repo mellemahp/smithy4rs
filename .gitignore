@@ -16,3 +16,9 @@ target/
 .idea/
 *.iml
 *.iws
+
+# Gradle and smithy output dir
+build/
+
+# We want to check the diff on generated smithy files in PRs
+!/codegen-test/build/smithy/source/rust-types/
