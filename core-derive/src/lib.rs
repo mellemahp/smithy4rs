@@ -9,10 +9,15 @@ mod schema;
 mod serialization;
 mod utils;
 
+#[cfg(feature = "serde-adapter")]
+mod adapter;
+
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote};
 
+#[cfg(feature = "serde-adapter")]
+use crate::adapter::ser_adapter_impl;
 use crate::{
     builder::{buildable, builder_impls, builder_struct, get_builder_fields},
     debug::debug_impl,
@@ -21,9 +26,9 @@ use crate::{
     serialization::serialization_impl,
     utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema},
 };
+
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
-// TODO(macro): Add debug impl using fmt serializer
-// TODO(derive): Smithy Struct should automatically derive: Debug, PartialEq, and Clone
+// TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
 //               if not already derived on shape.
 
 // ============================================================================
@@ -130,6 +135,10 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let serializable = serializable_shape_derive(input.clone());
     let deserializable = deserializable_shape_derive(input.clone());
 
+    // Adapters for serde (if enabled)
+    #[cfg(feature = "serde-adapter")]
+    let serde = smithy_serde_adapter(input.clone());
+
     // Add additional core derivations
     let debug = smithy_debug(input);
 
@@ -139,13 +148,31 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let deserializable_tokens = TokenStream::from(deserializable);
     let debug_tokens = TokenStream::from(debug);
 
-    quote! {
-        #schema_tokens
-        #serializable_tokens
-        #deserializable_tokens
-        #debug_tokens
+    #[cfg(feature = "serde-adapter")]
+    let serde_tokens = TokenStream::from(serde);
+
+    #[cfg(feature = "serde-adapter")]
+    {
+        quote! {
+            #schema_tokens
+            #serializable_tokens
+            #deserializable_tokens
+            #debug_tokens
+            #serde_tokens
+        }
+        .into()
     }
-    .into()
+
+    #[cfg(not(feature = "serde-adapter"))]
+    {
+        quote! {
+            #schema_tokens
+            #serializable_tokens
+            #deserializable_tokens
+            #debug_tokens
+        }
+        .into()
+    }
 }
 
 /// Derives `SchemaShape` for a struct, backed by a static schema (`StaticSchemaShape`)
@@ -252,6 +279,27 @@ pub fn smithy_debug(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             use #crate_ident::serde::debug::DebugWrapper as _DebugWrapper;
 
             #debug
+        };
+    }
+    .into()
+}
+
+/// Derives `serde` adapter implementations for a Smithy shape.
+#[cfg(feature = "serde-adapter")]
+#[proc_macro_derive(SmithySerdeAdapter)]
+pub fn smithy_serde_adapter(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let shape_name = &input.ident;
+    let schema_ident = parse_schema(&input.attrs);
+    let (extern_import, crate_ident) = get_crate_info();
+    let ser = ser_adapter_impl(&crate_ident, shape_name, &schema_ident);
+
+    quote! {
+        const _: () = {
+            #extern_import
+            extern crate serde as _serde;
+
+            #ser
         };
     }
     .into()

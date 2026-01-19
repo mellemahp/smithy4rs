@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-
 use std::{
+    any::type_name,
     error::Error as StdError,
     fmt::{Debug, Display, Formatter},
 };
@@ -10,44 +9,148 @@ use static_str_ops::staticize;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
+    prelude::{JsonNameTrait, XmlAttributeTrait, XmlNameTrait},
     schema::{Document, SchemaRef},
     serde::{
         se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer},
         serializers::{Error, Serializer},
     },
 };
-// TODO(features): This should all be behind a feature flag so serde is not
-//       required for all consumers.
-struct SerdeAdapter<S: serde::Serializer> {
-    serializer: S,
-}
-impl<S: serde::Serializer> SerdeAdapter<S> {
-    const fn new(serializer: S) -> Self {
-        SerdeAdapter { serializer }
+
+//========================================================================
+// Errors
+//========================================================================
+
+/// Wrapper type that bridges `serde` and `smithy` Serialization error types.
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct SerdeErrorWrapper<E: SerdeError>(E);
+impl<E: SerdeError> SerdeErrorWrapper<E> {
+    pub fn inner(self) -> E {
+        self.0
     }
 }
-
-#[derive(Debug)]
-pub struct SerdeErrorWrapper<E: SerdeError>(E);
 impl<E: SerdeError> Display for SerdeErrorWrapper<E> {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.0, f)
     }
 }
 impl<E: SerdeError> StdError for SerdeErrorWrapper<E> {}
 impl<E: SerdeError> Error for SerdeErrorWrapper<E> {
+    #[inline]
     fn custom<T: Display>(msg: T) -> Self {
         SerdeErrorWrapper(E::custom(msg))
     }
 }
-
 impl<E: SerdeError> From<E> for SerdeErrorWrapper<E> {
+    #[inline]
     fn from(e: E) -> Self {
         SerdeErrorWrapper(e)
     }
 }
 
-impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
+//========================================================================
+// Serialization Adapter
+//========================================================================
+
+// Traits to support (could these be global??):
+// 1.
+// 2. xmlName - Applied to shape names and to member names
+// 3.
+// 4.
+//
+// Should be able to add additional features in the future!
+
+/// Adapter that bridges between `serde` serialization and schema-guided
+/// serialization.
+///
+/// ## Supported Protocol traits
+/// By default we support the following built-in protocol traitsL
+/// 1. `jsonName` - Renames members in `json` serde serializers
+/// 2. `xmlName` - Renames shapes and members in `xml` serde serializers
+/// 3. `xmlAttribute` - Treats a member as an attribute for `xml` serde serializers (appends: `@:` to member name)
+///
+/// **NOTE**: The `xmlNamespace` trait is not supported by this adapter. This
+/// is because `serde`'s XML implementation requires namespaces to be set in
+/// the serializer config directly.
+///
+/// ## Generated Shapes
+/// This structure is used inside generated `serde::serialize` implementations
+/// when the `serde-adapter` feature is enabled.
+pub struct SerAdapter<S: serde::Serializer> {
+    serializer: S,
+    mapper: NameMapper,
+}
+impl<S: serde::Serializer> SerAdapter<S> {
+    /// Create a new schema-guided serialization adapter for a [`serde::Serializer`]
+    pub fn new(serializer: S) -> Self {
+        SerAdapter {
+            serializer,
+            mapper: NameMapper::new::<S>(),
+        }
+    }
+}
+
+/// Applies name mapping to support default protocol traits.
+enum NameMapper {
+    Json,
+    Xml,
+    Default,
+}
+impl NameMapper {
+    fn new<T: serde::Serializer>() -> Self {
+        if type_name::<T>().contains("json") {
+            NameMapper::Json
+        } else if type_name::<T>().contains("xml") {
+            NameMapper::Xml
+        } else {
+            NameMapper::Default
+        }
+    }
+
+    fn get_struct_name(&self, schema: &SchemaRef) -> &'static str {
+        if matches!(self, NameMapper::Xml)
+            && let Some(xml_name) = schema.get_trait_as::<XmlNameTrait>()
+        {
+            return staticize(xml_name.name());
+        }
+        staticize(schema.id().name())
+    }
+
+    fn get_member_name<S: StructSerializer>(
+        &self,
+        schema: &SchemaRef,
+    ) -> Result<&'static str, S::Error> {
+        let Some(me) = schema.as_member() else {
+            return Err(S::Error::custom(
+                "Expected member schema when serializing struct field",
+            ));
+        };
+        match self {
+            NameMapper::Json => {
+                // Rename based on JSON Traits, if present
+                Ok(schema
+                    .get_trait_as::<JsonNameTrait>()
+                    .map_or_else(|| staticize(&me.name), |val| staticize(val.name())))
+            }
+            NameMapper::Xml => {
+                // Rename based on JSON Traits
+                let name = schema
+                    .get_trait_as::<XmlNameTrait>()
+                    .map_or_else(|| me.name.as_str(), |val| val.name());
+                // Add attribute prefix if applicable
+                if schema.contains_type::<XmlAttributeTrait>() {
+                    return Ok(staticize(format!("@{name}")));
+                }
+                Ok(staticize(name))
+            }
+            NameMapper::Default => Ok(staticize(&me.name)),
+        }
+    }
+}
+
+impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     type Error = SerdeErrorWrapper<S::Error>;
     type Ok = S::Ok;
     type SerializeList = ListSerializeAdapter<S>;
@@ -60,9 +163,9 @@ impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
         schema: &SchemaRef,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
-        let struct_name = staticize(schema.id().name());
+        let struct_name = self.mapper.get_struct_name(schema);
         let struct_ser = self.serializer.serialize_struct(struct_name, len)?;
-        Ok(StructSerializerAdapter::new(struct_ser))
+        Ok(StructSerializerAdapter::new(struct_ser, self.mapper))
     }
 
     #[inline]
@@ -171,6 +274,7 @@ impl<S: serde::Serializer> Serializer for SerdeAdapter<S> {
     }
 }
 
+#[doc(hidden)]
 pub struct ListSerializeAdapter<S: serde::Serializer> {
     serializer: S::SerializeSeq,
 }
@@ -203,6 +307,7 @@ impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     }
 }
 
+#[doc(hidden)]
 pub struct MapSerializerAdapter<S: serde::Serializer> {
     serializer: S::SerializeMap,
 }
@@ -239,12 +344,14 @@ impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
     }
 }
 
+#[doc(hidden)]
 pub struct StructSerializerAdapter<S: serde::Serializer> {
     serializer: S::SerializeStruct,
+    mapper: NameMapper,
 }
 impl<S: serde::Serializer> StructSerializerAdapter<S> {
-    const fn new(serializer: S::SerializeStruct) -> Self {
-        Self { serializer }
+    const fn new(serializer: S::SerializeStruct, mapper: NameMapper) -> Self {
+        Self { serializer, mapper }
     }
 }
 impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
@@ -260,13 +367,10 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     where
         T: SerializeWithSchema,
     {
-        // TODO(errors): How to handle error?
-        let Some(me) = member_schema.as_member() else {
-            panic!("Expected member schema!");
-        };
+        let name = self.mapper.get_member_name::<Self>(member_schema)?;
         Ok(self
             .serializer
-            .serialize_field(staticize(&me.name), &ValueWrapper(member_schema, value))?)
+            .serialize_field(name, &ValueWrapper(member_schema, value))?)
     }
 
     #[inline]
@@ -275,6 +379,12 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     }
 }
 
+//========================================================================
+// Value Wrapper
+// -------------
+// Wraps inner values of
+//========================================================================
+
 struct ValueWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
 impl<T: SerializeWithSchema> serde::Serialize for ValueWrapper<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -282,20 +392,14 @@ impl<T: SerializeWithSchema> serde::Serialize for ValueWrapper<'_, T> {
         S: serde::Serializer,
     {
         self.1
-            .serialize_with_schema(self.0, SerdeAdapter::new(serializer))
+            .serialize_with_schema(self.0, SerAdapter::new(serializer))
             .map_err(|wrapper| wrapper.0)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        IndexMap,
-        derive::SmithyShape,
-        schema::{SchemaShape, prelude::*},
-        smithy,
-    };
+    use crate::{IndexMap, derive::SmithyShape, schema::prelude::*, smithy};
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
@@ -330,28 +434,21 @@ mod tests {
         member_map: IndexMap<String, String>,
     }
 
-    impl serde::Serialize for Test {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            let adapter = SerdeAdapter::new(serializer);
-            self.serialize_with_schema(self.schema(), adapter)
-                .map_err(|wrapper| wrapper.0)
+    fn get_test_shape() -> Test {
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        map.insert(String::from("c"), String::from("d"));
+        Test {
+            a: "a".to_string(),
+            b: "b".to_string(),
+            member_list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            member_map: map,
         }
     }
 
     #[test]
     fn can_use_serde_json() {
-        let mut map = IndexMap::new();
-        map.insert(String::from("a"), String::from("b"));
-        map.insert(String::from("c"), String::from("d"));
-        let test = Test {
-            a: "a".to_string(),
-            b: "b".to_string(),
-            member_list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
-            member_map: map,
-        };
+        let test = get_test_shape();
         let expected = r#"{
   "a": "a",
   "b": "b",
@@ -366,6 +463,71 @@ mod tests {
   }
 }"#;
         assert_eq!(serde_json::to_string_pretty(&test).unwrap(), expected);
-        println!("{}", serde_json::to_string_pretty(&test).unwrap());
+    }
+
+    #[test]
+    fn can_use_serde_xml() {
+        let test = get_test_shape();
+        let expected = r#"<?xml version="1.0" encoding="UTF-8"?><Test><a>a</a><b>b</b><list>a</list><list>b</list><list>c</list><map><a>b</a><c>d</c></map></Test>"#;
+        assert_eq!(expected, serde_xml_rs::to_string(&test).unwrap());
+    }
+
+    // --------------------------------------------------------------------
+    // JSON Trait support tests
+    // --------------------------------------------------------------------
+
+    smithy!("com.example#Rename": {
+        structure RENAME {
+            @JsonNameTrait::new("renamed");
+            A: STRING = "a"
+        }
+    });
+    #[derive(SmithyShape)]
+    #[smithy_schema(RENAME)]
+    pub struct TestRename {
+        #[smithy_schema(A)]
+        a: String,
+    }
+
+    #[test]
+    fn json_name_works() {
+        let rename = TestRename { a: "a".to_string() };
+        let expected = r#"{
+  "renamed": "a"
+}"#;
+        assert_eq!(serde_json::to_string_pretty(&rename).unwrap(), expected);
+    }
+
+    // --------------------------------------------------------------------
+    // XML Trait support tests
+    // --------------------------------------------------------------------
+
+    smithy!("com.example#Rename": {
+        structure XML_TRAITS {
+            @XmlNameTrait::new("renamed");
+            @XmlAttributeTrait;
+            A: STRING = "a"
+            @XmlNameTrait::new("int");
+            B: STRING = "b"
+        }
+    });
+    #[derive(SmithyShape)]
+    #[smithy_schema(XML_TRAITS)]
+    pub struct TestXml {
+        #[smithy_schema(A)]
+        a: String,
+        #[smithy_schema(B)]
+        b: i32,
+    }
+
+    #[test]
+    fn xml_traits_work() {
+        let rename = TestXml {
+            a: "a".to_string(),
+            b: 2,
+        };
+        let expected =
+            r#"<?xml version="1.0" encoding="UTF-8"?><Rename renamed="a"><int>2</int></Rename>"#;
+        assert_eq!(serde_xml_rs::to_string(&rename).unwrap(), expected);
     }
 }
