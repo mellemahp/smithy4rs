@@ -1,0 +1,22 @@
+name: publish-crates.yml
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  crates:
+    name: Publish packages to crates.io
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Publish package to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_PUBLISHING_TOKEN }}
+        run: |
+          cargo publish

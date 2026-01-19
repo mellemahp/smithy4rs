@@ -1,5 +1,6 @@
 [package]
 name = "smithy4rs-test-utils"
+publish = false
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
