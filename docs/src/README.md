@@ -67,7 +67,7 @@ A "protocol" is composed of both the transport (i.e. HTTP or MQTT)
 and serialization format (i.e. JSON or XML) used to communicate data between
 clients and servers.
 
-Data representions in the Smithy IDL are not tied to any specific wire format or transport.
+Data representations in the Smithy IDL are not tied to any specific wire format or transport.
 In contrast to IDL's like `protobuf` (`gRPC`), this allows Smithy servers and clients to 
 support any protocol they would like, even swapping out client protocols at runtime.
 

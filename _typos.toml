@@ -2,5 +2,6 @@
 [files]
 extend-exclude = [
     "codegen-test/codegen-link/*",
-    "codegen/**"
+    "codegen/**",
+    "docs/theme/**"
 ]
