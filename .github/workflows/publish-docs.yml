@@ -1,0 +1,31 @@
+name: publish-docs.yml
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
+  pull_request:
+    paths:
+      - docs/**
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  crates:
+    name: Publish mdbook site to github pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+      - run: mise docs-build
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book
