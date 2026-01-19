@@ -7,7 +7,6 @@
 
 # Tutorials
   - [Introduction](tutorials/README.md)
-  - [Sub-chapter](tutorials/sub-chapter.md)
 
 --- 
 

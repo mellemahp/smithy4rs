@@ -3,7 +3,7 @@
 This guide introduces [`smithy4rs`] with a simple working example of generating (de)serializable types .
 
 
-```admonish tip title="New to Smithy?" collapsible=true
+```admonish tip title="New to Smithy?"
 If you are new to Smithy, we recommend going through the [Smithy Quickstart](https://smithy.io/2.0/quickstart.html)
 guide before using `smithy4rs`. The guide will walk you through the basics 
 of creating a simple Smithy model.
@@ -36,7 +36,8 @@ Also add `smithy4rs-core` as a dependency:
 ```bash
 cargo add smithy4rs-core
 ```
-This package adds all the core functionality of our generate shapes.
+This package defines the Smithy data model in rust and adds all 
+the core functionality (such as serialization) for generate shapes.
 
 ### Set up Smithy build tooling
 
@@ -90,11 +91,11 @@ namespace com.quickstart.example
 
 /// Doc comment
 structure EventA {
-    member: Integer
+    int: Integer
 }
 ```
 
-### Using the generated shapes
+## Using the generated shapes
 
 To use our generated shapes, simply create a module add import 
 them using the `generated_shapes!` macro.
@@ -111,12 +112,13 @@ We can now use our generated shapes elsewhere in our rust code:
 
 ```rust 
 fn main() {
-  let x = TestStruct::builder()
-          .a("s".to_string())
-          .b(21)
+  // Create a new, validated event instance
+  let event = EventA::builder()
+          .int(42)
           .build()
           .expect("Should Build");
-  println!("{:#?}", x)
+  // pretty-print the event
+  println!("{:#?}", event)
 }
 ```
 
