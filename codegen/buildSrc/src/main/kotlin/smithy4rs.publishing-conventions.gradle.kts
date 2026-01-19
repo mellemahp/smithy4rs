@@ -43,9 +43,9 @@ publishing {
                     }
                     developers {
                         developer {
-                            id.set("scaffold")
-                            name.set("Scaffold API")
-                            organization.set("Scaffold Software")
+                            id.set("smithy4rs")
+                            name.set("smithy4rs")
+                            organization.set("Smithy4rs Community")
                             organizationUrl.set("https://github.com/mellemahp/smithy4rs")
                             roles.add("developer")
                         }
