@@ -7,6 +7,7 @@ test-logger-plugin = "4.0.0"
 spotbugs = "6.4.4"
 spotless = "8.0.0"
 dep-analysis = "3.3.0"
+jreleaser = "1.22.0"
 
 [libraries]
 # Smithy deps
@@ -28,3 +29,5 @@ spotbugs = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version
 spotless = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 dependency-analysis = { module = "com.autonomousapps:dependency-analysis-gradle-plugin", version.ref = "dep-analysis" }
 
+[plugins]
+jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
