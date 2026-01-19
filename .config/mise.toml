@@ -14,6 +14,10 @@ cargo-binstall = "latest"
 rust = [
   { profile = "default", version = "nightly", components = "rustfmt,clippy" },
 ]
+mdbook = "0.4.37"
+"cargo:mdbook-admonish" = "latest"
+"cargo:mdbook-open-on-gh" = "2.4.3"
+"cargo:mdbook-toc" = "0.14.2"
 
 [tasks.dev]
 depends = ["build", "test", "fmt-all"]
@@ -65,3 +69,19 @@ run = "cargo criterion --plotting-backend disabled --all-features"
 [tasks.pre-push]
 description = "Check that project will pass CI checks"
 depends = ['build', 'lint', 'audit', 'test', 'fmt-all', 'check-bench']
+
+[tasks.docs-clean]
+description = "Clean build artifacts for mdbook docs"
+run = "mdbook clean"
+dir = "docs"
+
+[tasks.docs-build]
+description = "Build"
+depends = ['docs-clean']
+run = "mdbook build"
+dir = "docs"
+
+[tasks.docs-serve]
+description = "Runs a local version of MdBook docs"
+run = "mdbook serve"
+dir = "docs"
