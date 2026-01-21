@@ -24,43 +24,36 @@ use crate::{
 /// Wrapper type that bridges `serde` and `smithy` Serialization error types.
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct SerdeErrorWrapper<E: SerdeError>(E);
-impl<E: SerdeError> SerdeErrorWrapper<E> {
+pub struct SerErrorWrapper<E: SerdeError>(E);
+impl<E: SerdeError> SerErrorWrapper<E> {
+    #[inline]
     pub fn inner(self) -> E {
         self.0
     }
 }
-impl<E: SerdeError> Display for SerdeErrorWrapper<E> {
+impl<E: SerdeError> Display for SerErrorWrapper<E> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.0, f)
     }
 }
-impl<E: SerdeError> StdError for SerdeErrorWrapper<E> {}
-impl<E: SerdeError> Error for SerdeErrorWrapper<E> {
+impl<E: SerdeError> StdError for SerErrorWrapper<E> {}
+impl<E: SerdeError> Error for SerErrorWrapper<E> {
     #[inline]
     fn custom<T: Display>(msg: T) -> Self {
-        SerdeErrorWrapper(E::custom(msg))
+        SerErrorWrapper(E::custom(msg))
     }
 }
-impl<E: SerdeError> From<E> for SerdeErrorWrapper<E> {
+impl<E: SerdeError> From<E> for SerErrorWrapper<E> {
     #[inline]
     fn from(e: E) -> Self {
-        SerdeErrorWrapper(e)
+        SerErrorWrapper(e)
     }
 }
 
 //========================================================================
 // Serialization Adapter
 //========================================================================
-
-// Traits to support (could these be global??):
-// 1.
-// 2. xmlName - Applied to shape names and to member names
-// 3.
-// 4.
-//
-// Should be able to add additional features in the future!
 
 /// Adapter that bridges between `serde` serialization and schema-guided
 /// serialization.
@@ -151,7 +144,7 @@ impl NameMapper {
 }
 
 impl<S: serde::Serializer> Serializer for SerAdapter<S> {
-    type Error = SerdeErrorWrapper<S::Error>;
+    type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
     type SerializeList = ListSerializeAdapter<S>;
     type SerializeMap = MapSerializerAdapter<S>;
@@ -284,7 +277,7 @@ impl<S: serde::Serializer> ListSerializeAdapter<S> {
     }
 }
 impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
-    type Error = SerdeErrorWrapper<S::Error>;
+    type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
@@ -317,7 +310,7 @@ impl<S: serde::Serializer> MapSerializerAdapter<S> {
     }
 }
 impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
-    type Error = SerdeErrorWrapper<S::Error>;
+    type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
@@ -355,7 +348,7 @@ impl<S: serde::Serializer> StructSerializerAdapter<S> {
     }
 }
 impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
-    type Error = SerdeErrorWrapper<S::Error>;
+    type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]

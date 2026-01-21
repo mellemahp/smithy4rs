@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["codegen-test", "core", "core-derive", "json-codec", "test-utils"]
-default-members = ["core", "core-derive", "test-utils", "json-codec"]
+default-members = ["core", "core-derive", "test-utils"]
 
 # Config for 'cargo release'
 [workspace.metadata.release]
