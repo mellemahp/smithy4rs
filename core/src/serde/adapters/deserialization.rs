@@ -264,7 +264,7 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
     ) -> Result<B, Self::Error>
     where
         B: DeserializeWithSchema<'de>,
-        F2: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        F2: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
     {
         // When deserializing a nested struct in a list, use next_element_seed
         // to delegate to the underlying serde deserializer
@@ -282,10 +282,10 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         &mut self,
         schema: &SchemaRef,
         state: &mut T,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
     {
         // Get the element schema
         let member_schema = schema
@@ -322,7 +322,7 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         _consumer: F2,
     ) -> Result<(), Self::Error>
     where
-        F2: FnMut(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
+        F2: Fn(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
     {
         Err(Self::Error::custom("Maps not yet supported"))
     }
@@ -441,10 +441,10 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         &mut self,
         schema: &SchemaRef,
         mut builder: B,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<B, Self::Error>
     where
-        F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
         B: DeserializeWithSchema<'de>,
     {
         // If we're not at the top level, we're deserializing a nested struct
@@ -480,7 +480,7 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         _consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
         T: DeserializeWithSchema<'de>,
     {
         // When deserializing a nested list in a struct field, we use next_value_seed
@@ -504,10 +504,10 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         &mut self,
         schema: &SchemaRef,
         state: &mut T2,
-        mut consumer: F2,
+        consumer: F2,
     ) -> Result<(), Self::Error>
     where
-        F2: FnMut(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
+        F2: Fn(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
         T2: DeserializeWithSchema<'de>,
     {
         // If we're not at the top level, we're deserializing a nested map
