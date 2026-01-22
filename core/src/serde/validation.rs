@@ -158,7 +158,7 @@ pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
 /// * `E` - Maximum number of errors the validator can track (Default: 20).
 pub struct DefaultValidator<const D: usize = 10, const E: usize = 20> {
     errors: Option<ValidationErrors>,
-    path_stack: ArrayBuf<PathElement, D>
+    path_stack: ArrayBuf<PathElement, D>,
 }
 
 impl<const D: usize, const ERR: usize> DefaultValidator<D, ERR> {
@@ -167,7 +167,7 @@ impl<const D: usize, const ERR: usize> DefaultValidator<D, ERR> {
     pub const fn new() -> Self {
         DefaultValidator {
             errors: None,
-            path_stack: ArrayBuf::new()
+            path_stack: ArrayBuf::new(),
         }
     }
 
