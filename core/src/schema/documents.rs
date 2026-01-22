@@ -1,4 +1,5 @@
 use std::{error::Error, fmt::Debug, sync::LazyLock};
+
 use thiserror::Error;
 
 use crate::{
@@ -675,7 +676,7 @@ impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Docum
 
 pub(crate) mod default {
     use bigdecimal::ToPrimitive;
-    use fast_str::FastStr;
+
     use crate::{
         BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
         schema::{DocumentError, SchemaRef, SchemaShape, ShapeId, ShapeType},
