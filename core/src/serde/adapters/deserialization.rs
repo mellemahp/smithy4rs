@@ -137,7 +137,7 @@ struct SeqAccessAdapter<'de, S: SeqAccess<'de>> {
 }
 
 impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
-for SeqAccessAdapter<'de, S>
+    for SeqAccessAdapter<'de, S>
 {
     type Error = DeserdeErrorWrapper<S::Error>;
 
@@ -395,7 +395,7 @@ struct MapAccessAdapter<'de, M: MapAccess<'de>> {
 }
 
 impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
-for MapAccessAdapter<'de, M>
+    for MapAccessAdapter<'de, M>
 {
     type Error = DeserdeErrorWrapper<M::Error>;
 
@@ -558,10 +558,10 @@ for MapAccessAdapter<'de, M>
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use indexmap::IndexMap;
     use smithy4rs_core_derive::SmithyShape;
 
+    use super::*;
     use crate::{prelude::*, smithy};
 
     // Test list schema

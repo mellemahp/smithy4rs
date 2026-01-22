@@ -17,7 +17,7 @@ use quote::quote;
 use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote};
 
 #[cfg(feature = "serde-adapter")]
-use crate::adapter::{ser_adapter_impl, deser_adapter_impl};
+use crate::adapter::{deser_adapter_impl, ser_adapter_impl};
 use crate::{
     builder::{buildable, builder_impls, builder_struct, get_builder_fields},
     debug::debug_impl,
@@ -292,7 +292,7 @@ pub fn smithy_serde_adapter(input: proc_macro::TokenStream) -> proc_macro::Token
     let schema_ident = parse_schema(&input.attrs);
     let (extern_import, crate_ident) = get_crate_info();
     let ser = ser_adapter_impl(&crate_ident, shape_name, &schema_ident);
-    let deser = deser_adapter_impl(&crate_ident, shape_name);
+    let deser = deser_adapter_impl(&crate_ident, shape_name, &input);
 
     quote! {
         const _: () = {

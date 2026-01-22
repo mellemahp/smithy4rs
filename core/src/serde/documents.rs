@@ -8,12 +8,11 @@ use crate::{
     },
     serde::{
         ShapeBuilder,
-        de::Deserializer,
+        de::{DeserializeWithSchema, Deserializer},
         se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
         serializers::{Error, SerializeWithSchema},
     },
 };
-use crate::serde::de::DeserializeWithSchema;
 // ============================================================================
 // Serialization
 // ============================================================================
@@ -397,7 +396,7 @@ impl DocumentDeserializer {
     }
 }
 
-impl <'de> Deserializer<'de> for DocumentDeserializer {
+impl<'de> Deserializer<'de> for DocumentDeserializer {
     type Error = DocumentError;
 
     #[inline]
@@ -483,7 +482,11 @@ impl <'de> Deserializer<'de> for DocumentDeserializer {
         // Add only values that match the provided schema.
         for (key, value) in map {
             if let Some(member_schema) = schema.members().get(&key) {
-                builder = consumer(builder, member_schema, &mut DocumentDeserializer::new(value))?;
+                builder = consumer(
+                    builder,
+                    member_schema,
+                    &mut DocumentDeserializer::new(value),
+                )?;
             }
         }
 
@@ -507,7 +510,11 @@ impl <'de> Deserializer<'de> for DocumentDeserializer {
         })?;
 
         for element_doc in list {
-            consumer(state, member_schema, &mut DocumentDeserializer::new(element_doc))?;
+            consumer(
+                state,
+                member_schema,
+                &mut DocumentDeserializer::new(element_doc),
+            )?;
         }
 
         Ok(())
@@ -526,7 +533,11 @@ impl <'de> Deserializer<'de> for DocumentDeserializer {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
         for (key_str, value_doc) in map {
             // Key is already a String, create deserializer for the value
-            consumer(state, key_str.clone(), &mut DocumentDeserializer::new(value_doc))?;
+            consumer(
+                state,
+                key_str.clone(),
+                &mut DocumentDeserializer::new(value_doc),
+            )?;
         }
         Ok(())
     }

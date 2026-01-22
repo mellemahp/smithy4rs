@@ -1,13 +1,18 @@
-use std::cell::{Cell, RefCell};
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
-use std::sync::Arc;
+use std::{
+    cell::{Cell, RefCell},
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+    sync::Arc,
+};
+
 use jiter::{Jiter, JiterResult, Peek};
 use smithy4rs_core::{
-    BigDecimal, BigInt, ByteBuffer, Instant, schema::SchemaRef, serde::deserializers::Deserializer,
+    BigDecimal, BigInt, ByteBuffer, Instant,
+    schema::{Document, SchemaRef},
+    serde::deserializers::Deserializer,
 };
-use smithy4rs_core::schema::Document;
+
 use crate::errors::JsonSerdeError;
 
 /// A JSON deserializer that uses jiter.
@@ -27,14 +32,14 @@ impl<'de> JsonDeserializer<'de> {
         }
     }
 }
-impl <'de> Deref for JsonDeserializer<'de> {
+impl<'de> Deref for JsonDeserializer<'de> {
     type Target = Jiter<'de>;
 
     fn deref(&self) -> &Self::Target {
         self.parser.as_ref()
     }
 }
-impl <'de> DerefMut for JsonDeserializer<'de> {
+impl<'de> DerefMut for JsonDeserializer<'de> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         Rc::get_mut(&mut self.parser).expect("Should be unwrappable")
     }
@@ -129,8 +134,7 @@ impl<'de, 'a: 'de> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
     }
 
     fn read_float(self, _schema: &SchemaRef) -> Result<f32, Self::Error> {
-        self
-            .next_float()
+        self.next_float()
             .map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Failed to read float: {}", e))
             })
@@ -170,8 +174,7 @@ impl<'de, 'a: 'de> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
     }
 
     fn read_string(self, _schema: &SchemaRef) -> Result<String, Self::Error> {
-        self
-            .known_str()
+        self.known_str()
             .map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Failed to read string: {}", e))
             })
@@ -200,10 +203,7 @@ impl<'de, 'a: 'de> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         })
     }
 
-    fn read_document(
-        self,
-        _schema: &SchemaRef,
-    ) -> Result<Box<dyn Document>, Self::Error> {
+    fn read_document(self, _schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error> {
         todo!("Support deserialization of documents")
     }
 
@@ -217,19 +217,20 @@ impl<'de, 'a: 'de> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         F: Fn(B, &SchemaRef, Self) -> Result<B, Self::Error>,
     {
         // next_object() returns the first key, or None for empty object
-        let maybe_key = self.next_object()
+        let maybe_key = self
+            .next_object()
             .map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
-            })?.map(|s| s.to_string());
+            })?
+            .map(|s| s.to_string());
 
         // Process all subsequent keys
         while let Some(key) = &maybe_key {
             match schema.get_member(key) {
                 Some(member_schema) => {
-                    builder = consumer(builder, member_schema,)?;
+                    builder = consumer(builder, member_schema)?;
                 }
-                None => {
-                }
+                None => {}
             }
         }
 
@@ -277,7 +278,6 @@ impl<'de, 'a: 'de> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
     where
         F: FnMut(&mut T, String, Self) -> Result<(), Self::Error>,
     {
-
         // next_object() returns the first key, or None for empty object
         let mut maybe_key = self.next_object().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
@@ -301,8 +301,7 @@ impl<'de, 'a: 'de> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
     }
 
     fn read_null(self) -> Result<(), Self::Error> {
-        self
-            .next_null()
+        self.next_null()
             .map_err(|e| JsonSerdeError::DeserializationError(format!("Expected null: {}", e)))
     }
 
