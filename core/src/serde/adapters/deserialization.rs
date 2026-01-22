@@ -1,16 +1,22 @@
 #![allow(dead_code)]
 
-use std::{error::Error as StdError, fmt, fmt::{Debug, Display, Formatter}, marker::PhantomData};
+use std::{
+    error::Error as StdError,
+    fmt,
+    fmt::{Debug, Display, Formatter},
+    marker::PhantomData,
+};
+
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use serde::de::{DeserializeSeed, Error as SerdeDeError, MapAccess, SeqAccess, Visitor};
 use temporal_rs::Instant;
+
 use crate::{
-    schema::{SchemaRef, ShapeType},
+    schema::{Document, SchemaRef, ShapeType},
     serde::deserializers::{DeserializeWithSchema, Error as DeserError},
 };
-use crate::schema::Document;
 
 //========================================================================
 // Errors
@@ -43,7 +49,6 @@ impl<E: SerdeDeError> From<E> for DeserdeErrorWrapper<E> {
 //========================================================================
 // Deser seed (public API)
 //========================================================================
-
 
 /// A [`DeserializeSeed`] that carries a schema to guide deserialization.
 ///
@@ -90,8 +95,10 @@ where
                     _phantom: PhantomData,
                 })
             }
-            ShapeType::IntEnum | ShapeType::Enum  => T::deserialize_with_schema(self.schema, &mut EnumWrapper::new(deserializer))
-                .map_err(|e| e.0),
+            ShapeType::IntEnum | ShapeType::Enum => {
+                T::deserialize_with_schema(self.schema, &mut EnumWrapper::new(deserializer))
+                    .map_err(|e| e.0)
+            }
             // Root JSON primitives do not need this adapter as they can be called directly.
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
@@ -245,10 +252,7 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         Err(Self::Error::custom("Timestamp not yet supported"))
     }
 
-    fn read_document(
-        &mut self,
-        _schema: &SchemaRef,
-    ) -> Result<Box<dyn Document>, Self::Error> {
+    fn read_document(&mut self, _schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error> {
         Err(Self::Error::custom("Document not yet supported"))
     }
 
@@ -429,10 +433,7 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         Err(Self::Error::custom("Timestamp not yet supported"))
     }
 
-    fn read_document(
-        &mut self,
-        _schema: &SchemaRef,
-    ) -> Result<Box<dyn Document>, Self::Error> {
+    fn read_document(&mut self, _schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error> {
         Err(Self::Error::custom("Document not yet supported"))
     }
 
@@ -546,7 +547,7 @@ struct EnumWrapper<'de, D: serde::Deserializer<'de>> {
     deserializer: Option<D>,
     _phantom: PhantomData<&'de ()>,
 }
-impl <'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
+impl<'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
     fn new(deserializer: D) -> Self {
         EnumWrapper {
             deserializer: Some(deserializer),
@@ -556,7 +557,8 @@ impl <'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
 }
 
 impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer<'de>
-for EnumWrapper<'de, D> {
+    for EnumWrapper<'de, D>
+{
     type Error = DeserdeErrorWrapper<D::Error>;
 
     #[cold]
@@ -587,75 +589,77 @@ for EnumWrapper<'de, D> {
 
             fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v as i32)
             }
 
             fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v as i32)
             }
 
             fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v)
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 v.try_into().map_err(SerdeDeError::custom)
             }
 
             fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 v.try_into().map_err(SerdeDeError::custom)
             }
 
             fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v as i32)
             }
 
             fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v as i32)
             }
 
             fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v as i32)
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 v.try_into().map_err(SerdeDeError::custom)
             }
 
             fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 v.try_into().map_err(SerdeDeError::custom)
             }
         }
-        Ok(self.deserializer.take()
+        Ok(self
+            .deserializer
+            .take()
             .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
             .deserialize_i32(IntegerVisitor)?)
     }
@@ -697,19 +701,21 @@ for EnumWrapper<'de, D> {
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v.to_string())
             }
 
             fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
             where
-                E: SerdeDeError
+                E: SerdeDeError,
             {
                 Ok(v)
             }
         }
-        Ok(self.deserializer.take()
+        Ok(self
+            .deserializer
+            .take()
             .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
             .deserialize_string(StringVisitor)?)
     }
@@ -730,30 +736,51 @@ for EnumWrapper<'de, D> {
     }
 
     #[cold]
-    fn read_struct<B, F>(&mut self, _schema: &SchemaRef, _builder: B, _consumer: F) -> Result<B, Self::Error>
+    fn read_struct<B, F>(
+        &mut self,
+        _schema: &SchemaRef,
+        _builder: B,
+        _consumer: F,
+    ) -> Result<B, Self::Error>
     where
         B: DeserializeWithSchema<'de>,
-        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>
+        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
     {
-        Err(DeserdeErrorWrapper(D::Error::custom("ScalarWrapper can deserialize struct types")))
+        Err(DeserdeErrorWrapper(D::Error::custom(
+            "ScalarWrapper can deserialize struct types",
+        )))
     }
 
     #[cold]
-    fn read_list<T, F>(&mut self, _schema: &SchemaRef, _state: &mut T, _consumer: F) -> Result<(), Self::Error>
+    fn read_list<T, F>(
+        &mut self,
+        _schema: &SchemaRef,
+        _state: &mut T,
+        _consumer: F,
+    ) -> Result<(), Self::Error>
     where
         T: DeserializeWithSchema<'de>,
-        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
     {
-        Err(DeserdeErrorWrapper(D::Error::custom("ScalarWrapper can deserialize list types")))
+        Err(DeserdeErrorWrapper(D::Error::custom(
+            "ScalarWrapper can deserialize list types",
+        )))
     }
 
     #[cold]
-    fn read_map<T, F>(&mut self, _schema: &SchemaRef, _state: &mut T, _consumer: F) -> Result<(), Self::Error>
+    fn read_map<T, F>(
+        &mut self,
+        _schema: &SchemaRef,
+        _state: &mut T,
+        _consumer: F,
+    ) -> Result<(), Self::Error>
     where
         T: DeserializeWithSchema<'de>,
-        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>
+        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>,
     {
-        Err(DeserdeErrorWrapper(D::Error::custom("ScalarWrapper can deserialize map types")))
+        Err(DeserdeErrorWrapper(D::Error::custom(
+            "ScalarWrapper can deserialize map types",
+        )))
     }
 
     #[cold]
@@ -770,7 +797,7 @@ for EnumWrapper<'de, D> {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use smithy4rs_core_derive::{smithy_enum, smithy_union, SmithyShape};
+    use smithy4rs_core_derive::{SmithyShape, smithy_enum, smithy_union};
 
     use super::*;
     use crate::{prelude::*, smithy};
@@ -1242,7 +1269,7 @@ mod tests {
     fn test_enum_deserialize() {
         let json = r#""a""#;
         let result: AorB = serde_json::from_str(json).unwrap();
-        let AorB::A = result  else {
+        let AorB::A = result else {
             panic!("Expected a")
         };
     }
@@ -1259,14 +1286,14 @@ mod tests {
     #[smithy_schema(C_OR_D)]
     pub enum CorD {
         C = 1,
-        D = 2
+        D = 2,
     }
 
     #[test]
     fn test_int_enum_deserialize() {
         let json = "2";
         let result: CorD = serde_json::from_str(json).unwrap();
-        let CorD::D = result  else {
+        let CorD::D = result else {
             panic!("Expected D")
         };
     }
