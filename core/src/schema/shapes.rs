@@ -23,9 +23,9 @@ use crate::schema::SchemaRef;
 #[derive(Clone, PartialEq, Eq)]
 pub struct ShapeId {
     id: FastStr,
-    namespace: String,
-    name: String,
-    member: Option<String>,
+    namespace: FastStr,
+    name: FastStr,
+    member: Option<FastStr>,
 }
 impl Hash for ShapeId {
     #[inline]
@@ -58,12 +58,12 @@ impl From<&str> for ShapeId {
         let mut member = None;
         if let Some((name, split_member)) = base_name.split_once('$') {
             base_name = name;
-            member = Some(split_member.to_string());
+            member = Some(FastStr::from_ref(split_member));
         }
         ShapeId {
             id: FastStr::from_ref(value),
-            namespace: namespace.to_string(),
-            name: base_name.to_string(),
+            namespace: FastStr::from_ref(namespace),
+            name: FastStr::from_ref(base_name),
             member,
         }
     }
@@ -78,9 +78,9 @@ impl ShapeId {
         }
         ShapeId {
             id: FastStr::from(id),
-            namespace: namespace.to_string(),
-            name: name.to_string(),
-            member: member.map(ToString::to_string),
+            namespace: FastStr::from_ref(namespace),
+            name: FastStr::from_ref(name),
+            member: member.map(FastStr::from_ref),
         }
     }
 
