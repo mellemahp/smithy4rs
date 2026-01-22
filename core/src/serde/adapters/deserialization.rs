@@ -1,24 +1,27 @@
 #![allow(dead_code)]
 
-use std::{
-    error::Error as StdError,
-    fmt::{Debug, Display, Formatter},
-    marker::PhantomData,
-};
-
+use std::{error::Error as StdError, fmt, fmt::{Debug, Display, Formatter}, marker::PhantomData};
+use bigdecimal::BigDecimal;
+use bytebuffer::ByteBuffer;
+use num_bigint::BigInt;
 use serde::de::{DeserializeSeed, Error as SerdeDeError, MapAccess, SeqAccess, Visitor};
-
+use temporal_rs::Instant;
 use crate::{
     schema::{SchemaRef, ShapeType},
     serde::deserializers::{DeserializeWithSchema, Error as DeserError},
 };
+use crate::schema::Document;
+
+//========================================================================
+// Errors
+//========================================================================
 
 /// Error wrapper to bridge serde errors with our error type
 #[derive(Debug)]
 pub struct DeserdeErrorWrapper<E: SerdeDeError>(E);
 
 impl<E: SerdeDeError> Display for DeserdeErrorWrapper<E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.0, f)
     }
 }
@@ -36,6 +39,11 @@ impl<E: SerdeDeError> From<E> for DeserdeErrorWrapper<E> {
         DeserdeErrorWrapper(e)
     }
 }
+
+//========================================================================
+// Deser seed (public API)
+//========================================================================
+
 
 /// A [`DeserializeSeed`] that carries a schema to guide deserialization.
 ///
@@ -75,21 +83,16 @@ where
                     _phantom: PhantomData,
                 })
             }
-            ShapeType::Structure => {
+            ShapeType::Structure | ShapeType::Map | ShapeType::Union => {
                 // Tell serde we expect a map/object
-                deserializer.deserialize_map(StructVisitor {
-                    schema: self.schema,
-                    _phantom: PhantomData,
-                })
-            }
-            ShapeType::Map => {
-                // Tell serde we expect a map
                 deserializer.deserialize_map(MapVisitor {
                     schema: self.schema,
                     _phantom: PhantomData,
                 })
             }
-            // TODO(adapter): We probably need a primitiveVistor to handle root json primitives
+            ShapeType::IntEnum | ShapeType::Enum  => T::deserialize_with_schema(self.schema, &mut EnumWrapper::new(deserializer))
+                .map_err(|e| e.0),
+            // Root JSON primitives do not need this adapter as they can be called directly.
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
                 self.schema.shape_type()
@@ -98,7 +101,11 @@ where
     }
 }
 
-// Visitor for lists - receives a SeqAccess and creates adapter
+//========================================================================
+// Lists
+//========================================================================
+
+/// Visitor for lists - receives a [`SeqAccess`] and creates adapter
 struct ListVisitor<'a, T> {
     schema: &'a SchemaRef,
     _phantom: PhantomData<T>,
@@ -107,7 +114,7 @@ struct ListVisitor<'a, T> {
 impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for ListVisitor<'a, T> {
     type Value = T;
 
-    fn expecting(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "a list")
     }
 
@@ -211,11 +218,11 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         }
     }
 
-    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<crate::BigInt, Self::Error> {
+    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<BigInt, Self::Error> {
         Err(Self::Error::custom("BigInteger not yet supported"))
     }
 
-    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<crate::BigDecimal, Self::Error> {
+    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<BigDecimal, Self::Error> {
         Err(Self::Error::custom("BigDecimal not yet supported"))
     }
 
@@ -230,18 +237,18 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         }
     }
 
-    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<crate::ByteBuffer, Self::Error> {
+    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
         Err(Self::Error::custom("Blob not yet supported"))
     }
 
-    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<crate::Instant, Self::Error> {
+    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<Instant, Self::Error> {
         Err(Self::Error::custom("Timestamp not yet supported"))
     }
 
     fn read_document(
         &mut self,
         _schema: &SchemaRef,
-    ) -> Result<Box<dyn crate::schema::Document>, Self::Error> {
+    ) -> Result<Box<dyn Document>, Self::Error> {
         Err(Self::Error::custom("Document not yet supported"))
     }
 
@@ -325,47 +332,21 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
     }
 }
 
-// Visitor for structs - receives MapAccess and creates adapter
-struct StructVisitor<'a, T> {
-    schema: &'a SchemaRef,
-    _phantom: PhantomData<T>,
-}
+//========================================================================
+// Object-like deser
+//========================================================================
 
-// Visitor for maps (IndexMap, etc) - receives MapAccess and creates adapter
+// Visitor for maps, structs, and unionts - receives MapAccess and creates adapter
 struct MapVisitor<'a, T> {
     schema: &'a SchemaRef,
     _phantom: PhantomData<T>,
 }
 
-impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for StructVisitor<'a, T> {
-    type Value = T;
-
-    fn expecting(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "a struct/map")
-    }
-
-    fn visit_map<A>(self, map: A) -> Result<T, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        // Create adapter from MapAccess
-        let mut adapter = MapAccessAdapter {
-            map_access: map,
-            is_top_level: true,
-            _phantom: PhantomData,
-        };
-
-        // Call our deserialization
-        T::deserialize_with_schema(self.schema, &mut adapter)
-            .map_err(|e| A::Error::custom(format!("Deserialization error: {}", e)))
-    }
-}
-
 impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> {
     type Value = T;
 
-    fn expecting(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "a map")
+    fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "a struct/map")
     }
 
     fn visit_map<A>(self, map: A) -> Result<T, A::Error>
@@ -427,11 +408,11 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         Ok(self.map_access.next_value()?)
     }
 
-    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<crate::BigInt, Self::Error> {
+    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<BigInt, Self::Error> {
         Err(Self::Error::custom("BigInteger not yet supported"))
     }
 
-    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<crate::BigDecimal, Self::Error> {
+    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<BigDecimal, Self::Error> {
         Err(Self::Error::custom("BigDecimal not yet supported"))
     }
 
@@ -440,18 +421,18 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
         Ok(self.map_access.next_value()?)
     }
 
-    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<crate::ByteBuffer, Self::Error> {
+    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
         Err(Self::Error::custom("Blob not yet supported"))
     }
 
-    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<crate::Instant, Self::Error> {
+    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<Instant, Self::Error> {
         Err(Self::Error::custom("Timestamp not yet supported"))
     }
 
     fn read_document(
         &mut self,
         _schema: &SchemaRef,
-    ) -> Result<Box<dyn crate::schema::Document>, Self::Error> {
+    ) -> Result<Box<dyn Document>, Self::Error> {
         Err(Self::Error::custom("Document not yet supported"))
     }
 
@@ -556,10 +537,240 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
     }
 }
 
+//========================================================================
+// Scalar Types
+//========================================================================
+
+/// Wraps `serde::deserializer` for deserializing Enum types that are treated as primitives.
+struct EnumWrapper<'de, D: serde::Deserializer<'de>> {
+    deserializer: Option<D>,
+    _phantom: PhantomData<&'de ()>,
+}
+impl <'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
+    fn new(deserializer: D) -> Self {
+        EnumWrapper {
+            deserializer: Some(deserializer),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer<'de>
+for EnumWrapper<'de, D> {
+    type Error = DeserdeErrorWrapper<D::Error>;
+
+    #[cold]
+    fn read_bool(&mut self, _schema: &SchemaRef) -> Result<bool, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize bool as enum"))
+    }
+
+    #[cold]
+    fn read_byte(&mut self, _schema: &SchemaRef) -> Result<i8, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize byte as enum"))
+    }
+
+    #[cold]
+    fn read_short(&mut self, _schema: &SchemaRef) -> Result<i16, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize short as enum"))
+    }
+
+    fn read_integer(&mut self, _schema: &SchemaRef) -> Result<i32, Self::Error> {
+        struct IntegerVisitor;
+
+        // TODO(numeric conversions): handle more types of input values
+        impl<'de> Visitor<'de> for IntegerVisitor {
+            type Value = i32;
+
+            fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an integer value")
+            }
+
+            fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v as i32)
+            }
+
+            fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v as i32)
+            }
+
+            fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+
+            fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+
+            fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v as i32)
+            }
+
+            fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v as i32)
+            }
+
+            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v as i32)
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+
+            fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+        }
+        Ok(self.deserializer.take()
+            .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
+            .deserialize_i32(IntegerVisitor)?)
+    }
+
+    #[cold]
+    fn read_long(&mut self, _schema: &SchemaRef) -> Result<i64, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize long as enum"))
+    }
+
+    #[cold]
+    fn read_float(&mut self, _schema: &SchemaRef) -> Result<f32, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize float as enum"))
+    }
+
+    #[cold]
+    fn read_double(&mut self, _schema: &SchemaRef) -> Result<f64, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize double as enum"))
+    }
+
+    #[cold]
+    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<BigInt, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize bigInteger as enum"))
+    }
+
+    #[cold]
+    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<BigDecimal, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize bigDecimal as enum"))
+    }
+
+    fn read_string(&mut self, _schema: &SchemaRef) -> Result<String, Self::Error> {
+        struct StringVisitor;
+
+        impl<'de> Visitor<'de> for StringVisitor {
+            type Value = String;
+
+            fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a string value")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v.to_string())
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: SerdeDeError
+            {
+                Ok(v)
+            }
+        }
+        Ok(self.deserializer.take()
+            .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
+            .deserialize_string(StringVisitor)?)
+    }
+
+    #[cold]
+    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize blob as enum"))
+    }
+
+    #[cold]
+    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<Instant, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize timestamp as enum"))
+    }
+
+    #[cold]
+    fn read_document(&mut self, _schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize bigInteger as enum"))
+    }
+
+    #[cold]
+    fn read_struct<B, F>(&mut self, _schema: &SchemaRef, _builder: B, _consumer: F) -> Result<B, Self::Error>
+    where
+        B: DeserializeWithSchema<'de>,
+        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>
+    {
+        Err(DeserdeErrorWrapper(D::Error::custom("ScalarWrapper can deserialize struct types")))
+    }
+
+    #[cold]
+    fn read_list<T, F>(&mut self, _schema: &SchemaRef, _state: &mut T, _consumer: F) -> Result<(), Self::Error>
+    where
+        T: DeserializeWithSchema<'de>,
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>
+    {
+        Err(DeserdeErrorWrapper(D::Error::custom("ScalarWrapper can deserialize list types")))
+    }
+
+    #[cold]
+    fn read_map<T, F>(&mut self, _schema: &SchemaRef, _state: &mut T, _consumer: F) -> Result<(), Self::Error>
+    where
+        T: DeserializeWithSchema<'de>,
+        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>
+    {
+        Err(DeserdeErrorWrapper(D::Error::custom("ScalarWrapper can deserialize map types")))
+    }
+
+    #[cold]
+    fn is_null(&mut self) -> bool {
+        false
+    }
+
+    #[cold]
+    fn read_null(&mut self) -> Result<(), Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize null value as enum"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use smithy4rs_core_derive::SmithyShape;
+    use smithy4rs_core_derive::{smithy_enum, smithy_union, SmithyShape};
 
     use super::*;
     use crate::{prelude::*, smithy};
@@ -981,5 +1192,82 @@ mod tests {
         assert_eq!(result.hobbies, Vec::<Hobby>::new());
         assert_eq!(result.metadata, IndexMap::<String, String>::new());
         assert!(result.notes.is_none());
+    }
+
+    smithy!("test#IpAddr": {
+        union IP_ADDR {
+            V4: STRING = "v4"
+            V6: STRING = "v6"
+        }
+    });
+
+    #[smithy_union]
+    #[derive(SmithyShape, PartialEq)]
+    #[smithy_schema(IP_ADDR)]
+    pub enum IpAddr {
+        #[smithy_schema(V4)]
+        V4(String),
+        #[smithy_schema(V6)]
+        V6(String),
+    }
+
+    #[test]
+    fn test_union_deserialize() {
+        let json = r#"{
+            "v4": "192.168.5.0"
+        }"#;
+        let result: IpAddr = serde_json::from_str(json).unwrap();
+        let IpAddr::V4(value) = result else {
+            panic!("Expected v4 address")
+        };
+        assert_eq!(value, "192.168.5.0")
+    }
+
+    smithy!("test#StringEnum": {
+        enum A_OR_B {
+            A = "a"
+            B = "b"
+        }
+    });
+
+    #[smithy_enum]
+    #[derive(SmithyShape)]
+    #[smithy_schema(A_OR_B)]
+    pub enum AorB {
+        A = "a",
+        B = "b",
+    }
+
+    #[test]
+    fn test_enum_deserialize() {
+        let json = r#""a""#;
+        let result: AorB = serde_json::from_str(json).unwrap();
+        let AorB::A = result  else {
+            panic!("Expected a")
+        };
+    }
+
+    smithy!("test#IntEnum": {
+        intEnum C_OR_D {
+            C = 1
+            D = 2
+        }
+    });
+
+    #[smithy_enum]
+    #[derive(SmithyShape)]
+    #[smithy_schema(C_OR_D)]
+    pub enum CorD {
+        C = 1,
+        D = 2
+    }
+
+    #[test]
+    fn test_int_enum_deserialize() {
+        let json = "2";
+        let result: CorD = serde_json::from_str(json).unwrap();
+        let CorD::D = result  else {
+            panic!("Expected D")
+        };
     }
 }
