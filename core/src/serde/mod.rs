@@ -1,4 +1,5 @@
 mod adapter;
+mod de_adapter;
 pub mod builders;
 pub mod correction;
 pub mod debug;

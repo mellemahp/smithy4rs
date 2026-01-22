@@ -2,7 +2,38 @@ use smithy4rs_core::{
     prelude::{INTEGER, STRING},
     schema::ShapeId, traits,
 };
+use smithy4rs_core::{
+    prelude::{HTTPChecksumRequiredTrait, HTTPQueryParamsTrait, HTTPQueryTrait},
+    schema::StaticTraitId, smithy,
+};
 use smithy4rs_core_derive::SmithyShape;
+pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
+    std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
+> = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
+    ::smithy4rs_core::schema::Schema::structure_builder("test#SimpleStruct", Vec::new()),
+));
+pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<
+    ::smithy4rs_core::schema::SchemaRef,
+> = ::smithy4rs_core::LazyLock::new(|| {
+    (&*SIMPLE_SCHEMA_BUILDER)
+        .put_member(
+            "field_a",
+            &STRING,
+            <[_]>::into_vec(::alloc::boxed::box_new([HTTPQueryTrait::new("foo").into()])),
+        )
+        .put_member("field_b", &INTEGER, Vec::new())
+        .put_member("field_c", &STRING, Vec::new())
+        .build()
+});
+pub static _SIMPLE_SCHEMA_MEMBER_FIELD_A: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::SchemaRef,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_a"));
+pub static _SIMPLE_SCHEMA_MEMBER_FIELD_B: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::SchemaRef,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_b"));
+pub static _SIMPLE_SCHEMA_MEMBER_FIELD_C: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::SchemaRef,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_c"));
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]
@@ -253,6 +284,19 @@ impl ::core::cmp::PartialEq for SimpleStruct {
             && self.field_c == other.field_c
     }
 }
+pub static NESTED_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
+    std::sync::Arc<::smithy4rs_core::schema::SchemaBuilder>,
+> = ::smithy4rs_core::LazyLock::new(|| std::sync::Arc::new(
+    ::smithy4rs_core::schema::Schema::structure_builder("test#NESTED_STRUCT", Vec::new()),
+));
+pub static NESTED_SCHEMA: ::smithy4rs_core::LazyLock<
+    ::smithy4rs_core::schema::SchemaRef,
+> = ::smithy4rs_core::LazyLock::new(|| {
+    (&*NESTED_SCHEMA_BUILDER).put_member("field_d", &STRING, Vec::new()).build()
+});
+pub static _NESTED_SCHEMA_MEMBER_D: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::SchemaRef,
+> = ::smithy4rs_core::LazyLock::new(|| NESTED_SCHEMA.expect_member("field_d"));
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
     #[smithy_schema(D)]

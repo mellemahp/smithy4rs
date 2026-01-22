@@ -88,10 +88,7 @@ where
                     _phantom: PhantomData,
                 })
             }
-<<<<<<< HEAD
             // TODO(adapter): We probably need a primitiveVistor to handle root json primitives
-=======
->>>>>>> d91b0c1 (checkpoint: adapter full worky!!)
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
                 get_shape_type(self.schema)
@@ -280,7 +277,7 @@ impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
     fn read_document(
         &mut self,
         _schema: &SchemaRef,
-    ) -> Result<crate::schema::Document, Self::Error> {
+    ) -> Result<Box<dyn crate::schema::Document>, Self::Error> {
         Err(Self::Error::custom("Document not yet supported"))
     }
 
@@ -489,7 +486,7 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
     fn read_document(
         &mut self,
         _schema: &SchemaRef,
-    ) -> Result<crate::schema::Document, Self::Error> {
+    ) -> Result<Box<dyn crate::schema::Document>, Self::Error> {
         Err(Self::Error::custom("Document not yet supported"))
     }
 
@@ -562,22 +559,16 @@ impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
 mod tests {
     use super::*;
     use indexmap::IndexMap;
-    use smithy4rs_core_derive::{DeserializableStruct, SchemaShape};
-    use indexmap::IndexMap;
+    use smithy4rs_core_derive::SmithyShape;
 
-    use crate::{
-        lazy_schema,
-        prelude::*,
-        schema::{Schema, ShapeId, StaticSchemaShape},
-        traits,
-    };
+    use crate::{prelude::*, schema::StaticSchemaShape, serde::ShapeBuilder, smithy};
 
     // Test list schema
-    lazy_schema!(
-        STRING_LIST_SCHEMA,
-        Schema::list_builder("test#StringList", traits![]),
-        ("member", STRING, traits![])
-    );
+    smithy!("test#StringList": {
+        list STRING_LIST_SCHEMA {
+            member: STRING
+        }
+    });
 
     #[test]
     fn test_list_of_strings() {
@@ -591,19 +582,19 @@ mod tests {
         assert_eq!(result, vec!["hello", "world", "test"]);
     }
 
-    lazy_schema!(
-        OPTIONAL_FIELDS_STRUCT_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#OptionalFieldsStruct"), traits![]),
-        (OPTIONAL_REQUIRED, "required_field", STRING, traits![]),
-        (OPTIONAL_OPTIONAL, "optional_field", STRING, traits![])
-    );
+    smithy!("test#OptionalFieldsStruct": {
+        structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
+            REQUIRED: STRING = "required_field"
+            OPTIONAL: STRING = "optional_field"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
-    struct OptionalFieldsStruct {
-        #[smithy_schema(OPTIONAL_REQUIRED)]
+    pub struct OptionalFieldsStruct {
+        #[smithy_schema(REQUIRED)]
         required_field: String,
-        #[smithy_schema(OPTIONAL_OPTIONAL)]
+        #[smithy_schema(OPTIONAL)]
         optional_field: Option<String>,
     }
 
@@ -612,8 +603,10 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<OptionalFieldsStruct>::new(OptionalFieldsStruct::schema());
-            seed.deserialize(deserializer)
+            let seed =
+                SchemaSeed::<OptionalFieldsStructBuilder>::new(OptionalFieldsStruct::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
@@ -643,19 +636,19 @@ mod tests {
     }
 
     // Nested struct tests
-    lazy_schema!(
-        NESTED_STRUCT_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#NestedStruct"), traits![]),
-        (NESTED_FIELD_A, "field_a", STRING, traits![]),
-        (NESTED_FIELD_B, "field_b", STRING, traits![])
-    );
+    smithy!("test#NestedStruct": {
+        structure NESTED_STRUCT_SCHEMA {
+            FIELD_A: STRING = "field_a"
+            FIELD_B: STRING = "field_b"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(NESTED_STRUCT_SCHEMA)]
-    struct NestedStruct {
-        #[smithy_schema(NESTED_FIELD_A)]
+    pub struct NestedStruct {
+        #[smithy_schema(FIELD_A)]
         field_a: String,
-        #[smithy_schema(NESTED_FIELD_B)]
+        #[smithy_schema(FIELD_B)]
         field_b: String,
     }
 
@@ -664,79 +657,76 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<NestedStruct>::new(NestedStruct::schema());
-            seed.deserialize(deserializer)
+            let seed = SchemaSeed::<NestedStructBuilder>::new(NestedStruct::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
     // List schema for tags
-    lazy_schema!(
-        TAGS_LIST_SCHEMA,
-        Schema::list_builder(ShapeId::from("test#TagsList"), traits![]),
-        ("member", STRING, traits![])
-    );
+    smithy!("test#TagsList": {
+        list TAGS_LIST_SCHEMA {
+            member: STRING
+        }
+    });
 
-    lazy_schema!(
-        PARENT_STRUCT_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#ParentStruct"), traits![]),
-        (PARENT_NAME, "name", STRING, traits![]),
-        (PARENT_NESTED, "nested", NESTED_STRUCT_SCHEMA, traits![]),
-        (
-            PARENT_OPTIONAL_NESTED,
-            "optional_nested",
-            NESTED_STRUCT_SCHEMA,
-            traits![]
-        ),
-        (PARENT_TAGS, "tags", TAGS_LIST_SCHEMA, traits![])
-    );
+    smithy!("test#ParentStruct": {
+        structure PARENT_STRUCT_SCHEMA {
+            NAME: STRING = "name"
+            NESTED: NESTED_STRUCT_SCHEMA = "nested"
+            OPTIONAL_NESTED: NESTED_STRUCT_SCHEMA = "optional_nested"
+            TAGS: TAGS_LIST_SCHEMA = "tags"
+        }
+    });
 
-    #[derive(SchemaShape, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(PARENT_STRUCT_SCHEMA)]
     pub struct ParentStruct {
-        #[smithy_schema(PARENT_NAME)]
+        #[smithy_schema(NAME)]
         name: String,
-        #[smithy_schema(PARENT_NESTED)]
+        #[smithy_schema(NESTED)]
         nested: NestedStruct,
-        #[smithy_schema(PARENT_OPTIONAL_NESTED)]
+        #[smithy_schema(OPTIONAL_NESTED)]
         optional_nested: Option<NestedStruct>,
-        #[smithy_schema(PARENT_TAGS)]
+        #[smithy_schema(TAGS)]
         tags: Vec<String>,
+    }
+
+    smithy!("test#MultiPrimitive": {
+        structure MULTI_PRIMITIVE_SCHEMA {
+            STRING_FIELD: STRING = "string_field"
+            INT_FIELD: INTEGER = "int_field"
+            BOOL_FIELD: BOOLEAN = "bool_field"
+            FLOAT_FIELD: FLOAT = "float_field"
+        }
+    });
+
+    #[derive(SmithyShape, PartialEq, Clone)]
+    #[smithy_schema(MULTI_PRIMITIVE_SCHEMA)]
+    pub struct MultiPrimitive {
+        #[smithy_schema(STRING_FIELD)]
+        string_field: String,
+        #[smithy_schema(INT_FIELD)]
+        int_field: i32,
+        #[smithy_schema(BOOL_FIELD)]
+        bool_field: bool,
+        #[smithy_schema(FLOAT_FIELD)]
+        float_field: f32,
+    }
+
+    impl<'de> serde::Deserialize<'de> for MultiPrimitive {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let seed = SchemaSeed::<MultiPrimitiveBuilder>::new(MultiPrimitive::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
+        }
     }
 
     #[test]
     fn test_multiple_primitives() {
-        lazy_schema!(
-            MULTI_PRIMITIVE_SCHEMA,
-            Schema::structure_builder(ShapeId::from("test#MultiPrimitive"), traits![]),
-            (MULTI_STRING, "string_field", STRING, traits![]),
-            (MULTI_INT, "int_field", INTEGER, traits![]),
-            (MULTI_BOOL, "bool_field", BOOLEAN, traits![]),
-            (MULTI_FLOAT, "float_field", FLOAT, traits![])
-        );
-
-        #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
-        #[smithy_schema(MULTI_PRIMITIVE_SCHEMA)]
-        struct MultiPrimitive {
-            #[smithy_schema(MULTI_STRING)]
-            string_field: String,
-            #[smithy_schema(MULTI_INT)]
-            int_field: i32,
-            #[smithy_schema(MULTI_BOOL)]
-            bool_field: bool,
-            #[smithy_schema(MULTI_FLOAT)]
-            float_field: f32,
-        }
-
-        impl<'de> serde::Deserialize<'de> for MultiPrimitive {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                let seed = SchemaSeed::<MultiPrimitive>::new(MultiPrimitive::schema());
-                seed.deserialize(deserializer)
-            }
-        }
-
         let json = r#"{
             "string_field": "test",
             "int_field": 42,
@@ -748,7 +738,7 @@ mod tests {
 
         assert_eq!(result.string_field, "test");
         assert_eq!(result.int_field, 42);
-        assert_eq!(result.bool_field, true);
+        assert!(result.bool_field);
         assert_eq!(result.float_field, 3.14);
     }
 
@@ -768,19 +758,19 @@ mod tests {
     }
 
     // Test nested list in struct
-    lazy_schema!(
-        STRUCT_WITH_LIST_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#StructWithList"), traits![]),
-        (SWL_NAME, "name", STRING, traits![]),
-        (SWL_TAGS, "tags", STRING_LIST_SCHEMA, traits![])
-    );
+    smithy!("test#StructWithList": {
+        structure STRUCT_WITH_LIST_SCHEMA {
+            NAME: STRING = "name"
+            TAGS: STRING_LIST_SCHEMA = "tags"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(STRUCT_WITH_LIST_SCHEMA)]
-    struct StructWithList {
-        #[smithy_schema(SWL_NAME)]
+    pub struct StructWithList {
+        #[smithy_schema(NAME)]
         name: String,
-        #[smithy_schema(SWL_TAGS)]
+        #[smithy_schema(TAGS)]
         tags: Vec<String>,
     }
 
@@ -789,8 +779,9 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<StructWithList>::new(StructWithList::schema());
-            seed.deserialize(deserializer)
+            let seed = SchemaSeed::<StructWithListBuilder>::new(StructWithList::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
@@ -808,22 +799,22 @@ mod tests {
     }
 
     // Comprehensive deep nesting test
-    lazy_schema!(
-        ADDRESS_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#Address"), traits![]),
-        (ADDR_STREET, "street", STRING, traits![]),
-        (ADDR_CITY, "city", STRING, traits![]),
-        (ADDR_ZIP, "zipCode", INTEGER, traits![])
-    );
+    smithy!("test#Address": {
+        structure ADDRESS_SCHEMA {
+            STREET: STRING = "street"
+            CITY: STRING = "city"
+            ZIP: INTEGER = "zipCode"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(ADDRESS_SCHEMA)]
-    struct Address {
-        #[smithy_schema(ADDR_STREET)]
+    pub struct Address {
+        #[smithy_schema(STREET)]
         street: String,
-        #[smithy_schema(ADDR_CITY)]
+        #[smithy_schema(CITY)]
         city: String,
-        #[smithy_schema(ADDR_ZIP)]
+        #[smithy_schema(ZIP)]
         zip_code: i32,
     }
 
@@ -832,36 +823,37 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<Address>::new(Address::schema());
-            seed.deserialize(deserializer)
+            let seed = SchemaSeed::<AddressBuilder>::new(Address::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
-    lazy_schema!(
-        PHONE_LIST_SCHEMA,
-        Schema::list_builder(ShapeId::from("test#PhoneList"), traits![]),
-        ("member", STRING, traits![])
-    );
+    smithy!("test#PhoneList": {
+        list PHONE_LIST_SCHEMA {
+            member: STRING
+        }
+    });
 
-    lazy_schema!(
-        CONTACT_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#Contact"), traits![]),
-        (CONTACT_EMAIL, "email", STRING, traits![]),
-        (CONTACT_PHONES, "phones", PHONE_LIST_SCHEMA, traits![]),
-        (CONTACT_ADDRESS, "address", ADDRESS_SCHEMA, traits![]),
-        (CONTACT_BACKUP, "backupAddress", ADDRESS_SCHEMA, traits![])
-    );
+    smithy!("test#Contact": {
+        structure CONTACT_SCHEMA {
+            EMAIL: STRING = "email"
+            PHONES: PHONE_LIST_SCHEMA = "phones"
+            ADDRESS: ADDRESS_SCHEMA = "address"
+            BACKUP: ADDRESS_SCHEMA = "backupAddress"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(CONTACT_SCHEMA)]
-    struct Contact {
-        #[smithy_schema(CONTACT_EMAIL)]
+    pub struct Contact {
+        #[smithy_schema(EMAIL)]
         email: String,
-        #[smithy_schema(CONTACT_PHONES)]
+        #[smithy_schema(PHONES)]
         phones: Vec<String>,
-        #[smithy_schema(CONTACT_ADDRESS)]
+        #[smithy_schema(ADDRESS)]
         address: Address,
-        #[smithy_schema(CONTACT_BACKUP)]
+        #[smithy_schema(BACKUP)]
         backup_address: Option<Address>,
     }
 
@@ -870,24 +862,25 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<Contact>::new(Contact::schema());
-            seed.deserialize(deserializer)
+            let seed = SchemaSeed::<ContactBuilder>::new(Contact::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
-    lazy_schema!(
-        HOBBY_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#Hobby"), traits![]),
-        (HOBBY_NAME, "name", STRING, traits![]),
-        (HOBBY_YEARS, "yearsOfExperience", INTEGER, traits![])
-    );
+    smithy!("test#Hobby": {
+        structure HOBBY_SCHEMA {
+            NAME: STRING = "name"
+            YEARS: INTEGER = "yearsOfExperience"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(HOBBY_SCHEMA)]
-    struct Hobby {
-        #[smithy_schema(HOBBY_NAME)]
+    pub struct Hobby {
+        #[smithy_schema(NAME)]
         name: String,
-        #[smithy_schema(HOBBY_YEARS)]
+        #[smithy_schema(YEARS)]
         years_of_experience: i32,
     }
 
@@ -896,55 +889,56 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<Hobby>::new(Hobby::schema());
-            seed.deserialize(deserializer)
+            let seed = SchemaSeed::<HobbyBuilder>::new(Hobby::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
-    lazy_schema!(
-        HOBBY_LIST_SCHEMA,
-        Schema::list_builder(ShapeId::from("test#HobbyList"), traits![]),
-        ("member", HOBBY_SCHEMA, traits![])
-    );
+    smithy!("test#HobbyList": {
+        list HOBBY_LIST_SCHEMA {
+            member: HOBBY_SCHEMA
+        }
+    });
 
-    lazy_schema!(
-        STRING_MAP_SCHEMA,
-        Schema::map_builder(ShapeId::from("test#StringMap"), traits![]),
-        ("key", STRING, traits![]),
-        ("value", STRING, traits![])
-    );
+    smithy!("test#StringMap": {
+        map STRING_MAP_SCHEMA {
+            key: STRING
+            value: STRING
+        }
+    });
 
-    lazy_schema!(
-        PERSON_SCHEMA,
-        Schema::structure_builder(ShapeId::from("test#Person"), traits![]),
-        (PERSON_NAME, "name", STRING, traits![]),
-        (PERSON_AGE, "age", INTEGER, traits![]),
-        (PERSON_ACTIVE, "isActive", BOOLEAN, traits![]),
-        (PERSON_SCORE, "score", FLOAT, traits![]),
-        (PERSON_CONTACT, "contact", CONTACT_SCHEMA, traits![]),
-        (PERSON_HOBBIES, "hobbies", HOBBY_LIST_SCHEMA, traits![]),
-        (PERSON_METADATA, "metadata", STRING_MAP_SCHEMA, traits![]),
-        (PERSON_NOTES, "notes", STRING, traits![])
-    );
+    smithy!("test#Person": {
+        structure PERSON_SCHEMA {
+            NAME: STRING = "name"
+            AGE: INTEGER = "age"
+            ACTIVE: BOOLEAN = "isActive"
+            SCORE: FLOAT = "score"
+            CONTACT: CONTACT_SCHEMA = "contact"
+            HOBBIES: HOBBY_LIST_SCHEMA = "hobbies"
+            METADATA: STRING_MAP_SCHEMA = "metadata"
+            NOTES: STRING = "notes"
+        }
+    });
 
-    #[derive(SchemaShape, DeserializableStruct, Debug, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[smithy_schema(PERSON_SCHEMA)]
-    struct Person {
-        #[smithy_schema(PERSON_NAME)]
+    pub struct Person {
+        #[smithy_schema(NAME)]
         name: String,
-        #[smithy_schema(PERSON_AGE)]
+        #[smithy_schema(AGE)]
         age: i32,
-        #[smithy_schema(PERSON_ACTIVE)]
+        #[smithy_schema(ACTIVE)]
         is_active: bool,
-        #[smithy_schema(PERSON_SCORE)]
+        #[smithy_schema(SCORE)]
         score: f32,
-        #[smithy_schema(PERSON_CONTACT)]
+        #[smithy_schema(CONTACT)]
         contact: Contact,
-        #[smithy_schema(PERSON_HOBBIES)]
+        #[smithy_schema(HOBBIES)]
         hobbies: Vec<Hobby>,
-        #[smithy_schema(PERSON_METADATA)]
+        #[smithy_schema(METADATA)]
         metadata: IndexMap<String, String>,
-        #[smithy_schema(PERSON_NOTES)]
+        #[smithy_schema(NOTES)]
         notes: Option<String>,
     }
 
@@ -953,8 +947,9 @@ mod tests {
         where
             D: serde::Deserializer<'de>,
         {
-            let seed = SchemaSeed::<Person>::new(Person::schema());
-            seed.deserialize(deserializer)
+            let seed = SchemaSeed::<PersonBuilder>::new(Person::schema());
+            let builder = seed.deserialize(deserializer)?;
+            builder.build().map_err(D::Error::custom)
         }
     }
 
@@ -1003,7 +998,7 @@ mod tests {
         // Verify top-level fields
         assert_eq!(result.name, "Alice Johnson");
         assert_eq!(result.age, 32);
-        assert_eq!(result.is_active, true);
+        assert!(result.is_active);
         assert_eq!(result.score, 95.5);
 
         // Verify nested contact
@@ -1066,7 +1061,7 @@ mod tests {
 
         assert_eq!(result.name, "Bob Smith");
         assert_eq!(result.age, 28);
-        assert_eq!(result.is_active, false);
+        assert!(!result.is_active);
         assert_eq!(result.score, 87.3);
         assert_eq!(result.contact.email, "bob@example.com");
         assert_eq!(result.contact.phones, Vec::<String>::new());

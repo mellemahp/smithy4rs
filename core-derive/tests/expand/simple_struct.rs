@@ -3,10 +3,17 @@ use smithy4rs_core::{
     schema::ShapeId,
     traits,
 };
+use smithy4rs_core::{
+    prelude::{HTTPChecksumRequiredTrait, HTTPQueryParamsTrait, HTTPQueryTrait},
+    schema::StaticTraitId,
+    smithy,
+};
+
 use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_SCHEMA {
+        @HTTPQueryTrait::new("foo");
         FIELD_A: STRING = "field_a"
         FIELD_B: INTEGER = "field_b"
         FIELD_C: STRING = "field_c"
