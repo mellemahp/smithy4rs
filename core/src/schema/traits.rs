@@ -170,7 +170,7 @@ impl Debug for TraitRef {
 /// </div>
 ///
 /// ## Custom Trait Initializers
-/// In order to downcast a custom trait we will need to create a custom "trait intializer" implementation and
+/// In order to downcast a custom trait we will need to create a custom "trait initializer" implementation and
 /// register it with the code generator.
 ///
 /// Trait initializers are generated into static schema definitions to attach a trait to a shape.
