@@ -225,7 +225,7 @@ impl UnionDeserVariant {
         );
         if self.unit {
             quote! {
-                if std::sync::Arc::ptr_eq(member_schema, &#member_schema) {
+                if &member_schema == &*#member_schema {
                     let _ = _Unit::deserialize_with_schema(member_schema, de)?;
                     return Ok(Some(#shape_name::#variant_name));
                 }
@@ -233,7 +233,7 @@ impl UnionDeserVariant {
         } else {
             let ty = self.ty.as_ref().expect("Expected a type");
             quote! {
-                if std::sync::Arc::ptr_eq(member_schema, &#member_schema) {
+                if &member_schema == &*#member_schema {
                     let value = #ty::deserialize_with_schema(member_schema, de)?;
                     return Ok(Some(#shape_name::#variant_name(value)));
                 }

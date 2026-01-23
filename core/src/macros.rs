@@ -526,7 +526,7 @@ macro_rules! static_trait_id {
 #[macro_export]
 macro_rules! deserialize_member {
     ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if std::sync::Arc::ptr_eq($member, $schema) {
+        if &$member == &*$schema {
             let value = <$ty as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
             return Ok($builder.$method(value));
         }
@@ -541,7 +541,7 @@ macro_rules! deserialize_member {
 #[macro_export]
 macro_rules! deserialize_optional_member {
     ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if std::sync::Arc::ptr_eq($member, $schema) {
+        if &$member == &*$schema {
             let value = <Option::<$ty> as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
             if let Some(v) = value {
                 return Ok($builder.$method(v));

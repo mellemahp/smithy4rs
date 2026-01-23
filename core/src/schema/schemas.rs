@@ -20,7 +20,28 @@ use crate::{
 /// Allows for cheap copying and read only access to schema data.
 /// This type is used to handle indirection required to build
 /// aggregate schemas and potentially recursive schemas.
-pub type SchemaRef = Ref<Schema>;
+#[derive(Clone, PartialEq)]
+#[repr(transparent)]
+pub struct SchemaRef(Ref<Schema>);
+impl Deref for SchemaRef {
+    type Target = Schema;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl From<Schema> for SchemaRef {
+    fn from(value: Schema) -> Self {
+        Self(value.into())
+    }
+}
+impl Debug for SchemaRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Remove extra wrapping from this pointer in debug print
+        self.0.fmt(f)
+    }
+}
 
 /// Convenience type representing a list of trait implementations.
 type TraitList = Vec<TraitRef>;
@@ -147,11 +168,11 @@ impl MemberSchema {
 // =======  FACTORY METHODS ==========
 impl Schema {
     fn scalar(shape_type: ShapeType, id: impl Into<ShapeId>, traits: TraitList) -> SchemaRef {
-        Ref::new(Schema::Scalar(ScalarSchema {
+        Schema::Scalar(ScalarSchema {
             id: id.into(),
             shape_type,
             traits: TraitMap::of(traits),
-        }))
+        }).into()
     }
 
     /// Create a Schema for a [Boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) shape.
@@ -180,11 +201,11 @@ impl Schema {
         values: Box<[i32]>,
         traits: TraitList,
     ) -> SchemaRef {
-        Ref::new(Self::IntEnum(EnumSchema {
+        Self::IntEnum(EnumSchema {
             id: id.into(),
             values: FxIndexSet::from_iter(values),
             traits: TraitMap::of(traits),
-        }))
+        }).into()
     }
 
     /// Create a Schema for a [Long](https://smithy.io/2.0/spec/simple-types.html#long) shape.
@@ -223,11 +244,11 @@ impl Schema {
         values: Box<[&'static str]>,
         traits: TraitList,
     ) -> SchemaRef {
-        Ref::new(Self::Enum(EnumSchema {
+        Self::Enum(EnumSchema {
             id: id.into(),
             values: FxIndexSet::from_iter(values),
             traits: TraitMap::of(traits),
-        }))
+        }).into()
     }
 
     /// Create a Schema for a [Blob](https://smithy.io/2.0/spec/simple-types.html#blob) shape.
@@ -591,7 +612,7 @@ impl SchemaBuilder {
 
         let mut traits = TraitMap::new();
         traits.extend(&self.traits.read().unwrap());
-        let output = match self.shape_type {
+        let output: SchemaRef = match self.shape_type {
             ShapeType::Structure | ShapeType::Union => {
                 let mut members_mut = self.members.write().expect("Lock poisoned.");
                 members_mut.sort();
@@ -601,27 +622,27 @@ impl SchemaBuilder {
                     member_builder.set_index(idx);
                     members.insert(member_builder.name.clone(), member_builder.build());
                 }
-                Ref::new(Schema::Struct(StructSchema {
+                Schema::Struct(StructSchema {
                     id: self.id.clone(),
                     shape_type: self.shape_type,
                     members,
                     traits,
-                }))
+                }).into()
             }
             ShapeType::List => {
                 let members = self.members.read().expect("Lock poisoned.");
-                Ref::new(Schema::List(ListSchema {
+                Schema::List(ListSchema {
                     id: self.id.clone(),
                     member: members
                         .first()
                         .expect("Expected `member` member for List Schema")
                         .build(),
                     traits,
-                }))
+                }).into()
             }
             ShapeType::Map => {
                 let members = self.members.read().expect("Lock poisoned.");
-                Ref::new(Schema::Map(MapSchema {
+                Schema::Map(MapSchema {
                     id: self.id.clone(),
                     key: members
                         .first()
@@ -632,7 +653,7 @@ impl SchemaBuilder {
                         .expect("Expected `value` member for Map schema")
                         .build(),
                     traits,
-                }))
+                }).into()
             }
             _ => unreachable!("Builder can only be created for aggregate types."),
         };
@@ -748,14 +769,14 @@ impl MemberSchemaBuilder {
     }
 
     fn build(&self) -> SchemaRef {
-        Ref::new(Schema::Member(MemberSchema {
+        Schema::Member(MemberSchema {
             id: self.id.clone(),
             target: self.member_target.clone(),
             name: self.name.clone(),
             index: self.member_index.unwrap_or_default(),
             traits: self.traits.clone(),
             flattened_traits: OnceLock::new(),
-        }))
+        }).into()
     }
 }
 
