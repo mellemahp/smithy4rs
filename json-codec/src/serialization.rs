@@ -340,7 +340,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
             JsonSerdeError::SerializationError("Expected member schema".to_string())
         })?;
 
-        write_json_string(self.buf, member.name.as_str());
+        write_json_string(self.buf, member.name());
         write_json_colon(self.buf);
 
         let value_serializer = JsonSerializer { buf: self.buf };

@@ -346,7 +346,7 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
                 member_schema.id()
             )));
         };
-        inner.field(me.name.as_str(), &DebugWrapper::new(member_schema, value));
+        inner.field(me.name(), &DebugWrapper::new(member_schema, value));
         Ok(())
     }
 

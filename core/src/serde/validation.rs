@@ -347,10 +347,10 @@ impl<'a> Serializer for &'a mut DefaultValidator {
             let Schema::IntEnum(enum_schema) = &**schema else {
                 unreachable!("Only intEnum schemas can be constructed with an enum type");
             };
-            if !enum_schema.values.contains(&value) {
+            if !enum_schema.values().contains(&value) {
                 self.emit_error(SmithyConstraints::IntEnumValue(
                     value,
-                    enum_schema.values.clone(),
+                    enum_schema.values().clone(),
                 ))?;
             }
         } else {
@@ -451,10 +451,10 @@ impl<'a> Serializer for &'a mut DefaultValidator {
             let Schema::Enum(enum_schema) = &**schema else {
                 unreachable!("Only enum schemas can be constructed with an enum type");
             };
-            if !enum_schema.values.contains(value) {
+            if !enum_schema.values().contains(value) {
                 self.emit_error(SmithyConstraints::EnumValue(
                     value.to_owned(),
-                    enum_schema.values.clone(),
+                    enum_schema.values().clone(),
                 ))?;
             }
         } else {

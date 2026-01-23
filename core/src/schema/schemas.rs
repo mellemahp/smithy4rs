@@ -5,7 +5,6 @@ use std::{
     ops::Deref,
     sync::{LazyLock, OnceLock, RwLock},
 };
-
 use rustc_hash::FxBuildHasher;
 
 use crate::{
@@ -60,7 +59,7 @@ pub struct StructSchema {
     id: ShapeId,
     shape_type: ShapeType,
     /// Members (i.e. fields) of the structure schema
-    pub members: FxIndexMap<String, SchemaRef>,
+    members: FxIndexMap<String, SchemaRef>,
     traits: TraitMap,
 }
 
@@ -69,7 +68,7 @@ pub struct StructSchema {
 pub struct ListSchema {
     id: ShapeId,
     /// Member representing items in the list
-    pub member: SchemaRef,
+    member: SchemaRef,
     traits: TraitMap,
 }
 
@@ -78,9 +77,9 @@ pub struct ListSchema {
 pub struct MapSchema {
     id: ShapeId,
     /// Member representing keys of the map
-    pub key: SchemaRef,
+    key: SchemaRef,
     /// Member representing values in the map
-    pub value: SchemaRef,
+    value: SchemaRef,
     traits: TraitMap,
 }
 
@@ -89,8 +88,14 @@ pub struct MapSchema {
 pub struct EnumSchema<T: PartialEq + Hash + Eq> {
     id: ShapeId,
     /// Set of allowed values for the enum
-    pub values: FxIndexSet<T>,
+    values: FxIndexSet<T>,
     traits: TraitMap,
+}
+impl <T: PartialEq + Hash + Eq> EnumSchema<T> {
+    /// Get the set of allowed values for this Enum
+    pub fn values(&self) -> &FxIndexSet<T> {
+        &self.values
+    }
 }
 
 /// Member of another aggregate type.
@@ -98,15 +103,15 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
 pub struct MemberSchema {
     id: ShapeId,
     /// Shape that this member targets
-    pub target: MemberTarget,
+    target: MemberTarget,
     /// Name of the member
-    pub name: String,
+    name: String,
     /// Index of the member.
     ///
     /// This is the member's definition order or
     /// the value of the `@idx` value of the member if provided.
     /// Members are sorted in index order.
-    pub index: usize,
+    index: usize,
     traits: TraitMap,
     flattened_traits: OnceLock<TraitMap>,
 }
@@ -128,6 +133,14 @@ impl MemberSchema {
             flattened.extend(self.target.traits());
             flattened
         })
+    }
+
+    /// Get the member name as defined in the smithy schema.
+    ///
+    /// **Note**: This name may differ from the structure field name.
+    #[inline]
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

@@ -348,7 +348,7 @@ impl StructSerializer for DocumentMapAccumulator {
             ));
         };
         let val = value.serialize_with_schema(member_schema, DocumentParser)?;
-        self.values.insert(me.name.clone(), val);
+        self.values.insert(me.name().to_string(), val);
         Ok(())
     }
 
