@@ -3,12 +3,18 @@
 //! Utilities for (de)serialization.
 
 use std::marker::PhantomData;
+
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use temporal_rs::Instant;
-use crate::schema::{Document, SchemaRef};
-use crate::serde::se::{Error, ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer};
+
+use crate::{
+    schema::{Document, SchemaRef},
+    serde::se::{
+        Error, ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
+    },
+};
 
 // ============================================================================
 // Key Converter
@@ -18,12 +24,12 @@ use crate::serde::se::{Error, ListSerializer, MapSerializer, SerializeWithSchema
 ///
 /// Used to support validation paths and string map document key conversions
 pub(crate) struct KeySerializer<E: Error>(PhantomData<E>);
-impl <E: Error> KeySerializer<E> {
+impl<E: Error> KeySerializer<E> {
     pub(crate) fn new() -> Self {
         Self(PhantomData)
     }
 }
-impl <E: Error> Serializer for &mut KeySerializer<E> {
+impl<E: Error> Serializer for &mut KeySerializer<E> {
     type Error = E;
     type Ok = String;
     type SerializeList = NoOpSerializer<E>;
@@ -151,7 +157,7 @@ fn invalid_key_error<E: Error>(schema: &SchemaRef) -> E {
 
 // Structures, maps, and lists cannot be used as map keys so these implementations will never actually be called.
 pub(crate) struct NoOpSerializer<E: Error>(PhantomData<E>);
-impl <E: Error> ListSerializer for NoOpSerializer<E> {
+impl<E: Error> ListSerializer for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 
@@ -172,7 +178,7 @@ impl <E: Error> ListSerializer for NoOpSerializer<E> {
         unreachable!()
     }
 }
-impl <E: Error> MapSerializer for NoOpSerializer<E> {
+impl<E: Error> MapSerializer for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 
@@ -196,7 +202,7 @@ impl <E: Error> MapSerializer for NoOpSerializer<E> {
         unreachable!()
     }
 }
-impl <E: Error> StructSerializer for NoOpSerializer<E> {
+impl<E: Error> StructSerializer for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 

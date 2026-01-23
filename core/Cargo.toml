@@ -41,7 +41,7 @@ serde-xml-rs = "0.8.2"
 workspace = true
 
 [features]
-serde-adapters = ["dep:serde"]
+serde-adapters = ["dep:serde", "num-bigint/serde", "bigdecimal/serde"]
 
 [[bench]]
 name = "schema"

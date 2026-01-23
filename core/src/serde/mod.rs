@@ -14,8 +14,8 @@ pub use documents::*;
 pub mod serializers;
 mod unit;
 
-pub mod validation;
 mod utils;
+pub mod validation;
 
 pub use deserializers as de;
 pub use serializers as se;

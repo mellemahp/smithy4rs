@@ -361,7 +361,7 @@ impl Schema {
         match self {
             Schema::List(list) => Some(&list.member),
             Schema::Member(member) => member.target.get_list_member(),
-            _ => None
+            _ => None,
         }
     }
 
@@ -373,7 +373,7 @@ impl Schema {
         match self {
             Schema::Map(map) => Some((&map.key, &map.value)),
             Schema::Member(member) => member.target.get_key_value(),
-            _ => None
+            _ => None,
         }
     }
 

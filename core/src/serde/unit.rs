@@ -19,6 +19,7 @@ impl SerializeWithSchema for Unit {
 }
 
 impl<'de> DeserializeWithSchema<'de> for Unit {
+    #[cold]
     fn deserialize_with_schema<D>(
         schema: &SchemaRef,
         deserializer: &mut D,

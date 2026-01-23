@@ -452,7 +452,8 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Vec<T> {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut list = serializer.write_list(schema, self.len())?;
-        let value_schema = schema.get_list_member()
+        let value_schema = schema
+            .get_list_member()
             .ok_or_else(|| S::Error::custom("Expected a list schema"))?;
         for element in self {
             list.serialize_element(value_schema, element)?;
@@ -472,7 +473,8 @@ where
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut map = serializer.write_map(schema, self.len())?;
-        let (key_schema, value_schema) = schema.get_key_value()
+        let (key_schema, value_schema) = schema
+            .get_key_value()
             .ok_or_else(|| S::Error::custom("Expected a map schema"))?;
         for (k, v) in self {
             map.serialize_entry(key_schema, value_schema, k, v)?;

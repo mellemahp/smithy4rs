@@ -80,9 +80,9 @@ use crate::{
         se::{SerializeWithSchema, Serializer},
         serializers,
         serializers::{ListSerializer, MapSerializer, StructSerializer},
+        utils::KeySerializer,
     },
 };
-use crate::serde::utils::KeySerializer;
 // ============================================================================
 // Validator Trait
 // ============================================================================
@@ -402,7 +402,6 @@ impl<'a> Serializer for &'a mut DefaultValidator {
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
         if let Some(range) = schema.get_trait_as::<RangeTrait>() {
-            // TODO(optimization): This conversion + comparison is likely slow
             let big_value = BigDecimal::from_bigint(value.clone(), 0);
             if &big_value < range.min() || &big_value > range.max() {
                 self.emit_error(SmithyConstraints::Range(
@@ -857,7 +856,8 @@ impl MapSerializer for DefaultMapValidator<'_> {
         K: SerializeWithSchema,
         V: SerializeWithSchema,
     {
-        match key.serialize_with_schema(key_schema, &mut KeySerializer::<ValidationFailure>::new()) {
+        match key.serialize_with_schema(key_schema, &mut KeySerializer::<ValidationFailure>::new())
+        {
             Ok(val) => self.root.push_path(PathElement::Key(val))?,
             // Return early on this error. Something is wrong with the schema.
             Err(err) => return self.root.short_circuit(err),
