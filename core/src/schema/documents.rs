@@ -19,8 +19,6 @@ use crate::{
 /// A Smithy [document](https://smithy.io/2.0/spec/simple-types.html#document) type,
 /// representing untyped data in the Smithy data model.
 ///
-/// TODO(doc): Update with dyn doc model
-///
 /// ### Smithy Data Model
 ///
 /// The Smithy data model consists of:
@@ -36,25 +34,20 @@ use crate::{
 ///
 /// ## Document Properties
 /// 1. Shape Conversion - All generated shapes should be able to be converted to/from a document
-/// 2. Lossless Serialization: Documents created from a shape should serialize exactly the same as the shape they are created from. I.e.
-///
-/// ```rust,ignore
-/// // These two should be equivalent
-/// my_smithy_shape.serialize(serializer)?;
-/// my_smithy_shape.as_document().serialize(serializer)?;
-/// ```
-///
-/// 3. Lossless Deserialization: Deserializing to a document then converting to a shape should be the same as deserializing to that shape. I.e. :
-///
-/// ```rust,ignore
-/// // These two should be equivalent
-/// let my_shape = deserializer::deserialize::<MyShape>::();
-/// let my_shape = deserializer::deserialize::<Document>::().into();
-/// ```
-/// This is particularly important for dealing with errors, events, and over-the-wire polymorphism.
-///
+/// 2. Lossless Serialization: Documents created from a shape should serialize exactly the same as the shape they are created from.
+/// 3. Lossless Deserialization: Deserializing to a document then converting to a shape should be the same as deserializing to that shape.///
 /// 4. Protocol Smoothing: Documents should try to smooth over any protocol-specific incompatibilities with the smithy data model.
 /// 5. Discriminators - Documents with an encloded type should be able to be (de)serialized with data that identifies their
+///
+/// ### Protocol-Specific implementations
+/// The [`Document`] trait defines the core behavior of documents, but Documents are used as type-erased
+/// trait objects (i.e. `Box<dyn Document>`).
+///
+/// In order to support protocol smoothing and lossless deserialization protocols should create their own [`Document`]
+/// implementations that are returned by deserializers.
+///
+/// A default [`Document`] implementation is provided that supports conversions to/from shapes and can be used for
+/// serializing Errors and other types that need over-the-wire polymorphism.
 ///
 /// ### Protocol Smoothing
 /// Because Document types are a protocol-agnostic view of untyped data, Protocol codecs should attempt to smooth over
@@ -1214,7 +1207,10 @@ smithy!("smithy.api#Document": {
 
 impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
     fn from(value: Vec<T>) -> Self {
-        let result = value.into_iter().map(Into::into).collect();
+        let mut result = Vec::with_capacity(value.len());
+        for v in value.into_iter() {
+            result.push(v.into());
+        }
         default::Document {
             schema: LIST_DOCUMENT_SCHEMA.clone(),
             value: Value::List(result),
@@ -1234,7 +1230,7 @@ smithy!("smithy.api#Document": {
 
 impl<T: Into<Box<dyn Document>>> From<IndexMap<String, T>> for Box<dyn Document> {
     fn from(value: IndexMap<String, T>) -> Self {
-        let mut result = IndexMap::new();
+        let mut result = IndexMap::with_capacity(value.len());
         for (key, value) in value {
             result.insert(key, value.into());
         }

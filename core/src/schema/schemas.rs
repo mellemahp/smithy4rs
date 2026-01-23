@@ -353,6 +353,30 @@ impl Schema {
         }
     }
 
+    /// Convenience for getting `member` on list schemas.
+    ///
+    /// Returns (key, value) tuple if map schema, otherwise `None`
+    #[inline]
+    pub fn get_list_member(&self) -> Option<&SchemaRef> {
+        match self {
+            Schema::List(list) => Some(&list.member),
+            Schema::Member(member) => member.target.get_list_member(),
+            _ => None,
+        }
+    }
+
+    /// Convenience for getting `key` and `value` member on map schemas.
+    ///
+    /// Returns (key, value) tuple if map schema, otherwise `None`
+    #[inline]
+    pub fn get_key_value(&self) -> Option<(&SchemaRef, &SchemaRef)> {
+        match self {
+            Schema::Map(map) => Some((&map.key, &map.value)),
+            Schema::Member(member) => member.target.get_key_value(),
+            _ => None,
+        }
+    }
+
     /// Returns member schema reference or *panics*
     ///
     /// <div class ="warning">

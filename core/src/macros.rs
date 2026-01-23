@@ -2,7 +2,7 @@
 /// Creates a lazily-resolved smithy [`Schema`](crate::schema::Schema) from a user-friend DSL
 /// that tries to mimic the Smithy IDL syntax.
 ///
-/// Generated schemas can be used by `Smithy4rs` proc macros to automatically implement
+/// Generated schemas can be used by `smithy4rs` proc macros to automatically implement
 /// schema-guided (de)serialization for structures and enums.
 ///
 /// ```rust, ignore

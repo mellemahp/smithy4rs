@@ -165,11 +165,32 @@ impl Debug for TraitRef {
 /// In general, users should try to move towards a code-generated version and downcast
 /// into those if they need to access data within the trait.
 ///
-/// TODO(codegen): Add docs on how to implement with codegen (or link)
-///
 /// <div class ="note">
 /// **NOTE**: Dynamic implementations cannot be downcast into a concrete implementation.
 /// </div>
+///
+/// ## Custom Trait Initializers
+/// In order to downcast a custom trait we will need to create a custom "trait initializer" implementation and
+/// register it with the code generator.
+///
+/// Trait initializers are generated into static schema definitions to attach a trait to a shape.
+///
+/// For example, in the following schema definition:
+/// ```rust
+/// use smithy4rs_core::smithy;
+/// use smithy4rs_core::prelude::LengthTrait;
+///
+/// smithy!("com.example#Shape": {
+///     @LengthTrait::builder().min(1).build();
+///      string Shape
+/// });
+/// ```
+///
+/// The initializer for the `LengthTrait` is `LengthTrait::builder().min(1).build()`.
+///
+/// `TraitInitializer` implementations can be added to a `RustCodegenIntegration` to customize the way
+/// in which traits are initialized in a Schema definition.
+///
 #[derive(Debug, Clone)]
 pub struct DynamicTrait {
     id: ShapeId,

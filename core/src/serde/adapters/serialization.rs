@@ -4,7 +4,10 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
-use serde::ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct};
+use serde::{
+    Serialize,
+    ser::{Error as SerdeError, SerializeMap, SerializeSeq, SerializeStruct},
+};
 use static_str_ops::staticize;
 
 use crate::{
@@ -216,18 +219,18 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     fn write_big_integer(
         self,
         _schema: &SchemaRef,
-        _value: &BigInt,
+        value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
-        todo!()
+        Ok(value.serialize(self.serializer)?)
     }
 
     #[inline]
     fn write_big_decimal(
         self,
         _schema: &SchemaRef,
-        _value: &BigDecimal,
+        value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
-        todo!()
+        Ok(value.serialize(self.serializer)?)
     }
 
     #[inline]
@@ -379,7 +382,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
 //========================================================================
 
 struct ValueWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
-impl<T: SerializeWithSchema> serde::Serialize for ValueWrapper<'_, T> {
+impl<T: SerializeWithSchema> Serialize for ValueWrapper<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
