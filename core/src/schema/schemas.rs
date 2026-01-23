@@ -667,10 +667,7 @@ impl Deref for MemberTarget {
     fn deref(&self) -> &Self::Target {
         match self {
             MemberTarget::Resolved(target) => target,
-            MemberTarget::Lazy { builder, value } => value.get().unwrap_or_else(|| {
-                value.set(builder.build()).expect("Lock poisoned");
-                value.get().unwrap()
-            }),
+            MemberTarget::Lazy { builder, value } => value.get_or_init(|| builder.build())
         }
     }
 }
