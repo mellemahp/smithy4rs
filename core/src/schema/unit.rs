@@ -34,6 +34,7 @@ smithy!("smithy.api#Unit": {
 });
 
 impl StaticSchemaShape for Unit {
+    #[inline]
     fn schema() -> &'static SchemaRef {
         &UNIT
     }

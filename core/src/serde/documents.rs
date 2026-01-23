@@ -11,6 +11,7 @@ use crate::{
         de::Deserializer,
         se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
         serializers::{Error, SerializeWithSchema},
+        utils::KeySerializer,
     },
 };
 // ============================================================================
@@ -262,6 +263,7 @@ impl ListSerializer for DocumentListAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
+    #[inline]
     fn serialize_element<T>(
         &mut self,
         element_schema: &SchemaRef,
@@ -296,6 +298,7 @@ impl MapSerializer for DocumentMapAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
+    #[inline]
     fn serialize_entry<K, V>(
         &mut self,
         key_schema: &SchemaRef,
@@ -308,14 +311,8 @@ impl MapSerializer for DocumentMapAccumulator {
         V: SerializeWithSchema,
     {
         // Serialize the key to get its string representation
-        let key_doc = key.serialize_with_schema(key_schema, DocumentParser)?;
-        let key_str = key_doc
-            .as_string()
-            .ok_or_else(|| {
-                DocumentError::DocumentConversion("Map key must be a string".to_string())
-            })?
-            .to_string();
-
+        let key_str =
+            key.serialize_with_schema(key_schema, &mut KeySerializer::<DocumentError>::new())?;
         let val = value.serialize_with_schema(value_schema, DocumentParser)?;
         self.values.insert(key_str, val);
         Ok(())
@@ -336,6 +333,7 @@ impl StructSerializer for DocumentMapAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
+    #[inline]
     fn serialize_member<T>(
         &mut self,
         member_schema: &SchemaRef,
