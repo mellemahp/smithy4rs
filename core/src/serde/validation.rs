@@ -940,12 +940,14 @@ impl ValidationErrors {
 
     /// Get the number of child-errors contained in this error.
     #[must_use]
+    #[inline]
     pub fn len(&self) -> usize {
         self.errors.len()
     }
 
     /// Returns true if this error has no children
     #[must_use]
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }
