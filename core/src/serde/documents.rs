@@ -8,7 +8,7 @@ use crate::{
     },
     serde::{
         ShapeBuilder,
-        de::Deserializer,
+        de::{DeserializeWithSchema, Deserializer},
         se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
         serializers::{Error, SerializeWithSchema},
         utils::KeySerializer,
@@ -394,7 +394,7 @@ impl DocumentDeserializer {
     }
 }
 
-impl Deserializer<'_> for DocumentDeserializer {
+impl<'de> Deserializer<'de> for DocumentDeserializer {
     type Error = DocumentError;
 
     #[inline]
@@ -468,10 +468,11 @@ impl Deserializer<'_> for DocumentDeserializer {
         &mut self,
         schema: &SchemaRef,
         mut builder: B,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<B, Self::Error>
     where
-        F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        B: DeserializeWithSchema<'de>,
+        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
     {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
@@ -479,8 +480,11 @@ impl Deserializer<'_> for DocumentDeserializer {
         // Add only values that match the provided schema.
         for (key, value) in map {
             if let Some(member_schema) = schema.members().get(&key) {
-                let mut field_deser = DocumentDeserializer::new(value);
-                builder = consumer(builder, member_schema, &mut field_deser)?;
+                builder = consumer(
+                    builder,
+                    member_schema,
+                    &mut DocumentDeserializer::new(value),
+                )?;
             }
         }
 
@@ -491,10 +495,11 @@ impl Deserializer<'_> for DocumentDeserializer {
         &mut self,
         schema: &SchemaRef,
         state: &mut T,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        T: DeserializeWithSchema<'de>,
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
     {
         let list: Vec<Box<dyn Document>> = self.get_inner()?;
 
@@ -503,8 +508,11 @@ impl Deserializer<'_> for DocumentDeserializer {
         })?;
 
         for element_doc in list {
-            let mut elem_deser = DocumentDeserializer::new(element_doc);
-            consumer(state, member_schema, &mut elem_deser)?;
+            consumer(
+                state,
+                member_schema,
+                &mut DocumentDeserializer::new(element_doc),
+            )?;
         }
 
         Ok(())
@@ -514,16 +522,20 @@ impl Deserializer<'_> for DocumentDeserializer {
         &mut self,
         _schema: &SchemaRef,
         state: &mut T,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, String, &mut Self) -> Result<(), Self::Error>,
+        T: DeserializeWithSchema<'de>,
+        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>,
     {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
         for (key_str, value_doc) in map {
             // Key is already a String, create deserializer for the value
-            let mut value_deser = DocumentDeserializer::new(value_doc);
-            consumer(state, key_str.clone(), &mut value_deser)?;
+            consumer(
+                state,
+                key_str.clone(),
+                &mut DocumentDeserializer::new(value_doc),
+            )?;
         }
         Ok(())
     }

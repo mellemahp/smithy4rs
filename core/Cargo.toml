@@ -41,7 +41,7 @@ serde-xml-rs = "0.8.2"
 workspace = true
 
 [features]
-serde-adapters = ["dep:serde", "num-bigint/serde", "bigdecimal/serde"]
+serde-adapters = ["dep:serde", "smithy4rs-core-derive/serde-adapter", "num-bigint/serde", "bigdecimal/serde"]
 
 [[bench]]
 name = "schema"

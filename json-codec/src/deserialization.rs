@@ -192,10 +192,10 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         &mut self,
         schema: &SchemaRef,
         mut builder: B,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<B, Self::Error>
     where
-        F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
     {
         // next_object() returns the first key, or None for empty object
         let mut maybe_key = self.parser.next_object().map_err(|e| {
@@ -229,10 +229,10 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         &mut self,
         _schema: &SchemaRef,
         state: &mut T,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
     {
         // Get the member schema for list elements
         let member_schema = _schema.get_member("member").ok_or_else(|| {
@@ -261,10 +261,10 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         &mut self,
         _schema: &SchemaRef,
         state: &mut T,
-        mut consumer: F,
+        consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, String, &mut Self) -> Result<(), Self::Error>,
+        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>,
     {
         // next_object() returns the first key, or None for empty object
         let mut maybe_key = self.parser.next_object().map_err(|e| {

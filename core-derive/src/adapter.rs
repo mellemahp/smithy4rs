@@ -1,6 +1,6 @@
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-
+use syn::{Data, DeriveInput};
 // ============================================================================
 // Serialization
 // ============================================================================
@@ -33,4 +33,55 @@ pub(crate) fn ser_adapter_impl(
 // Deserialization
 // ============================================================================
 
-// TODO(deser-adapter)
+/// Generates a deserializer adapter impl
+pub(crate) fn deser_adapter_impl(
+    crate_ident: &TokenStream,
+    shape_name: &Ident,
+    input: &DeriveInput,
+) -> TokenStream {
+    // common imports for all types
+    let mut imports = quote! {
+        use _serde::de::Error as _SerdeDeserError;
+        use _serde::de::DeserializeSeed as _DeserializeSeed;
+
+        use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+        use #crate_ident::serde::adapters::SchemaSeed as _SchemaSeed;
+    };
+    // Add builder-specific import
+    if matches!(&input.data, Data::Struct(_)) {
+        imports = quote! {
+            #imports
+            use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
+        };
+    }
+    let body = match &input.data {
+        Data::Struct(_) => {
+            let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
+            quote! {
+                let seed = _SchemaSeed::<#builder_name>::new(#shape_name::schema());
+                seed.deserialize(deserializer)?
+                    .build()
+                    .map_err(D::Error::custom)
+            }
+        }
+        Data::Enum(_) | Data::Union(_) => {
+            quote! {
+                let seed = _SchemaSeed::<#shape_name>::new(#shape_name::schema());
+                seed.deserialize(deserializer)
+            }
+        }
+    };
+    quote! {
+        #imports
+
+        #[automatically_derived]
+        impl<'de> _serde::Deserialize<'de> for #shape_name {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: _serde::Deserializer<'de>,
+            {
+                #body
+            }
+        }
+    }
+}

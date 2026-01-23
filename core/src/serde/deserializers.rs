@@ -156,7 +156,8 @@ pub trait Deserializer<'de>: Sized {
         consumer: F,
     ) -> Result<B, Self::Error>
     where
-        F: FnMut(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>;
+        B: DeserializeWithSchema<'de>,
+        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>;
 
     /// Read a list by calling a consumer function for each element.
     ///
@@ -184,7 +185,8 @@ pub trait Deserializer<'de>: Sized {
         consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>;
+        T: DeserializeWithSchema<'de>,
+        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>;
 
     /// Read a map by calling a consumer function for each entry.
     ///
@@ -212,7 +214,8 @@ pub trait Deserializer<'de>: Sized {
         consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: FnMut(&mut T, String, &mut Self) -> Result<(), Self::Error>;
+        T: DeserializeWithSchema<'de>,
+        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>;
 
     // === Null handling ===
 
