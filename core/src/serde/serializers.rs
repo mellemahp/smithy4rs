@@ -237,7 +237,7 @@ pub trait StructSerializer {
     /// # Errors
     /// Returns an [`Error`] matching the parent serializer if
     /// the unknown member could not be serialized.
-    #[inline]
+    #[cold]
     fn serialize_unknown(&mut self, _schema: &SchemaRef, name: &String) -> Result<(), Self::Error> {
         // Error out on unknown by default
         // TODO(unknown members): Is this the correct default behavior?
@@ -452,7 +452,8 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Vec<T> {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut list = serializer.write_list(schema, self.len())?;
-        let value_schema = schema.expect_member("member");
+        let value_schema = schema.get_list_member()
+            .ok_or_else(|| S::Error::custom("Expected a list schema"))?;
         for element in self {
             list.serialize_element(value_schema, element)?;
         }
@@ -471,9 +472,8 @@ where
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let mut map = serializer.write_map(schema, self.len())?;
-        // TODO(performance): is there a more efficient way to store/get these schemas?
-        let key_schema = schema.expect_member("key");
-        let value_schema = schema.expect_member("value");
+        let (key_schema, value_schema) = schema.get_key_value()
+            .ok_or_else(|| S::Error::custom("Expected a map schema"))?;
         for (k, v) in self {
             map.serialize_entry(key_schema, value_schema, k, v)?;
         }

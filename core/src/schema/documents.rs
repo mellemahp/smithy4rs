@@ -1214,7 +1214,10 @@ smithy!("smithy.api#Document": {
 
 impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
     fn from(value: Vec<T>) -> Self {
-        let result = value.into_iter().map(Into::into).collect();
+        let mut result = Vec::with_capacity(value.len());
+        for v in value.into_iter() {
+            result.push(v.into());
+        }
         default::Document {
             schema: LIST_DOCUMENT_SCHEMA.clone(),
             value: Value::List(result),
@@ -1234,7 +1237,7 @@ smithy!("smithy.api#Document": {
 
 impl<T: Into<Box<dyn Document>>> From<IndexMap<String, T>> for Box<dyn Document> {
     fn from(value: IndexMap<String, T>) -> Self {
-        let mut result = IndexMap::new();
+        let mut result = IndexMap::with_capacity(value.len());
         for (key, value) in value {
             result.insert(key, value.into());
         }

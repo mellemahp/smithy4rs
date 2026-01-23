@@ -82,7 +82,7 @@ use crate::{
         serializers::{ListSerializer, MapSerializer, StructSerializer},
     },
 };
-
+use crate::serde::utils::KeySerializer;
 // ============================================================================
 // Validator Trait
 // ============================================================================
@@ -671,12 +671,12 @@ impl<'a> Serializer for &'a mut HashingSerializer {
         hash_impl!(self, value);
     }
 
-    #[inline]
+    #[cold]
     fn write_float(self, _schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::UniqueItemOnFloat)
     }
 
-    #[inline]
+    #[cold]
     fn write_double(self, _schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::UniqueItemOnFloat)
     }
@@ -857,7 +857,7 @@ impl MapSerializer for DefaultMapValidator<'_> {
         K: SerializeWithSchema,
         V: SerializeWithSchema,
     {
-        match key.serialize_with_schema(key_schema, &mut KeySerializer) {
+        match key.serialize_with_schema(key_schema, &mut KeySerializer::<ValidationFailure>::new()) {
             Ok(val) => self.root.push_path(PathElement::Key(val))?,
             // Return early on this error. Something is wrong with the schema.
             Err(err) => return self.root.short_circuit(err),
@@ -870,197 +870,6 @@ impl MapSerializer for DefaultMapValidator<'_> {
     #[inline]
     fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
         Ok(())
-    }
-}
-
-// ============================================================================
-// Key Converter
-// ============================================================================
-
-// Converts a key value to a String so Keys can be represented as a path element.
-struct KeySerializer;
-impl Serializer for &mut KeySerializer {
-    type Error = ValidationFailure;
-    type Ok = String;
-    type SerializeList = NoOpSerializer;
-    type SerializeMap = NoOpSerializer;
-    type SerializeStruct = NoOpSerializer;
-
-    #[inline]
-    fn write_struct(
-        self,
-        schema: &SchemaRef,
-        _len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_map(self, schema: &SchemaRef, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_list(
-        self,
-        schema: &SchemaRef,
-        _len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_boolean(self, schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
-        Ok(value.to_string())
-    }
-
-    #[inline]
-    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
-        Ok(value.to_string())
-    }
-
-    #[inline]
-    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
-        Ok(value.to_string())
-    }
-
-    #[inline]
-    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
-        Ok(value.to_string())
-    }
-
-    #[inline]
-    fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_big_integer(
-        self,
-        schema: &SchemaRef,
-        _value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_big_decimal(
-        self,
-        schema: &SchemaRef,
-        _value: &BigDecimal,
-    ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
-        Ok(value.to_string())
-    }
-
-    #[inline]
-    fn write_blob(self, schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_timestamp(
-        self,
-        schema: &SchemaRef,
-        _value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_document(
-        self,
-        schema: &SchemaRef,
-        _value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-
-    #[inline]
-    fn skip(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        Err(ValidationFailure::InvalidKeyType(*schema.shape_type()))
-    }
-}
-
-// Structures, maps, and lists cannot be used as map keys so these implementations will never actually be called.
-struct NoOpSerializer;
-impl ListSerializer for NoOpSerializer {
-    type Error = ValidationFailure;
-    type Ok = String;
-
-    fn serialize_element<T>(
-        &mut self,
-        _element_schema: &SchemaRef,
-        _value: &T,
-    ) -> Result<(), Self::Error>
-    where
-        T: SerializeWithSchema,
-    {
-        unreachable!()
-    }
-
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        unreachable!()
-    }
-}
-impl MapSerializer for NoOpSerializer {
-    type Error = ValidationFailure;
-    type Ok = String;
-
-    fn serialize_entry<K, V>(
-        &mut self,
-        _key_schema: &SchemaRef,
-        _value_schema: &SchemaRef,
-        _key: &K,
-        _value: &V,
-    ) -> Result<(), Self::Error>
-    where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
-    {
-        unreachable!()
-    }
-
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        unreachable!()
-    }
-}
-impl StructSerializer for NoOpSerializer {
-    type Error = ValidationFailure;
-    type Ok = String;
-
-    fn serialize_member<T>(
-        &mut self,
-        _member_schema: &SchemaRef,
-        _value: &T,
-    ) -> Result<(), Self::Error>
-    where
-        T: SerializeWithSchema,
-    {
-        unreachable!()
-    }
-
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
-        unreachable!()
     }
 }
 
@@ -1147,9 +956,9 @@ impl Default for ValidationErrors {
     }
 }
 impl serializers::Error for ValidationErrors {
-    fn custom<T: Display>(_msg: T) -> Self {
-        // TODO(errors): What should be the "custom" behavior?
-        todo!()
+    fn custom<T: Display>(msg: T) -> Self {
+        let err = ValidationErrorField::new(&[], ValidationFailure::Custom(msg.to_string()));
+        Self { errors: vec![err] }
     }
 }
 
@@ -1241,8 +1050,6 @@ enum ValidationFailure {
     UniqueItemOnFloat,
     #[error("{0}")]
     Custom(String),
-    #[error("Type: {0} is not a valid map key")]
-    InvalidKeyType(ShapeType),
 }
 impl serializers::Error for ValidationFailure {
     fn custom<T: Display>(msg: T) -> Self {

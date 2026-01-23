@@ -13,6 +13,7 @@ use crate::{
         serializers::{Error, SerializeWithSchema},
     },
 };
+use crate::serde::utils::KeySerializer;
 // ============================================================================
 // Serialization
 // ============================================================================
@@ -308,14 +309,7 @@ impl MapSerializer for DocumentMapAccumulator {
         V: SerializeWithSchema,
     {
         // Serialize the key to get its string representation
-        let key_doc = key.serialize_with_schema(key_schema, DocumentParser)?;
-        let key_str = key_doc
-            .as_string()
-            .ok_or_else(|| {
-                DocumentError::DocumentConversion("Map key must be a string".to_string())
-            })?
-            .to_string();
-
+        let key_str = key.serialize_with_schema(key_schema, &mut KeySerializer::<DocumentError>::new())?;
         let val = value.serialize_with_schema(value_schema, DocumentParser)?;
         self.values.insert(key_str, val);
         Ok(())
