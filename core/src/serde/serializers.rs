@@ -153,11 +153,7 @@ pub trait StructSerializer {
     /// # Errors
     /// Returns an [`Error`] matching the parent serializer if
     /// the member could not be serialized.
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema;
 
@@ -318,8 +314,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the list could not be opened.
-    fn write_list(self, schema: &Schema, len: usize)
-                  -> Result<Self::SerializeList, Self::Error>;
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error>;
 
     /// Serialize a `boolean`
     ///
@@ -367,8 +362,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `bigInteger`.
-    fn write_big_integer(self, schema: &Schema, value: &BigInt)
-                         -> Result<Self::Ok, Self::Error>;
+    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a [`BigDecimal`]
     ///

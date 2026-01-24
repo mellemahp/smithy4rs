@@ -307,11 +307,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(DefaultMapValidator { root: self })
     }
 
-    fn write_list(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
         shape_type!(self, schema, ShapeType::List);
         length!(self, schema, len);
         Ok(DefaultListValidator {
@@ -395,11 +391,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_big_integer(
-        self,
-        schema: &Schema,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
         if let Some(range) = schema.get_trait_as::<RangeTrait>() {
             let big_value = BigDecimal::from_bigint(value.clone(), 0);
@@ -468,11 +460,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_timestamp(
-        self,
-        schema: &Schema,
-        _value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Timestamp);
         Ok(())
     }
@@ -628,20 +616,12 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     }
 
     #[inline]
-    fn write_map(
-        self,
-        _schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
     #[inline]
-    fn write_list(
-        self,
-        _schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
@@ -681,11 +661,7 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &Schema,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
@@ -709,11 +685,7 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     }
 
     #[inline]
-    fn write_timestamp(
-        self,
-        _schema: &Schema,
-        value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
         self.hash(value.epoch_nanoseconds().0);
         Ok(())
     }
@@ -799,11 +771,7 @@ impl StructSerializer for InnerHasher<'_> {
     type Error = ValidationFailure;
     type Ok = ();
 
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -882,11 +850,7 @@ impl StructSerializer for DefaultStructValidator<'_> {
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

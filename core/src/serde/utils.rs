@@ -51,11 +51,7 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     }
 
     #[cold]
-    fn write_list(
-        self,
-        schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
@@ -95,11 +91,7 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     }
 
     #[cold]
-    fn write_big_integer(
-        self,
-        schema: &Schema,
-        _value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, schema: &Schema, _value: &BigInt) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
@@ -123,11 +115,7 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     }
 
     #[cold]
-    fn write_timestamp(
-        self,
-        schema: &Schema,
-        _value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 

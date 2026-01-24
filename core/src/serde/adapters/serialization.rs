@@ -171,11 +171,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     }
 
     #[inline]
-    fn write_list(
-        self,
-        _schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
         let list_ser = self.serializer.serialize_seq(Some(len))?;
         Ok(ListSerializeAdapter::new(list_ser))
     }
@@ -216,11 +212,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &Schema,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         Ok(value.serialize(self.serializer)?)
     }
 
@@ -284,11 +276,7 @@ impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_element<T>(
-        &mut self,
-        value_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -355,11 +343,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

@@ -265,10 +265,7 @@ pub trait DeserializeWithSchema<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if data from the `Deserializer` could not be read into
     /// this shape type. This could be due to either a schema or data mismatch.
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>;
 }
@@ -280,10 +277,7 @@ pub trait DeserializeWithSchema<'de>: Sized {
 // === Primitives ===
 
 impl<'de> DeserializeWithSchema<'de> for bool {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -292,10 +286,7 @@ impl<'de> DeserializeWithSchema<'de> for bool {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i8 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -304,10 +295,7 @@ impl<'de> DeserializeWithSchema<'de> for i8 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i16 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -316,10 +304,7 @@ impl<'de> DeserializeWithSchema<'de> for i16 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i32 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -328,10 +313,7 @@ impl<'de> DeserializeWithSchema<'de> for i32 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i64 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -340,10 +322,7 @@ impl<'de> DeserializeWithSchema<'de> for i64 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for f32 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -352,10 +331,7 @@ impl<'de> DeserializeWithSchema<'de> for f32 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for f64 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -364,10 +340,7 @@ impl<'de> DeserializeWithSchema<'de> for f64 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for BigInt {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -376,10 +349,7 @@ impl<'de> DeserializeWithSchema<'de> for BigInt {
 }
 
 impl<'de> DeserializeWithSchema<'de> for BigDecimal {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -388,10 +358,7 @@ impl<'de> DeserializeWithSchema<'de> for BigDecimal {
 }
 
 impl<'de> DeserializeWithSchema<'de> for String {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -400,10 +367,7 @@ impl<'de> DeserializeWithSchema<'de> for String {
 }
 
 impl<'de> DeserializeWithSchema<'de> for ByteBuffer {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -412,10 +376,7 @@ impl<'de> DeserializeWithSchema<'de> for ByteBuffer {
 }
 
 impl<'de> DeserializeWithSchema<'de> for Instant {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -429,10 +390,7 @@ impl<'de, T> DeserializeWithSchema<'de> for Vec<T>
 where
     T: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -453,10 +411,7 @@ impl<'de, V> DeserializeWithSchema<'de> for IndexMap<String, V>
 where
     V: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -483,10 +438,7 @@ impl<'de, T> DeserializeWithSchema<'de> for Option<T>
 where
     T: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -503,10 +455,7 @@ impl<'de, T> DeserializeWithSchema<'de> for Box<T>
 where
     T: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {

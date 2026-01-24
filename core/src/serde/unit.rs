@@ -20,10 +20,7 @@ impl SerializeWithSchema for Unit {
 
 impl<'de> DeserializeWithSchema<'de> for Unit {
     #[cold]
-    fn deserialize_with_schema<D>(
-        schema: &Schema,
-        deserializer: &mut D,
-    ) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {

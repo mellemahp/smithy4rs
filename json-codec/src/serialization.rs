@@ -98,11 +98,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_map(
-        self,
-        _schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
         start_json_object(self.buf);
         Ok(JsonMapSerializer {
             buf: self.buf,
@@ -111,11 +107,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_list(
-        self,
-        _schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
         start_json_array(self.buf);
         Ok(JsonListSerializer {
             buf: self.buf,
@@ -167,11 +159,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &Schema,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         // TODO(optimization): probably a better way
         use std::fmt::Write;
         write!(StringWriter(self.buf), "{value}").map_err(JsonSerdeError::from)?;
@@ -202,11 +190,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_timestamp(
-        self,
-        _schema: &Schema,
-        _value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         todo!("Timestamp serialization not yet implemented")
     }
 
@@ -322,11 +306,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

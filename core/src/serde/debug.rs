@@ -107,11 +107,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     type SerializeMap = DebugMapSerializer<'a, 'b>;
     type SerializeStruct = DebugStructSerializer<'a, 'b>;
 
-    fn write_struct(
-        self,
-        schema: &Schema,
-        _: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, _: usize) -> Result<Self::SerializeStruct, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             self.fmt.write_str(schema.id().name())?;
             // Replace entire structure contents with redacted placeholder
@@ -187,11 +183,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        schema: &Schema,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
@@ -328,11 +320,7 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

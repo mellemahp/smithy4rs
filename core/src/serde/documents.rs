@@ -148,11 +148,7 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_list(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
         Ok(DocumentListAccumulator {
             schema: schema.clone(),
             values: Vec::with_capacity(len),
@@ -196,11 +192,7 @@ impl Serializer for DocumentParser {
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &Schema,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         Ok(value.clone().into())
     }
 
@@ -224,11 +216,7 @@ impl Serializer for DocumentParser {
     }
 
     #[inline]
-    fn write_timestamp(
-        self,
-        _schema: &Schema,
-        value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
@@ -334,11 +322,7 @@ impl StructSerializer for DocumentMapAccumulator {
     type Ok = Box<dyn Document>;
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

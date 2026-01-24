@@ -5,8 +5,10 @@ use std::{
     ops::Deref,
     sync::{LazyLock, OnceLock, RwLock},
 };
+
 use fast_str::FastStr;
 use rustc_hash::FxBuildHasher;
+
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
     schema::{
@@ -57,7 +59,8 @@ impl Schema {
             id: id.into(),
             shape_type,
             traits: TraitMap::of(traits),
-        }).into()
+        })
+        .into()
     }
 
     /// Create a Schema for a [Boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) shape.
@@ -90,7 +93,8 @@ impl Schema {
             id: id.into(),
             values: FxIndexSet::from_iter(values),
             traits: TraitMap::of(traits),
-        }).into()
+        })
+        .into()
     }
 
     /// Create a Schema for a [Long](https://smithy.io/2.0/spec/simple-types.html#long) shape.
@@ -133,7 +137,8 @@ impl Schema {
             id: id.into(),
             values: FxIndexSet::from_iter(values),
             traits: TraitMap::of(traits),
-        }).into()
+        })
+        .into()
     }
 
     /// Create a Schema for a [Blob](https://smithy.io/2.0/spec/simple-types.html#blob) shape.
@@ -272,9 +277,10 @@ impl SchemaValue {
             SchemaValue::Struct(StructSchema { members, .. }) => members,
             SchemaValue::Member(member) => member.target.members(),
             _ => {
-                static EMPTY: LazyLock<FxIndexMap<String, Schema>> = LazyLock::new(FxIndexMap::default);
+                static EMPTY: LazyLock<FxIndexMap<String, Schema>> =
+                    LazyLock::new(FxIndexMap::default);
                 &EMPTY
-            },
+            }
         }
     }
 
@@ -488,7 +494,7 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
     values: FxIndexSet<T>,
     traits: TraitMap,
 }
-impl <T: PartialEq + Hash + Eq> EnumSchema<T> {
+impl<T: PartialEq + Hash + Eq> EnumSchema<T> {
     /// Get the set of allowed values for this Enum
     pub fn values(&self) -> &FxIndexSet<T> {
         &self.values
@@ -496,7 +502,6 @@ impl <T: PartialEq + Hash + Eq> EnumSchema<T> {
 }
 
 /// Member of another aggregate type.
-#[derive(PartialEq)]
 pub struct MemberSchema {
     id: ShapeId,
     /// Shape that this member targets
@@ -511,6 +516,16 @@ pub struct MemberSchema {
     index: usize,
     traits: TraitMap,
     flattened_traits: OnceLock<TraitMap>,
+}
+// We have to implement this manually to avoid infinite recursion
+impl PartialEq for MemberSchema {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.target.id() == other.target.id()
+            && self.name == other.name
+            && self.index == other.index
+            && self.flattened_traits == other.flattened_traits
+    }
 }
 impl MemberSchema {
     /// Gets the traits that apply to this member.
@@ -641,7 +656,8 @@ impl SchemaBuilder {
                     shape_type: self.shape_type,
                     members,
                     traits,
-                }).into()
+                })
+                .into()
             }
             ShapeType::List => {
                 let members = self.members.read().expect("Lock poisoned.");
@@ -652,7 +668,8 @@ impl SchemaBuilder {
                         .expect("Expected `member` member for List Schema")
                         .build(),
                     traits,
-                }).into()
+                })
+                .into()
             }
             ShapeType::Map => {
                 let members = self.members.read().expect("Lock poisoned.");
@@ -667,7 +684,8 @@ impl SchemaBuilder {
                         .expect("Expected `value` member for Map schema")
                         .build(),
                     traits,
-                }).into()
+                })
+                .into()
             }
             _ => unreachable!("Builder can only be created for aggregate types."),
         };
@@ -702,7 +720,7 @@ impl Deref for MemberTarget {
     fn deref(&self) -> &Self::Target {
         match self {
             MemberTarget::Resolved(target) => target,
-            MemberTarget::Lazy { builder, value } => value.get_or_init(|| builder.build())
+            MemberTarget::Lazy { builder, value } => value.get_or_init(|| builder.build()),
         }
     }
 }
@@ -790,7 +808,8 @@ impl MemberSchemaBuilder {
             index: self.member_index.unwrap_or_default(),
             traits: self.traits.clone(),
             flattened_traits: OnceLock::new(),
-        }).into()
+        })
+        .into()
     }
 }
 
