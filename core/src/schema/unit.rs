@@ -1,6 +1,6 @@
 use crate::{
     annotation_trait,
-    schema::{SchemaRef, StaticSchemaShape},
+    schema::{Schema, StaticSchemaShape},
     smithy,
 };
 
@@ -35,7 +35,7 @@ smithy!("smithy.api#Unit": {
 
 impl StaticSchemaShape for Unit {
     #[inline]
-    fn schema() -> &'static SchemaRef {
+    fn schema() -> &'static Schema {
         &UNIT
     }
 }

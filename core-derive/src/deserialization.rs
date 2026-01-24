@@ -64,7 +64,7 @@ fn deserialize_builder(
 
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #builder_name {
-            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
@@ -95,7 +95,7 @@ fn deserialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
-            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
@@ -168,7 +168,7 @@ fn deserialize_union(
 
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
-            fn deserialize_with_schema<D>(schema: &_SchemaRef, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {

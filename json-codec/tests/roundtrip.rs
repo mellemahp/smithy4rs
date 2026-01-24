@@ -1,5 +1,5 @@
 use smithy4rs_core::{
-    schema::SchemaRef,
+    schema::Schema,
     serde::{Buildable, ShapeBuilder, de::DeserializeWithSchema, serializers::SerializeWithSchema},
 };
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
@@ -9,7 +9,7 @@ use smithy4rs_test_utils::*;
 // Roundtrip Test Helpers
 // ============================================================================
 
-fn serialize_to_json<T: SerializeWithSchema>(value: &T, schema: &SchemaRef) -> Vec<u8> {
+fn serialize_to_json<T: SerializeWithSchema>(value: &T, schema: &Schema) -> Vec<u8> {
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
     value.serialize_with_schema(schema, serializer).unwrap();
@@ -18,7 +18,7 @@ fn serialize_to_json<T: SerializeWithSchema>(value: &T, schema: &SchemaRef) -> V
 
 fn deserialize_from_json<'de, B: ShapeBuilder<'de, T>, T: Buildable<'de, B>>(
     data: &'de [u8],
-    schema: &SchemaRef,
+    schema: &Schema,
 ) -> T {
     let mut deserializer = JsonDeserializer::new(data);
     B::deserialize_with_schema(schema, &mut deserializer)
@@ -27,7 +27,7 @@ fn deserialize_from_json<'de, B: ShapeBuilder<'de, T>, T: Buildable<'de, B>>(
         .unwrap()
 }
 
-fn roundtrip<T, B>(value: &T, schema: &SchemaRef) -> T
+fn roundtrip<T, B>(value: &T, schema: &Schema) -> T
 where
     B: for<'de> ShapeBuilder<'de, T>,
     T: SerializeWithSchema + for<'de> Buildable<'de, B>,

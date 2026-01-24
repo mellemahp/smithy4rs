@@ -24,7 +24,7 @@
 //! ```
 
 use crate::{
-    schema::{Document, DocumentError, SchemaRef, StaticSchemaShape},
+    schema::{Document, DocumentError, Schema, StaticSchemaShape},
     serde::{
         correction::{ErrorCorrection, ErrorCorrectionDefault},
         deserializers::DeserializeWithSchema,
@@ -133,7 +133,7 @@ impl<T: ErrorCorrectionDefault> Required<T> {
 impl<T: SerializeWithSchema + ErrorCorrectionDefault> SerializeWithSchema for Required<T> {
     fn serialize_with_schema<S: Serializer>(
         &self,
-        schema: &SchemaRef,
+        schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         match self {
@@ -164,7 +164,7 @@ impl<
 {
     fn serialize_with_schema<S: Serializer>(
         &self,
-        schema: &SchemaRef,
+        schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         match self {

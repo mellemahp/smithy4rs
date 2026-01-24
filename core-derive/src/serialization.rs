@@ -56,7 +56,7 @@ pub(crate) fn serialization_impl(
         impl _SerializeWithSchema for #shape_name {
             fn serialize_with_schema<S: _Serializer>(
                 &self,
-                schema: &_SchemaRef,
+                schema: &_Schema,
                 serializer: S,
             ) -> Result<S::Ok, S::Error> {
                 #body

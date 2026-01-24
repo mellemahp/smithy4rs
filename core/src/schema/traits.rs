@@ -5,7 +5,7 @@
 //!
 //! ## Using Smithy Traits from as Schema
 //!
-//! Smithy [`crate::schema::Schema`]'s may contain one or more Smithy Traits. These
+//! Smithy [`crate::schema::SchemaValue`]'s may contain one or more Smithy Traits. These
 //! traits provide structured metadata for the schema and are the primary mechanism to
 //! customize runtime/serde behavior of structures modeled with the schema.
 //!
@@ -20,7 +20,7 @@
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
-//! # use smithy4rs_core::schema::{Schema, StaticTraitId, SchemaRef, NULL};
+//! # use smithy4rs_core::schema::{SchemaValue, StaticTraitId, Schema, NULL};
 //!
 //! smithy!("com.example#SensitiveString": {
 //!     @SensitiveTrait;
@@ -110,7 +110,7 @@ impl_downcast!(sync SmithyTrait);
 ///
 /// Generated or pre-defined Smithy Traits _should_ implement this trait.
 /// [`SmithyTrait`] implementations that do not implement this trait cannot
-/// be downcast into by [`crate::schema::Schema::get_trait_as`]
+/// be downcast into by [`crate::schema::SchemaValue::get_trait_as`]
 /// methods.
 pub trait StaticTraitId: SmithyTrait {
     /// Static trait ID as found in Smithy model definition of the trait.

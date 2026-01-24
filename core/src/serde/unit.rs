@@ -1,5 +1,5 @@
 use crate::{
-    schema::{SchemaRef, Unit},
+    schema::{Schema, Unit},
     serde::{
         de::{DeserializeWithSchema, Deserializer, Error},
         se::{SerializeWithSchema, Serializer, StructSerializer},
@@ -10,7 +10,7 @@ impl SerializeWithSchema for Unit {
     #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
-        schema: &SchemaRef,
+        schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         // Writes an empty structure
@@ -21,7 +21,7 @@ impl SerializeWithSchema for Unit {
 impl<'de> DeserializeWithSchema<'de> for Unit {
     #[cold]
     fn deserialize_with_schema<D>(
-        schema: &SchemaRef,
+        schema: &Schema,
         deserializer: &mut D,
     ) -> Result<Self, D::Error>
     where

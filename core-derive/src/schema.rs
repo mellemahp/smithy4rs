@@ -6,7 +6,7 @@ pub(crate) fn schema_impl(shape_name: &Ident, schema_ident: &Ident) -> TokenStre
     quote! {
         #[automatically_derived]
         impl _StaticSchemaShape for #shape_name {
-            fn schema() -> &'static _SchemaRef {
+            fn schema() -> &'static _Schema {
                 &#schema_ident
             }
         }

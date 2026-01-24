@@ -13,7 +13,7 @@ use static_str_ops::staticize;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::{JsonNameTrait, XmlAttributeTrait, XmlNameTrait},
-    schema::{Document, SchemaRef},
+    schema::{Document, Schema},
     serde::{
         se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer},
         serializers::{Error, Serializer},
@@ -105,7 +105,7 @@ impl NameMapper {
         }
     }
 
-    fn get_struct_name(&self, schema: &SchemaRef) -> &'static str {
+    fn get_struct_name(&self, schema: &Schema) -> &'static str {
         if matches!(self, NameMapper::Xml)
             && let Some(xml_name) = schema.get_trait_as::<XmlNameTrait>()
         {
@@ -116,7 +116,7 @@ impl NameMapper {
 
     fn get_member_name<S: StructSerializer>(
         &self,
-        schema: &SchemaRef,
+        schema: &Schema,
     ) -> Result<&'static str, S::Error> {
         let Some(me) = schema.as_member() else {
             return Err(S::Error::custom(
@@ -156,7 +156,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     #[inline]
     fn write_struct(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         let struct_name = self.mapper.get_struct_name(schema);
@@ -165,7 +165,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     }
 
     #[inline]
-    fn write_map(self, _schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
         let map_ser = self.serializer.serialize_map(Some(len))?;
         Ok(MapSerializerAdapter::new(map_ser))
     }
@@ -173,7 +173,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     #[inline]
     fn write_list(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         len: usize,
     ) -> Result<Self::SerializeList, Self::Error> {
         let list_ser = self.serializer.serialize_seq(Some(len))?;
@@ -181,44 +181,44 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     }
 
     #[inline]
-    fn write_boolean(self, _: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, _: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_bool(value)?)
     }
 
     #[inline]
-    fn write_byte(self, _: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, _: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_i8(value)?)
     }
 
     #[inline]
-    fn write_short(self, _: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, _: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_i16(value)?)
     }
 
     #[inline]
-    fn write_integer(self, _: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, _: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_i32(value)?)
     }
 
     #[inline]
-    fn write_long(self, _: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, _: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_i64(value)?)
     }
 
     #[inline]
-    fn write_float(self, _: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, _: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_f32(value)?)
     }
 
     #[inline]
-    fn write_double(self, _: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, _: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_f64(value)?)
     }
 
     #[inline]
     fn write_big_integer(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(value.serialize(self.serializer)?)
@@ -227,25 +227,25 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     #[inline]
     fn write_big_decimal(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(value.serialize(self.serializer)?)
     }
 
     #[inline]
-    fn write_string(self, _: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, _: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_str(value)?)
     }
 
     #[inline]
-    fn write_blob(self, _: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, _: &Schema, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         // TODO(streams): How to support data streams?
         todo!()
     }
 
     #[inline]
-    fn write_timestamp(self, _: &SchemaRef, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         // TODO(timestamp formatting): How to write timestamps with formatting traits?
         todo!()
     }
@@ -253,7 +253,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     #[inline]
     fn write_document(
         self,
-        _: &SchemaRef,
+        _: &Schema,
         _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         // TODO(document serde): Finish implementing for document types.
@@ -261,11 +261,11 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     }
 
     #[inline]
-    fn write_null(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_none()?)
     }
 
-    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.serialize_none()?)
     }
 }
@@ -286,7 +286,7 @@ impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     #[inline]
     fn serialize_element<T>(
         &mut self,
-        value_schema: &SchemaRef,
+        value_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -298,7 +298,7 @@ impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
     }
 
     #[inline]
-    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.end()?)
     }
 }
@@ -319,8 +319,8 @@ impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
     #[inline]
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
+        key_schema: &Schema,
+        value_schema: &Schema,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -335,7 +335,7 @@ impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
     }
 
     #[inline]
-    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.end()?)
     }
 }
@@ -357,7 +357,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     #[inline]
     fn serialize_member<T>(
         &mut self,
-        member_schema: &SchemaRef,
+        member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -370,7 +370,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
     }
 
     #[inline]
-    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(self.serializer.end()?)
     }
 }
@@ -381,7 +381,7 @@ impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
 // Wraps inner values of
 //========================================================================
 
-struct ValueWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
+struct ValueWrapper<'a, T: SerializeWithSchema>(&'a Schema, &'a T);
 impl<T: SerializeWithSchema> Serialize for ValueWrapper<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

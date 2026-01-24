@@ -10,7 +10,7 @@ use num_bigint::BigInt;
 use temporal_rs::Instant;
 
 use crate::{
-    schema::{Document, SchemaRef},
+    schema::{Document, Schema},
     serde::se::{
         Error, ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
     },
@@ -39,65 +39,65 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     #[cold]
     fn write_struct(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn write_map(self, schema: &SchemaRef, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
     fn write_list(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _len: usize,
     ) -> Result<Self::SerializeList, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn write_boolean(self, schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, schema: &Schema, _value: bool) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[inline]
-    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, _schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         Ok(value.to_string())
     }
 
     #[inline]
-    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, _schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         Ok(value.to_string())
     }
 
     #[inline]
-    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, _schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         Ok(value.to_string())
     }
 
     #[inline]
-    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, _schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         Ok(value.to_string())
     }
 
     #[cold]
-    fn write_float(self, schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, schema: &Schema, _value: f32) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn write_double(self, schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, schema: &Schema, _value: f64) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
     fn write_big_integer(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _value: &BigInt,
     ) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
@@ -106,26 +106,26 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     #[cold]
     fn write_big_decimal(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[inline]
-    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, _schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         Ok(value.to_string())
     }
 
     #[cold]
-    fn write_blob(self, schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, schema: &Schema, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
     fn write_timestamp(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _value: &Instant,
     ) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
@@ -134,24 +134,24 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     #[cold]
     fn write_document(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn write_null(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn skip(self, schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 }
 
-fn invalid_key_error<E: Error>(schema: &SchemaRef) -> E {
+fn invalid_key_error<E: Error>(schema: &Schema) -> E {
     E::custom(format!("Invalid key type: {}", schema.shape_type()))
 }
 
@@ -164,7 +164,7 @@ impl<E: Error> ListSerializer for NoOpSerializer<E> {
     #[cold]
     fn serialize_element<T>(
         &mut self,
-        _element_schema: &SchemaRef,
+        _element_schema: &Schema,
         _value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -174,7 +174,7 @@ impl<E: Error> ListSerializer for NoOpSerializer<E> {
     }
 
     #[cold]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         unreachable!()
     }
 }
@@ -185,8 +185,8 @@ impl<E: Error> MapSerializer for NoOpSerializer<E> {
     #[cold]
     fn serialize_entry<K, V>(
         &mut self,
-        _key_schema: &SchemaRef,
-        _value_schema: &SchemaRef,
+        _key_schema: &Schema,
+        _value_schema: &Schema,
         _key: &K,
         _value: &V,
     ) -> Result<(), Self::Error>
@@ -198,7 +198,7 @@ impl<E: Error> MapSerializer for NoOpSerializer<E> {
     }
 
     #[cold]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         unreachable!()
     }
 }
@@ -208,7 +208,7 @@ impl<E: Error> StructSerializer for NoOpSerializer<E> {
 
     fn serialize_member<T>(
         &mut self,
-        _member_schema: &SchemaRef,
+        _member_schema: &Schema,
         _value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -217,7 +217,7 @@ impl<E: Error> StructSerializer for NoOpSerializer<E> {
         unreachable!()
     }
 
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         unreachable!()
     }
 }

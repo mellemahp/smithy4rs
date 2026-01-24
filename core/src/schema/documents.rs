@@ -672,18 +672,18 @@ pub(crate) mod default {
 
     use crate::{
         BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-        schema::{DocumentError, SchemaRef, SchemaShape, ShapeId, ShapeType},
+        schema::{DocumentError, Schema, SchemaShape, ShapeId, ShapeType},
     };
 
     #[derive(Clone, PartialEq, Debug)]
     pub struct Document {
-        pub schema: SchemaRef,
+        pub schema: Schema,
         pub value: Value,
         pub discriminator: Option<ShapeId>,
     }
 
     impl SchemaShape for Document {
-        fn schema(&self) -> &SchemaRef {
+        fn schema(&self) -> &Schema {
             &self.schema
         }
     }
@@ -1290,12 +1290,12 @@ pub static NULL: LazyLock<Box<dyn Document>> = LazyLock::new(|| {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schema::SchemaRef;
+    use crate::schema::Schema;
 
     #[test]
     fn string_document_value() {
         let document_str: Box<dyn Document> = "MyStr".into();
-        let val: &SchemaRef = &STRING;
+        let val: &Schema = &STRING;
         assert_eq!(document_str.schema(), val);
         let output_str: String = document_str.as_string().unwrap().to_string();
         assert_eq!(output_str, "MyStr".to_string());
@@ -1310,7 +1310,7 @@ mod tests {
     fn list_document_value() {
         let vec = vec!["a", "b", "c"];
         let document_list: Box<dyn Document> = vec.into();
-        let val: &SchemaRef = &LIST_DOCUMENT_SCHEMA;
+        let val: &Schema = &LIST_DOCUMENT_SCHEMA;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
         let vec_out: Vec<String> = document_list.try_into().unwrap();
@@ -1325,7 +1325,7 @@ mod tests {
         let mut map_in: IndexMap<String, String> = IndexMap::new();
         map_in.insert("a".to_string(), "b".to_string());
         let map_doc: Box<dyn Document> = map_in.into();
-        let val: &SchemaRef = &MAP_DOCUMENT_SCHEMA;
+        let val: &Schema = &MAP_DOCUMENT_SCHEMA;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
 
@@ -1337,21 +1337,21 @@ mod tests {
     #[test]
     fn integer_document_values() {
         let byte: Box<dyn Document> = 1i8.into();
-        let byte_val: &SchemaRef = &BYTE;
+        let byte_val: &Schema = &BYTE;
         assert_eq!(byte.schema(), byte_val);
 
         let short: Box<dyn Document> = 1i16.into();
-        let short_val: &SchemaRef = &SHORT;
+        let short_val: &Schema = &SHORT;
 
         assert_eq!(short.schema(), short_val);
 
         let integer: Box<dyn Document> = 1i32.into();
-        let integer_val: &SchemaRef = &INTEGER;
+        let integer_val: &Schema = &INTEGER;
 
         assert_eq!(integer.schema(), integer_val);
 
         let long: Box<dyn Document> = 1i64.into();
-        let long_val: &SchemaRef = &LONG;
+        let long_val: &Schema = &LONG;
 
         assert_eq!(long.schema(), long_val);
     }
@@ -1361,11 +1361,11 @@ mod tests {
     #[test]
     fn float_document_values() {
         let float: Box<dyn Document> = 1f32.into();
-        let float_val: &SchemaRef = &FLOAT;
+        let float_val: &Schema = &FLOAT;
         assert_eq!(float.schema(), float_val);
 
         let double: Box<dyn Document> = 1f64.into();
-        let double_val: &SchemaRef = &DOUBLE;
+        let double_val: &Schema = &DOUBLE;
         assert_eq!(double.schema(), double_val);
 
         let float_value: f32 = float.try_into().unwrap();

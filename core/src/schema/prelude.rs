@@ -1,5 +1,5 @@
 //! # Prelude
-//! [`crate::schema::Schema`] definitions for the [Smithy prelude](https://github.com/smithy-lang/smithy/blob/65b473ddb94f9edda933f00bab988d465b2bd2fe/smithy-model/src/main/resources/software/amazon/smithy/model/loader/prelude.smithy)
+//! [`crate::schema::SchemaValue`] definitions for the [Smithy prelude](https://github.com/smithy-lang/smithy/blob/65b473ddb94f9edda933f00bab988d465b2bd2fe/smithy-model/src/main/resources/software/amazon/smithy/model/loader/prelude.smithy)
 //!
 //! The prelude consists of public, built-in shapes like `STRING`, `INTEGER`, etc. that
 //! are available to all models. Prelude shapes and traits are all in the `smithy.api` namespace

@@ -15,18 +15,18 @@ pub struct SimpleStruct {
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for SimpleStruct {
-        fn schema() -> &'static _SchemaRef {
+        fn schema() -> &'static _Schema {
             &SIMPLE_SCHEMA
         }
     }
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
@@ -34,7 +34,7 @@ const _: () = {
     impl _SerializeWithSchema for SimpleStruct {
         fn serialize_with_schema<S: _Serializer>(
             &self,
-            schema: &_SchemaRef,
+            schema: &_Schema,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
@@ -102,7 +102,7 @@ impl SimpleStructBuilder {
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
@@ -112,7 +112,7 @@ const _: () = {
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for SimpleStructBuilder {
         fn deserialize_with_schema<D>(
-            schema: &_SchemaRef,
+            schema: &_Schema,
             deserializer: &mut D,
         ) -> Result<Self, D::Error>
         where
@@ -124,30 +124,21 @@ const _: () = {
                     schema,
                     builder,
                     |builder, member_schema, de| {
-                        if std::sync::Arc::ptr_eq(
-                            member_schema,
-                            &_SIMPLE_SCHEMA_MEMBER_A,
-                        ) {
+                        if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_A {
                             let value = <String as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
                                 member_schema,
                                 de,
                             )?;
                             return Ok(builder.field_a(value));
                         }
-                        if std::sync::Arc::ptr_eq(
-                            member_schema,
-                            &_SIMPLE_SCHEMA_MEMBER_B,
-                        ) {
+                        if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_B {
                             let value = <i32 as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
                                 member_schema,
                                 de,
                             )?;
                             return Ok(builder.field_b(value));
                         }
-                        if std::sync::Arc::ptr_eq(
-                            member_schema,
-                            &_SIMPLE_SCHEMA_MEMBER_C,
-                        ) {
+                        if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_C {
                             let value = <Option<
                                 NestedBuilder,
                             > as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
@@ -194,7 +185,7 @@ const _: () = {
     impl _SerializeWithSchema for SimpleStructBuilder {
         fn serialize_with_schema<S: _Serializer>(
             &self,
-            schema: &_SchemaRef,
+            schema: &_Schema,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
@@ -261,18 +252,18 @@ pub struct Nested {
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for Nested {
-        fn schema() -> &'static _SchemaRef {
+        fn schema() -> &'static _Schema {
             &NESTED_SCHEMA
         }
     }
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
@@ -280,7 +271,7 @@ const _: () = {
     impl _SerializeWithSchema for Nested {
         fn serialize_with_schema<S: _Serializer>(
             &self,
-            schema: &_SchemaRef,
+            schema: &_Schema,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
@@ -320,7 +311,7 @@ impl NestedBuilder {
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
@@ -330,7 +321,7 @@ const _: () = {
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for NestedBuilder {
         fn deserialize_with_schema<D>(
-            schema: &_SchemaRef,
+            schema: &_Schema,
             deserializer: &mut D,
         ) -> Result<Self, D::Error>
         where
@@ -342,10 +333,7 @@ const _: () = {
                     schema,
                     builder,
                     |builder, member_schema, de| {
-                        if std::sync::Arc::ptr_eq(
-                            member_schema,
-                            &_NESTED_SCHEMA_MEMBER_D,
-                        ) {
+                        if &member_schema == &*_NESTED_SCHEMA_MEMBER_D {
                             let value = <String as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
                                 member_schema,
                                 de,
@@ -385,7 +373,7 @@ const _: () = {
     impl _SerializeWithSchema for NestedBuilder {
         fn serialize_with_schema<S: _Serializer>(
             &self,
-            schema: &_SchemaRef,
+            schema: &_Schema,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;

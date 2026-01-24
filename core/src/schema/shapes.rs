@@ -10,7 +10,7 @@ use std::{
 
 use fast_str::FastStr;
 
-use crate::schema::SchemaRef;
+use crate::schema::Schema;
 
 /// Immutable identifier for a shape in a Smithy model.
 ///
@@ -205,11 +205,11 @@ impl Display for ShapeType {
 /// static schema reference as the instance schema reference.
 pub trait SchemaShape {
     /// Get a reference to the Schema of this shape.
-    fn schema(&self) -> &SchemaRef;
+    fn schema(&self) -> &Schema;
 }
 
 impl<T: StaticSchemaShape> SchemaShape for T {
-    fn schema(&self) -> &SchemaRef {
+    fn schema(&self) -> &Schema {
         Self::schema()
     }
 }
@@ -220,7 +220,7 @@ impl<T: StaticSchemaShape> SchemaShape for T {
 /// those would be generated from a model.
 pub trait StaticSchemaShape {
     /// Get a reference to the (static) Schema of this shape.
-    fn schema() -> &'static SchemaRef;
+    fn schema() -> &'static Schema;
 }
 
 #[cfg(test)]

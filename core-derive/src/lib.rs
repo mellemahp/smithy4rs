@@ -186,7 +186,7 @@ pub fn schema_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     quote! {
         const _: () = {
             #extern_import
-            use #crate_ident::schema::SchemaRef as _SchemaRef;
+            use #crate_ident::schema::Schema as _Schema;
             use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
 
             #schema_trait
@@ -206,7 +206,7 @@ pub fn serializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro::
     quote! {
         const _: () = {
             #extern_import
-            use #crate_ident::schema::SchemaRef as _SchemaRef;
+            use #crate_ident::schema::Schema as _Schema;
 
             #serialization
         };
@@ -238,7 +238,7 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
 
                 const _: () = {
                     #extern_import
-                    use #crate_ident::schema::SchemaRef as _SchemaRef;
+                    use #crate_ident::schema::Schema as _Schema;
 
                     #deser
 
@@ -252,7 +252,7 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
         Data::Enum(_) => quote! {
             const _: () = {
                 #extern_import
-                use #crate_ident::schema::SchemaRef as _SchemaRef;
+                use #crate_ident::schema::Schema as _Schema;
 
                 #deser
             };
