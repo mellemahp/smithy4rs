@@ -19,7 +19,26 @@ schema-guided (de)serialization to support any number of protocols.
 > [!NOTE]
 > `smithy4rs` is an _unofficial_, _community-supported_ code generator.
 
+---
 
+This repository contains: 
+1. `smithy-build` plugins that execute code generation from Smithy model definitions.
+2. Core packages to support the runtime behavior of generated shapes.
+3. Protocol definitions and other packages for building high-performance clients 
+   and services with generated shapes.
+
+## Getting started
+> [!NOTE]
+> If you are new to Smithy, we recommend going through the [Smithy Quickstart](https://smithy.io/2.0/quickstart.html)
+> guide before using `smithy4rs`.
+
+For a guided introduction to this project, see the [`smithy4rs` Quick Start Guide](https://mellemahp.github.io/smithy4rs/quick-start.html).
+
+## Documentation
+
+For user-guides and general documentation see the [Documentation Site](https://mellemahp.github.io/smithy4rs/). 
+
+For API documentation see our [Rust docs](https://docs.rs/smithy4rs-core/latest/smithy4rs_core/).
 
 ## Security
 
