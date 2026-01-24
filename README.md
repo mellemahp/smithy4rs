@@ -47,10 +47,25 @@ For API documentation see our [Rust docs](https://docs.rs/smithy4rs-core/latest/
    If you need to install the CLI, see the [Smithy CLI installation guide]().
 3. Install [`cargo-generate`](https://github.com/cargo-generate/cargo-generate?tab=readme-ov-file#installation)
 
-### TODO: Complete
-TODO
+### Copy the template
+
+Run the following command to copy the type-codegen template:
+
+```console
+cargo generate --git https://github.com:mellemahp/smithy4rs-type-codegen-template.git
+```
+
+This template uses the `rust-types` build plugin to generate standalone types from any Smithy models 
+in the `model/` directory.
+
+### Build 
+
+Now, `cd` into the project directory created by `cargo generate` and run `cargo test` to build and 
+test the generate shapes.
 
 ### Next steps
+Try modifying the Smithy models in the `model/` directory to see what different shapes you can generate.
+
 For a longer, guided introduction to this project, see the [`smithy4rs` Quick Start Guide](https://mellemahp.github.io/smithy4rs/quick-start.html).
 
 ## Core packages
