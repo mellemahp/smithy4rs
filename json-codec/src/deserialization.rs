@@ -1,5 +1,5 @@
 use smithy4rs_core::{
-    BigDecimal, BigInt, ByteBuffer, Instant, schema::SchemaRef, serde::deserializers::Deserializer,
+    BigDecimal, BigInt, ByteBuffer, Instant, schema::Schema, serde::deserializers::Deserializer,
 };
 
 use crate::errors::JsonSerdeError;
@@ -24,13 +24,13 @@ impl<'de> JsonDeserializer<'de> {
 impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
     type Error = JsonSerdeError;
 
-    fn read_bool(&mut self, _schema: &SchemaRef) -> Result<bool, Self::Error> {
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
         self.parser.next_bool().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read bool: {}", e))
         })
     }
 
-    fn read_byte(&mut self, _schema: &SchemaRef) -> Result<i8, Self::Error> {
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
         let value = self.parser.next_int().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read byte: {}", e))
         })?;
@@ -51,7 +51,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         }
     }
 
-    fn read_short(&mut self, _schema: &SchemaRef) -> Result<i16, Self::Error> {
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
         let value = self.parser.next_int().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read short: {}", e))
         })?;
@@ -72,7 +72,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         }
     }
 
-    fn read_integer(&mut self, _schema: &SchemaRef) -> Result<i32, Self::Error> {
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         let value = self.parser.next_int().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read integer: {}", e))
         })?;
@@ -93,7 +93,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         }
     }
 
-    fn read_long(&mut self, _schema: &SchemaRef) -> Result<i64, Self::Error> {
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
         let value = self.parser.next_int().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read long: {}", e))
         })?;
@@ -109,7 +109,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         }
     }
 
-    fn read_float(&mut self, _schema: &SchemaRef) -> Result<f32, Self::Error> {
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
         self.parser
             .next_float()
             .map_err(|e| {
@@ -118,13 +118,13 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
             .map(|v| v as f32)
     }
 
-    fn read_double(&mut self, _schema: &SchemaRef) -> Result<f64, Self::Error> {
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
         self.parser.next_float().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read double: {}", e))
         })
     }
 
-    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<BigInt, Self::Error> {
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
         let s = self.parser.next_str().map_err(|e| {
             JsonSerdeError::DeserializationError(format!(
                 "Failed to read big integer string: {}",
@@ -137,7 +137,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         })
     }
 
-    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<BigDecimal, Self::Error> {
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
         let s = self.parser.next_str().map_err(|e| {
             JsonSerdeError::DeserializationError(format!(
                 "Failed to read big decimal string: {}",
@@ -150,7 +150,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         })
     }
 
-    fn read_string(&mut self, _schema: &SchemaRef) -> Result<String, Self::Error> {
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
         self.parser
             .next_str()
             .map_err(|e| {
@@ -159,7 +159,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
             .map(|s| s.to_string())
     }
 
-    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
         // Blobs in JSON are base64-encoded strings
         let s = self.parser.next_str().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read blob string: {}", e))
@@ -170,7 +170,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         Ok(ByteBuffer::from(s.as_bytes()))
     }
 
-    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<Instant, Self::Error> {
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
         let s = self.parser.next_str().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to read timestamp string: {}", e))
         })?;
@@ -183,19 +183,19 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
 
     fn read_document(
         &mut self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
     ) -> Result<Box<dyn smithy4rs_core::schema::Document>, Self::Error> {
         todo!("Support deserialization of documents")
     }
 
     fn read_struct<B, F>(
         &mut self,
-        schema: &SchemaRef,
+        schema: &Schema,
         mut builder: B,
         consumer: F,
     ) -> Result<B, Self::Error>
     where
-        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        F: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>,
     {
         // next_object() returns the first key, or None for empty object
         let mut maybe_key = self.parser.next_object().map_err(|e| {
@@ -227,12 +227,12 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
 
     fn read_list<T, F>(
         &mut self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         state: &mut T,
         consumer: F,
     ) -> Result<(), Self::Error>
     where
-        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        F: Fn(&mut T, &Schema, &mut Self) -> Result<(), Self::Error>,
     {
         // Get the member schema for list elements
         let member_schema = _schema.get_member("member").ok_or_else(|| {
@@ -259,7 +259,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
 
     fn read_map<T, F>(
         &mut self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         state: &mut T,
         consumer: F,
     ) -> Result<(), Self::Error>

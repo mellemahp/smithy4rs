@@ -15,18 +15,18 @@ pub enum TestEnum {
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for TestEnum {
-        fn schema() -> &'static _SchemaRef {
+        fn schema() -> &'static _Schema {
             &UNION
         }
     }
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
@@ -35,7 +35,7 @@ const _: () = {
     impl _SerializeWithSchema for TestEnum {
         fn serialize_with_schema<S: _Serializer>(
             &self,
-            schema: &_SchemaRef,
+            schema: &_Schema,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1)?;
@@ -55,7 +55,7 @@ const _: () = {
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _DeserializerError;
@@ -63,7 +63,7 @@ const _: () = {
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for TestEnum {
         fn deserialize_with_schema<D>(
-            schema: &_SchemaRef,
+            schema: &_Schema,
             deserializer: &mut D,
         ) -> Result<Self, D::Error>
         where
@@ -79,18 +79,18 @@ const _: () = {
                                 D::Error::custom("Attempted to set union value twice"),
                             );
                         }
-                        if std::sync::Arc::ptr_eq(member_schema, &_UNION_MEMBER_A) {
+                        if &member_schema == &*_UNION_MEMBER_A {
                             let value = String::deserialize_with_schema(
                                 member_schema,
                                 de,
                             )?;
                             return Ok(Some(TestEnum::A(value)));
                         }
-                        if std::sync::Arc::ptr_eq(member_schema, &_UNION_MEMBER_B) {
+                        if &member_schema == &*_UNION_MEMBER_B {
                             let value = i32::deserialize_with_schema(member_schema, de)?;
                             return Ok(Some(TestEnum::B(value)));
                         }
-                        if std::sync::Arc::ptr_eq(member_schema, &_UNION_MEMBER_C) {
+                        if &member_schema == &*_UNION_MEMBER_C {
                             let _ = _Unit::deserialize_with_schema(member_schema, de)?;
                             return Ok(Some(TestEnum::C));
                         }

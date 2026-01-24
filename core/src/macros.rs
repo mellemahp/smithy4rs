@@ -1,5 +1,5 @@
 /// # Smithy Schema Macro
-/// Creates a lazily-resolved smithy [`Schema`](crate::schema::Schema) from a user-friend DSL
+/// Creates a lazily-resolved smithy [`Schema`](crate::schema::SchemaValue) from a user-friend DSL
 /// that tries to mimic the Smithy IDL syntax.
 ///
 /// Generated schemas can be used by `smithy4rs` proc macros to automatically implement
@@ -332,11 +332,11 @@ macro_rules! smithy_internal {
                 $crate::LazyLock::new(|| $crate::Ref::new($builder));
 
             $(#[$outer])*
-            pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+            pub static $schema_name: $crate::LazyLock<$crate::schema::Schema> = $crate::LazyLock::new(|| {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
             });
 
-            $(static [<_$schema_name _MEMBER_$member_schema_name>]: $crate::LazyLock<&$crate::schema::SchemaRef> =
+            $(static [<_$schema_name _MEMBER_$member_schema_name>]: $crate::LazyLock<&$crate::schema::Schema> =
                 $crate::LazyLock::new(|| $schema_name.expect_member($member_ident));
             )*
         }
@@ -356,7 +356,7 @@ macro_rules! smithy_internal {
                 $crate::LazyLock::new(|| $crate::Ref::new($builder));
 
             $(#[$outer])*
-            pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+            pub static $schema_name: $crate::LazyLock<$crate::schema::Schema> = $crate::LazyLock::new(|| {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_ident, $member_schema, $member_traits))*)
             });
         }
@@ -370,7 +370,7 @@ macro_rules! smithy_internal {
         $builder:expr
     ) => {
         $(#[$outer])*
-        pub static $schema_name: $crate::LazyLock<$crate::schema::SchemaRef> = $crate::LazyLock::new(|| {
+        pub static $schema_name: $crate::LazyLock<$crate::schema::Schema> = $crate::LazyLock::new(|| {
             $builder
         });
     };
@@ -526,7 +526,7 @@ macro_rules! static_trait_id {
 #[macro_export]
 macro_rules! deserialize_member {
     ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if std::sync::Arc::ptr_eq($member, $schema) {
+        if &$member == &*$schema {
             let value = <$ty as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
             return Ok($builder.$method(value));
         }
@@ -541,7 +541,7 @@ macro_rules! deserialize_member {
 #[macro_export]
 macro_rules! deserialize_optional_member {
     ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if std::sync::Arc::ptr_eq($member, $schema) {
+        if &$member == &*$schema {
             let value = <Option::<$ty> as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
             if let Some(v) = value {
                 return Ok($builder.$method(v));

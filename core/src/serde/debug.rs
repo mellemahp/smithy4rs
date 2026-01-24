@@ -20,7 +20,7 @@ use thiserror::Error;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, SchemaRef, SmithyTrait, prelude::SensitiveTrait},
+    schema::{Document, Schema, SmithyTrait, prelude::SensitiveTrait},
     serde::{
         debug::FmtError::Custom,
         se::{ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer},
@@ -34,10 +34,10 @@ use crate::{
 ///
 /// This class should not be used directly by users. Instead, users should use generated
 /// `Debug` implementation for shapes.
-pub struct DebugWrapper<'a, T: SerializeWithSchema>(&'a SchemaRef, &'a T);
+pub struct DebugWrapper<'a, T: SerializeWithSchema>(&'a Schema, &'a T);
 impl<'a, T: SerializeWithSchema> DebugWrapper<'a, T> {
     /// Construct a new Debug wrapper to format type `T` using the provided schema.
-    pub const fn new(schema: &'a SchemaRef, value: &'a T) -> Self {
+    pub const fn new(schema: &'a Schema, value: &'a T) -> Self {
         DebugWrapper(schema, value)
     }
 }
@@ -107,11 +107,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     type SerializeMap = DebugMapSerializer<'a, 'b>;
     type SerializeStruct = DebugStructSerializer<'a, 'b>;
 
-    fn write_struct(
-        self,
-        schema: &SchemaRef,
-        _: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, _: usize) -> Result<Self::SerializeStruct, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             self.fmt.write_str(schema.id().name())?;
             // Replace entire structure contents with redacted placeholder
@@ -124,7 +120,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
         }
     }
 
-    fn write_map(self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, _: usize) -> Result<Self::SerializeMap, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             // Replace entire map with redacted placeholder
             self.fmt.write_str(REDACTED_MAP)?;
@@ -134,7 +130,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
         }
     }
 
-    fn write_list(self, schema: &SchemaRef, _: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, _: usize) -> Result<Self::SerializeList, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             // Replace entire list with redacted placeholder
             self.fmt.write_str(REDACTED_LIST)?;
@@ -145,53 +141,49 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     }
 
     #[inline]
-    fn write_boolean(self, schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        schema: &SchemaRef,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
@@ -199,7 +191,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     #[inline]
     fn write_big_decimal(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
@@ -207,19 +199,19 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     }
 
     #[inline]
-    fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_blob(self, schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
 
     #[inline]
-    fn write_timestamp(self, schema: &SchemaRef, value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
@@ -227,7 +219,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     #[inline]
     fn write_document(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
@@ -235,13 +227,13 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     }
 
     #[inline]
-    fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         self.fmt.write_str("null")?;
         Ok(())
     }
 
     #[inline]
-    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(())
     }
 }
@@ -256,7 +248,7 @@ impl ListSerializer for DebugListSerializer<'_, '_> {
 
     fn serialize_element<T>(
         &mut self,
-        element_schema: &SchemaRef,
+        element_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -271,7 +263,7 @@ impl ListSerializer for DebugListSerializer<'_, '_> {
     }
 
     #[inline]
-    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         if let DebugListSerializer::Unredacted(mut inner) = self {
             inner.finish()?;
         }
@@ -290,8 +282,8 @@ impl MapSerializer for DebugMapSerializer<'_, '_> {
 
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
+        key_schema: &Schema,
+        value_schema: &Schema,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -311,7 +303,7 @@ impl MapSerializer for DebugMapSerializer<'_, '_> {
     }
 
     #[inline]
-    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         if let DebugMapSerializer::Unredacted(mut inner) = self {
             inner.finish()?;
         }
@@ -328,11 +320,7 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -346,14 +334,14 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
                 member_schema.id()
             )));
         };
-        inner.field(me.name.as_str(), &DebugWrapper::new(member_schema, value));
+        inner.field(me.name(), &DebugWrapper::new(member_schema, value));
         Ok(())
     }
 
     fn serialize_member_named<T>(
         &mut self,
         member_name: &str,
-        member_schema: &SchemaRef,
+        member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -368,7 +356,7 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
     }
 
     #[inline]
-    fn end(self, _: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
         if let DebugStructSerializer::Unredacted(mut inner) = self {
             inner.finish()?;
         }

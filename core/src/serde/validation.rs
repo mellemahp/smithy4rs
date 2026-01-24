@@ -73,7 +73,7 @@ use thiserror::Error;
 use crate::{
     BigDecimal, FxIndexSet, Instant,
     schema::{
-        Document, Schema, SchemaRef, ShapeType,
+        Document, Schema, ShapeType,
         prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
     },
     serde::{
@@ -123,7 +123,7 @@ pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
     /// Aggregation of all the validation issues encountered.
     fn validate<V: SerializeWithSchema>(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         value: &V,
     ) -> Result<(), ValidationErrors>;
 }
@@ -235,7 +235,7 @@ impl Validator for &mut DefaultValidator {
     #[inline]
     fn validate<V: SerializeWithSchema>(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         value: &V,
     ) -> Result<(), ValidationErrors> {
         value.serialize_with_schema(schema, &mut *self)?;
@@ -290,7 +290,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_struct(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         if !schema.shape_type().eq(&ShapeType::Structure)
@@ -301,17 +301,13 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(DefaultStructValidator { root: self })
     }
 
-    fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
         shape_type!(self, schema, ShapeType::Map);
         length!(self, schema, len);
         Ok(DefaultMapValidator { root: self })
     }
 
-    fn write_list(
-        self,
-        schema: &SchemaRef,
-        len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
         shape_type!(self, schema, ShapeType::List);
         length!(self, schema, len);
         Ok(DefaultListValidator {
@@ -322,35 +318,35 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         })
     }
 
-    fn write_boolean(self, schema: &SchemaRef, _value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, schema: &Schema, _value: bool) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Boolean);
         Ok(())
     }
 
-    fn write_byte(self, schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Byte);
         range!(self, schema, value, to_i8);
         Ok(())
     }
 
-    fn write_short(self, schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Short);
         range!(self, schema, value, to_i16);
         Ok(())
     }
 
-    fn write_integer(self, schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         // IntEnums are treated as Integers
         if schema.shape_type().eq(&ShapeType::Integer) {
             range!(self, schema, value, to_i32);
         } else if schema.shape_type().eq(&ShapeType::IntEnum) {
-            let Schema::IntEnum(enum_schema) = &**schema else {
+            let Some(enum_schema) = schema.as_int_enum() else {
                 unreachable!("Only intEnum schemas can be constructed with an enum type");
             };
-            if !enum_schema.values.contains(&value) {
+            if !enum_schema.values().contains(&value) {
                 self.emit_error(SmithyConstraints::IntEnumValue(
                     value,
-                    enum_schema.values.clone(),
+                    enum_schema.values().clone(),
                 ))?;
             }
         } else {
@@ -359,13 +355,13 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_long(self, schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Long);
         range!(self, schema, value, to_i64);
         Ok(())
     }
 
-    fn write_float(self, schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Float);
         if let Some(range) = schema.get_trait_as::<RangeTrait>()
             && let (Some(min), Some(max)) = (range.min().to_f32(), range.max().to_f32())
@@ -380,7 +376,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_double(self, schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Double);
         if let Some(range) = schema.get_trait_as::<RangeTrait>()
             && let (Some(min), Some(max)) = (range.min().to_f64(), range.max().to_f64())
@@ -395,11 +391,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_big_integer(
-        self,
-        schema: &SchemaRef,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
         if let Some(range) = schema.get_trait_as::<RangeTrait>() {
             let big_value = BigDecimal::from_bigint(value.clone(), 0);
@@ -416,7 +408,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_big_decimal(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigDecimal);
@@ -432,7 +424,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_string(self, schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         // Enums are treated as strings for the purpose of validation
         if schema.shape_type().eq(&ShapeType::String) {
             let len = value.len();
@@ -448,13 +440,13 @@ impl<'a> Serializer for &'a mut DefaultValidator {
                 ))?;
             }
         } else if schema.shape_type().eq(&ShapeType::Enum) {
-            let Schema::Enum(enum_schema) = &**schema else {
+            let Some(enum_schema) = schema.as_enum() else {
                 unreachable!("Only enum schemas can be constructed with an enum type");
             };
-            if !enum_schema.values.contains(value) {
+            if !enum_schema.values().contains(value) {
                 self.emit_error(SmithyConstraints::EnumValue(
                     value.to_owned(),
-                    enum_schema.values.clone(),
+                    enum_schema.values().clone(),
                 ))?;
             }
         } else {
@@ -463,42 +455,38 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_blob(self, schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, schema: &Schema, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Blob);
         Ok(())
     }
 
-    fn write_timestamp(
-        self,
-        schema: &SchemaRef,
-        _value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Timestamp);
         Ok(())
     }
 
     fn write_document(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Document);
         Ok(())
     }
 
-    fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         /* Skip null value validation */
         // TODO(sparse lists): Decide how sparseness be handled in validator
         Ok(())
     }
 
     #[inline]
-    fn write_missing(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_missing(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         self.emit_error(SmithyConstraints::Required)
     }
 
     #[inline]
-    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         /* Do nothing on skip */
         Ok(())
     }
@@ -518,7 +506,7 @@ impl ListSerializer for DefaultListValidator<'_> {
 
     fn serialize_element<T>(
         &mut self,
-        element_schema: &SchemaRef,
+        element_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -540,7 +528,7 @@ impl ListSerializer for DefaultListValidator<'_> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         //self.root.pop_path()
         Ok(())
     }
@@ -569,7 +557,7 @@ impl UniquenessTracker {
     /// Returns true if the item was already in the set.
     fn add<T: SerializeWithSchema>(
         &mut self,
-        schema: &SchemaRef,
+        schema: &Schema,
         value: &T,
     ) -> Result<bool, ValidationFailure> {
         let mut serializer = HashingSerializer::new();
@@ -621,106 +609,90 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     #[inline]
     fn write_struct(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         _len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
     #[inline]
-    fn write_map(
-        self,
-        _schema: &SchemaRef,
-        _len: usize,
-    ) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
     #[inline]
-    fn write_list(
-        self,
-        _schema: &SchemaRef,
-        _len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
     #[inline]
-    fn write_boolean(self, _schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, _schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, _schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, _schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, _schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, _schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[cold]
-    fn write_float(self, _schema: &SchemaRef, _value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, _schema: &Schema, _value: f32) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::UniqueItemOnFloat)
     }
 
     #[cold]
-    fn write_double(self, _schema: &SchemaRef, _value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, _schema: &Schema, _value: f64) -> Result<Self::Ok, Self::Error> {
         Err(ValidationFailure::UniqueItemOnFloat)
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &SchemaRef,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
     fn write_big_decimal(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, _schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_blob(self, _schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, _schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         hash_impl!(self, value);
     }
 
     #[inline]
-    fn write_timestamp(
-        self,
-        _schema: &SchemaRef,
-        value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
         self.hash(value.epoch_nanoseconds().0);
         Ok(())
     }
 
     fn write_document(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         // TODO(document validation): How to hash document types?
@@ -728,13 +700,13 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     }
 
     #[inline]
-    fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         self.hash("null");
         Ok(())
     }
 
     #[inline]
-    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         /* Do not execute hash on skip */
         Ok(())
     }
@@ -754,7 +726,7 @@ impl ListSerializer for InnerHasher<'_> {
     #[inline]
     fn serialize_element<T>(
         &mut self,
-        element_schema: &SchemaRef,
+        element_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -765,7 +737,7 @@ impl ListSerializer for InnerHasher<'_> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(())
     }
 }
@@ -776,8 +748,8 @@ impl MapSerializer for InnerHasher<'_> {
     #[inline]
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
+        key_schema: &Schema,
+        value_schema: &Schema,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -791,7 +763,7 @@ impl MapSerializer for InnerHasher<'_> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(())
     }
 }
@@ -799,11 +771,7 @@ impl StructSerializer for InnerHasher<'_> {
     type Error = ValidationFailure;
     type Ok = ();
 
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -820,7 +788,7 @@ impl StructSerializer for InnerHasher<'_> {
     fn serialize_member_named<T>(
         &mut self,
         member_name: &str,
-        member_schema: &SchemaRef,
+        member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -832,7 +800,7 @@ impl StructSerializer for InnerHasher<'_> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(())
     }
 }
@@ -847,8 +815,8 @@ impl MapSerializer for DefaultMapValidator<'_> {
 
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
+        key_schema: &Schema,
+        value_schema: &Schema,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -868,7 +836,7 @@ impl MapSerializer for DefaultMapValidator<'_> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(())
     }
 }
@@ -882,11 +850,7 @@ impl StructSerializer for DefaultStructValidator<'_> {
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -896,7 +860,7 @@ impl StructSerializer for DefaultStructValidator<'_> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(())
     }
 }
@@ -1006,14 +970,14 @@ impl ValidationErrorField {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathElement {
     /// A Schema path element such as a member identifier
-    Schema(SchemaRef),
+    Schema(Schema),
     /// An index path element (for list elements)
     Index(usize),
     /// A key path element (for map keys)
     Key(String),
 }
-impl From<&SchemaRef> for PathElement {
-    fn from(schema_ref: &SchemaRef) -> Self {
+impl From<&Schema> for PathElement {
+    fn from(schema_ref: &Schema) -> Self {
         PathElement::Schema(schema_ref.clone())
     }
 }

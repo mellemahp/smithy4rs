@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{
-        Document, DocumentError, NULL, SchemaRef, ShapeId, ShapeType, StaticSchemaShape,
+        Document, DocumentError, NULL, Schema, ShapeId, ShapeType, StaticSchemaShape,
         default::Value,
     },
     serde::{
@@ -21,7 +21,7 @@ use crate::{
 impl SerializeWithSchema for Box<dyn Document> {
     fn serialize_with_schema<S: Serializer>(
         &self,
-        schema: &SchemaRef,
+        schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         // TODO(errors): Handle exceptions?
@@ -130,7 +130,7 @@ impl Serializer for DocumentParser {
 
     fn write_struct(
         self,
-        schema: &SchemaRef,
+        schema: &Schema,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         Ok(DocumentMapAccumulator {
@@ -140,7 +140,7 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_map(self, schema: &SchemaRef, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
         Ok(DocumentMapAccumulator {
             schema: schema.clone(),
             values: IndexMap::with_capacity(len),
@@ -148,11 +148,7 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_list(
-        self,
-        schema: &SchemaRef,
-        len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
         Ok(DocumentListAccumulator {
             schema: schema.clone(),
             values: Vec::with_capacity(len),
@@ -161,93 +157,85 @@ impl Serializer for DocumentParser {
     }
 
     #[inline]
-    fn write_boolean(self, _schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, _schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, _schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, _schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, _schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, _schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_float(self, _schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, _schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_double(self, _schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, _schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &SchemaRef,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         Ok(value.clone().into())
     }
 
     #[inline]
     fn write_big_decimal(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(value.clone().into())
     }
 
     #[inline]
-    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, _schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
-    fn write_blob(self, _schema: &SchemaRef, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, _schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         Ok(value.clone().into())
     }
 
     #[inline]
-    fn write_timestamp(
-        self,
-        _schema: &SchemaRef,
-        value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
         Ok(value.into())
     }
 
     #[inline]
     fn write_document(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         Ok(value.clone())
     }
 
     #[inline]
-    fn write_null(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(NULL.clone())
     }
 
     #[inline]
-    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         // When skipping (e.g., for None values), return a null document
         Ok(NULL.clone())
     }
@@ -255,7 +243,7 @@ impl Serializer for DocumentParser {
 
 #[doc(hidden)]
 pub struct DocumentListAccumulator {
-    schema: SchemaRef,
+    schema: Schema,
     values: Vec<Box<dyn Document>>,
     discriminator: Option<ShapeId>,
 }
@@ -266,7 +254,7 @@ impl ListSerializer for DocumentListAccumulator {
     #[inline]
     fn serialize_element<T>(
         &mut self,
-        element_schema: &SchemaRef,
+        element_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -278,7 +266,7 @@ impl ListSerializer for DocumentListAccumulator {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(crate::schema::default::Document {
             schema: self.schema,
             value: Value::List(self.values),
@@ -290,7 +278,7 @@ impl ListSerializer for DocumentListAccumulator {
 
 #[doc(hidden)]
 pub struct DocumentMapAccumulator {
-    schema: SchemaRef,
+    schema: Schema,
     values: IndexMap<String, Box<dyn Document>>,
     discriminator: Option<ShapeId>,
 }
@@ -301,8 +289,8 @@ impl MapSerializer for DocumentMapAccumulator {
     #[inline]
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
+        key_schema: &Schema,
+        value_schema: &Schema,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -319,7 +307,7 @@ impl MapSerializer for DocumentMapAccumulator {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(crate::schema::default::Document {
             schema: self.schema,
             value: Value::Map(self.values),
@@ -334,11 +322,7 @@ impl StructSerializer for DocumentMapAccumulator {
     type Ok = Box<dyn Document>;
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -348,12 +332,12 @@ impl StructSerializer for DocumentMapAccumulator {
             ));
         };
         let val = value.serialize_with_schema(member_schema, DocumentParser)?;
-        self.values.insert(me.name.clone(), val);
+        self.values.insert(me.name().to_string(), val);
         Ok(())
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         Ok(crate::schema::default::Document {
             schema: self.schema,
             value: Value::Map(self.values),
@@ -398,67 +382,67 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
     type Error = DocumentError;
 
     #[inline]
-    fn read_bool(&mut self, _schema: &SchemaRef) -> Result<bool, Self::Error> {
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_byte(&mut self, _schema: &SchemaRef) -> Result<i8, Self::Error> {
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_short(&mut self, _schema: &SchemaRef) -> Result<i16, Self::Error> {
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_integer(&mut self, _schema: &SchemaRef) -> Result<i32, Self::Error> {
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_long(&mut self, _schema: &SchemaRef) -> Result<i64, Self::Error> {
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_float(&mut self, _schema: &SchemaRef) -> Result<f32, Self::Error> {
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_double(&mut self, _schema: &SchemaRef) -> Result<f64, Self::Error> {
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_big_integer(&mut self, _schema: &SchemaRef) -> Result<BigInt, Self::Error> {
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_big_decimal(&mut self, _schema: &SchemaRef) -> Result<BigDecimal, Self::Error> {
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_string(&mut self, _schema: &SchemaRef) -> Result<String, Self::Error> {
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_blob(&mut self, _schema: &SchemaRef) -> Result<ByteBuffer, Self::Error> {
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_timestamp(&mut self, _schema: &SchemaRef) -> Result<Instant, Self::Error> {
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_document(&mut self, _schema: &SchemaRef) -> Result<Box<dyn Document>, Self::Error> {
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
         self.document.take().ok_or_else(|| {
             DocumentError::DocumentConversion("Encountered empty document deserializer".to_string())
         })
@@ -466,13 +450,13 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
 
     fn read_struct<B, F>(
         &mut self,
-        schema: &SchemaRef,
+        schema: &Schema,
         mut builder: B,
         consumer: F,
     ) -> Result<B, Self::Error>
     where
         B: DeserializeWithSchema<'de>,
-        F: Fn(B, &SchemaRef, &mut Self) -> Result<B, Self::Error>,
+        F: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>,
     {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
@@ -493,13 +477,13 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
 
     fn read_list<T, F>(
         &mut self,
-        schema: &SchemaRef,
+        schema: &Schema,
         state: &mut T,
         consumer: F,
     ) -> Result<(), Self::Error>
     where
         T: DeserializeWithSchema<'de>,
-        F: Fn(&mut T, &SchemaRef, &mut Self) -> Result<(), Self::Error>,
+        F: Fn(&mut T, &Schema, &mut Self) -> Result<(), Self::Error>,
     {
         let list: Vec<Box<dyn Document>> = self.get_inner()?;
 
@@ -520,7 +504,7 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
 
     fn read_map<T, F>(
         &mut self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         state: &mut T,
         consumer: F,
     ) -> Result<(), Self::Error>
@@ -634,7 +618,7 @@ mod tests {
         let document_str: Box<dyn Document> = "MyStr".into();
         let output_str = document_str.as_string().expect("string");
         assert_eq!(output_str, &"MyStr".to_string());
-        let val: &SchemaRef = &STRING;
+        let val: &Schema = &STRING;
         assert_eq!(document_str.schema(), val);
     }
 

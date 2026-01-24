@@ -13,25 +13,25 @@ pub enum TestEnum {
 }
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for TestEnum {
-        fn schema() -> &'static _SchemaRef {
+        fn schema() -> &'static _Schema {
             &SIMPLE_ENUM
         }
     }
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     #[automatically_derived]
     impl _SerializeWithSchema for TestEnum {
         fn serialize_with_schema<S: _Serializer>(
             &self,
-            schema: &_SchemaRef,
+            schema: &_Schema,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let value = match self {
@@ -46,13 +46,13 @@ const _: () = {
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::SchemaRef as _SchemaRef;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for TestEnum {
         fn deserialize_with_schema<D>(
-            schema: &_SchemaRef,
+            schema: &_Schema,
             deserializer: &mut D,
         ) -> Result<Self, D::Error>
         where

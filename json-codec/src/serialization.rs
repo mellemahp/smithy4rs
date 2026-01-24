@@ -1,6 +1,6 @@
 use smithy4rs_core::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, SchemaRef},
+    schema::{Document, Schema},
     serde::serializers::{
         ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
     },
@@ -87,7 +87,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     #[inline]
     fn write_struct(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         _len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         start_json_object(self.buf);
@@ -98,11 +98,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_map(
-        self,
-        _schema: &SchemaRef,
-        _len: usize,
-    ) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
         start_json_object(self.buf);
         Ok(JsonMapSerializer {
             buf: self.buf,
@@ -111,11 +107,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_list(
-        self,
-        _schema: &SchemaRef,
-        _len: usize,
-    ) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
         start_json_array(self.buf);
         Ok(JsonListSerializer {
             buf: self.buf,
@@ -124,54 +116,50 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_boolean(self, _schema: &SchemaRef, value: bool) -> Result<Self::Ok, Self::Error> {
+    fn write_boolean(self, _schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
         self.buf
             .extend_from_slice(if value { b"true" } else { b"false" });
         Ok(())
     }
 
     #[inline]
-    fn write_byte(self, _schema: &SchemaRef, value: i8) -> Result<Self::Ok, Self::Error> {
+    fn write_byte(self, _schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_short(self, _schema: &SchemaRef, value: i16) -> Result<Self::Ok, Self::Error> {
+    fn write_short(self, _schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_integer(self, _schema: &SchemaRef, value: i32) -> Result<Self::Ok, Self::Error> {
+    fn write_integer(self, _schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_long(self, _schema: &SchemaRef, value: i64) -> Result<Self::Ok, Self::Error> {
+    fn write_long(self, _schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         write_json_integer(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_float(self, _schema: &SchemaRef, value: f32) -> Result<Self::Ok, Self::Error> {
+    fn write_float(self, _schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         write_json_float(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_double(self, _schema: &SchemaRef, value: f64) -> Result<Self::Ok, Self::Error> {
+    fn write_double(self, _schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         write_json_double(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_big_integer(
-        self,
-        _schema: &SchemaRef,
-        value: &BigInt,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         // TODO(optimization): probably a better way
         use std::fmt::Write;
         write!(StringWriter(self.buf), "{value}").map_err(JsonSerdeError::from)?;
@@ -181,7 +169,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     #[inline]
     fn write_big_decimal(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         // TODO(optimization): probably a better way
@@ -191,42 +179,38 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_string(self, _schema: &SchemaRef, value: &str) -> Result<Self::Ok, Self::Error> {
+    fn write_string(self, _schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
         write_json_string(self.buf, value);
         Ok(())
     }
 
     #[inline]
-    fn write_blob(self, _schema: &SchemaRef, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+    fn write_blob(self, _schema: &Schema, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
         todo!("Blob serialization (base64 encoding) not yet implemented")
     }
 
     #[inline]
-    fn write_timestamp(
-        self,
-        _schema: &SchemaRef,
-        _value: &Instant,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         todo!("Timestamp serialization not yet implemented")
     }
 
     #[inline]
     fn write_document(
         self,
-        _schema: &SchemaRef,
+        _schema: &Schema,
         _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
         todo!("Document serialization not yet implemented")
     }
 
     #[inline]
-    fn write_null(mut self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn write_null(mut self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         self.push_bytes(b"null");
         Ok(())
     }
 
     #[inline]
-    fn skip(self, _schema: &SchemaRef) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         // Skip does nothing for JSON
         Ok(())
     }
@@ -244,7 +228,7 @@ impl<'a> ListSerializer for JsonListSerializer<'a> {
     #[inline]
     fn serialize_element<T>(
         &mut self,
-        element_schema: &SchemaRef,
+        element_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -262,7 +246,7 @@ impl<'a> ListSerializer for JsonListSerializer<'a> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<(), Self::Error> {
         end_json_array(self.buf);
         Ok(())
     }
@@ -280,8 +264,8 @@ impl<'a> MapSerializer for JsonMapSerializer<'a> {
     #[inline]
     fn serialize_entry<K, V>(
         &mut self,
-        key_schema: &SchemaRef,
-        value_schema: &SchemaRef,
+        key_schema: &Schema,
+        value_schema: &Schema,
         key: &K,
         value: &V,
     ) -> Result<(), Self::Error>
@@ -306,7 +290,7 @@ impl<'a> MapSerializer for JsonMapSerializer<'a> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<(), Self::Error> {
         end_json_object(self.buf);
         Ok(())
     }
@@ -322,11 +306,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(
-        &mut self,
-        member_schema: &SchemaRef,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -340,7 +320,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
             JsonSerdeError::SerializationError("Expected member schema".to_string())
         })?;
 
-        write_json_string(self.buf, member.name.as_str());
+        write_json_string(self.buf, member.name());
         write_json_colon(self.buf);
 
         let value_serializer = JsonSerializer { buf: self.buf };
@@ -353,7 +333,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
     fn serialize_member_named<T>(
         &mut self,
         member_name: &str,
-        member_schema: &SchemaRef,
+        member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
@@ -374,7 +354,7 @@ impl<'a> StructSerializer for JsonStructSerializer<'a> {
     }
 
     #[inline]
-    fn end(self, _schema: &SchemaRef) -> Result<(), Self::Error> {
+    fn end(self, _schema: &Schema) -> Result<(), Self::Error> {
         end_json_object(self.buf);
         Ok(())
     }

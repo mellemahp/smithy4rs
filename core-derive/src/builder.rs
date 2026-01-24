@@ -270,28 +270,28 @@ impl BuilderFieldData {
             // For optional fields, use deserialize_optional_member! with inner type
             (true, BuildTarget::Primitive(ty)) => {
                 quote! {
-                    #crate_ident::deserialize_optional_member!(member_schema, &#schema, de, builder, #field_name, #ty);
+                    #crate_ident::deserialize_optional_member!(member_schema, #schema, de, builder, #field_name, #ty);
                 }
             }
             (true, BuildTarget::Builable { builder, .. }) => {
                 let field_builder =
                     Ident::new(format!("{field_name}_builder").as_str(), Span::call_site());
                 quote! {
-                    #crate_ident::deserialize_optional_member!(member_schema, &#schema, de, builder, #field_builder, #builder);
+                    #crate_ident::deserialize_optional_member!(member_schema, #schema, de, builder, #field_builder, #builder);
                 }
             }
             // === Required types ===
             // For required fields, use deserialize_member!
             (false, BuildTarget::Primitive(ty)) => {
                 quote! {
-                    #crate_ident::deserialize_member!(member_schema, &#schema, de, builder, #field_name, #ty);
+                    #crate_ident::deserialize_member!(member_schema, #schema, de, builder, #field_name, #ty);
                 }
             }
             (false, BuildTarget::Builable { builder, .. }) => {
                 let field_builder =
                     Ident::new(format!("{field_name}_builder").as_str(), Span::call_site());
                 quote! {
-                    #crate_ident::deserialize_member!(member_schema, &#schema, de, builder, #field_builder, #builder);
+                    #crate_ident::deserialize_member!(member_schema, #schema, de, builder, #field_builder, #builder);
                 }
             }
         }
