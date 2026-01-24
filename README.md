@@ -16,7 +16,7 @@
 
 [Smithy](https://smithy.io/) code generators for shapes, clients, servers in [Rust](https://rust-lang.org/). 
 
-Generate shapes provide runtime access to schema metadata and implement
+Generated shapes provide runtime access to schema metadata and implement
 schema-guided (de)serialization to support any number of protocols.
 
 > [!NOTE]
