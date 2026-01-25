@@ -2,7 +2,6 @@
 
 use std::hint::black_box;
 
-use bigdecimal::BigDecimal;
 use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     IndexMap,
@@ -20,7 +19,7 @@ smithy!("test#ValidationStruct": {
     structure VALIDATE_SHAPE_SCHEMA {
         @LengthTrait::builder().min(1).max(100).build();
         STRING: STRING = "string"
-        @RangeTrait::builder().max(BigDecimal::from(100)).build();
+        @RangeTrait::builder().max("100").build();
         REQUIRED_INT: INTEGER = "required_int"
         INTEGER: INTEGER = "integer"
     }

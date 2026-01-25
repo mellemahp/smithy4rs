@@ -587,3 +587,15 @@ macro_rules! generated_shapes {
         ));
     };
 }
+
+/// Constructs a map document from a set of key-value pairs
+///
+/// This macro primarily exists to support dynamic traits in codegen, but
+/// can also be useful for testing.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! doc_map {
+    ($($key:expr => $val:expr),* $(,)?) => {
+        $crate::IndexMap::<String, Box<dyn $crate::schema::Document>>::from_iter([$(($key.into(), $val.into()),)*])
+    }
+}

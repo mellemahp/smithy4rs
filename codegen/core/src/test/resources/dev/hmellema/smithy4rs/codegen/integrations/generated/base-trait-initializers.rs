@@ -5,7 +5,6 @@ use smithy4rs_core::{
         STRING,
         SparseTrait,
     },
-    schema::DynamicTrait,
     smithy,
 };
 
@@ -29,9 +28,4 @@ smithy!("com.test#WithAnnotationTrait": {
     list WITH_ANNOTATION_TRAIT {
         member: STRING
     }
-});
-
-smithy!("com.test#WithGeneric": {
-    @DynamicTrait::from("com.test#genericTrait", "stuff");
-    string WITH_GENERIC
 });

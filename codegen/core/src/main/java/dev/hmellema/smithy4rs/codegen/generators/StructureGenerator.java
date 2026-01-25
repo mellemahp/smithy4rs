@@ -24,7 +24,7 @@ public final class StructureGenerator implements
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
                 /// Schema for [`${shape:T}`]${?hasTraits}
-                ${traits:C}${/hasTraits}
+                ${traits:C|}${/hasTraits}
                 structure ${shape:I} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }

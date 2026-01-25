@@ -19,13 +19,6 @@ import software.amazon.smithy.codegen.core.directed.GenerateListDirective;
 public final class ListGenerator
         implements Consumer<GenerateListDirective<CodeGenerationContext, RustCodegenSettings>> {
 
-    // TODO(traits): Add traits to schema
-    private static final String TEMPLATE = """
-
-
-            });
-            """;
-
     @Override
     public void accept(GenerateListDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         directive.context()

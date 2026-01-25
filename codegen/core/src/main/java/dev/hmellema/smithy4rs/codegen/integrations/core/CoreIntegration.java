@@ -24,6 +24,12 @@ public final class CoreIntegration implements RustCodegenIntegration {
     @Override
     public List<TraitInitializer<? extends Trait>> traitInitializers() {
         return List.of(
+                // Prelude initializers,
+                new LengthTraitInitializer(),
+                new RangeTraitInitializer(),
+                // Service traits
+                // TODO(service traits): Add initializers for service-level traits
+                // Generic initializers (note: must come _after_ all others)
                 new AnnotationTraitInitializer(),
                 new StringTraitInitializer(),
                 new GenericTraitInitializer());
