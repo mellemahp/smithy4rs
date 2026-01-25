@@ -14,6 +14,7 @@ import software.amazon.smithy.model.traits.DeprecatedTrait;
 import software.amazon.smithy.model.traits.DocumentationTrait;
 import software.amazon.smithy.model.traits.ExternalDocumentationTrait;
 import software.amazon.smithy.model.traits.SinceTrait;
+import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.model.traits.UnstableTrait;
 
 /**

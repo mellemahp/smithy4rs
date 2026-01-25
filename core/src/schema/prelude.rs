@@ -5,7 +5,7 @@
 //! are available to all models. Prelude shapes and traits are all in the `smithy.api` namespace
 //! and must be hard-coded as they are used by generate shapes.
 
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use bigdecimal::Zero;
 use regex::Regex;
@@ -425,16 +425,24 @@ impl RangeTraitBuilder {
     }
 
     /// Set a minimum value for this constraint.
+    ///
+    /// # Panics
+    /// If the string is not a valid bigDecimal. This is validated
+    /// by the Smithy build system.
     #[must_use]
-    pub fn min(mut self, min: BigDecimal) -> Self {
-        self.min = Some(min);
+    pub fn min(mut self, min: &str) -> Self {
+        self.min = Some(BigDecimal::from_str(min).expect("invalid min"));
         self
     }
 
     /// Set a maximum value for this constraint.
+    ///
+    /// # Panics
+    /// If the string is not a valid bigDecimal. This is validated
+    /// by the Smithy build system.
     #[must_use]
-    pub fn max(mut self, max: BigDecimal) -> Self {
-        self.max = Some(max);
+    pub fn max(mut self, max: &str) -> Self {
+        self.max = Some(BigDecimal::from_str(max).expect("invalid max"));
         self
     }
 

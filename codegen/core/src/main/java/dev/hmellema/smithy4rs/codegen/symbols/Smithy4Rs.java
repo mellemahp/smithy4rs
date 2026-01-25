@@ -17,6 +17,10 @@ public class Smithy4Rs {
             .name("smithy")
             .namespace(SMITHY4RS_CORE, "::")
             .build();
+    public static final Symbol DOC_MAP_MACRO = Symbol.builder()
+            .name("doc_map")
+            .namespace(SMITHY4RS_CORE, "::")
+            .build();
     public static final Symbol SMITHY_ENUM = Symbol.builder()
             .name("smithy_enum")
             .namespace(SMITHY4RS_DERIVE, "::")

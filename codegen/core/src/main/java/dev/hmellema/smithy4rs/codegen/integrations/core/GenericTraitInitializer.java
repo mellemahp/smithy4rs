@@ -5,8 +5,11 @@
 package dev.hmellema.smithy4rs.codegen.integrations.core;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
+import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import dev.hmellema.smithy4rs.codegen.TraitInitializer;
+import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
+import java.util.Objects;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.model.node.ArrayNode;
 import software.amazon.smithy.model.node.BooleanNode;
@@ -48,7 +51,6 @@ final class GenericTraitInitializer implements TraitInitializer<Trait> {
         return true;
     }
 
-    // TODO: SUPPORT Map (object) and list document types via cool macros
     private record NodeWriter(RustWriter writer, Node node) implements Runnable, NodeVisitor<Void> {
         @Override
         public void run() {
@@ -57,7 +59,14 @@ final class GenericTraitInitializer implements TraitInitializer<Trait> {
 
         @Override
         public Void arrayNode(ArrayNode arrayNode) {
-            throw new UnsupportedOperationException();
+            var consumers = arrayNode.getElements()
+                    .stream()
+                    .map(n -> (Runnable) () -> n.accept(this)).toList();
+            writer.pushState();
+            writer.putContext("nodes", consumers);
+            writer.write("vec![${#nodes}${value:C}${^key.last}, ${/key.last}${/nodes}${^nodes}Vec::new()${/nodes}]");
+            writer.popState();
+            return null;
         }
 
         @Override
@@ -83,7 +92,22 @@ final class GenericTraitInitializer implements TraitInitializer<Trait> {
 
         @Override
         public Void objectNode(ObjectNode objectNode) {
-            throw new UnsupportedOperationException();
+            // doc_map!["a" => 1, "b" => 2]
+            writer.writeInline("$T![", Smithy4Rs.DOC_MAP_MACRO);
+            var entries = objectNode.getMembers().entrySet().iterator();
+            while (entries.hasNext()) {
+                var entry = entries.next();
+                writer.writeInline(
+                        "$C => $C",
+                        new NodeWriter(writer, entry.getKey()),
+                        new NodeWriter(writer, entry.getValue())
+                );
+                if (entries.hasNext()) {
+                    writer.writeInline(", ");
+                }
+            }
+            writer.writeInline("]");
+            return null;
         }
 
         @Override

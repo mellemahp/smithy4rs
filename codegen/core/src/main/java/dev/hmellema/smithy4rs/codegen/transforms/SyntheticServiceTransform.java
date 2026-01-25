@@ -17,6 +17,7 @@ import software.amazon.smithy.model.shapes.Shape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.StructureShape;
 import software.amazon.smithy.model.traits.ErrorTrait;
+import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.model.transform.ModelTransformer;
 
 /**
@@ -88,6 +89,8 @@ public final class SyntheticServiceTransform {
         model.shapes()
                 .filter(s -> !s.isMemberShape())
                 .filter(s -> !Prelude.isPreludeShape(s))
+                // TODO(custom traits?): Allow users to generate these?
+                .filter(s -> !s.hasTrait(TraitDefinition.class))
                 .forEach(closure::add);
 
         // Filter out any shapes from this closure that are contained by any other shapes in the closure
