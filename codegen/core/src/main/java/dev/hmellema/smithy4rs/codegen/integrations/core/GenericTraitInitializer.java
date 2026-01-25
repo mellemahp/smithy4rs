@@ -5,11 +5,9 @@
 package dev.hmellema.smithy4rs.codegen.integrations.core;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
-import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import dev.hmellema.smithy4rs.codegen.TraitInitializer;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
-import java.util.Objects;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.model.node.ArrayNode;
 import software.amazon.smithy.model.node.BooleanNode;
@@ -61,7 +59,8 @@ final class GenericTraitInitializer implements TraitInitializer<Trait> {
         public Void arrayNode(ArrayNode arrayNode) {
             var consumers = arrayNode.getElements()
                     .stream()
-                    .map(n -> (Runnable) () -> n.accept(this)).toList();
+                    .map(n -> (Runnable) () -> n.accept(this))
+                    .toList();
             writer.pushState();
             writer.putContext("nodes", consumers);
             writer.write("vec![${#nodes}${value:C}${^key.last}, ${/key.last}${/nodes}${^nodes}Vec::new()${/nodes}]");
@@ -100,8 +99,7 @@ final class GenericTraitInitializer implements TraitInitializer<Trait> {
                 writer.writeInline(
                         "$C => $C",
                         new NodeWriter(writer, entry.getKey()),
-                        new NodeWriter(writer, entry.getValue())
-                );
+                        new NodeWriter(writer, entry.getValue()));
                 if (entries.hasNext()) {
                     writer.writeInline(", ");
                 }

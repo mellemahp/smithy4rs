@@ -1,3 +1,7 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.integrations.core;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
@@ -20,7 +24,6 @@ final class LengthTraitInitializer implements TraitInitializer<LengthTrait> {
         writer.putContext("max", trait.getMax());
         writer.putContext("length", LENGTH_TRAIT);
         writer.writeInline(
-                "${length:T}::builder()${?min}.min(${min:L}L)${/min}${?max}.max(${max:L}L)${/max}.build()"
-        );
+                "${length:T}::builder()${?min}.min(${min:L}L)${/min}${?max}.max(${max:L}L)${/max}.build()");
     }
 }
