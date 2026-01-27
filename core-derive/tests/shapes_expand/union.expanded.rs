@@ -1,6 +1,7 @@
-use smithy4rs_core::prelude::{INTEGER, STRING};
-use smithy4rs_core::schema::UNIT;
-use smithy4rs_core::smithy;
+use smithy4rs_core::{
+    prelude::{INTEGER, STRING},
+    schema::UNIT, smithy,
+};
 use smithy4rs_core_derive::{SmithyShape, smithy_union};
 #[doc(hidden)]
 pub static UNION_BUILDER: ::smithy4rs_core::LazyLock<

@@ -599,3 +599,15 @@ macro_rules! doc_map {
         $crate::IndexMap::<String, Box<dyn $crate::schema::Document>>::from_iter([$(($key.into(), $val.into()),)*])
     }
 }
+
+
+/// Constructs an ordered string map (`IndexMap<String,_>`) from a set of key-value pairs
+///
+/// This macro primarily exists to support trait initializers, but
+/// can also be useful for testing.
+#[macro_export]
+macro_rules! string_map {
+    ($($key:expr => $val:expr),* $(,)?) => {
+        $crate::IndexMap::<String, _>::from_iter([$(($key.into(), $val.into()),)*])
+    }
+}

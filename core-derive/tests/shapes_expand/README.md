@@ -1,6 +1,6 @@
 # Macro Expansion Tests
 
-This directory contains snapshot tests for the `SerializableShape` and `DeserializableStruct` derive macros using [macrotest](https://docs.rs/macrotest).
+This directory contains snapshot tests for the `SmithyShape` derive macro using [macrotest](https://docs.rs/macrotest).
 
 ## How It Works
 
