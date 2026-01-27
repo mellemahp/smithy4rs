@@ -4,7 +4,6 @@
 //! implementations for generated shapes.
 
 mod shapes;
-mod traits;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -16,7 +15,7 @@ use crate::shapes::{
     buildable, builder_impls, builder_struct, debug_impl, deserialization_impl,
     get_builder_fields, schema_impl, serialization_impl,
 };
-use crate::traits::{constructor, static_trait_id_impl, trait_value_impl};
+
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
 //               if not already derived on shape.
@@ -296,38 +295,6 @@ pub fn smithy_serde_adapter(input: proc_macro::TokenStream) -> proc_macro::Token
 
             #ser
             #deser
-        };
-    }
-    .into()
-}
-
-// ============================================================================
-// Trait Macros
-// ============================================================================
-
-/// Derives `SmithyTrait` implementations for a shape.
-#[proc_macro_derive(SmithyTraitImpl, attributes(smithy_trait_id))]
-pub fn smithy_trait_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let shape_name = &input.ident;
-    let (extern_import, crate_ident) = get_crate_info();
-    let static_id = static_trait_id_impl(shape_name, &input.attrs);
-    let trait_def = trait_value_impl(shape_name, &input);
-    let constructor = constructor(shape_name, &input);
-    
-    quote! {
-        #constructor
-        
-        const _: () = {
-            #extern_import
-            use #crate_ident::schema::StaticTraitId as _StaticTraitId;
-            use #crate_ident::schema::ShapeId as _ShapeId;
-            use #crate_ident::LazyLock as _LazyLock;
-            use #crate_ident::schema::SmithyTrait as _SmithyTrait;
-            use #crate_ident::schema::Document as _Document;
-
-            #static_id
-            #trait_def
         };
     }
     .into()
