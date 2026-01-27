@@ -1,4 +1,14 @@
 use smithy4rs_core_derive::{SmithyShape, smithy_enum};
+use smithy4rs_core::smithy;
+pub static SIMPLE_INT_ENUM: ::smithy4rs_core::LazyLock<
+    ::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| {
+    ::smithy4rs_core::schema::Schema::create_int_enum(
+        "test#SimpleStruct",
+        Box::new([1, 2, 3]),
+        Vec::new(),
+    )
+});
 #[smithy_schema(SIMPLE_INT_ENUM)]
 pub enum TestIntEnum {
     #[enum_value(1)]

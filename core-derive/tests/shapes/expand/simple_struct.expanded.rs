@@ -1,8 +1,31 @@
 use smithy4rs_core::{
     prelude::{INTEGER, STRING},
-    schema::ShapeId, traits,
+    smithy,
 };
 use smithy4rs_core_derive::SmithyShape;
+#[doc(hidden)]
+pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
+    ::smithy4rs_core::Ref<::smithy4rs_core::schema::SchemaBuilder>,
+> = ::smithy4rs_core::LazyLock::new(|| ::smithy4rs_core::Ref::new(
+    ::smithy4rs_core::schema::Schema::structure_builder("test#SimpleStruct", Vec::new()),
+));
+pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+{
+    (&*SIMPLE_SCHEMA_BUILDER)
+        .put_member("field_a", &STRING, Vec::new())
+        .put_member("field_b", &INTEGER, Vec::new())
+        .put_member("field_c", &STRING, Vec::new())
+        .build()
+});
+static _SIMPLE_SCHEMA_MEMBER_A: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_a"));
+static _SIMPLE_SCHEMA_MEMBER_B: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_b"));
+static _SIMPLE_SCHEMA_MEMBER_C: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_c"));
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]
@@ -220,22 +243,6 @@ const _: () = {
     }
 };
 #[automatically_derived]
-impl ::core::fmt::Debug for SimpleStruct {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        ::core::fmt::Formatter::debug_struct_field3_finish(
-            f,
-            "SimpleStruct",
-            "field_a",
-            &self.field_a,
-            "field_b",
-            &self.field_b,
-            "field_c",
-            &&self.field_c,
-        )
-    }
-}
-#[automatically_derived]
 impl ::core::marker::StructuralPartialEq for SimpleStruct {}
 #[automatically_derived]
 impl ::core::cmp::PartialEq for SimpleStruct {
@@ -245,6 +252,28 @@ impl ::core::cmp::PartialEq for SimpleStruct {
             && self.field_c == other.field_c
     }
 }
+#[automatically_derived]
+impl ::core::clone::Clone for SimpleStruct {
+    #[inline]
+    fn clone(&self) -> SimpleStruct {
+        SimpleStruct {
+            field_a: ::core::clone::Clone::clone(&self.field_a),
+            field_b: ::core::clone::Clone::clone(&self.field_b),
+            field_c: ::core::clone::Clone::clone(&self.field_c),
+        }
+    }
+}
+#[doc(hidden)]
+pub static NESTED_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
+    ::smithy4rs_core::Ref<::smithy4rs_core::schema::SchemaBuilder>,
+> = ::smithy4rs_core::LazyLock::new(|| ::smithy4rs_core::Ref::new(
+    ::smithy4rs_core::schema::Schema::structure_builder("test#NESTED_STRUCT", Vec::new()),
+));
+pub static NESTED_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+{ (&*NESTED_SCHEMA_BUILDER).put_member("field_d", &STRING, Vec::new()).build() });
+static _NESTED_SCHEMA_MEMBER_D: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| NESTED_SCHEMA.expect_member("field_d"));
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
     #[smithy_schema(D)]
@@ -398,23 +427,20 @@ const _: () = {
     }
 };
 #[automatically_derived]
-impl ::core::fmt::Debug for Nested {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        ::core::fmt::Formatter::debug_struct_field1_finish(
-            f,
-            "Nested",
-            "field_a",
-            &&self.field_a,
-        )
-    }
-}
-#[automatically_derived]
 impl ::core::marker::StructuralPartialEq for Nested {}
 #[automatically_derived]
 impl ::core::cmp::PartialEq for Nested {
     #[inline]
     fn eq(&self, other: &Nested) -> bool {
         self.field_a == other.field_a
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for Nested {
+    #[inline]
+    fn clone(&self) -> Nested {
+        Nested {
+            field_a: ::core::clone::Clone::clone(&self.field_a),
+        }
     }
 }
