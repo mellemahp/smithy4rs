@@ -8,7 +8,7 @@ pub(crate) fn constructor(trait_ident: &Ident, input: &DeriveInput) -> TokenStre
         Data::Struct(data) => {
             match &data.fields {
                 Fields::Unnamed(fields) => tuple_struct_constructor(trait_ident, fields),
-                Fields::Named(fields) => tuple_struct_constructor(trait_ident, fields),
+                Fields::Named(fields) => struct_builder(trait_ident, fields),
                 Fields::Unit => { panic!("Unit struct not supported"); }
             }
         }
@@ -31,9 +31,9 @@ fn tuple_struct_constructor(trait_ident: &Ident, fields: &FieldsUnnamed) -> Toke
     }
 }
 
-fn struct_builder(trait_ident: &Ident, fields: &FieldsUnnamed) -> TokenStream {
+fn struct_builder(trait_ident: &Ident, fields: &FieldsNamed) -> TokenStream {
     let builder_ident = Ident::new(&format!("{trait_ident}Builder"), Span::call_site());
-    let builder_impl = builder_impl();
+    //let builder_impl = builder_impl();
     quote! {
         impl #trait_ident {
             #[doc = "Create a new [`"]
@@ -45,7 +45,7 @@ fn struct_builder(trait_ident: &Ident, fields: &FieldsUnnamed) -> TokenStream {
             }
         }
 
-        #builder_impl
+        //#builder_impl
     }
 }
 

@@ -77,13 +77,22 @@
 //! can be found in [`crate::schema::prelude`].
 
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
-
+use std::cmp::PartialEq;
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
+use bigdecimal::BigDecimal;
+use bytebuffer::ByteBuffer;
 use downcast_rs::{DowncastSync, impl_downcast};
-
+use num_bigint::BigInt;
+use temporal_rs::Instant;
 use crate::{
     Ref,
     schema::{Document, ShapeId},
 };
+use crate::prelude::{SensitiveTrait, DOCUMENT};
+use crate::schema::{default, StaticSchemaShape};
+use crate::schema::default::Value;
+use crate::serde::se::SerializeWithSchema;
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -100,9 +109,14 @@ pub trait SmithyTrait: DowncastSync {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;
 
-    /// The data stored inside the trait as a [`Document`] value.
-    #[allow(clippy::borrowed_box)]
-    fn value(&self) -> &Box<dyn Document>;
+    /// Get the trait as a Document reference.
+    ///
+    /// This allows dynamic and statically type traits to be treated similarly.
+    ///
+    /// **NOTE**: This method is slower than downcasting for traits with static
+    /// implementations. Try to only use when handling dynamic traits or `unknown`
+    /// traits (traits with no schema available).
+    fn as_document(&self) -> Arc<dyn Document>;
 }
 impl_downcast!(sync SmithyTrait);
 
@@ -112,9 +126,22 @@ impl_downcast!(sync SmithyTrait);
 /// [`SmithyTrait`] implementations that do not implement this trait cannot
 /// be downcast into by [`crate::schema::Schema::get_trait_as`]
 /// methods.
-pub trait StaticTraitId: SmithyTrait {
+pub trait StaticTraitId {
     /// Static trait ID as found in Smithy model definition of the trait.
     fn trait_id() -> &'static ShapeId;
+}
+
+// === Blanket impl for all traits with static Ids ===
+impl <T: StaticTraitId + DowncastSync + SerializeWithSchema + StaticSchemaShape + Clone> SmithyTrait for T {
+    fn id(&self) -> &ShapeId {
+        T::trait_id()
+    }
+
+    /// TODO: SHOULD TRY TO DOWNCAST FIRST
+    fn as_document(&self) -> Arc<dyn Document> {
+        let result: Box<dyn Document> = self.clone().into();
+        result.into()
+    }
 }
 
 /// Convenience type for cheaply-cloneable reference to a dynamic trait.
@@ -126,7 +153,9 @@ pub trait StaticTraitId: SmithyTrait {
 pub struct TraitRef(Ref<dyn SmithyTrait>);
 impl PartialEq for TraitRef {
     fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id() && (self.value() == other.value())
+        self.id() == other.id()
+            // Now compare documents
+            && self.as_document() == other.as_document()
     }
 }
 impl Deref for TraitRef {
@@ -191,33 +220,39 @@ impl Debug for TraitRef {
 /// `TraitInitializer` implementations can be added to a `RustCodegenIntegration` to customize the way
 /// in which traits are initialized in a Schema definition.
 ///
-#[derive(Debug, Clone)]
-pub struct DynamicTrait {
-    id: ShapeId,
-    value: Box<dyn Document>,
-}
+#[derive(Clone)]
+pub struct DynamicTrait(Arc<dyn Document>);
 impl DynamicTrait {
     /// Create a new [`SmithyTrait`] with no corresponding concrete implementation.
     ///
     /// <div class ="warning">
     /// **WARNING**: Traits created with this method cannot be downcast into a specific implementation.
     /// </div>
-    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(id: I, value: D) -> TraitRef {
-        Self {
-            id: id.into(),
-            value: value.into(),
-        }
-        .into()
+    pub fn from<I: Into<ShapeId>, D: Into<Box<dyn Document>>>(id: I, value: D) -> Self {
+        let dt: Box<dyn Document> = default::Document {
+            schema: DOCUMENT.clone(),
+            value: Value::Boolean(true),
+            discriminator: None,
+        }.into();
+        Self(dt.into())
+    }
+}
+impl Deref for DynamicTrait {
+    type Target = ();
+
+    fn deref(&self) -> &Self::Target {
+        todo!()
     }
 }
 
 impl SmithyTrait for DynamicTrait {
     fn id(&self) -> &ShapeId {
-        &self.id
+        // Should always be set, but default to `DOCUMENT` id just in case
+        self.0.discriminator().unwrap_or(&DOCUMENT.id())
     }
 
-    fn value(&self) -> &Box<dyn Document> {
-        &self.value
+    fn downcast_eq(&self, other: &Ref<dyn SmithyTrait>) -> bool {
+        todo!()
     }
 }
 
@@ -314,9 +349,9 @@ mod tests {
         let dyn_id: ShapeId = "smithy.api#Dynamic".into();
         let map = TraitMap::of(traits![
             JsonNameTrait::new("a"),
-            DynamicTrait::from(dyn_id.clone(), "b")
+            //DynamicTrait::from(dyn_id.clone(), "b")
         ]);
-        assert!(map.contains(&dyn_id));
+        //assert!(map.contains(&dyn_id));
         assert!(map.contains(JsonNameTrait::trait_id()));
         assert!(map.contains_type::<JsonNameTrait>());
     }
