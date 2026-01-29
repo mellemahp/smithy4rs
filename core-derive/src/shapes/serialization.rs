@@ -4,7 +4,7 @@ use syn::{Data, DataEnum, DataStruct, DeriveInput, Field, Lit, Variant};
 
 use crate::{
     parse_schema,
-    utils::{is_optional, is_union, parse_enum_value},
+    shapes::utils::{is_optional, is_union, parse_enum_value},
 };
 
 /// Generates the `SerializeWithSchema` implementation for a shape.

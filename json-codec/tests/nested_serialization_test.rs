@@ -1,4 +1,4 @@
-// TODO(test): add some test utils for validating the serialized json outputs, perhaps snapshots would suffice
+// TODO(test): add some test utils.rs for validating the serialized json outputs, perhaps snapshots would suffice
 use smithy4rs_core::{
     IndexMap,
     serde::{ShapeBuilder, se::SerializeWithSchema},

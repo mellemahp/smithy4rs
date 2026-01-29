@@ -2,30 +2,21 @@
 //!
 //! These macros are used to generate schema-guided (de)Serialization
 //! implementations for generated shapes.
-mod builder;
-mod debug;
-mod deserialization;
-mod schema;
-mod serialization;
-mod utils;
 
-#[cfg(feature = "serde-adapter")]
-mod adapter;
+mod shapes;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
+use shapes::utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema};
 use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote};
 
 #[cfg(feature = "serde-adapter")]
-use crate::adapter::{deser_adapter_impl, ser_adapter_impl};
-use crate::{
-    builder::{buildable, builder_impls, builder_struct, get_builder_fields},
-    debug::debug_impl,
-    deserialization::deserialization_impl,
-    schema::schema_impl,
-    serialization::serialization_impl,
-    utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema},
+use crate::shapes::adapter::{deser_adapter_impl, ser_adapter_impl};
+use crate::shapes::{
+    buildable, builder_impls, builder_struct, debug_impl, deserialization_impl, get_builder_fields,
+    schema_impl, serialization_impl,
 };
+
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
 //               if not already derived on shape.
@@ -282,6 +273,10 @@ pub fn smithy_debug(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
     .into()
 }
+
+// ============================================================================
+// Serde Adapter
+// ============================================================================
 
 /// Derives `serde` adapter implementations for a Smithy shape.
 #[cfg(feature = "serde-adapter")]

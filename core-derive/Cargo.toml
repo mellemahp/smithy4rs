@@ -22,7 +22,9 @@ proc-macro-crate = "3.4.0"
 
 [dev-dependencies]
 macrotest = "1.0"
-smithy4rs-core = { path = "../core", features = [] }
+smithy4rs-core = { path = "../core" }
+# Allows expand tests to work with `--all-features` flag
+serde = { version = "1.0"}
 
 [lints]
 workspace = true

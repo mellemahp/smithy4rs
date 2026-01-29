@@ -1,19 +1,18 @@
 use smithy4rs_core::{
     prelude::{INTEGER, STRING},
-    schema::ShapeId,
-    traits,
+    smithy,
 };
 use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_SCHEMA {
-        FIELD_A: STRING = "field_a"
-        FIELD_B: INTEGER = "field_b"
-        FIELD_C: STRING = "field_c"
+        A: STRING = "field_a"
+        B: INTEGER = "field_b"
+        C: STRING = "field_c"
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[smithy_schema(A)]
@@ -31,7 +30,7 @@ smithy!("test#NESTED_STRUCT": {
     }
 });
 
-#[derive(SmithyShape, Debug, PartialEq)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(NESTED_SCHEMA)]
 pub struct Nested {
     #[smithy_schema(D)]

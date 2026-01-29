@@ -6,29 +6,29 @@
 // use smithy4rs_core::serde::de::{Deserializable, Deserializer, ShapeBuilder};
 // use smithy4rs_core::serde::se::{Serialize, Serializer, StructSerializer};
 // use smithy4rs_core::serde::{FmtSerializer, SerializeShape};
-// use smithy4rs_core::{lazy_member_schema, traits};
+// use smithy4rs_core::{lazy_member_schema, traits_expand};
 // use std::fmt::Display;
 // use std::sync::LazyLock;
 //
 // pub static LIST_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 //     Schema::list_builder(ShapeId::from("com.example#MyList"))
-//         .put_member("member", &prelude::STRING, traits![])
+//         .put_member("member", &prelude::STRING, traits_expand![])
 //         .build()
 // });
 //
 // pub static MAP_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 //     Schema::map_builder(ShapeId::from("com.example#MyMap"))
-//         .put_member("key", &prelude::STRING, traits![])
-//         .put_member("value", &prelude::STRING, traits![])
+//         .put_member("key", &prelude::STRING, traits_expand![])
+//         .put_member("value", &prelude::STRING, traits_expand![])
 //         .build()
 // });
 //
 // pub static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 //     Schema::structure_builder(ShapeId::from("com.example#Shape"))
-//         .put_member("a", &prelude::STRING, traits![])
-//         .put_member("b", &prelude::STRING, traits![])
-//         .put_member("list", &LIST_SCHEMA, traits![])
-//         .put_member("map", &MAP_SCHEMA, traits![])
+//         .put_member("a", &prelude::STRING, traits_expand![])
+//         .put_member("b", &prelude::STRING, traits_expand![])
+//         .put_member("list", &LIST_SCHEMA, traits_expand![])
+//         .put_member("map", &MAP_SCHEMA, traits_expand![])
 //         .build()
 // });
 // lazy_member_schema!(MEMBER_A, SCHEMA, "a");

@@ -1,4 +1,8 @@
-use smithy4rs_core::prelude::{INTEGER, STRING, UNIT};
+use smithy4rs_core::{
+    prelude::{INTEGER, STRING},
+    schema::UNIT,
+    smithy,
+};
 use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
 smithy!("test#SimpleUnion": {
@@ -19,5 +23,5 @@ pub enum TestEnum {
     B(i32),
     // Unit variant
     #[smithy_schema(C)]
-    C
+    C,
 }

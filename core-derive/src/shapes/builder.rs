@@ -2,7 +2,7 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{DataStruct, Type};
 
-use crate::utils::{
+use crate::shapes::utils::{
     IdentOrExpr, extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional,
     is_primitive, parse_default, parse_schema, replace_inner,
 };

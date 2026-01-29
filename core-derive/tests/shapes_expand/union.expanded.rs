@@ -1,5 +1,28 @@
-use smithy4rs_core::prelude::{INTEGER, STRING, UNIT};
+use smithy4rs_core::{
+    prelude::{INTEGER, STRING},
+    schema::UNIT, smithy,
+};
 use smithy4rs_core_derive::{SmithyShape, smithy_union};
+#[doc(hidden)]
+pub static UNION_BUILDER: ::smithy4rs_core::LazyLock<
+    ::smithy4rs_core::Ref<::smithy4rs_core::schema::SchemaBuilder>,
+> = ::smithy4rs_core::LazyLock::new(|| ::smithy4rs_core::Ref::new(
+    ::smithy4rs_core::schema::Schema::union_builder("test#SimpleUnion", Vec::new()),
+));
+pub static UNION: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+{
+    (&*UNION_BUILDER)
+        .put_member("field_a", &STRING, Vec::new())
+        .put_member("field_b", &INTEGER, Vec::new())
+        .put_member("field_c", &UNIT, Vec::new())
+        .build()
+});
+static _UNION_MEMBER_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+UNION.expect_member("field_a"));
+static _UNION_MEMBER_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+UNION.expect_member("field_b"));
+static _UNION_MEMBER_C: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+UNION.expect_member("field_c"));
 #[smithy_schema(UNION)]
 #[smithy_union_enum]
 pub enum TestEnum {

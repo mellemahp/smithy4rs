@@ -1086,6 +1086,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
+ "serde",
  "smithy4rs-core",
  "syn",
 ]

@@ -2,8 +2,8 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Lit, Type, Variant};
 
-use crate::{
-    builder::get_builder_fields,
+use crate::shapes::{
+    get_builder_fields,
     utils::{get_builder_ident, is_union, parse_enum_value, parse_schema},
 };
 

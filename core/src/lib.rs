@@ -18,7 +18,7 @@
 /// with metadata from a Smithy model.
 pub mod schema;
 
-/// Schema-enabled (De)serialization
+/// Schema-guided (De)serialization
 pub mod serde;
 
 // Don't list macros as a module in generated docs
