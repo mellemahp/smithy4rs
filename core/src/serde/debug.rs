@@ -381,13 +381,12 @@ impl Debug for Box<dyn Document> {
 impl Debug for dyn SmithyTrait {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut s = f.debug_tuple(self.id().id());
-        // // Only print document value if it is non-null.
-        // if !&self.value().is_null() {
-        //     // Use the debug wrapper to avoid writing document wrapper info into the trait debug.
-        //     s.field(&DebugWrapper::new(self.value().schema(), self.value()));
-        // }
-        todo!();
-        //s.finish()
+        // Only print document value if it is non-null.
+        if !&self.value().is_null() {
+            // Use the debug wrapper to avoid writing document wrapper info into the trait debug.
+            s.field(&DebugWrapper::new(self.value().schema(), self.value()));
+        }
+        s.finish()
     }
 }
 
@@ -398,10 +397,9 @@ mod tests {
     use crate::{
         IndexMap,
         derive::SmithyShape,
-        //schema::prelude::{MediaTypeTrait, STRING},
+        schema::prelude::{MediaTypeTrait, STRING},
         smithy,
     };
-    use crate::prelude::STRING;
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
@@ -429,7 +427,7 @@ mod tests {
             @SensitiveTrait;
             MAP_REDACT: MAP_SCHEMA = "map"
             @SensitiveTrait;
-            //@MediaTypeTrait::new("application/json");
+            @MediaTypeTrait::new("application/json");
             LIST_REDACT: LIST_SCHEMA = "list"
         }
     });

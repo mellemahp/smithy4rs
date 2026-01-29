@@ -2,8 +2,10 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Field, Lit, Variant};
 
-use crate::parse_schema;
-use crate::shapes::utils::{is_optional, is_union, parse_enum_value};
+use crate::{
+    parse_schema,
+    shapes::utils::{is_optional, is_union, parse_enum_value},
+};
 
 /// Generates the `SerializeWithSchema` implementation for a shape.
 pub(crate) fn serialization_impl(

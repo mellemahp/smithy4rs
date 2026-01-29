@@ -74,7 +74,7 @@ use crate::{
     BigDecimal, FxIndexSet, Instant,
     schema::{
         Document, Schema, ShapeType,
-        //prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
+        prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
     },
     serde::{
         se::{SerializeWithSchema, Serializer},
@@ -303,16 +303,16 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
         shape_type!(self, schema, ShapeType::Map);
-       // length!(self, schema, len);
+        length!(self, schema, len);
         Ok(DefaultMapValidator { root: self })
     }
 
     fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
         shape_type!(self, schema, ShapeType::List);
-        //length!(self, schema, len);
+        length!(self, schema, len);
         Ok(DefaultListValidator {
             root: self,
-            unique: false, //schema.contains_type::<UniqueItemsTrait>(),
+            unique: schema.contains_type::<UniqueItemsTrait>(),
             lookup: UniquenessTracker::new(),
             index: 0,
         })
@@ -325,20 +325,20 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_byte(self, schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Byte);
-        //range!(self, schema, value, to_i8);
+        range!(self, schema, value, to_i8);
         Ok(())
     }
 
     fn write_short(self, schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Short);
-       // range!(self, schema, value, to_i16);
+        range!(self, schema, value, to_i16);
         Ok(())
     }
 
     fn write_integer(self, schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
         // IntEnums are treated as Integers
         if schema.shape_type().eq(&ShapeType::Integer) {
-           // range!(self, schema, value, to_i32);
+            range!(self, schema, value, to_i32);
         } else if schema.shape_type().eq(&ShapeType::IntEnum) {
             let Some(enum_schema) = schema.as_int_enum() else {
                 unreachable!("Only intEnum schemas can be constructed with an enum type");
@@ -357,52 +357,52 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_long(self, schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Long);
-        //range!(self, schema, value, to_i64);
+        range!(self, schema, value, to_i64);
         Ok(())
     }
 
     fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Float);
-        // if let Some(range) = schema.get_trait_as::<RangeTrait>()
-        //     && let (Some(min), Some(max)) = (range.min().to_f32(), range.max().to_f32())
-        //     && (value < min || value > max)
-        // {
-        //     self.emit_error(SmithyConstraints::Range(
-        //         BigDecimal::from_f32(value).unwrap_or_default(),
-        //         range.min().clone(),
-        //         range.max().clone(),
-        //     ))?;
-        // }
+        if let Some(range) = schema.get_trait_as::<RangeTrait>()
+            && let (Some(min), Some(max)) = (range.min().to_f32(), range.max().to_f32())
+            && (value < min || value > max)
+        {
+            self.emit_error(SmithyConstraints::Range(
+                BigDecimal::from_f32(value).unwrap_or_default(),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        }
         Ok(())
     }
 
     fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Double);
-        // if let Some(range) = schema.get_trait_as::<RangeTrait>()
-        //     && let (Some(min), Some(max)) = (range.min().to_f64(), range.max().to_f64())
-        //     && (value < min || value > max)
-        // {
-        //     self.emit_error(SmithyConstraints::Range(
-        //         BigDecimal::from_f64(value).unwrap_or_default(),
-        //         range.min().clone(),
-        //         range.max().clone(),
-        //     ))?;
-        // }
+        if let Some(range) = schema.get_trait_as::<RangeTrait>()
+            && let (Some(min), Some(max)) = (range.min().to_f64(), range.max().to_f64())
+            && (value < min || value > max)
+        {
+            self.emit_error(SmithyConstraints::Range(
+                BigDecimal::from_f64(value).unwrap_or_default(),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        }
         Ok(())
     }
 
     fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
-        // if let Some(range) = schema.get_trait_as::<RangeTrait>() {
-        //     let big_value = BigDecimal::from_bigint(value.clone(), 0);
-        //     if &big_value < range.min() || &big_value > range.max() {
-        //         self.emit_error(SmithyConstraints::Range(
-        //             big_value,
-        //             range.min().clone(),
-        //             range.max().clone(),
-        //         ))?;
-        //     }
-        // }
+        if let Some(range) = schema.get_trait_as::<RangeTrait>() {
+            let big_value = BigDecimal::from_bigint(value.clone(), 0);
+            if &big_value < range.min() || &big_value > range.max() {
+                self.emit_error(SmithyConstraints::Range(
+                    big_value,
+                    range.min().clone(),
+                    range.max().clone(),
+                ))?;
+            }
+        }
         Ok(())
     }
 
@@ -412,15 +412,15 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigDecimal);
-        // if let Some(range) = schema.get_trait_as::<RangeTrait>()
-        //     && (value < range.min() || value > range.max())
-        // {
-        //     self.emit_error(SmithyConstraints::Range(
-        //         value.clone(),
-        //         range.min().clone(),
-        //         range.max().clone(),
-        //     ))?;
-        // }
+        if let Some(range) = schema.get_trait_as::<RangeTrait>()
+            && (value < range.min() || value > range.max())
+        {
+            self.emit_error(SmithyConstraints::Range(
+                value.clone(),
+                range.min().clone(),
+                range.max().clone(),
+            ))?;
+        }
         Ok(())
     }
 
@@ -428,17 +428,17 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         // Enums are treated as strings for the purpose of validation
         if schema.shape_type().eq(&ShapeType::String) {
             let len = value.len();
-           // length!(self, schema, len);
+            length!(self, schema, len);
 
             // Check @pattern trait matches provided.
-            // if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
-            //     && pattern.pattern().find(value).is_none()
-            // {
-            //     self.emit_error(SmithyConstraints::Pattern(
-            //         value.to_string(),
-            //         pattern.pattern().to_string(),
-            //     ))?;
-            // }
+            if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
+                && pattern.pattern().find(value).is_none()
+            {
+                self.emit_error(SmithyConstraints::Pattern(
+                    value.to_string(),
+                    pattern.pattern().to_string(),
+                ))?;
+            }
         } else if schema.shape_type().eq(&ShapeType::Enum) {
             let Some(enum_schema) = schema.as_enum() else {
                 unreachable!("Only enum schemas can be constructed with an enum type");
@@ -1062,7 +1062,7 @@ mod tests {
     use crate::{
         IndexMap,
         derive::SmithyShape,
-        schema::prelude::{INTEGER, STRING},
+        schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
         serde::ShapeBuilder,
         smithy,
     };
@@ -1089,25 +1089,25 @@ mod tests {
 
     // ==== Basic Shape Validations ====
     smithy!("com.test#ValidatedList": {
-       // @LengthTrait::builder().max(3).build();
-       // @UniqueItemsTrait;
+        @LengthTrait::builder().max(3).build();
+        @UniqueItemsTrait;
         list LIST_SCHEMA {
-           // @LengthTrait::builder().max(4).build();
+            @LengthTrait::builder().max(4).build();
             member: STRING
         }
     });
     smithy!("com.test#ValidatedMap": {
-        //@LengthTrait::builder().max(2).build();
+        @LengthTrait::builder().max(2).build();
         map MAP_SCHEMA {
-            //@PatternTrait::new("^[a-zA-Z]*$");
+            @PatternTrait::new("^[a-zA-Z]*$");
             key: STRING
-            //@LengthTrait::builder().max(4).build();
+            @LengthTrait::builder().max(4).build();
             value: STRING
         }
     });
     smithy!("com.test#ValidationStruct": {
         structure BASIC_VALIDATION_SCHEMA {
-            //@PatternTrait::new("^[a-zA-Z]*$");
+            @PatternTrait::new("^[a-zA-Z]*$");
             A: STRING = "a"
             B: INTEGER = "b"
             LIST: LIST_SCHEMA = "list"
@@ -1339,7 +1339,7 @@ mod tests {
     // Nested Shape
     smithy!("test#ValidationStruct": {
         structure NESTED_SCHEMA {
-            //@PatternTrait::new("^[a-z]*$");
+            @PatternTrait::new("^[a-z]*$");
             C: STRING = "c"
         }
     });
@@ -1417,19 +1417,19 @@ mod tests {
 
     // ==== Nested List Validations ====
     smithy!("com.example#ListOfNested": {
-        //@LengthTrait::builder().max(3).build();
+        @LengthTrait::builder().max(3).build();
         list LIST_OF_NESTED_SCHEMA {
             member: NESTED_SCHEMA
         }
     });
     smithy!("com.example#ListOfList": {
-        //@LengthTrait::builder().max(2).build();
+        @LengthTrait::builder().max(2).build();
         list LIST_OF_LIST_OF_NESTED_SCHEMA {
             member: LIST_OF_NESTED_SCHEMA
         }
     });
     smithy!("com.example#ListOfListOfList": {
-        //@LengthTrait::builder().max(2).build();
+        @LengthTrait::builder().max(2).build();
         list LIST_OF_LIST_OF_LIST_OF_NESTED {
             member: LIST_OF_LIST_OF_NESTED_SCHEMA
         }
@@ -1563,13 +1563,13 @@ mod tests {
 
     // ==== `@uniqueItem` Validations ====
     smithy!("com.example#SetOfStruct": {
-        //@UniqueItemsTrait;
+        @UniqueItemsTrait;
         list SET_OF_STRUCT {
             member: NESTED_SCHEMA
         }
     });
     smithy!("com.example#SetOfString": {
-        //@UniqueItemsTrait;
+        @UniqueItemsTrait;
         list SET_OF_STRING {
             member: STRING
         }
@@ -1580,7 +1580,7 @@ mod tests {
         }
     });
     smithy!("com.example#SetOfList": {
-        //@UniqueItemsTrait;
+        @UniqueItemsTrait;
         list SET_OF_LIST {
             member: LIST_OF_INT
         }
@@ -1592,7 +1592,7 @@ mod tests {
         }
     });
     smithy!("com.example#SetOfMap": {
-        //@UniqueItemsTrait;
+        @UniqueItemsTrait;
         list SET_OF_MAP {
             member: MAP_OF_INT
         }
@@ -1699,21 +1699,21 @@ mod tests {
 
     // ==== Nested Map Validations ====
     smithy!("com.example#MapOfNested": {
-        //@LengthTrait::builder().max(2).build();
+        @LengthTrait::builder().max(2).build();
         map MAP_OF_NESTED_SCHEMA {
             key: STRING
             value: NESTED_SCHEMA
         }
     });
     smithy!("com.example#MapOfMap": {
-        //@LengthTrait::builder().max(2).build();
+        @LengthTrait::builder().max(2).build();
         map MAP_OF_MAP_OF_NESTED {
             key: STRING
             value: MAP_OF_NESTED_SCHEMA
         }
     });
     smithy!("com.example#MapOfMapOfMap": {
-        //@LengthTrait::builder().max(2).build();
+        @LengthTrait::builder().max(2).build();
         map MAP_OF_MAP_OF_MAP_OF_NESTED {
             key: STRING
             value: MAP_OF_MAP_OF_NESTED

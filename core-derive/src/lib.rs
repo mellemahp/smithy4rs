@@ -7,13 +7,14 @@ mod shapes;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{parse, parse_macro_input, parse_quote, Data, DeriveInput, ItemEnum, Lit, Variant};
 use shapes::utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema};
+use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote};
+
 #[cfg(feature = "serde-adapter")]
 use crate::shapes::adapter::{deser_adapter_impl, ser_adapter_impl};
 use crate::shapes::{
-    buildable, builder_impls, builder_struct, debug_impl, deserialization_impl,
-    get_builder_fields, schema_impl, serialization_impl,
+    buildable, builder_impls, builder_struct, debug_impl, deserialization_impl, get_builder_fields,
+    schema_impl, serialization_impl,
 };
 
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`

@@ -431,9 +431,9 @@ macro_rules! annotation_trait {
                 <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            // fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
-            //     &$crate::schema::documents::NULL
-            // }
+            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
+                &$crate::schema::documents::NULL
+            }
         }
     };
 }
@@ -461,10 +461,10 @@ macro_rules! annotation_trait {
 macro_rules! string_trait {
     ($(#[$outer:meta])* $id:literal: $trait_struct:ident($value_name:ident)) => {
         $(#[$outer])*
-        #[derive(Debug, PartialEq)]
+        #[derive(Debug)]
         pub struct $trait_struct {
             $value_name: String,
-            //value: Box<dyn $crate::schema::documents::Document>,
+            value: Box<dyn $crate::schema::documents::Document>,
         }
         impl $trait_struct {
             /// Get the value of this trait
@@ -479,20 +479,20 @@ macro_rules! string_trait {
             pub fn new($value_name: &str) -> Self {
                 $trait_struct {
                     $value_name: $value_name.to_string(),
-                   //value: $value_name.into(),
+                    value: $value_name.into(),
                 }
             }
         }
         $crate::static_trait_id!($trait_struct, $id);
-        // impl $crate::schema::SmithyTrait for $trait_struct {
-        //     fn id(&self) -> &$crate::schema::ShapeId {
-        //         <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
-        //     }
-        //     // 
-        //     // fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
-        //     //     &self.value
-        //     // }
-        // }
+        impl $crate::schema::SmithyTrait for $trait_struct {
+            fn id(&self) -> &$crate::schema::ShapeId {
+                <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
+            }
+
+            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
+                &self.value
+            }
+        }
     };
 }
 
@@ -599,7 +599,6 @@ macro_rules! doc_map {
         $crate::IndexMap::<String, Box<dyn $crate::schema::Document>>::from_iter([$(($key.into(), $val.into()),)*])
     }
 }
-
 
 /// Constructs an ordered string map (`IndexMap<String,_>`) from a set of key-value pairs
 ///
