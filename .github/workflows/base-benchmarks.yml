@@ -1,0 +1,28 @@
+name: Bencher Base
+
+on:
+  push:
+    branches: main
+
+jobs:
+  benchmark_base:
+    name: Continuous Benchmarking - Base
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+      - name: Build
+        run: mise build
+      - uses: bencherdev/bencher@main
+      - name: Track base branch benchmarks with Bencher
+        run: |
+          bencher run \
+          --project smithy4rs \
+          --token '${{ secrets.BENCHER_API_TOKEN }}' \
+          --branch main \
+          --err \
+          --testbed ubuntu-latest \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --adapter rust_criterion "cargo bench"
