@@ -1,7 +1,8 @@
 <div align="center">
 <img alt="logo" width="300" src="docs/assets/logo.svg"/>
 </div>
-<h1 align="center"><strong>smithy4rs</strong>: Smithy code generators for Rust</h1>
+<h1 align="center">smithy4rs</h1>
+<h3 align="center">Smithy code generators for Rust </h3>
 <p align="center">
    <a href="https://github.com/mellemahp/smithy4rs/actions/workflows/rust-checks.yml" title="Build Status">
       <img alt="Build Status" src="https://github.com/mellemahp/smithy4rs/workflows/Rust-CI/badge.svg">
