@@ -1,6 +1,24 @@
-# Introduction
+<div align="center">
+<img alt="logo" width="300" src="./assets/logo.svg"/>
+</div>
+<h1 align="center">smithy4rs</h1>
+<h3 align="center">Smithy code generators for Rust </h3>
+<p align="center">
+   <a href="https://github.com/mellemahp/smithy4rs/actions/workflows/rust-checks.yml" title="Build Status">
+      <img alt="Build Status" src="https://github.com/mellemahp/smithy4rs/workflows/Rust-CI/badge.svg">
+   </a>
+   <a href="https://github.com/mellemahp/smithy4rs/blob/main/LICENSE" title="License">
+      <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg">
+   </a>
+   <a href="https://crates.io/crates/smithy4rs-core" title="crates.io">
+      <img alt="crates.io" src="https://img.shields.io/crates/v/smithy4rs-core">
+   </a>
+   <a href="https://deps.rs/repo/github/mellemahp/smithy4rs" title="dependencies">
+      <img alt="dependencies" src ="https://deps.rs/repo/github/mellemahp/smithy4rs/status.svg">
+   </a>
+</p>
 
-The `smithy4rs` project provides [Smithy](smithy.io) code generators for clients, server, 
+`smithy4rs` provides [Smithy](smithy.io) code generators for clients, server, 
 and shapes for the [Rust](https://rust-lang.org/) programming language.
 
 Generated code supports [protocol-agnostic](#what-does-it-mean-to-be-protocol-agnostic) clients, 
@@ -16,7 +34,7 @@ the AWS Rust SDK, head over to [`smithy-rs`](https://github.com/smithy-lang/smit
 
 ### Core components
 
-The `smithy4rs` project contains three core types of components: 
+`smithy4rs` contains three core types of components: 
 1. `smithy-build` plugins - used to integrate with the smithy toolchain and generate
    code from a Smithy model.
 2. Core libraries - provide the core functionality for generated Rust code.

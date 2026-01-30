@@ -3,6 +3,9 @@ name: Bencher Base
 on:
   push:
     branches: main
+    paths:
+      - core/**
+      - core-derive/**
 
 jobs:
   benchmark_base:

@@ -2,6 +2,9 @@ name: Bencher PR
 
 on:
   pull_request:
+    paths:
+      - core/**
+      - core-derive/**
   workflow_dispatch:
 
 jobs:
