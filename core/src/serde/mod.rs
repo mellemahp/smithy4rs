@@ -16,6 +16,8 @@ mod unit;
 
 mod utils;
 pub mod validation;
+/// EEEEK
+pub mod arbitrary;
 
 pub use deserializers as de;
 pub use serializers as se;

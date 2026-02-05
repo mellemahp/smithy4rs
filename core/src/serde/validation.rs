@@ -1058,6 +1058,8 @@ impl ValidationError for SmithyConstraints {}
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
 mod tests {
+    use std::fmt::Debug;
+    use arbitrary::{Arbitrary, Unstructured};
     use super::*;
     use crate::{
         IndexMap,
@@ -1066,6 +1068,10 @@ mod tests {
         serde::ShapeBuilder,
         smithy,
     };
+    use crate::serde::arbitrary::ArbitraryDeserializer;
+    use crate::serde::Buildable;
+    use crate::serde::de::DeserializeWithSchema;
+    use crate::serde::deserializers::Deserializer;
 
     #[test]
     fn test_validation_errors_aggregate() {
@@ -1344,7 +1350,7 @@ mod tests {
         }
     });
 
-    #[derive(SmithyShape, Clone)]
+    #[derive(SmithyShape, Clone, Arbitrary)]
     #[smithy_schema(NESTED_SCHEMA)]
     pub struct NestedStruct {
         #[smithy_schema(C)]
