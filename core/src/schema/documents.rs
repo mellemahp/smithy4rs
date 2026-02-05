@@ -1208,7 +1208,7 @@ smithy!("smithy.api#Document": {
 impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
     fn from(value: Vec<T>) -> Self {
         let mut result = Vec::with_capacity(value.len());
-        for v in value.into_iter() {
+        for v in value {
             result.push(v.into());
         }
         default::Document {
