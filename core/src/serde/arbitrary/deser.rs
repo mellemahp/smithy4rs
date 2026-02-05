@@ -2,12 +2,13 @@
 
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::ops::Div;
 use arbitrary::Unstructured;
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use temporal_rs::Instant;
-use crate::schema::{Document, Schema};
+use crate::schema::{Document, Schema, ShapeType};
 use crate::serde::de::{DeserializeWithSchema, Deserializer};
 
 // ============================================================================
@@ -78,11 +79,12 @@ impl <'de, 'arb> Deserializer<'de> for ArbitraryDeserializer<'de, 'arb> {
         Ok(BigInt::arbitrary(self.0)?)
     }
 
-    fn read_big_decimal(&mut self, _: &Schema) -> Result<BigDecimal, Self::Error> {
-        // TODO: beter way to impl arbitrary?
+    fn read_big_decimal(&mut self, schema: &Schema) -> Result<BigDecimal, Self::Error> {
         let scale = i64::arbitrary(self.0)?;
-        let big_int = BigInt::arbitrary(self.0)?;
-        Ok(BigDecimal::from_bigint(big_int, scale))
+        let big_decimal = BigDecimal::from_bigint(self.read_big_integer(schema)?, scale);
+        // divide by a random number
+        let divisor = f32::arbitrary(self.0)?;
+        Ok(big_decimal.div(divisor))
     }
 
     fn read_string(&mut self, _: &Schema) -> Result<String, Self::Error> {
@@ -90,10 +92,12 @@ impl <'de, 'arb> Deserializer<'de> for ArbitraryDeserializer<'de, 'arb> {
     }
 
     fn read_blob(&mut self, _: &Schema) -> Result<ByteBuffer, Self::Error> {
-        todo!()
+        let bytes = Vec::<u8>::arbitrary(self.0)?;
+        Ok(ByteBuffer::from_bytes(bytes.as_slice()))
     }
 
-    fn read_timestamp(&mut self, schema: &Schema) -> Result<Instant, Self::Error> {
+    fn read_timestamp(&mut self, _: &Schema) -> Result<Instant, Self::Error> {
+        // TODO: bound input
         let millis = i64::arbitrary(self.0)?;
         Ok(Instant::from_epoch_milliseconds(millis)
             .map_err(|_| arbitrary::Error::IncorrectFormat)?)
@@ -103,23 +107,30 @@ impl <'de, 'arb> Deserializer<'de> for ArbitraryDeserializer<'de, 'arb> {
         todo!()
     }
 
-    fn read_struct<B, F>(&mut self, schema: &Schema, mut builder: B, consumer: F) -> Result<B, Self::Error>
+    fn read_struct<B, F>(&mut self, schema: &Schema, mut state: B, consumer: F) -> Result<B, Self::Error>
     where
         B: DeserializeWithSchema<'de>,
         F: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>
     {
         // NOTE: We do not want unknown values as those are never serialized and
         // so are not relevant to these tests
-        for (name, member_schema) in schema.members() {
+        if schema.shape_type() == &ShapeType::Union {
+            // pick a random member
+            let idx = usize::arbitrary(self.0)? % schema.members().len();
+            let (_, member) = schema.members().get_index(idx)
+                .ok_or(arbitrary::Error::IncorrectFormat)?;
+            return consumer(state, member, self);
+        }
+        for member_schema in schema.members().values() {
             // if the member is optional, randomly pick if it should be set
             if !member_schema.contains_type::<RequiredTrait>() &&
                 bool::arbitrary(self.0)?
             {
                 continue;
             }
-            builder = consumer(builder, member_schema, self)?;
+            state = consumer(state, member_schema, self)?;
         }
-        Ok(builder)
+        Ok(state)
     }
 
     fn read_list<T, F>(&mut self, schema: &Schema, state: &mut T, consumer: F) -> Result<(), Self::Error>
