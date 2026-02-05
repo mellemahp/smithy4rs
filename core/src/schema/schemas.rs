@@ -496,7 +496,7 @@ pub struct EnumSchema<T: PartialEq + Hash + Eq> {
 }
 impl<T: PartialEq + Hash + Eq> EnumSchema<T> {
     /// Get the set of allowed values for this Enum
-    #[must_use] 
+    #[must_use]
     pub fn values(&self) -> &FxIndexSet<T> {
         &self.values
     }

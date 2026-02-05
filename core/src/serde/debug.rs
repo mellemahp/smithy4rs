@@ -45,7 +45,7 @@ impl<T: SerializeWithSchema> Debug for DebugWrapper<'_, T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         self.1
             .serialize_with_schema(self.0, DebugSerializer { fmt })
-            .map_err(|_| Error )
+            .map_err(|_| Error)
     }
 }
 

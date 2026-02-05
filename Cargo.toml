@@ -25,7 +25,6 @@ json = "0.12.4"
 smithy4rs-core = { version = "0.0.1", path = "core", features = [] }
 smithy4rs-core-derive = { version = "0.0.1", path = "core-derive", features = [] }
 thiserror = "2.0.18"
-log = "0.4.29"
 
 [workspace.lints.rust]
 future-incompatible = "warn"
