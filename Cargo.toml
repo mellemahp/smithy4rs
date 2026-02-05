@@ -20,19 +20,10 @@ keywords = ["smithy", "api"]
 categories = ["api-bindings"]
 
 [workspace.dependencies]
-bigdecimal = "0.4.10"
-bytebuffer = "2.3.0"
 criterion = "0.8"
-downcast-rs = "2.0.2"
-fast-str = "1.0.0"
-indexmap = { version = "2.13.0" }
-jiter = "0.13.0"
 json = "0.12.4"
-num-bigint = "0.4"
-regex = "1.12.2"
 smithy4rs-core = { version = "0.0.1", path = "core", features = [] }
 smithy4rs-core-derive = { version = "0.0.1", path = "core-derive", features = [] }
-temporal_rs = "0.1.1"
 thiserror = "2.0.18"
 
 [workspace.lints.rust]

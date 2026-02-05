@@ -12,25 +12,26 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
-num-bigint.workspace = true
-bigdecimal.workspace = true
-bytebuffer.workspace = true
-indexmap.workspace = true
-thiserror.workspace = true
-downcast-rs.workspace = true
-regex.workspace = true
-fast-str.workspace = true
-temporal_rs.workspace = true
-smithy4rs-core-derive.workspace = true
-
-# <TODO> move to workspace
-pastey = "0.2.1"
-# <TODO> What features are required for serde adapter?
-serde = { version = "1.0", optional = true }
-static_str_ops = "0.1.2"
+# core data types (re-exported)
+num-bigint = "0.4.6"
+bigdecimal = "0.4.10"
+bytebuffer = "2.3.0"
+indexmap = "2.13.0"
+temporal_rs = "0.1.1"
+# utility
+downcast-rs = "2.0.2"
+fast-str = "1.0.0"
+regex = "1.12.2"
 rustc-hash = "2.1.1"
-log = "0.4.29"
 stack-array = "0.4.1"
+static_str_ops = "0.1.2"
+# macros
+smithy4rs-core-derive.workspace = true
+pastey = "0.2.1"
+# adapter
+serde = { version = "1.0", optional = true, default-features = false }
+# common
+thiserror.workspace = true
 
 [dev-dependencies]
 serde_json = "1.0.149"

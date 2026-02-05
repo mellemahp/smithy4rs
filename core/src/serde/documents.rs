@@ -699,7 +699,7 @@ mod tests {
         assert_eq!(original_float, result);
 
         // Double
-        let original_double = 1.23456789f64;
+        let original_double = 1.234_567_89_f64;
         let doc: Box<dyn Document> = original_double.into();
         let result: f64 = doc.try_into().unwrap();
         assert_eq!(original_double, result);
