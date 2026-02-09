@@ -15,12 +15,17 @@
   - [Client](codegen/client/README.md)
   - [Server](codegen/server/README.md)
 
---- 
+---
 
-# Reference
+# Concepts
 
 - [Schemas](guides/schemas.md)
 - [Document Types](guides/documents.md)
+
+--- 
+# Reference 
+
 - [Serde Compatibility](guides/serde-compatibility.md)
 - [Validation](guides/validation.md)
+- [Fuzzing](guides/fuzzing.md)
 
