@@ -28,13 +28,11 @@ static_str_ops = "0.1.2"
 # macros
 smithy4rs-core-derive.workspace = true
 pastey = "0.2.1"
-# adapter
+# features
 serde = { version = "1.0", optional = true, default-features = false }
+arbitrary = { version = "1.4.2", optional = true, features = ["derive"] }
 # common
 thiserror.workspace = true
-
-arbitrary = { version = "1.4.2", features = ["derive"] }
-rand = "0.10.0-rc.9"
 
 [dev-dependencies]
 serde_json = "1.0.149"
@@ -45,10 +43,8 @@ serde-xml-rs = "0.8.2"
 workspace = true
 
 [features]
-# TODO: Remove after testing
-default = ["arbitrary"]
 serde-adapters = ["dep:serde", "smithy4rs-core-derive/serde-adapter", "num-bigint/serde", "bigdecimal/serde"]
-arbitrary = ["smithy4rs-core-derive/arbitrary", "num-bigint/arbitrary", "indexmap/arbitrary"]
+arbitrary = ["dep:arbitrary", "smithy4rs-core-derive/arbitrary", "num-bigint/arbitrary", "indexmap/arbitrary"]
 
 [[bench]]
 name = "schema"

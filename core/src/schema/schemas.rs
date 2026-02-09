@@ -451,7 +451,7 @@ impl SchemaValue {
 #[derive(Debug, PartialEq)]
 pub struct ScalarSchema {
     id: ShapeId,
-    shape_type: ShapeType,
+    pub(crate) shape_type: ShapeType,
     traits: TraitMap,
 }
 
@@ -460,9 +460,9 @@ pub struct ScalarSchema {
 #[derive(PartialEq)]
 pub struct StructSchema {
     id: ShapeId,
-    shape_type: ShapeType,
+    pub(crate) shape_type: ShapeType,
     /// Members (i.e. fields) of the structure schema
-    members: FxIndexMap<String, Schema>,
+    pub(crate) members: FxIndexMap<String, Schema>,
     traits: TraitMap,
 }
 
@@ -506,7 +506,7 @@ impl<T: PartialEq + Hash + Eq> EnumSchema<T> {
 pub struct MemberSchema {
     id: ShapeId,
     /// Shape that this member targets
-    target: MemberTarget,
+    pub(crate) target: MemberTarget,
     /// Name of the member
     name: FastStr,
     /// Index of the member.

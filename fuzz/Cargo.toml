@@ -9,12 +9,12 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-smithy4rs-core.workspace = true
-arbitrary = "1.4.2"
+smithy4rs-core = { version = "0.0.1", path = "../core", features = ["arbitrary"] }
+arbitrary = { version = "1.4.2", default-features = false }
 
 [[bin]]
-name = "fuzz_target_1"
-path = "fuzz_targets/fuzz_target_1.rs"
+name = "validator"
+path = "fuzz_targets/validator_fuzzing.rs"
 test = false
 doc = false
 bench = false
