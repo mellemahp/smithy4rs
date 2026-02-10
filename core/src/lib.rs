@@ -21,6 +21,9 @@ pub mod schema;
 /// Schema-guided (De)serialization
 pub mod serde;
 
+/// Optional features supported by `smithy4rs`
+pub mod features;
+
 // Don't list macros as a module in generated docs
 #[doc(hidden)]
 pub mod macros;

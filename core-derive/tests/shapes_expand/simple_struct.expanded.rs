@@ -126,6 +126,17 @@ impl SimpleStructBuilder {
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::Schema as _Schema;
+    use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
+    #[automatically_derived]
+    impl _StaticSchemaShape for SimpleStructBuilder {
+        fn schema() -> &'static _Schema {
+            &SIMPLE_SCHEMA
+        }
+    }
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
@@ -338,6 +349,17 @@ impl NestedBuilder {
         self
     }
 }
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::schema::Schema as _Schema;
+    use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
+    #[automatically_derived]
+    impl _StaticSchemaShape for NestedBuilder {
+        fn schema() -> &'static _Schema {
+            &NESTED_SCHEMA
+        }
+    }
+};
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::schema::Schema as _Schema;

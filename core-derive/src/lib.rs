@@ -12,11 +12,12 @@ use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, p
 
 #[cfg(feature = "serde-adapter")]
 use crate::shapes::adapter::{deser_adapter_impl, ser_adapter_impl};
+#[cfg(feature = "arbitrary")]
+use crate::shapes::arbitrary::arbitrary_impl;
 use crate::shapes::{
     buildable, builder_impls, builder_struct, debug_impl, deserialization_impl, get_builder_fields,
     schema_impl, serialization_impl,
 };
-
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
 //               if not already derived on shape.
@@ -129,6 +130,9 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     #[cfg(feature = "serde-adapter")]
     let serde = smithy_serde_adapter(input.clone());
 
+    #[cfg(feature = "arbitrary")]
+    let arbitrary = smithy_arbitrary(input.clone());
+
     // Add additional core derivations
     let debug = smithy_debug(input);
 
@@ -138,31 +142,34 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let deserializable_tokens = TokenStream::from(deserializable);
     let debug_tokens = TokenStream::from(debug);
 
-    #[cfg(feature = "serde-adapter")]
-    let serde_tokens = TokenStream::from(serde);
+    #[cfg(any(feature = "arbitrary", feature = "serde-adapter"))]
+    let mut output = quote! {
+        #schema_tokens
+        #serializable_tokens
+        #deserializable_tokens
+        #debug_tokens
+    };
+    #[cfg(not(any(feature = "arbitrary", feature = "serde-adapter")))]
+    let output = quote! {
+        #schema_tokens
+        #serializable_tokens
+        #deserializable_tokens
+        #debug_tokens
+    };
 
     #[cfg(feature = "serde-adapter")]
     {
-        quote! {
-            #schema_tokens
-            #serializable_tokens
-            #deserializable_tokens
-            #debug_tokens
-            #serde_tokens
-        }
-        .into()
+        let serde_tokens = TokenStream::from(serde);
+        output.extend(serde_tokens);
     }
 
-    #[cfg(not(feature = "serde-adapter"))]
+    #[cfg(feature = "arbitrary")]
     {
-        quote! {
-            #schema_tokens
-            #serializable_tokens
-            #deserializable_tokens
-            #debug_tokens
-        }
-        .into()
+        let arbitrary_tokens = TokenStream::from(arbitrary);
+        output.extend(arbitrary_tokens);
     }
+
+    output.into()
 }
 
 /// Derives `SchemaShape` for a struct, backed by a static schema (`StaticSchemaShape`)
@@ -223,9 +230,18 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
             let builder_serializer =
                 serialization_impl(&crate_ident, &builder_name, &schema_ident, &input);
             let buildable = buildable(shape_name, &builder_name);
+            let builder_schema = schema_impl(&builder_name, &schema_ident);
             // Builder struct is generated outside the const block to make it publicly accessible
             quote! {
                 #builder
+
+                const _: () = {
+                    #extern_import
+                    use #crate_ident::schema::Schema as _Schema;
+                    use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+
+                    #builder_schema
+                };
 
                 const _: () = {
                     #extern_import
@@ -296,6 +312,31 @@ pub fn smithy_serde_adapter(input: proc_macro::TokenStream) -> proc_macro::Token
 
             #ser
             #deser
+        };
+    }
+    .into()
+}
+
+// ============================================================================
+// Serde Adapter
+// ============================================================================
+
+/// Derives `serde` adapter implementations for a Smithy shape.
+#[cfg(feature = "arbitrary")]
+#[proc_macro_derive(SmithyArbitrary)]
+pub fn smithy_arbitrary(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let shape_name = &input.ident;
+    let schema_ident = parse_schema(&input.attrs);
+    let (extern_import, crate_ident) = get_crate_info();
+    let arbitrary_tokens = arbitrary_impl(&crate_ident, shape_name, &schema_ident, &input);
+
+    quote! {
+        const _: () = {
+            #extern_import
+            extern crate arbitrary as _arbitrary;
+
+            #arbitrary_tokens
         };
     }
     .into()

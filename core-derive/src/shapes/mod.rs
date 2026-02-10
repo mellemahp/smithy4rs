@@ -15,4 +15,8 @@ pub(crate) use serialization::*;
 
 #[cfg(feature = "serde-adapter")]
 pub(crate) mod adapter;
+
+#[cfg(feature = "arbitrary")]
+pub(crate) mod arbitrary;
+
 pub(crate) mod utils;

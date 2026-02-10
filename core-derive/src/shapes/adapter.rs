@@ -13,7 +13,7 @@ pub(crate) fn ser_adapter_impl(
 ) -> TokenStream {
     quote! {
         use #crate_ident::serde::serializers::Serializer as _Serializer;
-        use #crate_ident::serde::adapters::SerAdapter as _SerAdapter;
+        use #crate_ident::features::adapters::SerAdapter as _SerAdapter;
         use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
 
         #[automatically_derived]
@@ -45,7 +45,7 @@ pub(crate) fn deser_adapter_impl(
         use _serde::de::DeserializeSeed as _DeserializeSeed;
 
         use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
-        use #crate_ident::serde::adapters::SchemaSeed as _SchemaSeed;
+        use #crate_ident::features::adapters::SchemaSeed as _SchemaSeed;
     };
     // Add builder-specific import
     if matches!(&input.data, Data::Struct(_)) {
