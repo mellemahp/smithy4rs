@@ -250,89 +250,23 @@ impl<'de, S: SeqAccess<'de>> Deserializer<'de> for SeqAccessDeserializer<'de, S>
     where
         Self: 'a;
 
-    // Primitives - not supported in sequence context (list elements are
-    // deserialized through the reader, not the deserializer)
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read primitive in sequence context",
-        ))
-    }
-
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Self::Error::custom("blob not supported in serde adapter"))
-    }
-
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Self::Error::custom(
-            "timestamp not supported in serde adapter",
-        ))
-    }
-
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom(
-            "document not supported in serde adapter",
-        ))
-    }
-
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read struct in sequence context",
-        ))
-    }
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> { unreachable!() }
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> { unreachable!() }
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> { unreachable!() }
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> { unreachable!() }
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> { unreachable!() }
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> { unreachable!() }
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> { unreachable!() }
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> { unreachable!() }
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> { unreachable!() }
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> { unreachable!() }
+    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
+    fn is_null(&mut self) -> bool { false }
 
     fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
         let seq_access = self
@@ -343,20 +277,6 @@ impl<'de, S: SeqAccess<'de>> Deserializer<'de> for SeqAccessDeserializer<'de, S>
             seq_access,
             _phantom: PhantomData,
         })
-    }
-
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
-        Err(Self::Error::custom("cannot read map in sequence context"))
-    }
-
-    fn is_null(&mut self) -> bool {
-        false
-    }
-
-    fn read_null(&mut self) -> Result<(), Self::Error> {
-        Err(Self::Error::custom(
-            "null not supported in sequence context",
-        ))
     }
 }
 
@@ -393,63 +313,22 @@ impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M>
     where
         Self: 'a;
 
-    // Primitives - not supported in map context (struct/map values are
-    // deserialized through the reader, not the deserializer)
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
-        Err(Self::Error::custom("cannot read primitive in map context"))
-    }
-
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Self::Error::custom("blob not supported in serde adapter"))
-    }
-
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Self::Error::custom(
-            "timestamp not supported in serde adapter",
-        ))
-    }
-
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom(
-            "document not supported in serde adapter",
-        ))
-    }
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> { unreachable!() }
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> { unreachable!() }
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> { unreachable!() }
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> { unreachable!() }
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> { unreachable!() }
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> { unreachable!() }
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> { unreachable!() }
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> { unreachable!() }
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> { unreachable!() }
+    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
+    fn is_null(&mut self) -> bool { false }
 
     fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
         let map_access = self
@@ -462,10 +341,6 @@ impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M>
         })
     }
 
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
-        Err(Self::Error::custom("cannot read list in map context"))
-    }
-
     fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
         let map_access = self
             .map_access
@@ -476,18 +351,10 @@ impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M>
             _phantom: PhantomData,
         })
     }
-
-    fn is_null(&mut self) -> bool {
-        false
-    }
-
-    fn read_null(&mut self) -> Result<(), Self::Error> {
-        Err(Self::Error::custom("null not supported in map context"))
-    }
 }
 
 //========================================================================
-// Deser seed (public API)
+// Schema Seed (Public API)
 //========================================================================
 
 /// A [`DeserializeSeed`] that carries a schema to guide deserialization.
@@ -612,10 +479,10 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> 
 }
 
 //========================================================================
-// Scalar Types (Enums)
+// Enum Deserializer
 //========================================================================
 
-/// Wraps `serde::deserializer` for deserializing Enum types that are treated as primitives.
+/// Wraps a serde `Deserializer` for deserializing string and integer enums.
 struct EnumWrapper<'de, D: serde::Deserializer<'de>> {
     deserializer: Option<D>,
     _phantom: PhantomData<&'de ()>,
@@ -645,20 +512,9 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
     where
         Self: 'a;
 
-    #[cold]
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize bool as enum"))
-    }
-
-    #[cold]
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize byte as enum"))
-    }
-
-    #[cold]
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize short as enum"))
-    }
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> { unreachable!() }
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> { unreachable!() }
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> { unreachable!() }
 
     fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
@@ -718,30 +574,11 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
             .deserialize_i32(IntegerVisitor)?)
     }
 
-    #[cold]
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize long as enum"))
-    }
-
-    #[cold]
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize float as enum"))
-    }
-
-    #[cold]
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize double as enum"))
-    }
-
-    #[cold]
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize bigInteger as enum"))
-    }
-
-    #[cold]
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize bigDecimal as enum"))
-    }
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> { unreachable!() }
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> { unreachable!() }
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> { unreachable!() }
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
 
     fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
         struct StringVisitor;
@@ -769,52 +606,21 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
             .deserialize_string(StringVisitor)?)
     }
 
-    #[cold]
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize blob as enum"))
-    }
-
-    #[cold]
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize timestamp as enum"))
-    }
-
-    #[cold]
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize document as enum"))
-    }
-
-    #[cold]
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize struct as enum"))
-    }
-
-    #[cold]
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize list as enum"))
-    }
-
-    #[cold]
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize map as enum"))
-    }
-
-    #[cold]
-    fn is_null(&mut self) -> bool {
-        false
-    }
-
-    #[cold]
-    fn read_null(&mut self) -> Result<(), Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize null value as enum"))
-    }
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> { unreachable!() }
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> { unreachable!() }
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> { unreachable!() }
+    fn is_null(&mut self) -> bool { false }
+    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
 }
 
 //========================================================================
-// Primitive Types
+// Primitive Deserializer
 //========================================================================
 
-/// Wraps `serde::Deserializer` for deserializing primitive types (String, Integer, etc.)
+/// Wraps a serde `Deserializer` for deserializing primitive types.
 struct PrimitiveWrapper<'de, D: serde::Deserializer<'de>> {
     deserializer: Option<D>,
     _phantom: PhantomData<&'de ()>,
@@ -998,17 +804,8 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Self::Error::custom(
-            "bigInteger not supported in serde adapter",
-        ))
-    }
-
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Self::Error::custom(
-            "bigDecimal not supported in serde adapter",
-        ))
-    }
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
 
     fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
         struct StringVisitor;
@@ -1029,49 +826,14 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Self::Error::custom("blob not supported in serde adapter"))
-    }
-
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Self::Error::custom(
-            "timestamp not supported in serde adapter",
-        ))
-    }
-
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom(
-            "document not supported in serde adapter",
-        ))
-    }
-
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read struct from primitive context",
-        ))
-    }
-
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read list from primitive context",
-        ))
-    }
-
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
-        Err(Self::Error::custom(
-            "cannot read map from primitive context",
-        ))
-    }
-
-    fn is_null(&mut self) -> bool {
-        false
-    }
-
-    fn read_null(&mut self) -> Result<(), Self::Error> {
-        Err(Self::Error::custom(
-            "null not supported in primitive context",
-        ))
-    }
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> { unreachable!() }
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> { unreachable!() }
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> { unreachable!() }
+    fn is_null(&mut self) -> bool { false }
+    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
 }
 
 #[cfg(test)]
