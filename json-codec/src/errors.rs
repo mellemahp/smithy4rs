@@ -10,6 +10,7 @@ use thiserror::Error;
 pub enum JsonSerdeError {
     #[error("Failed to serialize: {0}")]
     SerializationError(String),
+    // TODO(errors): I don't *love* that we're using strings, it also makes tests rely on matching specific error messages...
     #[error("Failed to deserialize: {0}")]
     DeserializationError(String),
     #[error("IO error: {0}")]

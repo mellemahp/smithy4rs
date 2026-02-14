@@ -1,5 +1,9 @@
 use smithy4rs_core::{
-    BigDecimal, BigInt, ByteBuffer, Instant, schema::Schema, serde::deserializers::Deserializer,
+    BigDecimal, BigInt, ByteBuffer, Instant,
+    schema::Schema,
+    serde::deserializers::{
+        DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader,
+    },
 };
 
 use crate::errors::JsonSerdeError;
@@ -21,8 +25,55 @@ impl<'de> JsonDeserializer<'de> {
     }
 }
 
+/// Reader for JSON struct members.
+///
+/// Iterates through JSON object keys and values. The `'de` lifetime is the
+/// input data lifetime, and `'a` is the borrow of the deserializer.
+///
+/// Callers must alternate `read_name()` and `read_value()`/`skip_value()` calls.
+pub struct JsonStructReader<'de, 'a> {
+    deserializer: &'a mut JsonDeserializer<'de>,
+    started: bool,
+}
+
+/// Reader for JSON list elements.
+///
+/// Iterates through JSON array elements. The `'de` lifetime is the input data
+/// lifetime, and `'a` is the borrow of the deserializer.
+pub struct JsonListReader<'de, 'a> {
+    deserializer: &'a mut JsonDeserializer<'de>,
+    started: bool,
+}
+
+/// Reader for JSON map entries.
+///
+/// Iterates through JSON object key-value pairs as map entries. The `'de`
+/// lifetime is the input data lifetime, and `'a` is the borrow of the deserializer.
+///
+/// Callers must alternate `read_key()` and `read_value()`/`skip_value()` calls.
+pub struct JsonMapReader<'de, 'a> {
+    deserializer: &'a mut JsonDeserializer<'de>,
+    started: bool,
+}
+
+// ============================================================================
+// Deserializer Implementation
+// ============================================================================
+
 impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
     type Error = JsonSerdeError;
+    type StructReader<'a>
+        = JsonStructReader<'de, 'a>
+    where
+        Self: 'a;
+    type ListReader<'a>
+        = JsonListReader<'de, 'a>
+    where
+        Self: 'a;
+    type MapReader<'a>
+        = JsonMapReader<'de, 'a>
+    where
+        Self: 'a;
 
     fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
         self.parser.next_bool().map_err(|e| {
@@ -39,15 +90,12 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
             jiter::NumberInt::Int(i) => i8::try_from(i).map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Value out of range for i8: {}", e))
             }),
-            jiter::NumberInt::BigInt(b) => {
-                let i = b.to_string().parse::<i8>().map_err(|e| {
-                    JsonSerdeError::DeserializationError(format!(
-                        "BigInt value out of range for i8: {}",
-                        e
-                    ))
-                })?;
-                Ok(i)
-            }
+            jiter::NumberInt::BigInt(b) => b.to_string().parse::<i8>().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!(
+                    "BigInt value out of range for i8: {}",
+                    e
+                ))
+            }),
         }
     }
 
@@ -60,15 +108,12 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
             jiter::NumberInt::Int(i) => i16::try_from(i).map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Value out of range for i16: {}", e))
             }),
-            jiter::NumberInt::BigInt(b) => {
-                let i = b.to_string().parse::<i16>().map_err(|e| {
-                    JsonSerdeError::DeserializationError(format!(
-                        "BigInt value out of range for i16: {}",
-                        e
-                    ))
-                })?;
-                Ok(i)
-            }
+            jiter::NumberInt::BigInt(b) => b.to_string().parse::<i16>().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!(
+                    "BigInt value out of range for i16: {}",
+                    e
+                ))
+            }),
         }
     }
 
@@ -81,15 +126,12 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
             jiter::NumberInt::Int(i) => i32::try_from(i).map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Value out of range for i32: {}", e))
             }),
-            jiter::NumberInt::BigInt(b) => {
-                let i = b.to_string().parse::<i32>().map_err(|e| {
-                    JsonSerdeError::DeserializationError(format!(
-                        "BigInt value out of range for i32: {}",
-                        e
-                    ))
-                })?;
-                Ok(i)
-            }
+            jiter::NumberInt::BigInt(b) => b.to_string().parse::<i32>().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!(
+                    "BigInt value out of range for i32: {}",
+                    e
+                ))
+            }),
         }
     }
 
@@ -188,100 +230,25 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         todo!("Support deserialization of documents")
     }
 
-    fn read_struct<B, F>(
-        &mut self,
-        schema: &Schema,
-        mut builder: B,
-        consumer: F,
-    ) -> Result<B, Self::Error>
-    where
-        F: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>,
-    {
-        // next_object() returns the first key, or None for empty object
-        let mut maybe_key = self.parser.next_object().map_err(|e| {
-            JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
-        })?;
-
-        // Process all keys (first and subsequent)
-        while let Some(key) = maybe_key {
-            if let Some(member_schema) = schema.get_member(key) {
-                builder = consumer(builder, member_schema, self)?;
-            } else {
-                // Unknown field - skip it
-                self.parser.next_skip().map_err(|e| {
-                    JsonSerdeError::DeserializationError(format!(
-                        "Failed to skip unknown field: {}",
-                        e
-                    ))
-                })?;
-            }
-
-            // Get next key
-            maybe_key = self.parser.next_key().map_err(|e| {
-                JsonSerdeError::DeserializationError(format!("Failed to read object key: {}", e))
-            })?;
-        }
-
-        Ok(builder)
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+        Ok(JsonStructReader {
+            deserializer: self,
+            started: false,
+        })
     }
 
-    fn read_list<T, F>(
-        &mut self,
-        _schema: &Schema,
-        state: &mut T,
-        consumer: F,
-    ) -> Result<(), Self::Error>
-    where
-        F: Fn(&mut T, &Schema, &mut Self) -> Result<(), Self::Error>,
-    {
-        // Get the member schema for list elements
-        let member_schema = _schema.get_member("member").ok_or_else(|| {
-            JsonSerdeError::DeserializationError("List schema missing member".to_string())
-        })?;
-
-        // next_array() returns Option<Peek> for the first element (or None for empty array)
-        let mut maybe_peek = self.parser.next_array().map_err(|e| {
-            JsonSerdeError::DeserializationError(format!("Expected array start: {}", e))
-        })?;
-
-        // Process all elements (first and subsequent)
-        while maybe_peek.is_some() {
-            consumer(state, member_schema, self)?;
-
-            // Get next element
-            maybe_peek = self.parser.array_step().map_err(|e| {
-                JsonSerdeError::DeserializationError(format!("Failed to read array element: {}", e))
-            })?;
-        }
-
-        Ok(())
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+        Ok(JsonListReader {
+            deserializer: self,
+            started: false,
+        })
     }
 
-    fn read_map<T, F>(
-        &mut self,
-        _schema: &Schema,
-        state: &mut T,
-        consumer: F,
-    ) -> Result<(), Self::Error>
-    where
-        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>,
-    {
-        // next_object() returns the first key, or None for empty object
-        let mut maybe_key = self.parser.next_object().map_err(|e| {
-            JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
-        })?;
-
-        // Process all keys (first and subsequent)
-        while let Some(key) = maybe_key {
-            consumer(state, key.to_owned(), self)?;
-
-            // Get next key
-            maybe_key = self.parser.next_key().map_err(|e| {
-                JsonSerdeError::DeserializationError(format!("Failed to read map key: {}", e))
-            })?;
-        }
-
-        Ok(())
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+        Ok(JsonMapReader {
+            deserializer: self,
+            started: false,
+        })
     }
 
     fn is_null(&mut self) -> bool {
@@ -295,38 +262,146 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
     }
 }
 
+// ============================================================================
+// StructReader Implementation
+// ============================================================================
+
+impl<'de, 'a> StructReader<'de> for JsonStructReader<'de, 'a> {
+    type Error = JsonSerdeError;
+
+    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
+        let maybe_key = if !self.started {
+            self.started = true;
+            self.deserializer.parser.next_object().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
+            })?
+        } else {
+            self.deserializer.parser.next_key().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!("Failed to read object key: {}", e))
+            })?
+        };
+
+        Ok(maybe_key.map(|s| s.to_string()))
+    }
+
+    fn read_value<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<T, Self::Error> {
+        T::deserialize_with_schema(schema, self.deserializer)
+    }
+
+    fn skip_value(&mut self) -> Result<(), Self::Error> {
+        self.deserializer.parser.next_skip().map_err(|e| {
+            JsonSerdeError::DeserializationError(format!("Failed to skip value: {}", e))
+        })
+    }
+}
+
+// ============================================================================
+// ListReader Implementation
+// ============================================================================
+
+impl<'de, 'a> ListReader<'de> for JsonListReader<'de, 'a> {
+    type Error = JsonSerdeError;
+
+    fn read_element<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<Option<T>, Self::Error> {
+        let has_element = if !self.started {
+            self.started = true;
+            self.deserializer
+                .parser
+                .next_array()
+                .map_err(|e| {
+                    JsonSerdeError::DeserializationError(format!("Expected array start: {}", e))
+                })?
+                .is_some()
+        } else {
+            self.deserializer
+                .parser
+                .array_step()
+                .map_err(|e| {
+                    JsonSerdeError::DeserializationError(format!("Failed to advance array: {}", e))
+                })?
+                .is_some()
+        };
+
+        if !has_element {
+            return Ok(None);
+        }
+
+        T::deserialize_with_schema(schema, self.deserializer).map(Some)
+    }
+}
+
+// ============================================================================
+// MapReader Implementation
+// ============================================================================
+
+impl<'de, 'a> MapReader<'de> for JsonMapReader<'de, 'a> {
+    type Error = JsonSerdeError;
+
+    fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
+        let maybe_key = if !self.started {
+            self.started = true;
+            self.deserializer.parser.next_object().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
+            })?
+        } else {
+            self.deserializer.parser.next_key().map_err(|e| {
+                JsonSerdeError::DeserializationError(format!("Failed to read map key: {}", e))
+            })?
+        };
+
+        Ok(maybe_key.map(|s| s.to_string()))
+    }
+
+    fn read_value<V: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<V, Self::Error> {
+        V::deserialize_with_schema(schema, self.deserializer)
+    }
+
+    fn skip_value(&mut self) -> Result<(), Self::Error> {
+        self.deserializer.parser.next_skip().map_err(|e| {
+            JsonSerdeError::DeserializationError(format!("Failed to skip value: {}", e))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use smithy4rs_core::prelude::*;
 
     use super::*;
 
-    // TODO(test): Add comprehensive suite here
-
     #[test]
     fn test_read_primitives() {
-        let mut de = JsonDeserializer::new("true".as_bytes());
+        let mut de = JsonDeserializer::new(b"true");
         assert!(de.read_bool(&BOOLEAN).unwrap());
 
-        let mut de = JsonDeserializer::new("42".as_bytes());
+        let mut de = JsonDeserializer::new(b"42");
         assert_eq!(de.read_integer(&INTEGER).unwrap(), 42);
 
-        let mut de = JsonDeserializer::new("1.234".as_bytes());
+        let mut de = JsonDeserializer::new(b"1.234");
         assert!((de.read_float(&FLOAT).unwrap() - 1.234).abs() < 0.001);
 
-        let mut de = JsonDeserializer::new("\"hello\"".as_bytes());
+        let mut de = JsonDeserializer::new(b"\"hello\"");
         assert_eq!(de.read_string(&STRING).unwrap(), "hello");
     }
 
     #[test]
     fn test_is_null() {
-        let mut de = JsonDeserializer::new("null".as_bytes());
+        let mut de = JsonDeserializer::new(b"null");
         assert!(de.is_null());
 
-        let mut de = JsonDeserializer::new("42".as_bytes());
+        let mut de = JsonDeserializer::new(b"42");
         assert!(!de.is_null());
 
-        let mut de = JsonDeserializer::new("\"string\"".as_bytes());
+        let mut de = JsonDeserializer::new(b"\"string\"");
         assert!(!de.is_null());
     }
 }

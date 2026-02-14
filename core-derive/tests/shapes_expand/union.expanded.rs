@@ -82,6 +82,7 @@ const _: () = {
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::deserializers::Error as _DeserializerError;
+    use _smithy4rs::serde::deserializers::StructReader as _StructReader;
     use _smithy4rs::schema::Unit as _Unit;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for TestEnum {
@@ -92,35 +93,37 @@ const _: () = {
         where
             D: _Deserializer<'de>,
         {
-            deserializer
-                .read_struct(
-                    schema,
-                    None,
-                    |option, member_schema, de| {
-                        if option.is_some() {
-                            return Err(
-                                D::Error::custom("Attempted to set union value twice"),
-                            );
-                        }
-                        if &member_schema == &*_UNION_MEMBER_A {
-                            let value = String::deserialize_with_schema(
-                                member_schema,
-                                de,
-                            )?;
-                            return Ok(Some(TestEnum::A(value)));
-                        }
-                        if &member_schema == &*_UNION_MEMBER_B {
-                            let value = i32::deserialize_with_schema(member_schema, de)?;
-                            return Ok(Some(TestEnum::B(value)));
-                        }
-                        if &member_schema == &*_UNION_MEMBER_C {
-                            let _ = _Unit::deserialize_with_schema(member_schema, de)?;
-                            return Ok(Some(TestEnum::C));
-                        }
-                        Ok(Some(TestEnum::Unknown("unknown".to_string())))
-                    },
-                )?
-                .ok_or(D::Error::custom("Failed to deserialize union"))
+            let mut reader = deserializer.read_struct()?;
+            let mut result: Option<TestEnum> = None;
+            while let Some(field_name) = reader.read_name()? {
+                if result.is_some() {
+                    return Err(
+                        _DeserializerError::custom("Attempted to set union value twice"),
+                    );
+                }
+                if let Some(member_schema) = schema.get_member(&field_name) {
+                    if &member_schema == &*_UNION_MEMBER_A {
+                        let value: String = reader.read_value(member_schema)?;
+                        result = Some(TestEnum::A(value));
+                        continue;
+                    }
+                    if &member_schema == &*_UNION_MEMBER_B {
+                        let value: i32 = reader.read_value(member_schema)?;
+                        result = Some(TestEnum::B(value));
+                        continue;
+                    }
+                    if &member_schema == &*_UNION_MEMBER_C {
+                        let _: _Unit = reader.read_value(member_schema)?;
+                        result = Some(TestEnum::C);
+                        continue;
+                    }
+                    result = Some(TestEnum::Unknown("unknown".to_string()));
+                    continue;
+                } else {
+                    reader.skip_value()?;
+                }
+            }
+            result.ok_or(_DeserializerError::custom("Failed to deserialize union"))
         }
     }
 };
