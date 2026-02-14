@@ -7,14 +7,10 @@ use std::{
     marker::PhantomData,
 };
 
-use bigdecimal::BigDecimal;
-use bytebuffer::ByteBuffer;
-use num_bigint::BigInt;
 use serde::de::{DeserializeSeed, Error as SerdeDeError, MapAccess, SeqAccess, Visitor};
-use temporal_rs::Instant;
 
 use crate::{
-    schema::{Document, Schema, ShapeType},
+    schema::{Schema, ShapeType},
     serde::deserializers::{
         DeserializeWithSchema, Deserializer, Error as DeserError, ListReader, MapReader,
         StructReader,
@@ -250,24 +246,6 @@ impl<'de, S: SeqAccess<'de>> Deserializer<'de> for SeqAccessDeserializer<'de, S>
     where
         Self: 'a;
 
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> { unreachable!() }
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> { unreachable!() }
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> { unreachable!() }
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> { unreachable!() }
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> { unreachable!() }
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> { unreachable!() }
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> { unreachable!() }
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> { unreachable!() }
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> { unreachable!() }
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> { unreachable!() }
-    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
-    fn is_null(&mut self) -> bool { false }
-
     fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
         let seq_access = self
             .seq_access
@@ -312,23 +290,6 @@ impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M>
         = SerdeMapReader<'de, M>
     where
         Self: 'a;
-
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> { unreachable!() }
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> { unreachable!() }
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> { unreachable!() }
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> { unreachable!() }
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> { unreachable!() }
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> { unreachable!() }
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> { unreachable!() }
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> { unreachable!() }
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> { unreachable!() }
-    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
-    fn is_null(&mut self) -> bool { false }
 
     fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
         let map_access = self
@@ -512,10 +473,6 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
     where
         Self: 'a;
 
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> { unreachable!() }
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> { unreachable!() }
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> { unreachable!() }
-
     fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
 
@@ -574,12 +531,6 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
             .deserialize_i32(IntegerVisitor)?)
     }
 
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> { unreachable!() }
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> { unreachable!() }
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> { unreachable!() }
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
-
     fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
         struct StringVisitor;
 
@@ -605,15 +556,6 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
             .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
             .deserialize_string(StringVisitor)?)
     }
-
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> { unreachable!() }
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> { unreachable!() }
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> { unreachable!() }
-    fn is_null(&mut self) -> bool { false }
-    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
 }
 
 //========================================================================
@@ -804,9 +746,6 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> { unreachable!() }
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> { unreachable!() }
-
     fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
         struct StringVisitor;
         impl<'de> Visitor<'de> for StringVisitor {
@@ -825,15 +764,6 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .deserialize_string(StringVisitor)
             .map_err(DeserdeErrorWrapper)
     }
-
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> { unreachable!() }
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> { unreachable!() }
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> { unreachable!() }
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> { unreachable!() }
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> { unreachable!() }
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> { unreachable!() }
-    fn is_null(&mut self) -> bool { false }
-    fn read_null(&mut self) -> Result<(), Self::Error> { unreachable!() }
 }
 
 #[cfg(test)]

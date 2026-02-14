@@ -30,16 +30,6 @@ use crate::{
 pub trait Error: Sized + StdError {
     /// Create a custom error message
     fn custom<T: Display>(msg: T) -> Self;
-
-    /// Create an error for a missing required field
-    fn missing_field(field: &str) -> Self {
-        Self::custom(format!("missing required field: {}", field))
-    }
-
-    /// Create an error for an unknown field
-    fn unknown_field(field: &str) -> Self {
-        Self::custom(format!("unknown field: {}", field))
-    }
 }
 
 // ============================================================================
@@ -221,79 +211,105 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a bool.
-    fn read_bool(&mut self, schema: &Schema) -> Result<bool, Self::Error>;
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a byte (`i8`)
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `byte`.
-    fn read_byte(&mut self, schema: &Schema) -> Result<i8, Self::Error>;
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a short (`i16`)
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `short`.
-    fn read_short(&mut self, schema: &Schema) -> Result<i16, Self::Error>;
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+        unreachable!()
+    }
 
     /// Read an integer (`i32`)
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as an `integer`.
-    fn read_integer(&mut self, schema: &Schema) -> Result<i32, Self::Error>;
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a long (i64)
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `long`.
-    fn read_long(&mut self, schema: &Schema) -> Result<i64, Self::Error>;
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a float (`f32`)
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `float`.
-    fn read_float(&mut self, schema: &Schema) -> Result<f32, Self::Error>;
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a double (`f64`)
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `double`.
-    fn read_double(&mut self, schema: &Schema) -> Result<f64, Self::Error>;
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a big integer
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `bigInteger`.
-    fn read_big_integer(&mut self, schema: &Schema) -> Result<BigInt, Self::Error>;
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a big decimal
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `bigDecimal`.
-    fn read_big_decimal(&mut self, schema: &Schema) -> Result<BigDecimal, Self::Error>;
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a string
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `string`.
-    fn read_string(&mut self, schema: &Schema) -> Result<String, Self::Error>;
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a blob
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `blob`.
-    fn read_blob(&mut self, schema: &Schema) -> Result<ByteBuffer, Self::Error>;
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+        unreachable!()
+    }
 
     /// Read a timestamp
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `timestamp`.
-    fn read_timestamp(&mut self, schema: &Schema) -> Result<Instant, Self::Error>;
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
+        unreachable!()
+    }
 
     /// Read data as untyped [`Document`]
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `document`.
-    fn read_document(&mut self, schema: &Schema) -> Result<Box<dyn Document>, Self::Error>;
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+        unreachable!()
+    }
 
     // === Compound types ===
 
@@ -342,7 +358,9 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the struct could not be started (e.g., expected `{`).
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error>;
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+        unreachable!()
+    }
 
     /// Begin reading a list, returning a reader for its elements.
     ///
@@ -363,7 +381,9 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the list could not be started (e.g., expected `[`).
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error>;
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+        unreachable!()
+    }
 
     /// Begin reading a map, returning a reader for its entries.
     ///
@@ -386,18 +406,24 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the map could not be started (e.g., expected `{`).
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error>;
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+        unreachable!()
+    }
 
     // === Null handling ===
 
     /// Check if the next value is null without consuming it.
-    fn is_null(&mut self) -> bool;
+    fn is_null(&mut self) -> bool {
+        false
+    }
 
     /// Read a null value.
     ///
     /// # Errors
     /// Returns [`Error`] if an element could not be read as `null`/empty value.
-    fn read_null(&mut self) -> Result<(), Self::Error>;
+    fn read_null(&mut self) -> Result<(), Self::Error> {
+        unreachable!()
+    }
 }
 
 /// Deserialize a shape with its pre-defined schema.
