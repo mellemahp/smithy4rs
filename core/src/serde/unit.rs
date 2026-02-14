@@ -1,7 +1,7 @@
 use crate::{
     schema::{Schema, Unit},
     serde::{
-        de::{DeserializeWithSchema, Deserializer, Error},
+        de::{DeserializeWithSchema, Deserializer, Error, StructReader},
         se::{SerializeWithSchema, Serializer, StructSerializer},
     },
 };
@@ -20,17 +20,20 @@ impl SerializeWithSchema for Unit {
 
 impl<'de> DeserializeWithSchema<'de> for Unit {
     #[cold]
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(_schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.read_struct(schema, Unit, |_, member, _| {
-            // Consumer should NEVER be called on unit schemas as that
-            // would imply that the unit has members
-            Err(D::Error::custom(format!(
-                "Attempted to read member `{:?}` on Unit type",
-                member.id().member()
-            )))
-        })
+        let mut reader = deserializer.read_struct()?;
+
+        // Unit types should have no members
+        if let Some(ref field_name) = reader.read_name()? {
+            return Err(D::Error::custom(format!(
+                "Attempted to read member `{}` on Unit type",
+                field_name
+            )));
+        }
+
+        Ok(Unit)
     }
 }

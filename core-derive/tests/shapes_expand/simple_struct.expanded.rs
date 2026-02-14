@@ -143,6 +143,7 @@ const _: () = {
     use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
     use _smithy4rs::serde::ShapeBuilder as _ShapeBuilder;
     use _smithy4rs::serde::Buildable as _Buildable;
+    use _smithy4rs::serde::deserializers::StructReader as _StructReader;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for SimpleStructBuilder {
         fn deserialize_with_schema<D>(
@@ -152,41 +153,34 @@ const _: () = {
         where
             D: _Deserializer<'de>,
         {
-            let builder = SimpleStructBuilder::new();
-            deserializer
-                .read_struct(
-                    schema,
-                    builder,
-                    |builder, member_schema, de| {
-                        if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_A {
-                            let value = <String as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
-                                member_schema,
-                                de,
-                            )?;
-                            return Ok(builder.field_a(value));
+            let mut builder = SimpleStructBuilder::new();
+            let mut reader = deserializer.read_struct()?;
+            while let Some(field_name) = reader.read_name()? {
+                if let Some(member_schema) = schema.get_member(&field_name) {
+                    if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_A {
+                        let value: String = reader.read_value(member_schema)?;
+                        builder = builder.field_a(value);
+                        continue;
+                    }
+                    if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_B {
+                        let value: i32 = reader.read_value(member_schema)?;
+                        builder = builder.field_b(value);
+                        continue;
+                    }
+                    if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_C {
+                        let value: Option<NestedBuilder> = reader
+                            .read_value(member_schema)?;
+                        if let Some(v) = value {
+                            builder = builder.field_c_builder(v);
                         }
-                        if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_B {
-                            let value = <i32 as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
-                                member_schema,
-                                de,
-                            )?;
-                            return Ok(builder.field_b(value));
-                        }
-                        if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_C {
-                            let value = <Option<
-                                NestedBuilder,
-                            > as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
-                                member_schema,
-                                de,
-                            )?;
-                            if let Some(v) = value {
-                                return Ok(builder.field_c_builder(v));
-                            }
-                            return Ok(builder);
-                        }
-                        Ok(builder)
-                    },
-                )
+                        continue;
+                    }
+                    reader.skip_value()?;
+                } else {
+                    reader.skip_value()?;
+                }
+            }
+            Ok(builder)
         }
     }
     #[automatically_derived]
@@ -369,6 +363,7 @@ const _: () = {
     use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
     use _smithy4rs::serde::ShapeBuilder as _ShapeBuilder;
     use _smithy4rs::serde::Buildable as _Buildable;
+    use _smithy4rs::serde::deserializers::StructReader as _StructReader;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for NestedBuilder {
         fn deserialize_with_schema<D>(
@@ -378,22 +373,21 @@ const _: () = {
         where
             D: _Deserializer<'de>,
         {
-            let builder = NestedBuilder::new();
-            deserializer
-                .read_struct(
-                    schema,
-                    builder,
-                    |builder, member_schema, de| {
-                        if &member_schema == &*_NESTED_SCHEMA_MEMBER_D {
-                            let value = <String as ::smithy4rs_core::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema(
-                                member_schema,
-                                de,
-                            )?;
-                            return Ok(builder.field_a(value));
-                        }
-                        Ok(builder)
-                    },
-                )
+            let mut builder = NestedBuilder::new();
+            let mut reader = deserializer.read_struct()?;
+            while let Some(field_name) = reader.read_name()? {
+                if let Some(member_schema) = schema.get_member(&field_name) {
+                    if &member_schema == &*_NESTED_SCHEMA_MEMBER_D {
+                        let value: String = reader.read_value(member_schema)?;
+                        builder = builder.field_a(value);
+                        continue;
+                    }
+                    reader.skip_value()?;
+                } else {
+                    reader.skip_value()?;
+                }
+            }
+            Ok(builder)
         }
     }
     #[automatically_derived]
