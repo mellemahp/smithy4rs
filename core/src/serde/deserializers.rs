@@ -574,10 +574,9 @@ where
 
         let mut reader = deserializer.read_list()?;
 
-        let mut vec = match reader.size_hint() {
-            Some(size) => Vec::with_capacity(size),
-            None => Vec::new(),
-        };
+        let mut vec = reader
+            .size_hint()
+            .map_or_else(Vec::new, |size| Vec::with_capacity(size));
 
         while let Some(elem) = reader.read_element(element_schema)? {
             vec.push(elem);
@@ -604,10 +603,9 @@ where
 
         let mut reader = deserializer.read_map()?;
 
-        let mut map = match reader.size_hint() {
-            Some(size) => IndexMap::with_capacity(size),
-            None => IndexMap::new(),
-        };
+        let mut map = reader
+            .size_hint()
+            .map_or_else(IndexMap::new, |size| IndexMap::with_capacity(size));
 
         while let Some(key) = reader.read_key()? {
             let value = reader.read_value(value_schema)?;

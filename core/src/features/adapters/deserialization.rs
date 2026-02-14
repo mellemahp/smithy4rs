@@ -15,7 +15,10 @@ use temporal_rs::Instant;
 
 use crate::{
     schema::{Document, Schema, ShapeType},
-    serde::deserializers::{DeserializeWithSchema, Error as DeserError},
+    serde::deserializers::{
+        DeserializeWithSchema, Deserializer, Error as DeserError, ListReader, MapReader,
+        StructReader,
+    },
 };
 
 //========================================================================
@@ -43,6 +46,443 @@ impl<E: SerdeDeError> DeserError for DeserdeErrorWrapper<E> {
 impl<E: SerdeDeError> From<E> for DeserdeErrorWrapper<E> {
     fn from(e: E) -> Self {
         DeserdeErrorWrapper(e)
+    }
+}
+
+//========================================================================
+// Never Reader Types (for unused GAT slots)
+//========================================================================
+
+/// A reader type that can never be constructed.
+/// Used for GAT slots that are not applicable in a given context.
+/// Generic over E to satisfy GAT `Error = Self::Error` bounds.
+pub struct NeverStructReader<E>(PhantomData<fn() -> E>, std::convert::Infallible);
+
+impl<'de, E: DeserError> StructReader<'de> for NeverStructReader<E> {
+    type Error = E;
+
+    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
+        match self.1 {}
+    }
+
+    fn read_value<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        _schema: &Schema,
+    ) -> Result<T, Self::Error> {
+        match self.1 {}
+    }
+
+    fn skip_value(&mut self) -> Result<(), Self::Error> {
+        match self.1 {}
+    }
+}
+
+pub struct NeverListReader<E>(PhantomData<fn() -> E>, std::convert::Infallible);
+
+impl<'de, E: DeserError> ListReader<'de> for NeverListReader<E> {
+    type Error = E;
+
+    fn read_element<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        _schema: &Schema,
+    ) -> Result<Option<T>, Self::Error> {
+        match self.1 {}
+    }
+}
+
+pub struct NeverMapReader<E>(PhantomData<fn() -> E>, std::convert::Infallible);
+
+impl<'de, E: DeserError> MapReader<'de> for NeverMapReader<E> {
+    type Error = E;
+
+    fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
+        match self.1 {}
+    }
+
+    fn read_value<V: DeserializeWithSchema<'de>>(
+        &mut self,
+        _schema: &Schema,
+    ) -> Result<V, Self::Error> {
+        match self.1 {}
+    }
+
+    fn skip_value(&mut self) -> Result<(), Self::Error> {
+        match self.1 {}
+    }
+}
+
+//========================================================================
+// Reader Types
+//========================================================================
+
+/// Wraps serde's `SeqAccess` to implement our `ListReader` trait.
+pub struct SerdeListReader<'de, S: SeqAccess<'de>> {
+    seq_access: S,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, S: SeqAccess<'de>> ListReader<'de> for SerdeListReader<'de, S> {
+    type Error = DeserdeErrorWrapper<S::Error>;
+
+    fn read_element<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<Option<T>, Self::Error> {
+        let seed = SchemaSeed::<T>::new(schema);
+        self.seq_access
+            .next_element_seed(seed)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        self.seq_access.size_hint()
+    }
+}
+
+/// Wraps serde's `MapAccess` to implement our `StructReader` trait.
+pub struct SerdeStructReader<'de, M: MapAccess<'de>> {
+    map_access: M,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, M: MapAccess<'de>> StructReader<'de> for SerdeStructReader<'de, M> {
+    type Error = DeserdeErrorWrapper<M::Error>;
+
+    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
+        self.map_access
+            .next_key::<String>()
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_value<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<T, Self::Error> {
+        let seed = SchemaSeed::<T>::new(schema);
+        self.map_access
+            .next_value_seed(seed)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn skip_value(&mut self) -> Result<(), Self::Error> {
+        self.map_access
+            .next_value::<serde::de::IgnoredAny>()
+            .map_err(DeserdeErrorWrapper)?;
+        Ok(())
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        self.map_access.size_hint()
+    }
+}
+
+/// Wraps serde's `MapAccess` to implement our `MapReader` trait.
+pub struct SerdeMapReader<'de, M: MapAccess<'de>> {
+    map_access: M,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, M: MapAccess<'de>> MapReader<'de> for SerdeMapReader<'de, M> {
+    type Error = DeserdeErrorWrapper<M::Error>;
+
+    fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
+        self.map_access
+            .next_key::<String>()
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_value<V: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<V, Self::Error> {
+        let seed = SchemaSeed::<V>::new(schema);
+        self.map_access
+            .next_value_seed(seed)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn skip_value(&mut self) -> Result<(), Self::Error> {
+        self.map_access
+            .next_value::<serde::de::IgnoredAny>()
+            .map_err(DeserdeErrorWrapper)?;
+        Ok(())
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        self.map_access.size_hint()
+    }
+}
+
+//========================================================================
+// Context Deserializers
+//========================================================================
+
+/// A deserializer wrapping serde's `SeqAccess` for list deserialization.
+///
+/// This implements our `Deserializer` trait in a list context, where
+/// `read_list()` returns the underlying `SerdeListReader`.
+struct SeqAccessDeserializer<'de, S: SeqAccess<'de>> {
+    seq_access: Option<S>,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, S: SeqAccess<'de>> SeqAccessDeserializer<'de, S> {
+    fn new(seq_access: S) -> Self {
+        Self {
+            seq_access: Some(seq_access),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<'de, S: SeqAccess<'de>> Deserializer<'de> for SeqAccessDeserializer<'de, S> {
+    type Error = DeserdeErrorWrapper<S::Error>;
+    type StructReader<'a>
+        = NeverStructReader<Self::Error>
+    where
+        Self: 'a;
+    type ListReader<'a>
+        = SerdeListReader<'de, S>
+    where
+        Self: 'a;
+    type MapReader<'a>
+        = NeverMapReader<Self::Error>
+    where
+        Self: 'a;
+
+    // Primitives - not supported in sequence context (list elements are
+    // deserialized through the reader, not the deserializer)
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read primitive in sequence context",
+        ))
+    }
+
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+        Err(Self::Error::custom("blob not supported in serde adapter"))
+    }
+
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
+        Err(Self::Error::custom(
+            "timestamp not supported in serde adapter",
+        ))
+    }
+
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+        Err(Self::Error::custom(
+            "document not supported in serde adapter",
+        ))
+    }
+
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read struct in sequence context",
+        ))
+    }
+
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+        let seq_access = self
+            .seq_access
+            .take()
+            .ok_or_else(|| Self::Error::custom("read_list called more than once"))?;
+        Ok(SerdeListReader {
+            seq_access,
+            _phantom: PhantomData,
+        })
+    }
+
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+        Err(Self::Error::custom("cannot read map in sequence context"))
+    }
+
+    fn is_null(&mut self) -> bool {
+        false
+    }
+
+    fn read_null(&mut self) -> Result<(), Self::Error> {
+        Err(Self::Error::custom(
+            "null not supported in sequence context",
+        ))
+    }
+}
+
+/// A deserializer wrapping serde's `MapAccess` for struct/map deserialization.
+///
+/// This implements our `Deserializer` trait in a map context, where
+/// `read_struct()` and `read_map()` return the underlying reader.
+struct MapAccessDeserializer<'de, M: MapAccess<'de>> {
+    map_access: Option<M>,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, M: MapAccess<'de>> MapAccessDeserializer<'de, M> {
+    fn new(map_access: M) -> Self {
+        Self {
+            map_access: Some(map_access),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M> {
+    type Error = DeserdeErrorWrapper<M::Error>;
+    type StructReader<'a>
+        = SerdeStructReader<'de, M>
+    where
+        Self: 'a;
+    type ListReader<'a>
+        = NeverListReader<Self::Error>
+    where
+        Self: 'a;
+    type MapReader<'a>
+        = SerdeMapReader<'de, M>
+    where
+        Self: 'a;
+
+    // Primitives - not supported in map context (struct/map values are
+    // deserialized through the reader, not the deserializer)
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+        Err(Self::Error::custom("cannot read primitive in map context"))
+    }
+
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+        Err(Self::Error::custom("blob not supported in serde adapter"))
+    }
+
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
+        Err(Self::Error::custom(
+            "timestamp not supported in serde adapter",
+        ))
+    }
+
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+        Err(Self::Error::custom(
+            "document not supported in serde adapter",
+        ))
+    }
+
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+        let map_access = self
+            .map_access
+            .take()
+            .ok_or_else(|| Self::Error::custom("read_struct called more than once"))?;
+        Ok(SerdeStructReader {
+            map_access,
+            _phantom: PhantomData,
+        })
+    }
+
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+        Err(Self::Error::custom("cannot read list in map context"))
+    }
+
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+        let map_access = self
+            .map_access
+            .take()
+            .ok_or_else(|| Self::Error::custom("read_map called more than once"))?;
+        Ok(SerdeMapReader {
+            map_access,
+            _phantom: PhantomData,
+        })
+    }
+
+    fn is_null(&mut self) -> bool {
+        false
+    }
+
+    fn read_null(&mut self) -> Result<(), Self::Error> {
+        Err(Self::Error::custom("null not supported in map context"))
     }
 }
 
@@ -99,7 +539,20 @@ where
                 T::deserialize_with_schema(self.schema, &mut EnumWrapper::new(deserializer))
                     .map_err(|e| e.0)
             }
-            // Root JSON primitives do not need this adapter as they can be called directly.
+            // Primitives are deserialized through the PrimitiveWrapper
+            ShapeType::Boolean
+            | ShapeType::Byte
+            | ShapeType::Short
+            | ShapeType::Integer
+            | ShapeType::Long
+            | ShapeType::Float
+            | ShapeType::Double
+            | ShapeType::BigInteger
+            | ShapeType::BigDecimal
+            | ShapeType::String => {
+                T::deserialize_with_schema(self.schema, &mut PrimitiveWrapper::new(deserializer))
+                    .map_err(|e| e.0)
+            }
             _ => Err(D::Error::custom(format!(
                 "Unsupported shape type for deserialization: {:?}",
                 self.schema.shape_type()
@@ -109,7 +562,7 @@ where
 }
 
 //========================================================================
-// Lists
+// Visitors
 //========================================================================
 
 /// Visitor for lists - receives a [`SeqAccess`] and creates adapter
@@ -129,218 +582,13 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for ListVisitor<'a, T>
     where
         A: SeqAccess<'de>,
     {
-        // Create adapter from SeqAccess
-        let mut adapter = SeqAccessAdapter {
-            seq_access: seq,
-            end_of_sequence: false,
-            _phantom: PhantomData,
-        };
-
-        // Call our deserialization
-        T::deserialize_with_schema(self.schema, &mut adapter)
-            .map_err(|e| A::Error::custom(format!("Deserialization error: {}", e)))
+        let mut deserializer = SeqAccessDeserializer::new(seq);
+        T::deserialize_with_schema(self.schema, &mut deserializer)
+            .map_err(|e| A::Error::custom(format!("{}", e)))
     }
 }
 
-// SeqAccessAdapter wraps serde's SeqAccess and implements our Deserializer trait
-struct SeqAccessAdapter<'de, S: SeqAccess<'de>> {
-    seq_access: S,
-    /// Flag to track when `next_element()` returns None (end of sequence)
-    end_of_sequence: bool,
-    _phantom: PhantomData<&'de ()>,
-}
-
-impl<'de, S: SeqAccess<'de>> crate::serde::deserializers::Deserializer<'de>
-    for SeqAccessAdapter<'de, S>
-{
-    type Error = DeserdeErrorWrapper<S::Error>;
-
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Self::Error::custom("BigInteger not yet supported"))
-    }
-
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Self::Error::custom("BigDecimal not yet supported"))
-    }
-
-    // Primitives - call next_element on SeqAccess
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
-        match self.seq_access.next_element()? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Self::Error::custom("Blob not yet supported"))
-    }
-
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Self::Error::custom("Timestamp not yet supported"))
-    }
-
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom("Document not yet supported"))
-    }
-
-    fn read_struct<B, F2>(
-        &mut self,
-        schema: &Schema,
-        _builder: B,
-        _consumer: F2,
-    ) -> Result<B, Self::Error>
-    where
-        B: DeserializeWithSchema<'de>,
-        F2: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>,
-    {
-        // When deserializing a nested struct in a list, use next_element_seed
-        // to delegate to the underlying serde deserializer
-        let seed = SchemaSeed::<B>::new(schema);
-        match self.seq_access.next_element_seed(seed)? {
-            Some(value) => Ok(value),
-            None => {
-                self.end_of_sequence = true;
-                Err(Self::Error::custom("End of sequence"))
-            }
-        }
-    }
-
-    fn read_list<T, F>(
-        &mut self,
-        schema: &Schema,
-        state: &mut T,
-        consumer: F,
-    ) -> Result<(), Self::Error>
-    where
-        F: Fn(&mut T, &Schema, &mut Self) -> Result<(), Self::Error>,
-    {
-        // Get the element schema
-        let member_schema = schema
-            .get_member("member")
-            .ok_or_else(|| Self::Error::custom("List schema missing member"))?;
-
-        // Iterate through all elements
-        loop {
-            // Reset the flag before each iteration
-            self.end_of_sequence = false;
-
-            // Call the consumer to deserialize one element
-            // The consumer will call back into our read_* methods
-            let result = consumer(state, member_schema, self);
-
-            // Check if we reached the end of the sequence
-            // This flag is set by read_* methods when next_element() returns None
-            if self.end_of_sequence {
-                // End of sequence is a normal termination, not an error
-                break;
-            }
-
-            // If there was an actual error (not end-of-sequence), propagate it
-            result?;
-        }
-
-        Ok(())
-    }
-
-    fn read_map<T2, F2>(
-        &mut self,
-        _schema: &Schema,
-        _state: &mut T2,
-        _consumer: F2,
-    ) -> Result<(), Self::Error>
-    where
-        F2: Fn(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
-    {
-        Err(Self::Error::custom("Maps not yet supported"))
-    }
-
-    fn is_null(&mut self) -> bool {
-        false
-    }
-
-    fn read_null(&mut self) -> Result<(), Self::Error> {
-        Err(Self::Error::custom("Null not supported in sequences"))
-    }
-}
-
-//========================================================================
-// Object-like deser
-//========================================================================
-
-// Visitor for maps, structs, and unionts - receives MapAccess and creates adapter
+/// Visitor for maps, structs, and unions - receives `MapAccess` and creates adapter
 struct MapVisitor<'a, T> {
     schema: &'a Schema,
     _phantom: PhantomData<T>,
@@ -357,189 +605,14 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> 
     where
         A: MapAccess<'de>,
     {
-        // Create adapter from MapAccess
-        let mut adapter = MapAccessAdapter {
-            map_access: map,
-            is_top_level: true,
-            _phantom: PhantomData,
-        };
-
-        // Call our deserialization
-        T::deserialize_with_schema(self.schema, &mut adapter)
-            .map_err(|e| A::Error::custom(format!("Deserialization error: {}", e)))
-    }
-}
-
-// MapAccessAdapter wraps serde's MapAccess and implements our Deserializer trait
-struct MapAccessAdapter<'de, M: MapAccess<'de>> {
-    map_access: M,
-    /// Track if we're currently in the top-level iteration
-    /// When false, we're deserializing a nested value and should use `next_value_seed`
-    is_top_level: bool,
-    _phantom: PhantomData<&'de ()>,
-}
-
-impl<'de, M: MapAccess<'de>> crate::serde::deserializers::Deserializer<'de>
-    for MapAccessAdapter<'de, M>
-{
-    type Error = DeserdeErrorWrapper<M::Error>;
-
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Self::Error::custom("BigInteger not yet supported"))
-    }
-
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Self::Error::custom("BigDecimal not yet supported"))
-    }
-
-    // Primitives - call next_value on MapAccess
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
-        Ok(self.map_access.next_value()?)
-    }
-
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Self::Error::custom("Blob not yet supported"))
-    }
-
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Self::Error::custom("Timestamp not yet supported"))
-    }
-
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom("Document not yet supported"))
-    }
-
-    fn read_struct<B, F>(
-        &mut self,
-        schema: &Schema,
-        mut builder: B,
-        consumer: F,
-    ) -> Result<B, Self::Error>
-    where
-        F: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>,
-        B: DeserializeWithSchema<'de>,
-    {
-        // If we're not at the top level, we're deserializing a nested struct
-        // Use next_value_seed to delegate to serde
-        if !self.is_top_level {
-            let seed = SchemaSeed::<B>::new(schema);
-            return Ok(self.map_access.next_value_seed(seed)?);
-        }
-
-        // Mark that we're now in nested context for any further calls
-        self.is_top_level = false;
-
-        // Iterate through all map entries
-        while let Some(key) = self.map_access.next_key::<String>()? {
-            // Look up the member schema by field name
-            if let Some(member_schema) = schema.get_member(&key) {
-                // Call the consumer with the member schema
-                // The consumer will call back into our read_* methods to deserialize the value
-                builder = consumer(builder, member_schema, self)?;
-            } else {
-                // Unknown field - skip the value
-                self.map_access.next_value::<serde::de::IgnoredAny>()?;
-            }
-        }
-
-        Ok(builder)
-    }
-
-    fn read_list<T, F>(
-        &mut self,
-        schema: &Schema,
-        state: &mut T,
-        _consumer: F,
-    ) -> Result<(), Self::Error>
-    where
-        F: Fn(&mut T, &Schema, &mut Self) -> Result<(), Self::Error>,
-        T: DeserializeWithSchema<'de>,
-    {
-        // When deserializing a nested list in a struct field, we use next_value_seed
-        // to delegate to the underlying serde deserializer (e.g., serde_json).
-        //
-        // This tells serde_json to deserialize the array value, which will:
-        // 1. Create a SeqAccess for the array
-        // 2. Call our ListVisitor with it
-        // 3. Wrap it in SeqAccessAdapter
-        // 4. Call Vec::deserialize_with_schema with the SeqAccessAdapter
-        // 5. Which can properly iterate through elements using read_list
-        //
-        // The result is a fully deserialized T (e.g., Vec<String>) which we assign to state.
-        let seed = SchemaSeed::<T>::new(schema);
-        let result = self.map_access.next_value_seed(seed)?;
-        *state = result;
-        Ok(())
-    }
-
-    fn read_map<T2, F2>(
-        &mut self,
-        schema: &Schema,
-        state: &mut T2,
-        consumer: F2,
-    ) -> Result<(), Self::Error>
-    where
-        F2: Fn(&mut T2, String, &mut Self) -> Result<(), Self::Error>,
-        T2: DeserializeWithSchema<'de>,
-    {
-        // If we're not at the top level, we're deserializing a nested map
-        // Use next_value_seed to delegate to serde
-        if !self.is_top_level {
-            let seed = SchemaSeed::<T2>::new(schema);
-            let result = self.map_access.next_value_seed(seed)?;
-            *state = result;
-            return Ok(());
-        }
-
-        // Iterate through all map entries
-        while let Some(key) = self.map_access.next_key::<String>()? {
-            // Call the consumer with the key
-            // The consumer will call back into our read_* methods to deserialize the value
-            consumer(state, key, self)?;
-        }
-
-        Ok(())
-    }
-
-    fn is_null(&mut self) -> bool {
-        false
-    }
-
-    fn read_null(&mut self) -> Result<(), Self::Error> {
-        Err(Self::Error::custom("Null not supported in map values"))
+        let mut deserializer = MapAccessDeserializer::new(map);
+        T::deserialize_with_schema(self.schema, &mut deserializer)
+            .map_err(|e| A::Error::custom(format!("{}", e)))
     }
 }
 
 //========================================================================
-// Scalar Types
+// Scalar Types (Enums)
 //========================================================================
 
 /// Wraps `serde::deserializer` for deserializing Enum types that are treated as primitives.
@@ -547,6 +620,7 @@ struct EnumWrapper<'de, D: serde::Deserializer<'de>> {
     deserializer: Option<D>,
     _phantom: PhantomData<&'de ()>,
 }
+
 impl<'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
     fn new(deserializer: D) -> Self {
         EnumWrapper {
@@ -556,10 +630,20 @@ impl<'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
     }
 }
 
-impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer<'de>
-    for EnumWrapper<'de, D>
-{
+impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D> {
     type Error = DeserdeErrorWrapper<D::Error>;
+    type StructReader<'a>
+        = NeverStructReader<Self::Error>
+    where
+        Self: 'a;
+    type ListReader<'a>
+        = NeverListReader<Self::Error>
+    where
+        Self: 'a;
+    type MapReader<'a>
+        = NeverMapReader<Self::Error>
+    where
+        Self: 'a;
 
     #[cold]
     fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
@@ -579,7 +663,6 @@ impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer
     fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
 
-        // TODO(numeric conversions): handle more types of input values
         impl<'de> Visitor<'de> for IntegerVisitor {
             type Value = i32;
 
@@ -587,76 +670,47 @@ impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer
                 formatter.write_str("an integer value")
             }
 
-            fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
-                Ok(v as i32)
+            fn visit_i8<E: SerdeDeError>(self, v: i8) -> Result<Self::Value, E> {
+                Ok(i32::from(v))
             }
 
-            fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
-                Ok(v as i32)
+            fn visit_i16<E: SerdeDeError>(self, v: i16) -> Result<Self::Value, E> {
+                Ok(i32::from(v))
             }
 
-            fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_i32<E: SerdeDeError>(self, v: i32) -> Result<Self::Value, E> {
                 Ok(v)
             }
 
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
                 v.try_into().map_err(SerdeDeError::custom)
             }
 
-            fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_i128<E: SerdeDeError>(self, v: i128) -> Result<Self::Value, E> {
                 v.try_into().map_err(SerdeDeError::custom)
             }
 
-            fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
-                Ok(v as i32)
+            fn visit_u8<E: SerdeDeError>(self, v: u8) -> Result<Self::Value, E> {
+                Ok(i32::from(v))
             }
 
-            fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
-                Ok(v as i32)
+            fn visit_u16<E: SerdeDeError>(self, v: u16) -> Result<Self::Value, E> {
+                Ok(i32::from(v))
             }
 
-            fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
-                Ok(v as i32)
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_u32<E: SerdeDeError>(self, v: u32) -> Result<Self::Value, E> {
                 v.try_into().map_err(SerdeDeError::custom)
             }
 
-            fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+
+            fn visit_u128<E: SerdeDeError>(self, v: u128) -> Result<Self::Value, E> {
                 v.try_into().map_err(SerdeDeError::custom)
             }
         }
+
         Ok(self
             .deserializer
             .take()
@@ -699,20 +753,15 @@ impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer
                 formatter.write_str("a string value")
             }
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_str<E: SerdeDeError>(self, v: &str) -> Result<Self::Value, E> {
                 Ok(v.to_string())
             }
 
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: SerdeDeError,
-            {
+            fn visit_string<E: SerdeDeError>(self, v: String) -> Result<Self::Value, E> {
                 Ok(v)
             }
         }
+
         Ok(self
             .deserializer
             .take()
@@ -732,55 +781,22 @@ impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer
 
     #[cold]
     fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Self::Error::custom("Cannot deserialize bigInteger as enum"))
+        Err(Self::Error::custom("Cannot deserialize document as enum"))
     }
 
     #[cold]
-    fn read_struct<B, F>(
-        &mut self,
-        _schema: &Schema,
-        _builder: B,
-        _consumer: F,
-    ) -> Result<B, Self::Error>
-    where
-        B: DeserializeWithSchema<'de>,
-        F: Fn(B, &Schema, &mut Self) -> Result<B, Self::Error>,
-    {
-        Err(DeserdeErrorWrapper(D::Error::custom(
-            "ScalarWrapper can deserialize struct types",
-        )))
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize struct as enum"))
     }
 
     #[cold]
-    fn read_list<T, F>(
-        &mut self,
-        _schema: &Schema,
-        _state: &mut T,
-        _consumer: F,
-    ) -> Result<(), Self::Error>
-    where
-        T: DeserializeWithSchema<'de>,
-        F: Fn(&mut T, &Schema, &mut Self) -> Result<(), Self::Error>,
-    {
-        Err(DeserdeErrorWrapper(D::Error::custom(
-            "ScalarWrapper can deserialize list types",
-        )))
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize list as enum"))
     }
 
     #[cold]
-    fn read_map<T, F>(
-        &mut self,
-        _schema: &Schema,
-        _state: &mut T,
-        _consumer: F,
-    ) -> Result<(), Self::Error>
-    where
-        T: DeserializeWithSchema<'de>,
-        F: Fn(&mut T, String, &mut Self) -> Result<(), Self::Error>,
-    {
-        Err(DeserdeErrorWrapper(D::Error::custom(
-            "ScalarWrapper can deserialize map types",
-        )))
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+        Err(Self::Error::custom("Cannot deserialize map as enum"))
     }
 
     #[cold]
@@ -791,6 +807,270 @@ impl<'de, D: serde::Deserializer<'de>> crate::serde::deserializers::Deserializer
     #[cold]
     fn read_null(&mut self) -> Result<(), Self::Error> {
         Err(Self::Error::custom("Cannot deserialize null value as enum"))
+    }
+}
+
+//========================================================================
+// Primitive Types
+//========================================================================
+
+/// Wraps `serde::Deserializer` for deserializing primitive types (String, Integer, etc.)
+struct PrimitiveWrapper<'de, D: serde::Deserializer<'de>> {
+    deserializer: Option<D>,
+    _phantom: PhantomData<&'de ()>,
+}
+
+impl<'de, D: serde::Deserializer<'de>> PrimitiveWrapper<'de, D> {
+    fn new(deserializer: D) -> Self {
+        PrimitiveWrapper {
+            deserializer: Some(deserializer),
+            _phantom: PhantomData,
+        }
+    }
+
+    fn take_deserializer(&mut self) -> Result<D, DeserdeErrorWrapper<D::Error>> {
+        self.deserializer
+            .take()
+            .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("deserializer already consumed")))
+    }
+}
+
+impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'de, D> {
+    type Error = DeserdeErrorWrapper<D::Error>;
+    type StructReader<'a>
+        = NeverStructReader<Self::Error>
+    where
+        Self: 'a;
+    type ListReader<'a>
+        = NeverListReader<Self::Error>
+    where
+        Self: 'a;
+    type MapReader<'a>
+        = NeverMapReader<Self::Error>
+    where
+        Self: 'a;
+
+    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+        struct BoolVisitor;
+        impl<'de> Visitor<'de> for BoolVisitor {
+            type Value = bool;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a boolean")
+            }
+            fn visit_bool<E: SerdeDeError>(self, v: bool) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_bool(BoolVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+        struct ByteVisitor;
+        impl<'de> Visitor<'de> for ByteVisitor {
+            type Value = i8;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a byte (i8)")
+            }
+            fn visit_i8<E: SerdeDeError>(self, v: i8) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_i8(ByteVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+        struct ShortVisitor;
+        impl<'de> Visitor<'de> for ShortVisitor {
+            type Value = i16;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a short (i16)")
+            }
+            fn visit_i16<E: SerdeDeError>(self, v: i16) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_i16(ShortVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+        struct IntegerVisitor;
+        impl<'de> Visitor<'de> for IntegerVisitor {
+            type Value = i32;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("an integer (i32)")
+            }
+            fn visit_i32<E: SerdeDeError>(self, v: i32) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_i32(IntegerVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+        struct LongVisitor;
+        impl<'de> Visitor<'de> for LongVisitor {
+            type Value = i64;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a long (i64)")
+            }
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                v.try_into().map_err(SerdeDeError::custom)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_i64(LongVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+        struct FloatVisitor;
+        impl<'de> Visitor<'de> for FloatVisitor {
+            type Value = f32;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a float (f32)")
+            }
+            fn visit_f32<E: SerdeDeError>(self, v: f32) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+            fn visit_f64<E: SerdeDeError>(self, v: f64) -> Result<Self::Value, E> {
+                Ok(v as f32)
+            }
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
+                Ok(v as f32)
+            }
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                Ok(v as f32)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_f32(FloatVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+        struct DoubleVisitor;
+        impl<'de> Visitor<'de> for DoubleVisitor {
+            type Value = f64;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a double (f64)")
+            }
+            fn visit_f64<E: SerdeDeError>(self, v: f64) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+            fn visit_i64<E: SerdeDeError>(self, v: i64) -> Result<Self::Value, E> {
+                Ok(v as f64)
+            }
+            fn visit_u64<E: SerdeDeError>(self, v: u64) -> Result<Self::Value, E> {
+                Ok(v as f64)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_f64(DoubleVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+        Err(Self::Error::custom(
+            "bigInteger not supported in serde adapter",
+        ))
+    }
+
+    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+        Err(Self::Error::custom(
+            "bigDecimal not supported in serde adapter",
+        ))
+    }
+
+    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+        struct StringVisitor;
+        impl<'de> Visitor<'de> for StringVisitor {
+            type Value = String;
+            fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("a string")
+            }
+            fn visit_str<E: SerdeDeError>(self, v: &str) -> Result<Self::Value, E> {
+                Ok(v.to_string())
+            }
+            fn visit_string<E: SerdeDeError>(self, v: String) -> Result<Self::Value, E> {
+                Ok(v)
+            }
+        }
+        self.take_deserializer()?
+            .deserialize_string(StringVisitor)
+            .map_err(DeserdeErrorWrapper)
+    }
+
+    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+        Err(Self::Error::custom("blob not supported in serde adapter"))
+    }
+
+    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
+        Err(Self::Error::custom(
+            "timestamp not supported in serde adapter",
+        ))
+    }
+
+    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+        Err(Self::Error::custom(
+            "document not supported in serde adapter",
+        ))
+    }
+
+    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read struct from primitive context",
+        ))
+    }
+
+    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read list from primitive context",
+        ))
+    }
+
+    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+        Err(Self::Error::custom(
+            "cannot read map from primitive context",
+        ))
+    }
+
+    fn is_null(&mut self) -> bool {
+        false
+    }
+
+    fn read_null(&mut self) -> Result<(), Self::Error> {
+        Err(Self::Error::custom(
+            "null not supported in primitive context",
+        ))
     }
 }
 
