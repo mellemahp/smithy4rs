@@ -231,7 +231,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         todo!("Support deserialization of documents")
     }
 
-    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(self, schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         Ok(JsonStructReader {
             deserializer: self,
             schema: schema.clone(),
@@ -239,14 +239,14 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         })
     }
 
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+    fn read_list(self, _: &Schema) -> Result<Self::ListReader, Self::Error> {
         Ok(JsonListReader {
             deserializer: self,
             started: false,
         })
     }
 
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+    fn read_map(self) -> Result<Self::MapReader<'_>, Self::Error> {
         Ok(JsonMapReader {
             deserializer: self,
             started: false,
@@ -271,7 +271,7 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
 impl<'de, 'a> StructReader<'de> for JsonStructReader<'de, 'a> {
     type Error = JsonSerdeError;
 
-    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
+    fn read_member(mut self) -> Result<Option<Schema>, Self::Error> {
         loop {
             let maybe_key = if !self.started {
                 self.started = true;

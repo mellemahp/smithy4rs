@@ -374,7 +374,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the list could not be started (e.g., expected `[`).
-    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
+    fn read_list(self) -> Result<Self::ListReader, Self::Error> {
         Err(Error::custom("read_list is not supported by this deserializer"))
     }
 
@@ -399,7 +399,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the map could not be started (e.g., expected `{`).
-    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
+    fn read_map(self) -> Result<Self::MapReader, Self::Error> {
         Err(Error::custom("read_map is not supported by this deserializer"))
     }
 
@@ -592,7 +592,7 @@ where
             .get_member("member")
             .ok_or_else(|| Error::custom("list schema missing member"))?;
 
-        let mut reader = deserializer.read_list(schema)?;
+        let mut reader = deserializer.read_list()?;
 
         let mut vec = reader
             .size_hint()
@@ -621,7 +621,7 @@ where
             .get_member("value")
             .ok_or_else(|| Error::custom("map schema missing value"))?;
 
-        let mut reader = deserializer.read_map(schema)?;
+        let mut reader = deserializer.read_map()?;
 
         let mut map = reader
             .size_hint()
