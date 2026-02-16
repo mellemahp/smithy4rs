@@ -29,9 +29,7 @@ impl<'de> DeserializeWithSchema<'de> for Unit {
         // Unit types should have no members
         if let Some(ref field_name) = reader.read_name()? {
             return Err(D::Error::custom(format!(
-                "Attempted to read member `{}` on Unit type",
-                field_name
-            )));
+                "Attempted to read member `{field_name}` on Unit type"            )));
         }
 
         Ok(Unit)

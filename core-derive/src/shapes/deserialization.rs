@@ -157,7 +157,7 @@ fn deserialize_union(
     data: &DataEnum,
 ) -> TokenStream {
     let mut imports = quote! {
-        use #crate_ident::serde::deserializers::Error as _DeserializerError;
+        use #crate_ident::serde::deserializers::Error as _;
         use #crate_ident::serde::deserializers::StructReader as _StructReader;
     };
     if data.variants.iter().any(|v| v.fields.is_empty()) {
@@ -188,7 +188,7 @@ fn deserialize_union(
 
                 while let Some(field_name) = reader.read_name()? {
                     if result.is_some() {
-                        return Err(_DeserializerError::custom("Attempted to set union value twice"));
+                        return Err(D::Error::custom("Attempted to set union value twice"));
                     }
                     if let Some(member_schema) = schema.get_member(&field_name) {
                         #(#variants)*
@@ -200,7 +200,7 @@ fn deserialize_union(
                     }
                 }
 
-                result.ok_or(_DeserializerError::custom("Failed to deserialize union"))
+                result.ok_or(D::Error::custom("Failed to deserialize union"))
             }
         }
     }
