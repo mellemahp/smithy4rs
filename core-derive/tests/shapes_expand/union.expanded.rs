@@ -81,7 +81,7 @@ const _: () = {
     use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
-    use _smithy4rs::serde::deserializers::Error as _DeserializerError;
+    use _smithy4rs::serde::deserializers::Error as _;
     use _smithy4rs::serde::deserializers::StructReader as _StructReader;
     use _smithy4rs::schema::Unit as _Unit;
     #[automatically_derived]
@@ -97,9 +97,7 @@ const _: () = {
             let mut result: Option<TestEnum> = None;
             while let Some(field_name) = reader.read_name()? {
                 if result.is_some() {
-                    return Err(
-                        _DeserializerError::custom("Attempted to set union value twice"),
-                    );
+                    return Err(D::Error::custom("Attempted to set union value twice"));
                 }
                 if let Some(member_schema) = schema.get_member(&field_name) {
                     if &member_schema == &*_UNION_MEMBER_A {
@@ -123,7 +121,7 @@ const _: () = {
                     reader.skip_value()?;
                 }
             }
-            result.ok_or(_DeserializerError::custom("Failed to deserialize union"))
+            result.ok_or(D::Error::custom("Failed to deserialize union"))
         }
     }
 };

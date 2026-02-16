@@ -383,7 +383,7 @@ impl DocumentDeserializer {
 ///
 /// Callers must alternate `read_name()` and `read_value()`/`skip_value()` calls.
 struct DocumentStructReader {
-    iter: std::vec::IntoIter<(String, Box<dyn Document>)>,
+    iter: indexmap::map::IntoIter<String, Box<dyn Document>>,
     current_value: Option<Box<dyn Document>>,
 }
 
@@ -396,7 +396,7 @@ struct DocumentListReader {
 ///
 /// Callers must alternate `read_key()` and `read_value()`/`skip_value()` calls.
 struct DocumentMapReader {
-    iter: std::vec::IntoIter<(String, Box<dyn Document>)>,
+    iter: indexmap::map::IntoIter<String, Box<dyn Document>>,
     current_value: Option<Box<dyn Document>>,
 }
 
@@ -482,15 +482,17 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
         })
     }
 
+    #[inline]
     fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
         Ok(DocumentStructReader {
-            iter: map.into_iter().collect::<Vec<_>>().into_iter(),
+            iter: map.into_iter(),
             current_value: None,
         })
     }
 
+    #[inline]
     fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
         let list: Vec<Box<dyn Document>> = self.get_inner()?;
 
@@ -499,11 +501,12 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
         })
     }
 
+    #[inline]
     fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
         Ok(DocumentMapReader {
-            iter: map.into_iter().collect::<Vec<_>>().into_iter(),
+            iter: map.into_iter(),
             current_value: None,
         })
     }
