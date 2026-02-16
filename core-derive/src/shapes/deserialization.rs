@@ -65,14 +65,14 @@ fn deserialize_builder(
 
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #builder_name {
-            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
                 let mut builder = #builder_name::new();
                 let mut reader = deserializer.read_struct(schema)?;
 
-                while let Some(member_schema) = reader.read_member()? {
+                while let Some(member_schema) = reader.read_member(schema)? {
                     #(#match_arms)*
                     // Known schema member but unknown to this code version (forward compat)
                     reader.skip_value()?;
@@ -101,7 +101,7 @@ fn deserialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
-            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
@@ -175,14 +175,14 @@ fn deserialize_union(
 
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
-            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
                 let mut reader = deserializer.read_struct(schema)?;
                 let mut result: Option<#shape_name> = None;
 
-                while let Some(member_schema) = reader.read_member()? {
+                while let Some(member_schema) = reader.read_member(schema)? {
                     if result.is_some() {
                         return Err(D::Error::custom("Attempted to set union value twice"));
                     }
@@ -233,8 +233,8 @@ impl UnionDeserVariant {
         );
         if self.unit {
             quote! {
-                if &member_schema == *#member_schema_const {
-                    let _: _Unit = reader.read_value(&member_schema)?;
+                if member_schema == *#member_schema_const {
+                    let _: _Unit = reader.read_value(member_schema)?;
                     result = Some(#shape_name::#variant_name);
                     continue;
                 }
@@ -242,8 +242,8 @@ impl UnionDeserVariant {
         } else {
             let ty = self.ty.as_ref().expect("Expected a type");
             quote! {
-                if &member_schema == *#member_schema_const {
-                    let value: #ty = reader.read_value(&member_schema)?;
+                if member_schema == *#member_schema_const {
+                    let value: #ty = reader.read_value(member_schema)?;
                     result = Some(#shape_name::#variant_name(value));
                     continue;
                 }

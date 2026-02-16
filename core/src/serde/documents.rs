@@ -109,8 +109,8 @@ impl dyn Document {
     pub(crate) fn into_builder<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
         self: Box<Self>,
     ) -> Result<B, DocumentError> {
-        let mut de = DocumentDeserializer::new(self);
-        B::deserialize_with_schema(S::schema(), &mut de)
+        let de = DocumentDeserializer::new(self);
+        B::deserialize_with_schema(S::schema(), de)
     }
 }
 
@@ -383,7 +383,6 @@ impl DocumentDeserializer {
 ///
 /// Callers must alternate `read_member()` and `read_value()`/`skip_value()` calls.
 struct DocumentStructReader {
-    schema: Schema,
     iter: indexmap::map::IntoIter<String, Box<dyn Document>>,
     current_value: Option<Box<dyn Document>>,
 }
@@ -403,99 +402,89 @@ struct DocumentMapReader {
 
 impl<'de> Deserializer<'de> for DocumentDeserializer {
     type Error = DocumentError;
-    type StructReader<'a>
-        = DocumentStructReader
-    where
-        Self: 'a;
-    type ListReader<'a>
-        = DocumentListReader
-    where
-        Self: 'a;
-    type MapReader<'a>
-        = DocumentMapReader
-    where
-        Self: 'a;
+    type StructReader = DocumentStructReader;
+    type ListReader = DocumentListReader;
+    type MapReader = DocumentMapReader;
 
     #[inline]
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+    fn read_bool(mut self, _schema: &Schema) -> Result<bool, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+    fn read_byte(mut self, _schema: &Schema) -> Result<i8, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+    fn read_short(mut self, _schema: &Schema) -> Result<i16, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+    fn read_integer(mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+    fn read_long(mut self, _schema: &Schema) -> Result<i64, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+    fn read_float(mut self, _schema: &Schema) -> Result<f32, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+    fn read_double(mut self, _schema: &Schema) -> Result<f64, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+    fn read_big_integer(mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+    fn read_big_decimal(mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+    fn read_string(mut self, _schema: &Schema) -> Result<String, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+    fn read_blob(mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
+    fn read_timestamp(mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
         self.get_inner()
     }
 
     #[inline]
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+    fn read_document(mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
         self.document.take().ok_or_else(|| {
             DocumentError::DocumentConversion("Encountered empty document deserializer".to_string())
         })
     }
 
     #[inline]
-    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(mut self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
         Ok(DocumentStructReader {
-            schema: schema.clone(),
             iter: map.into_iter(),
             current_value: None,
         })
     }
 
     #[inline]
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+    fn read_list(mut self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
         let list: Vec<Box<dyn Document>> = self.get_inner()?;
 
         Ok(DocumentListReader {
@@ -504,7 +493,7 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
     }
 
     #[inline]
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+    fn read_map(mut self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
         Ok(DocumentMapReader {
@@ -520,7 +509,7 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
             .is_null()
     }
 
-    fn read_null(&mut self) -> Result<(), Self::Error> {
+    fn read_null(mut self) -> Result<(), Self::Error> {
         if self.is_null() {
             Ok(())
         } else {
@@ -538,13 +527,13 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
 impl<'de> StructReader<'de> for DocumentStructReader {
     type Error = DocumentError;
 
-    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
+    fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
         loop {
             match self.iter.next() {
                 Some((key, value)) => {
-                    if let Some(member_schema) = self.schema.get_member(&key) {
+                    if let Some(member_schema) = schema.get_member(&key) {
                         self.current_value = Some(value);
-                        return Ok(Some(member_schema.clone()));
+                        return Ok(Some(member_schema));
                     }
                     // Unknown key — skip internally and continue
                 }
@@ -560,8 +549,8 @@ impl<'de> StructReader<'de> for DocumentStructReader {
         let doc = self.current_value.take().ok_or_else(|| {
             DocumentError::DocumentConversion("No current member to read".to_string())
         })?;
-        let mut de = DocumentDeserializer::new(doc);
-        T::deserialize_with_schema(schema, &mut de)
+        let de = DocumentDeserializer::new(doc);
+        T::deserialize_with_schema(schema, de)
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
@@ -579,8 +568,8 @@ impl<'de> ListReader<'de> for DocumentListReader {
     ) -> Result<Option<T>, Self::Error> {
         match self.iter.next() {
             Some(doc) => {
-                let mut de = DocumentDeserializer::new(doc);
-                let value = T::deserialize_with_schema(schema, &mut de)?;
+                let de = DocumentDeserializer::new(doc);
+                let value = T::deserialize_with_schema(schema, de)?;
                 Ok(Some(value))
             }
             None => Ok(None),
@@ -608,8 +597,8 @@ impl<'de> MapReader<'de> for DocumentMapReader {
         let doc = self.current_value.take().ok_or_else(|| {
             DocumentError::DocumentConversion("No current value to read".to_string())
         })?;
-        let mut de = DocumentDeserializer::new(doc);
-        V::deserialize_with_schema(schema, &mut de)
+        let de = DocumentDeserializer::new(doc);
+        V::deserialize_with_schema(schema, de)
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {

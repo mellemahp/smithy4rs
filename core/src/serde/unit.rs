@@ -20,14 +20,14 @@ impl SerializeWithSchema for Unit {
 
 impl<'de> DeserializeWithSchema<'de> for Unit {
     #[cold]
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let mut reader = deserializer.read_struct(schema)?;
 
         // Unit types should have no members
-        if let Some(ref member_schema) = reader.read_member()? {
+        if let Some(member_schema) = reader.read_member(schema)? {
             return Err(D::Error::custom(format!(
                 "Attempted to read member `{:?}` on Unit type",
                 member_schema.id()

@@ -88,29 +88,29 @@ const _: () = {
     impl<'de> _DeserializeWithSchema<'de> for TestEnum {
         fn deserialize_with_schema<D>(
             schema: &_Schema,
-            deserializer: &mut D,
+            deserializer: D,
         ) -> Result<Self, D::Error>
         where
             D: _Deserializer<'de>,
         {
             let mut reader = deserializer.read_struct(schema)?;
             let mut result: Option<TestEnum> = None;
-            while let Some(member_schema) = reader.read_member()? {
+            while let Some(member_schema) = reader.read_member(schema)? {
                 if result.is_some() {
                     return Err(D::Error::custom("Attempted to set union value twice"));
                 }
-                if &member_schema == *_UNION_MEMBER_A {
-                    let value: String = reader.read_value(&member_schema)?;
+                if member_schema == *_UNION_MEMBER_A {
+                    let value: String = reader.read_value(member_schema)?;
                     result = Some(TestEnum::A(value));
                     continue;
                 }
-                if &member_schema == *_UNION_MEMBER_B {
-                    let value: i32 = reader.read_value(&member_schema)?;
+                if member_schema == *_UNION_MEMBER_B {
+                    let value: i32 = reader.read_value(member_schema)?;
                     result = Some(TestEnum::B(value));
                     continue;
                 }
-                if &member_schema == *_UNION_MEMBER_C {
-                    let _: _Unit = reader.read_value(&member_schema)?;
+                if member_schema == *_UNION_MEMBER_C {
+                    let _: _Unit = reader.read_value(member_schema)?;
                     result = Some(TestEnum::C);
                     continue;
                 }

@@ -7,7 +7,7 @@ fn test_overflow_for_byte() {
     let json = br#"{"byte_val": 200, "short_val": 0, "int_val": 0, "long_val": 0, "float_val": 0.0, "double_val": 0.0}"#;
     let mut de = JsonDeserializer::new(json);
     let result =
-        NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, &mut de);
+        NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, de);
 
     // 200 exceeds i8::MAX (127), should error with range message
     match result {
@@ -27,7 +27,7 @@ fn test_overflow_for_short() {
     let json = br#"{"byte_val": 0, "short_val": 40000, "int_val": 0, "long_val": 0, "float_val": 0.0, "double_val": 0.0}"#;
     let mut de = JsonDeserializer::new(json);
     let result =
-        NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, &mut de);
+        NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, de);
 
     // 40000 exceeds i16::MAX (32767), should error with range message
     match result {

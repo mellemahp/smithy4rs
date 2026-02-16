@@ -6,7 +6,7 @@ use smithy4rs_test_utils::*;
 fn test_string_for_integer() {
     let json = br#"{"field_a": "test", "field_b": "not_an_int"}"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
@@ -24,7 +24,7 @@ fn test_string_for_integer() {
 fn test_integer_for_string() {
     let json = br#"{"field_a": 123, "field_b": 456}"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
@@ -42,7 +42,7 @@ fn test_integer_for_string() {
 fn test_array_for_object() {
     let json = b"[]";
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
@@ -60,7 +60,7 @@ fn test_array_for_object() {
 fn test_object_for_array() {
     let json = b"{}";
     let mut de = JsonDeserializer::new(json);
-    let result: Result<Vec<i32>, _> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, &mut de);
+    let result: Result<Vec<i32>, _> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
@@ -78,7 +78,7 @@ fn test_object_for_array() {
 fn test_bool_for_integer() {
     let json = br#"{"field_a": "test", "field_b": true}"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {

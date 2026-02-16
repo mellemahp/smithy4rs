@@ -63,7 +63,7 @@ const _: () = {
     impl<'de> _DeserializeWithSchema<'de> for TestIntEnum {
         fn deserialize_with_schema<D>(
             schema: &_Schema,
-            deserializer: &mut D,
+            deserializer: D,
         ) -> Result<Self, D::Error>
         where
             D: _Deserializer<'de>,

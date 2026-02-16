@@ -7,7 +7,7 @@ fn test_unknown_field_skipped() {
     // SimpleStruct only has field_a and field_b, but JSON has extra fields
     let json = br#"{"field_a": "test", "unknown_field": "should_be_skipped", "field_b": 42}"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de)
         .unwrap()
         .build()
         .unwrap();
@@ -27,7 +27,7 @@ fn test_multiple_unknown_fields_skipped() {
         "extra4": null
     }"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de)
         .unwrap()
         .build()
         .unwrap();
@@ -44,7 +44,7 @@ fn test_unknown_nested_object_skipped() {
         "field_b": 42
     }"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de)
         .unwrap()
         .build()
         .unwrap();
@@ -61,7 +61,7 @@ fn test_unknown_array_skipped() {
         "field_b": 42
     }"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de)
         .unwrap()
         .build()
         .unwrap();
@@ -90,7 +90,7 @@ fn test_unknown_fields_in_nested_struct() {
     let mut de = JsonDeserializer::new(json.as_bytes());
     let result = NestedCollectionsStructBuilder::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
-        &mut de,
+        de,
     )
     .unwrap()
     .build()
@@ -137,7 +137,7 @@ fn test_unknown_fields_at_multiple_nesting_levels() {
     let mut de = JsonDeserializer::new(json.as_bytes());
     let result = NestedCollectionsStructBuilder::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
-        &mut de,
+        de,
     )
     .unwrap()
     .build()

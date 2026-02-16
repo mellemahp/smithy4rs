@@ -526,8 +526,8 @@ macro_rules! static_trait_id {
 #[macro_export]
 macro_rules! deserialize_member {
     ($member:expr, $schema:expr, $reader:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if &$member == *$schema {
-            let value: $ty = $reader.read_value(&$member)?;
+        if $member == *$schema {
+            let value: $ty = $reader.read_value($member)?;
             $builder = $builder.$method(value);
             continue;
         }
@@ -542,8 +542,8 @@ macro_rules! deserialize_member {
 #[macro_export]
 macro_rules! deserialize_optional_member {
     ($member:expr, $schema:expr, $reader:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if &$member == *$schema {
-            let value: Option<$ty> = $reader.read_value(&$member)?;
+        if $member == *$schema {
+            let value: Option<$ty> = $reader.read_value($member)?;
             if let Some(v) = value {
                 $builder = $builder.$method(v);
             }
