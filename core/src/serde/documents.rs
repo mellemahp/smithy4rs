@@ -381,8 +381,9 @@ impl DocumentDeserializer {
 
 /// Reader for struct members from a Document.
 ///
-/// Callers must alternate `read_name()` and `read_value()`/`skip_value()` calls.
+/// Callers must alternate `read_member()` and `read_value()`/`skip_value()` calls.
 struct DocumentStructReader {
+    schema: Schema,
     iter: indexmap::map::IntoIter<String, Box<dyn Document>>,
     current_value: Option<Box<dyn Document>>,
 }
@@ -483,10 +484,11 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
     }
 
     #[inline]
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
         let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
 
         Ok(DocumentStructReader {
+            schema: schema.clone(),
             iter: map.into_iter(),
             current_value: None,
         })
@@ -536,13 +538,18 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
 impl<'de> StructReader<'de> for DocumentStructReader {
     type Error = DocumentError;
 
-    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
-        match self.iter.next() {
-            Some((key, value)) => {
-                self.current_value = Some(value);
-                Ok(Some(key))
+    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
+        loop {
+            match self.iter.next() {
+                Some((key, value)) => {
+                    if let Some(member_schema) = self.schema.get_member(&key) {
+                        self.current_value = Some(value);
+                        return Ok(Some(member_schema.clone()));
+                    }
+                    // Unknown key — skip internally and continue
+                }
+                None => return Ok(None),
             }
-            None => Ok(None),
         }
     }
 

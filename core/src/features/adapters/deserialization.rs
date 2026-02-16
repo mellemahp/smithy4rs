@@ -57,7 +57,7 @@ pub struct NeverStructReader<E>(PhantomData<fn() -> E>, std::convert::Infallible
 impl<'de, E: DeserError> StructReader<'de> for NeverStructReader<E> {
     type Error = E;
 
-    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
+    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
         match self.1 {}
     }
 
@@ -138,16 +138,32 @@ impl<'de, S: SeqAccess<'de>> ListReader<'de> for SerdeListReader<'de, S> {
 /// Wraps serde's `MapAccess` to implement our `StructReader` trait.
 pub struct SerdeStructReader<'de, M: MapAccess<'de>> {
     map_access: M,
+    schema: Schema,
     _phantom: PhantomData<&'de ()>,
 }
 
 impl<'de, M: MapAccess<'de>> StructReader<'de> for SerdeStructReader<'de, M> {
     type Error = DeserdeErrorWrapper<M::Error>;
 
-    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
-        self.map_access
-            .next_key::<String>()
-            .map_err(DeserdeErrorWrapper)
+    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
+        loop {
+            match self
+                .map_access
+                .next_key::<String>()
+                .map_err(DeserdeErrorWrapper)?
+            {
+                Some(key) => {
+                    if let Some(member_schema) = self.schema.get_member(&key) {
+                        return Ok(Some(member_schema.clone()));
+                    }
+                    // Unknown key — skip the value internally
+                    self.map_access
+                        .next_value::<serde::de::IgnoredAny>()
+                        .map_err(DeserdeErrorWrapper)?;
+                }
+                None => return Ok(None),
+            }
+        }
     }
 
     fn read_value<T: DeserializeWithSchema<'de>>(
@@ -291,13 +307,14 @@ impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M>
     where
         Self: 'a;
 
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
         let map_access = self
             .map_access
             .take()
             .ok_or_else(|| Self::Error::custom("read_struct called more than once"))?;
         Ok(SerdeStructReader {
             map_access,
+            schema: schema.clone(),
             _phantom: PhantomData,
         })
     }

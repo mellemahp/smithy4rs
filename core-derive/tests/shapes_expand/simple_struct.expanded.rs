@@ -154,31 +154,27 @@ const _: () = {
             D: _Deserializer<'de>,
         {
             let mut builder = SimpleStructBuilder::new();
-            let mut reader = deserializer.read_struct()?;
-            while let Some(field_name) = reader.read_name()? {
-                if let Some(member_schema) = schema.get_member(&field_name) {
-                    if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_A {
-                        let value: String = reader.read_value(member_schema)?;
-                        builder = builder.field_a(value);
-                        continue;
-                    }
-                    if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_B {
-                        let value: i32 = reader.read_value(member_schema)?;
-                        builder = builder.field_b(value);
-                        continue;
-                    }
-                    if &member_schema == &*_SIMPLE_SCHEMA_MEMBER_C {
-                        let value: Option<NestedBuilder> = reader
-                            .read_value(member_schema)?;
-                        if let Some(v) = value {
-                            builder = builder.field_c_builder(v);
-                        }
-                        continue;
-                    }
-                    reader.skip_value()?;
-                } else {
-                    reader.skip_value()?;
+            let mut reader = deserializer.read_struct(schema)?;
+            while let Some(member_schema) = reader.read_member()? {
+                if &member_schema == *_SIMPLE_SCHEMA_MEMBER_A {
+                    let value: String = reader.read_value(&member_schema)?;
+                    builder = builder.field_a(value);
+                    continue;
                 }
+                if &member_schema == *_SIMPLE_SCHEMA_MEMBER_B {
+                    let value: i32 = reader.read_value(&member_schema)?;
+                    builder = builder.field_b(value);
+                    continue;
+                }
+                if &member_schema == *_SIMPLE_SCHEMA_MEMBER_C {
+                    let value: Option<NestedBuilder> = reader
+                        .read_value(&member_schema)?;
+                    if let Some(v) = value {
+                        builder = builder.field_c_builder(v);
+                    }
+                    continue;
+                }
+                reader.skip_value()?;
             }
             Ok(builder)
         }
@@ -374,18 +370,14 @@ const _: () = {
             D: _Deserializer<'de>,
         {
             let mut builder = NestedBuilder::new();
-            let mut reader = deserializer.read_struct()?;
-            while let Some(field_name) = reader.read_name()? {
-                if let Some(member_schema) = schema.get_member(&field_name) {
-                    if &member_schema == &*_NESTED_SCHEMA_MEMBER_D {
-                        let value: String = reader.read_value(member_schema)?;
-                        builder = builder.field_a(value);
-                        continue;
-                    }
-                    reader.skip_value()?;
-                } else {
-                    reader.skip_value()?;
+            let mut reader = deserializer.read_struct(schema)?;
+            while let Some(member_schema) = reader.read_member()? {
+                if &member_schema == *_NESTED_SCHEMA_MEMBER_D {
+                    let value: String = reader.read_value(&member_schema)?;
+                    builder = builder.field_a(value);
+                    continue;
                 }
+                reader.skip_value()?;
             }
             Ok(builder)
         }

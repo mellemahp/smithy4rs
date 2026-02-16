@@ -8,7 +8,7 @@
 //! The deserialization system uses a reader-based pattern for compound types:
 //!
 //! - [`Deserializer`]: Entry point that reads primitives and creates readers
-//! - [`StructReader`]: Iterates struct members with `read_name()` / `read_value()`
+//! - [`StructReader`]: Iterates struct members with `read_member()` / `read_value()`
 //! - [`ListReader`]: Iterates list elements with `read_element()`
 //! - [`MapReader`]: Iterates map entries with `read_key()` / `read_value()`
 //!
@@ -38,48 +38,48 @@ pub trait Error: Sized + StdError {
 
 /// Reader for struct members.
 ///
-/// Iterates through struct members using a two-step pattern:
-/// 1. Call `read_name()` to get the next field name
+/// Iterates through known struct members using a two-step pattern:
+/// 1. Call `read_member()` to get the next known member's schema
 /// 2. Call `read_value()` to deserialize the value, or `skip_value()` to skip it
+///
+/// Unknown fields are skipped internally by the reader.
 ///
 /// # Example
 ///
 /// ```ignore
-/// let mut reader = deserializer.read_struct()?;
+/// let mut reader = deserializer.read_struct(schema)?;
 ///
 /// let mut name: Option<String> = None;
 /// let mut age: Option<i32> = None;
 ///
-/// while let Some(field) = reader.read_name()? {
-///     match field.as_str() {
-///         "name" => {
-///             let member = schema.get_member("name").unwrap();
-///             name = Some(reader.read_value(member)?);
-///         }
-///         "age" => {
-///             let member = schema.get_member("age").unwrap();
-///             age = Some(reader.read_value(member)?);
-///         }
-///         _ => reader.skip_value()?,
+/// while let Some(member_schema) = reader.read_member()? {
+///     if &member_schema == &*MEMBER_NAME {
+///         name = Some(reader.read_value(&member_schema)?);
+///         continue;
 ///     }
+///     if &member_schema == &*MEMBER_AGE {
+///         age = Some(reader.read_value(&member_schema)?);
+///         continue;
+///     }
+///     reader.skip_value()?;
 /// }
 /// ```
 pub trait StructReader<'de> {
     /// The error type returned by reader operations.
     type Error: Error;
 
-    /// Read the next member's field name, or `None` if no more members.
+    /// Read the next known member, returning its schema.
     ///
-    /// Returns an owned `String` to avoid lifetime conflicts with subsequent
-    /// `read_value()` calls.
+    /// Unknown fields are skipped internally by the reader.
+    /// Returns `None` when all fields have been read.
     ///
     /// After this returns `Some`, you must call either `read_value()` or
-    /// `skip_value()` before calling `read_name()` again.
-    fn read_name(&mut self) -> Result<Option<String>, Self::Error>;
+    /// `skip_value()` before calling `read_member()` again.
+    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error>;
 
     /// Read the current member's value.
     ///
-    /// Must be called after `read_name()` returns `Some`.
+    /// Must be called after `read_member()` returns `Some`.
     fn read_value<T: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
@@ -318,8 +318,9 @@ pub trait Deserializer<'de>: Sized {
     /// Begin reading a struct, returning a reader for its members.
     ///
     /// The reader borrows from the deserializer and allows iterating through struct
-    /// members using a two-step pattern: call `read_name()` to get the field name,
-    /// then `read_value()` to deserialize the value or `skip_value()` to skip it.
+    /// members. The schema is passed so the reader can resolve wire names/tags to
+    /// member schemas internally. Call `read_member()` to get the next known member's
+    /// schema, then `read_value()` to deserialize the value or `skip_value()` to skip it.
     ///
     /// # Example (generated code)
     ///
@@ -329,23 +330,21 @@ pub trait Deserializer<'de>: Sized {
     ///         schema: &Schema,
     ///         deserializer: &mut D
     ///     ) -> Result<Self, D::Error> {
-    ///         let mut reader = deserializer.read_struct()?;
+    ///         let mut reader = deserializer.read_struct(schema)?;
     ///
     ///         let mut city_id: Option<String> = None;
     ///         let mut name: Option<String> = None;
     ///
-    ///         while let Some(field) = reader.read_name()? {
-    ///             match field.as_str() {
-    ///                 "cityId" => {
-    ///                     let member = schema.get_member("cityId").unwrap();
-    ///                     city_id = Some(reader.read_value(member)?);
-    ///                 }
-    ///                 "name" => {
-    ///                     let member = schema.get_member("name").unwrap();
-    ///                     name = Some(reader.read_value(member)?);
-    ///                 }
-    ///                 _ => reader.skip_value()?,
+    ///         while let Some(member_schema) = reader.read_member()? {
+    ///             if &member_schema == &*MEMBER_CITY_ID {
+    ///                 city_id = Some(reader.read_value(&member_schema)?);
+    ///                 continue;
     ///             }
+    ///             if &member_schema == &*MEMBER_NAME {
+    ///                 name = Some(reader.read_value(&member_schema)?);
+    ///                 continue;
+    ///             }
+    ///             reader.skip_value()?;
     ///         }
     ///
     ///         Ok(CitySummary {
@@ -358,7 +357,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the struct could not be started (e.g., expected `{`).
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(&mut self, _schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
         unreachable!()
     }
 
