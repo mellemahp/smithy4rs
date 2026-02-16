@@ -75,7 +75,7 @@ pub trait StructReader<'de> {
     ///
     /// After this returns `Some`, you must call either `read_value()` or
     /// `skip_value()` before calling `read_member()` again.
-    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error>;
+    fn read_member(&mut self) -> Result<Option<&Schema>, Self::Error>;
 
     /// Read the current member's value.
     ///
@@ -211,7 +211,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a bool.
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+    fn read_bool(self, _schema: &Schema) -> Result<bool, Self::Error> {
         Err(Error::custom("read_bool is not supported by this deserializer"))
     }
 
@@ -219,7 +219,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `byte`.
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+    fn read_byte(self, _schema: &Schema) -> Result<i8, Self::Error> {
         Err(Error::custom("read_byte is not supported by this deserializer"))
     }
 
@@ -227,7 +227,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `short`.
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+    fn read_short(self, _schema: &Schema) -> Result<i16, Self::Error> {
         Err(Error::custom("read_short is not supported by this deserializer"))
     }
 
@@ -235,7 +235,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as an `integer`.
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+    fn read_integer(self, _schema: &Schema) -> Result<i32, Self::Error> {
         Err(Error::custom("read_integer is not supported by this deserializer"))
     }
 
@@ -243,7 +243,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `long`.
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+    fn read_long(self, _schema: &Schema) -> Result<i64, Self::Error> {
         Err(Error::custom("read_long is not supported by this deserializer"))
     }
 
@@ -251,7 +251,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `float`.
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+    fn read_float(self, _schema: &Schema) -> Result<f32, Self::Error> {
         Err(Error::custom("read_float is not supported by this deserializer"))
     }
 
@@ -259,7 +259,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `double`.
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+    fn read_double(self, _schema: &Schema) -> Result<f64, Self::Error> {
         Err(Error::custom("read_double is not supported by this deserializer"))
     }
 
@@ -267,7 +267,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `bigInteger`.
-    fn read_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+    fn read_big_integer(self, _schema: &Schema) -> Result<BigInt, Self::Error> {
         Err(Error::custom("read_big_integer is not supported by this deserializer"))
     }
 
@@ -275,7 +275,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `bigDecimal`.
-    fn read_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+    fn read_big_decimal(self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
         Err(Error::custom("read_big_decimal is not supported by this deserializer"))
     }
 
@@ -283,7 +283,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `string`.
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+    fn read_string(self, _schema: &Schema) -> Result<String, Self::Error> {
         Err(Error::custom("read_string is not supported by this deserializer"))
     }
 
@@ -291,7 +291,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `blob`.
-    fn read_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+    fn read_blob(self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
         Err(Error::custom("read_blob is not supported by this deserializer"))
     }
 
@@ -299,7 +299,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `timestamp`.
-    fn read_timestamp(&mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
+    fn read_timestamp(self, _schema: &Schema) -> Result<Instant, Self::Error> {
         Err(Error::custom("read_timestamp is not supported by this deserializer"))
     }
 
@@ -307,7 +307,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `document`.
-    fn read_document(&mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+    fn read_document(self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
         Err(Error::custom("read_document is not supported by this deserializer"))
     }
 
@@ -357,7 +357,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the struct could not be started (e.g., expected `{`).
-    fn read_struct(&mut self, _schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         Err(Error::custom("read_struct is not supported by this deserializer"))
     }
 
@@ -380,7 +380,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the list could not be started (e.g., expected `[`).
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader<'_>, Self::Error> {
         Err(Error::custom("read_list is not supported by this deserializer"))
     }
 
@@ -405,7 +405,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the map could not be started (e.g., expected `{`).
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
+    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader<'_>, Self::Error> {
         Err(Error::custom("read_map is not supported by this deserializer"))
     }
 
@@ -420,7 +420,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if an element could not be read as `null`/empty value.
-    fn read_null(&mut self) -> Result<(), Self::Error> {
+    fn read_null(self) -> Result<(), Self::Error> {
         Err(Error::custom("read_null is not supported by this deserializer"))
     }
 }
@@ -437,11 +437,11 @@ pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
     /// # Errors
     /// Returns [`Error`] if data from the `Deserializer` could not be read into
     /// this shape type.
-    fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error>;
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error>;
 }
 
 impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape<'de> for T {
-    fn deserialize<D: Deserializer<'de>>(deserializer: &mut D) -> Result<Self, D::Error> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Self::deserialize_with_schema(Self::schema(), deserializer)
     }
 }
@@ -464,7 +464,7 @@ pub trait DeserializeWithSchema<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if data from the `Deserializer` could not be read into
     /// this shape type. This could be due to either a schema or data mismatch.
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>;
 }
@@ -476,7 +476,7 @@ pub trait DeserializeWithSchema<'de>: Sized {
 // === Primitives ===
 
 impl<'de> DeserializeWithSchema<'de> for bool {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -485,7 +485,7 @@ impl<'de> DeserializeWithSchema<'de> for bool {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i8 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -494,7 +494,7 @@ impl<'de> DeserializeWithSchema<'de> for i8 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i16 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -503,7 +503,7 @@ impl<'de> DeserializeWithSchema<'de> for i16 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i32 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -512,7 +512,7 @@ impl<'de> DeserializeWithSchema<'de> for i32 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for i64 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -521,7 +521,7 @@ impl<'de> DeserializeWithSchema<'de> for i64 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for f32 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -530,7 +530,7 @@ impl<'de> DeserializeWithSchema<'de> for f32 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for f64 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -539,7 +539,7 @@ impl<'de> DeserializeWithSchema<'de> for f64 {
 }
 
 impl<'de> DeserializeWithSchema<'de> for BigInt {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -548,7 +548,7 @@ impl<'de> DeserializeWithSchema<'de> for BigInt {
 }
 
 impl<'de> DeserializeWithSchema<'de> for BigDecimal {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -557,7 +557,7 @@ impl<'de> DeserializeWithSchema<'de> for BigDecimal {
 }
 
 impl<'de> DeserializeWithSchema<'de> for String {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -566,7 +566,7 @@ impl<'de> DeserializeWithSchema<'de> for String {
 }
 
 impl<'de> DeserializeWithSchema<'de> for ByteBuffer {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -575,7 +575,7 @@ impl<'de> DeserializeWithSchema<'de> for ByteBuffer {
 }
 
 impl<'de> DeserializeWithSchema<'de> for Instant {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -589,7 +589,7 @@ impl<'de, T> DeserializeWithSchema<'de> for Vec<T>
 where
     T: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -597,7 +597,7 @@ where
             .get_member("member")
             .ok_or_else(|| Error::custom("list schema missing member"))?;
 
-        let mut reader = deserializer.read_list()?;
+        let mut reader = deserializer.read_list(schema)?;
 
         let mut vec = reader
             .size_hint()
@@ -618,7 +618,7 @@ impl<'de, V> DeserializeWithSchema<'de> for IndexMap<String, V>
 where
     V: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -626,7 +626,7 @@ where
             .get_member("value")
             .ok_or_else(|| Error::custom("map schema missing value"))?;
 
-        let mut reader = deserializer.read_map()?;
+        let mut reader = deserializer.read_map(schema)?;
 
         let mut map = reader
             .size_hint()
@@ -647,7 +647,7 @@ impl<'de, T> DeserializeWithSchema<'de> for Option<T>
 where
     T: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, mut deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -664,7 +664,7 @@ impl<'de, T> DeserializeWithSchema<'de> for Box<T>
 where
     T: DeserializeWithSchema<'de>,
 {
-    fn deserialize_with_schema<D>(schema: &Schema, deserializer: &mut D) -> Result<Self, D::Error>
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
