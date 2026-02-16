@@ -59,21 +59,44 @@ impl crate::serde::de::Error for Error {
 // ============================================================================
 
 /// [`StructReader`] implementation for arbitrary deserialization.
-pub struct ArbitraryStructReader<'a, 'u: 'a>  {
+pub struct ArbitraryStructReader<'a, 'u> {
     u: &'a mut Unstructured<'u>,
-    members: Vec<(String, Schema)>,
     index: usize,
+    set_union: bool,
 }
 
 impl<'de> StructReader<'de> for ArbitraryStructReader<'_, '_> {
     type Error = Error;
 
-    fn read_member(&mut self) -> Result<Option<&Schema>, Self::Error> {
-        if self.index >= self.members.len() {
+    fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
+        // NOTE: We do not want unknown values as those are never serialized and
+        // so are not relevant to these tests
+        if schema.shape_type() == &ShapeType::Union {
+            if self.set_union {
+                // If a union value has already been set, do not set again
+                return Ok(None);
+            }
+
+            self.set_union = true;
+            // pick a random member
+            let idx = usize::arbitrary(self.u)? % schema.members().len();
+            let (_, member_schema) = schema
+                .members()
+                .get_index(idx)
+                .ok_or(arbitrary::Error::IncorrectFormat)?;
+            return Ok(Some(member_schema));
+        };
+        // === Normal Structures ====
+        // If there are no more members to set, return empty
+        if self.index >= schema.members().len() {
             return Ok(None);
         }
-        let schema = &self.members[self.index].1;
+        // Get the next member
+        let (_, member_schema) = schema.members()
+            .get_index(self.index)
+            .ok_or(arbitrary::Error::IncorrectFormat)?;
         self.index += 1;
+
         Ok(Some(schema))
     }
 
@@ -81,7 +104,7 @@ impl<'de> StructReader<'de> for ArbitraryStructReader<'_, '_> {
         &mut self,
         schema: &Schema,
     ) -> Result<T, Self::Error> {
-        T::deserialize_with_schema(schema, &mut ArbitraryDeserializer::new(self.u))
+        T::deserialize_with_schema(schema, ArbitraryDeserializer::new(self.u))
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
@@ -117,7 +140,7 @@ impl<'de> ListReader<'de> for ArbitraryListReader<'_, '_> {
             return Ok(None);
         }
         self.remaining -= 1;
-        let value = T::deserialize_with_schema(schema, &mut ArbitraryDeserializer::new(self.u))?;
+        let value = T::deserialize_with_schema(schema, ArbitraryDeserializer::new(self.u))?;
         Ok(Some(value))
     }
 }
@@ -156,7 +179,7 @@ impl<'de> MapReader<'de> for ArbitraryMapReader<'_, '_> {
         &mut self,
         schema: &Schema,
     ) -> Result<V, Self::Error> {
-        V::deserialize_with_schema(schema, &mut ArbitraryDeserializer::new(self.u))
+        V::deserialize_with_schema(schema, ArbitraryDeserializer::new(self.u))
     }
 
     #[inline]
@@ -186,11 +209,11 @@ impl<'a, 'u> ArbitraryDeserializer<'a, 'u> {
     }
 }
 
-impl<'de, 'a, 'u> Deserializer<'de> for &mut ArbitraryDeserializer<'a, 'u> {
+impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
     type Error = Error;
-    type StructReader<'s> = ArbitraryStructReader<'a, 'u> where Self: 's;
-    type ListReader<'s> = ArbitraryListReader<'a, 'u> where Self: 's;
-    type MapReader<'s> = ArbitraryMapReader<'a, 'u> where Self: 's;
+    type StructReader = ArbitraryStructReader<'a, 'u>;
+    type ListReader = ArbitraryListReader<'a, 'u>;
+    type MapReader = ArbitraryMapReader<'a, 'u>;
 
     #[inline]
     fn read_bool(self, _: &Schema) -> Result<bool, Self::Error> {
@@ -244,7 +267,8 @@ impl<'de, 'a, 'u> Deserializer<'de> for &mut ArbitraryDeserializer<'a, 'u> {
 
     fn read_big_decimal(self, schema: &Schema) -> Result<BigDecimal, Self::Error> {
         let scale = i64::arbitrary(self.u)?;
-        let big_decimal = BigDecimal::from_bigint(self.read_big_integer(schema)?, scale);
+        let big_int= ArbitraryDeserializer::new(self.u).read_big_integer(schema)?;
+        let big_decimal = BigDecimal::from_bigint(big_int, scale);
         // divide by a random number
         let divisor = f32::arbitrary(self.u)?;
         Ok(big_decimal.div(divisor))
@@ -283,33 +307,15 @@ impl<'de, 'a, 'u> Deserializer<'de> for &mut ArbitraryDeserializer<'a, 'u> {
         todo!()
     }
 
-    fn read_struct(self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
-        // NOTE: We do not want unknown values as those are never serialized and
-        // so are not relevant to these tests
-        let members = if schema.shape_type() == &ShapeType::Union {
-            // pick a random member
-            let idx = usize::arbitrary(self.u)? % schema.members().len();
-            let (name, member_schema) = schema
-                .members()
-                .get_index(idx)
-                .ok_or(arbitrary::Error::IncorrectFormat)?;
-            vec![(name.clone(), member_schema.clone())]
-        } else {
-            // For regular structs, yield all members
-            schema
-                .members()
-                .iter()
-                .map(|(name, member_schema)| (name.clone(), member_schema.clone()))
-                .collect()
-        };
+    fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         Ok(ArbitraryStructReader {
             u: self.u,
-            members,
             index: 0,
+            set_union: false,
         })
     }
 
-    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader<'_>, Self::Error> {
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
         let len = usize::arbitrary(self.u)?;
         Ok(ArbitraryListReader {
             u: self.u,
@@ -317,7 +323,7 @@ impl<'de, 'a, 'u> Deserializer<'de> for &mut ArbitraryDeserializer<'a, 'u> {
         })
     }
 
-    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader<'_>, Self::Error> {
+    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
         let len = usize::arbitrary(self.u)?;
         Ok(ArbitraryMapReader {
             u: self.u,

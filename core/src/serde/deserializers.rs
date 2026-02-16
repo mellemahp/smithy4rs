@@ -75,7 +75,7 @@ pub trait StructReader<'de> {
     ///
     /// After this returns `Some`, you must call either `read_value()` or
     /// `skip_value()` before calling `read_member()` again.
-    fn read_member(&mut self) -> Result<Option<&Schema>, Self::Error>;
+    fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error>;
 
     /// Read the current member's value.
     ///
@@ -191,19 +191,13 @@ pub trait Deserializer<'de>: Sized {
     type Error: Error;
 
     /// The reader type for structs, parameterized by the borrow lifetime.
-    type StructReader<'a>: StructReader<'de, Error = Self::Error>
-    where
-        Self: 'a;
+    type StructReader: StructReader<'de, Error = Self::Error>;
 
     /// The reader type for lists, parameterized by the borrow lifetime.
-    type ListReader<'a>: ListReader<'de, Error = Self::Error>
-    where
-        Self: 'a;
+    type ListReader: ListReader<'de, Error = Self::Error>;
 
     /// The reader type for maps, parameterized by the borrow lifetime.
-    type MapReader<'a>: MapReader<'de, Error = Self::Error>
-    where
-        Self: 'a;
+    type MapReader: MapReader<'de, Error = Self::Error>;
 
     // === Primitive deserialization ===
 
@@ -380,7 +374,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the list could not be started (e.g., expected `[`).
-    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader<'_>, Self::Error> {
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
         Err(Error::custom("read_list is not supported by this deserializer"))
     }
 
@@ -405,13 +399,14 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the map could not be started (e.g., expected `{`).
-    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader<'_>, Self::Error> {
+    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
         Err(Error::custom("read_map is not supported by this deserializer"))
     }
 
     // === Null handling ===
 
     /// Check if the next value is null without consuming it.
+    #[allow(clippy::wrong_self_convention)]
     fn is_null(&mut self) -> bool {
         false
     }
