@@ -206,7 +206,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a bool.
     fn read_bool(self, _schema: &Schema) -> Result<bool, Self::Error> {
-        Err(Error::custom("read_bool is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_bool is not supported by this deserializer",
+        ))
     }
 
     /// Read a byte (`i8`)
@@ -214,7 +216,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `byte`.
     fn read_byte(self, _schema: &Schema) -> Result<i8, Self::Error> {
-        Err(Error::custom("read_byte is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_byte is not supported by this deserializer",
+        ))
     }
 
     /// Read a short (`i16`)
@@ -222,7 +226,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `short`.
     fn read_short(self, _schema: &Schema) -> Result<i16, Self::Error> {
-        Err(Error::custom("read_short is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_short is not supported by this deserializer",
+        ))
     }
 
     /// Read an integer (`i32`)
@@ -230,7 +236,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as an `integer`.
     fn read_integer(self, _schema: &Schema) -> Result<i32, Self::Error> {
-        Err(Error::custom("read_integer is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_integer is not supported by this deserializer",
+        ))
     }
 
     /// Read a long (i64)
@@ -238,7 +246,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `long`.
     fn read_long(self, _schema: &Schema) -> Result<i64, Self::Error> {
-        Err(Error::custom("read_long is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_long is not supported by this deserializer",
+        ))
     }
 
     /// Read a float (`f32`)
@@ -246,7 +256,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `float`.
     fn read_float(self, _schema: &Schema) -> Result<f32, Self::Error> {
-        Err(Error::custom("read_float is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_float is not supported by this deserializer",
+        ))
     }
 
     /// Read a double (`f64`)
@@ -254,7 +266,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `double`.
     fn read_double(self, _schema: &Schema) -> Result<f64, Self::Error> {
-        Err(Error::custom("read_double is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_double is not supported by this deserializer",
+        ))
     }
 
     /// Read a big integer
@@ -262,7 +276,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `bigInteger`.
     fn read_big_integer(self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        Err(Error::custom("read_big_integer is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_big_integer is not supported by this deserializer",
+        ))
     }
 
     /// Read a big decimal
@@ -270,7 +286,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `bigDecimal`.
     fn read_big_decimal(self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        Err(Error::custom("read_big_decimal is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_big_decimal is not supported by this deserializer",
+        ))
     }
 
     /// Read a string
@@ -278,7 +296,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `string`.
     fn read_string(self, _schema: &Schema) -> Result<String, Self::Error> {
-        Err(Error::custom("read_string is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_string is not supported by this deserializer",
+        ))
     }
 
     /// Read a blob
@@ -286,7 +306,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `blob`.
     fn read_blob(self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        Err(Error::custom("read_blob is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_blob is not supported by this deserializer",
+        ))
     }
 
     /// Read a timestamp
@@ -294,7 +316,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `timestamp`.
     fn read_timestamp(self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        Err(Error::custom("read_timestamp is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_timestamp is not supported by this deserializer",
+        ))
     }
 
     /// Read data as untyped [`Document`]
@@ -302,7 +326,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `document`.
     fn read_document(self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        Err(Error::custom("read_document is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_document is not supported by this deserializer",
+        ))
     }
 
     // === Compound types ===
@@ -352,7 +378,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the struct could not be started (e.g., expected `{`).
     fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
-        Err(Error::custom("read_struct is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_struct is not supported by this deserializer",
+        ))
     }
 
     /// Begin reading a list, returning a reader for its elements.
@@ -375,7 +403,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the list could not be started (e.g., expected `[`).
     fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
-        Err(Error::custom("read_list is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_list is not supported by this deserializer",
+        ))
     }
 
     /// Begin reading a map, returning a reader for its entries.
@@ -400,7 +430,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if the map could not be started (e.g., expected `{`).
     fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
-        Err(Error::custom("read_map is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_map is not supported by this deserializer",
+        ))
     }
 
     // === Null handling ===
@@ -416,7 +448,9 @@ pub trait Deserializer<'de>: Sized {
     /// # Errors
     /// Returns [`Error`] if an element could not be read as `null`/empty value.
     fn read_null(self) -> Result<(), Self::Error> {
-        Err(Error::custom("read_null is not supported by this deserializer"))
+        Err(Error::custom(
+            "read_null is not supported by this deserializer",
+        ))
     }
 }
 

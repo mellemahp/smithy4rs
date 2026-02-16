@@ -6,7 +6,7 @@ use smithy4rs_test_utils::*;
 fn test_empty_list_at_top_level() {
     let json = b"[]";
     let mut de = JsonDeserializer::new(json);
-    let result: Vec<i32> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, de).unwrap();
+    let result: Vec<i32> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, &mut de).unwrap();
     assert!(result.is_empty());
 }
 
@@ -29,7 +29,7 @@ fn test_empty_struct_fields() {
     let mut de = JsonDeserializer::new(json.as_bytes());
     let result = NestedCollectionsStructBuilder::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
-        de,
+        &mut de,
     )
     .unwrap()
     .build()
@@ -55,7 +55,7 @@ fn test_empty_nested_struct_in_list() {
     let mut de = JsonDeserializer::new(json.as_bytes());
     let result = NestedCollectionsStructBuilder::deserialize_with_schema(
         &NESTED_COLLECTIONS_STRUCT_SCHEMA,
-        de,
+        &mut de,
     )
     .unwrap()
     .build()

@@ -9,7 +9,7 @@ fn test_missing_required_field() {
     let mut de = JsonDeserializer::new(json);
 
     // Deserialization succeeds
-    let builder = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de)
+    let builder = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
         .expect("Deserialization should succeed");
 
     // But build should fail for missing required field
@@ -29,7 +29,7 @@ fn test_missing_required_field() {
 fn test_null_for_required_field() {
     let json = br#"{"field_a": null, "field_b": 42}"#;
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de);
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
 
     // This should error during deserialization because field_a is a required String
     match result {

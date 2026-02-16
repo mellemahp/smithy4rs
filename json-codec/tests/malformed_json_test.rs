@@ -6,7 +6,7 @@ use smithy4rs_test_utils::*;
 fn test_unclosed_brace() {
     let json = b"{\"field_a\": \"test\"";
     let mut de = JsonDeserializer::new(json);
-    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, de);
+    let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
@@ -24,7 +24,7 @@ fn test_unclosed_brace() {
 fn test_unclosed_bracket() {
     let json = b"[1, 2, 3";
     let mut de = JsonDeserializer::new(json);
-    let result: Result<Vec<i32>, _> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, de);
+    let result: Result<Vec<i32>, _> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, &mut de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
@@ -42,7 +42,7 @@ fn test_unclosed_bracket() {
 fn test_trailing_comma() {
     let json = b"[1, 2, 3,]";
     let mut de = JsonDeserializer::new(json);
-    let result: Result<Vec<i32>, _> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, de);
+    let result: Result<Vec<i32>, _> = Vec::deserialize_with_schema(&INTEGER_LIST_SCHEMA, &mut de);
 
     match result {
         Err(JsonSerdeError::DeserializationError(msg)) => {
