@@ -93,33 +93,29 @@ const _: () = {
         where
             D: _Deserializer<'de>,
         {
-            let mut reader = deserializer.read_struct()?;
+            let mut reader = deserializer.read_struct(schema)?;
             let mut result: Option<TestEnum> = None;
-            while let Some(field_name) = reader.read_name()? {
+            while let Some(member_schema) = reader.read_member()? {
                 if result.is_some() {
                     return Err(D::Error::custom("Attempted to set union value twice"));
                 }
-                if let Some(member_schema) = schema.get_member(&field_name) {
-                    if &member_schema == &*_UNION_MEMBER_A {
-                        let value: String = reader.read_value(member_schema)?;
-                        result = Some(TestEnum::A(value));
-                        continue;
-                    }
-                    if &member_schema == &*_UNION_MEMBER_B {
-                        let value: i32 = reader.read_value(member_schema)?;
-                        result = Some(TestEnum::B(value));
-                        continue;
-                    }
-                    if &member_schema == &*_UNION_MEMBER_C {
-                        let _: _Unit = reader.read_value(member_schema)?;
-                        result = Some(TestEnum::C);
-                        continue;
-                    }
-                    result = Some(TestEnum::Unknown("unknown".to_string()));
+                if &member_schema == *_UNION_MEMBER_A {
+                    let value: String = reader.read_value(&member_schema)?;
+                    result = Some(TestEnum::A(value));
                     continue;
-                } else {
-                    reader.skip_value()?;
                 }
+                if &member_schema == *_UNION_MEMBER_B {
+                    let value: i32 = reader.read_value(&member_schema)?;
+                    result = Some(TestEnum::B(value));
+                    continue;
+                }
+                if &member_schema == *_UNION_MEMBER_C {
+                    let _: _Unit = reader.read_value(&member_schema)?;
+                    result = Some(TestEnum::C);
+                    continue;
+                }
+                result = Some(TestEnum::Unknown("unknown".to_string()));
+                continue;
             }
             result.ok_or(D::Error::custom("Failed to deserialize union"))
         }

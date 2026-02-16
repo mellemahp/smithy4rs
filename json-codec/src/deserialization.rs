@@ -30,9 +30,10 @@ impl<'de> JsonDeserializer<'de> {
 /// Iterates through JSON object keys and values. The `'de` lifetime is the
 /// input data lifetime, and `'a` is the borrow of the deserializer.
 ///
-/// Callers must alternate `read_name()` and `read_value()`/`skip_value()` calls.
+/// Callers must alternate `read_member()` and `read_value()`/`skip_value()` calls.
 pub struct JsonStructReader<'de, 'a> {
     deserializer: &'a mut JsonDeserializer<'de>,
+    schema: Schema,
     started: bool,
 }
 
@@ -230,9 +231,10 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
         todo!("Support deserialization of documents")
     }
 
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
         Ok(JsonStructReader {
             deserializer: self,
+            schema: schema.clone(),
             started: false,
         })
     }
@@ -269,19 +271,35 @@ impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
 impl<'de, 'a> StructReader<'de> for JsonStructReader<'de, 'a> {
     type Error = JsonSerdeError;
 
-    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
-        let maybe_key = if !self.started {
-            self.started = true;
-            self.deserializer.parser.next_object().map_err(|e| {
-                JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
-            })?
-        } else {
-            self.deserializer.parser.next_key().map_err(|e| {
-                JsonSerdeError::DeserializationError(format!("Failed to read object key: {}", e))
-            })?
-        };
+    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
+        loop {
+            let maybe_key = if !self.started {
+                self.started = true;
+                self.deserializer.parser.next_object().map_err(|e| {
+                    JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
+                })?
+            } else {
+                self.deserializer.parser.next_key().map_err(|e| {
+                    JsonSerdeError::DeserializationError(format!(
+                        "Failed to read object key: {}",
+                        e
+                    ))
+                })?
+            };
 
-        Ok(maybe_key.map(|s| s.to_string()))
+            match maybe_key {
+                Some(key) => {
+                    if let Some(member_schema) = self.schema.get_member(key) {
+                        return Ok(Some(member_schema.clone()));
+                    }
+                    // Unknown key — skip the value internally
+                    self.deserializer.parser.next_skip().map_err(|e| {
+                        JsonSerdeError::DeserializationError(format!("Failed to skip value: {}", e))
+                    })?;
+                }
+                None => return Ok(None),
+            }
+        }
     }
 
     fn read_value<T: DeserializeWithSchema<'de>>(

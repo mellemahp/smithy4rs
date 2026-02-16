@@ -66,13 +66,13 @@ pub struct ArbitraryStructReader<'a, 'u> {
 impl<'de, 'u> StructReader<'de> for ArbitraryStructReader<'_, 'u> {
     type Error = Error;
 
-    fn read_name(&mut self) -> Result<Option<String>, Self::Error> {
+    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
         if self.index >= self.members.len() {
             return Ok(None);
         }
-        let name = self.members[self.index].0.clone();
+        let schema = self.members[self.index].1.clone();
         self.index += 1;
-        Ok(Some(name))
+        Ok(Some(schema))
     }
 
     fn read_value<T: DeserializeWithSchema<'de>>(
@@ -268,24 +268,23 @@ impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
         todo!()
     }
 
-    fn read_struct(&mut self) -> Result<Self::StructReader<'_>, Self::Error> {
+    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
         // NOTE: We do not want unknown values as those are never serialized and
         // so are not relevant to these tests
-        let members = if self.schema.shape_type() == &ShapeType::Union {
+        let members = if schema.shape_type() == &ShapeType::Union {
             // pick a random member
-            let idx = usize::arbitrary(self.u)? % self.schema.members().len();
-            let (name, schema) = self
-                .schema
+            let idx = usize::arbitrary(self.u)? % schema.members().len();
+            let (name, member_schema) = schema
                 .members()
                 .get_index(idx)
                 .ok_or(arbitrary::Error::IncorrectFormat)?;
-            vec![(name.clone(), schema.clone())]
+            vec![(name.clone(), member_schema.clone())]
         } else {
             // For regular structs, yield all members
-            self.schema
+            schema
                 .members()
                 .iter()
-                .map(|(name, schema)| (name.clone(), schema.clone()))
+                .map(|(name, member_schema)| (name.clone(), member_schema.clone()))
                 .collect()
         };
         Ok(ArbitraryStructReader {

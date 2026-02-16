@@ -70,16 +70,12 @@ fn deserialize_builder(
                 D: _Deserializer<'de>,
             {
                 let mut builder = #builder_name::new();
-                let mut reader = deserializer.read_struct()?;
+                let mut reader = deserializer.read_struct(schema)?;
 
-                while let Some(field_name) = reader.read_name()? {
-                    if let Some(member_schema) = schema.get_member(&field_name) {
-                        #(#match_arms)*
-                        // Unknown field
-                        reader.skip_value()?;
-                    } else {
-                        reader.skip_value()?;
-                    }
+                while let Some(member_schema) = reader.read_member()? {
+                    #(#match_arms)*
+                    // Known schema member but unknown to this code version (forward compat)
+                    reader.skip_value()?;
                 }
 
                 Ok(builder)
@@ -183,21 +179,17 @@ fn deserialize_union(
             where
                 D: _Deserializer<'de>,
             {
-                let mut reader = deserializer.read_struct()?;
+                let mut reader = deserializer.read_struct(schema)?;
                 let mut result: Option<#shape_name> = None;
 
-                while let Some(field_name) = reader.read_name()? {
+                while let Some(member_schema) = reader.read_member()? {
                     if result.is_some() {
                         return Err(D::Error::custom("Attempted to set union value twice"));
                     }
-                    if let Some(member_schema) = schema.get_member(&field_name) {
-                        #(#variants)*
-                        // Member did not match an expected value
-                        result = Some(#shape_name::Unknown("unknown".to_string()));
-                        continue;
-                    } else {
-                        reader.skip_value()?;
-                    }
+                    #(#variants)*
+                    // Known schema member but unknown to this code version (forward compat)
+                    result = Some(#shape_name::Unknown("unknown".to_string()));
+                    continue;
                 }
 
                 result.ok_or(D::Error::custom("Failed to deserialize union"))
@@ -241,8 +233,8 @@ impl UnionDeserVariant {
         );
         if self.unit {
             quote! {
-                if &member_schema == &*#member_schema_const {
-                    let _: _Unit = reader.read_value(member_schema)?;
+                if &member_schema == *#member_schema_const {
+                    let _: _Unit = reader.read_value(&member_schema)?;
                     result = Some(#shape_name::#variant_name);
                     continue;
                 }
@@ -250,8 +242,8 @@ impl UnionDeserVariant {
         } else {
             let ty = self.ty.as_ref().expect("Expected a type");
             quote! {
-                if &member_schema == &*#member_schema_const {
-                    let value: #ty = reader.read_value(member_schema)?;
+                if &member_schema == *#member_schema_const {
+                    let value: #ty = reader.read_value(&member_schema)?;
                     result = Some(#shape_name::#variant_name(value));
                     continue;
                 }
