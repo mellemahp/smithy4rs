@@ -14,8 +14,6 @@
 //!
 //! [Smithy]: https://smithy.io/
 
-extern crate core;
-
 /// Schemas used to describe and (de)serialize generated shapes
 /// with metadata from a Smithy model.
 pub mod schema;

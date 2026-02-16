@@ -46,68 +46,6 @@ impl<E: SerdeDeError> From<E> for DeserdeErrorWrapper<E> {
 }
 
 //========================================================================
-// Never Reader Types (for unused GAT slots)
-//========================================================================
-
-/// A reader type that can never be constructed.
-/// Used for GAT slots that are not applicable in a given context.
-/// Generic over E to satisfy GAT `Error = Self::Error` bounds.
-pub struct NeverStructReader<E>(PhantomData<fn() -> E>, std::convert::Infallible);
-
-impl<'de, E: DeserError> StructReader<'de> for NeverStructReader<E> {
-    type Error = E;
-
-    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
-        match self.1 {}
-    }
-
-    fn read_value<T: DeserializeWithSchema<'de>>(
-        &mut self,
-        _schema: &Schema,
-    ) -> Result<T, Self::Error> {
-        match self.1 {}
-    }
-
-    fn skip_value(&mut self) -> Result<(), Self::Error> {
-        match self.1 {}
-    }
-}
-
-pub struct NeverListReader<E>(PhantomData<fn() -> E>, std::convert::Infallible);
-
-impl<'de, E: DeserError> ListReader<'de> for NeverListReader<E> {
-    type Error = E;
-
-    fn read_element<T: DeserializeWithSchema<'de>>(
-        &mut self,
-        _schema: &Schema,
-    ) -> Result<Option<T>, Self::Error> {
-        match self.1 {}
-    }
-}
-
-pub struct NeverMapReader<E>(PhantomData<fn() -> E>, std::convert::Infallible);
-
-impl<'de, E: DeserError> MapReader<'de> for NeverMapReader<E> {
-    type Error = E;
-
-    fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
-        match self.1 {}
-    }
-
-    fn read_value<V: DeserializeWithSchema<'de>>(
-        &mut self,
-        _schema: &Schema,
-    ) -> Result<V, Self::Error> {
-        match self.1 {}
-    }
-
-    fn skip_value(&mut self) -> Result<(), Self::Error> {
-        match self.1 {}
-    }
-}
-
-//========================================================================
 // Reader Types
 //========================================================================
 
@@ -138,23 +76,23 @@ impl<'de, S: SeqAccess<'de>> ListReader<'de> for SerdeListReader<'de, S> {
 /// Wraps serde's `MapAccess` to implement our `StructReader` trait.
 pub struct SerdeStructReader<'de, M: MapAccess<'de>> {
     map_access: M,
-    schema: Schema,
+    current_member_schema: Option<&'static Schema>,
     _phantom: PhantomData<&'de ()>,
 }
 
 impl<'de, M: MapAccess<'de>> StructReader<'de> for SerdeStructReader<'de, M> {
     type Error = DeserdeErrorWrapper<M::Error>;
 
-    fn read_member(&mut self) -> Result<Option<Schema>, Self::Error> {
+    fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
         loop {
             match self
                 .map_access
-                .next_key::<String>()
+                .next_key::<&str>()
                 .map_err(DeserdeErrorWrapper)?
             {
                 Some(key) => {
-                    if let Some(member_schema) = self.schema.get_member(&key) {
-                        return Ok(Some(member_schema.clone()));
+                    if let Some(member_schema) = schema.get_member(key) {
+                        return Ok(Some(member_schema));
                     }
                     // Unknown key — skip the value internally
                     self.map_access
@@ -199,7 +137,8 @@ impl<'de, M: MapAccess<'de>> MapReader<'de> for SerdeMapReader<'de, M> {
 
     fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
         self.map_access
-            .next_key::<String>()
+            .next_key::<&str>()
+            .map(|opt| opt.map(String::from))
             .map_err(DeserdeErrorWrapper)
     }
 
@@ -230,18 +169,15 @@ impl<'de, M: MapAccess<'de>> MapReader<'de> for SerdeMapReader<'de, M> {
 //========================================================================
 
 /// A deserializer wrapping serde's `SeqAccess` for list deserialization.
-///
-/// This implements our `Deserializer` trait in a list context, where
-/// `read_list()` returns the underlying `SerdeListReader`.
-struct SeqAccessDeserializer<'de, S: SeqAccess<'de>> {
-    seq_access: Option<S>,
+pub struct SeqAccessDeserializer<'de, S: SeqAccess<'de>> {
+    seq_access: S,
     _phantom: PhantomData<&'de ()>,
 }
 
 impl<'de, S: SeqAccess<'de>> SeqAccessDeserializer<'de, S> {
     fn new(seq_access: S) -> Self {
         Self {
-            seq_access: Some(seq_access),
+            seq_access,
             _phantom: PhantomData,
         }
     }
@@ -249,44 +185,28 @@ impl<'de, S: SeqAccess<'de>> SeqAccessDeserializer<'de, S> {
 
 impl<'de, S: SeqAccess<'de>> Deserializer<'de> for SeqAccessDeserializer<'de, S> {
     type Error = DeserdeErrorWrapper<S::Error>;
-    type StructReader<'a>
-        = NeverStructReader<Self::Error>
-    where
-        Self: 'a;
-    type ListReader<'a>
-        = SerdeListReader<'de, S>
-    where
-        Self: 'a;
-    type MapReader<'a>
-        = NeverMapReader<Self::Error>
-    where
-        Self: 'a;
+    type StructReader = SerdeStructReader<'de, NeverMapAccess<S::Error>>;
+    type ListReader = SerdeListReader<'de, S>;
+    type MapReader = SerdeMapReader<'de, NeverMapAccess<S::Error>>;
 
-    fn read_list(&mut self) -> Result<Self::ListReader<'_>, Self::Error> {
-        let seq_access = self
-            .seq_access
-            .take()
-            .ok_or_else(|| Self::Error::custom("read_list called more than once"))?;
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
         Ok(SerdeListReader {
-            seq_access,
+            seq_access: self.seq_access,
             _phantom: PhantomData,
         })
     }
 }
 
 /// A deserializer wrapping serde's `MapAccess` for struct/map deserialization.
-///
-/// This implements our `Deserializer` trait in a map context, where
-/// `read_struct()` and `read_map()` return the underlying reader.
-struct MapAccessDeserializer<'de, M: MapAccess<'de>> {
-    map_access: Option<M>,
+pub struct MapAccessDeserializer<'de, M: MapAccess<'de>> {
+    map_access: M,
     _phantom: PhantomData<&'de ()>,
 }
 
 impl<'de, M: MapAccess<'de>> MapAccessDeserializer<'de, M> {
     fn new(map_access: M) -> Self {
         Self {
-            map_access: Some(map_access),
+            map_access,
             _phantom: PhantomData,
         }
     }
@@ -294,40 +214,62 @@ impl<'de, M: MapAccess<'de>> MapAccessDeserializer<'de, M> {
 
 impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M> {
     type Error = DeserdeErrorWrapper<M::Error>;
-    type StructReader<'a>
-        = SerdeStructReader<'de, M>
-    where
-        Self: 'a;
-    type ListReader<'a>
-        = NeverListReader<Self::Error>
-    where
-        Self: 'a;
-    type MapReader<'a>
-        = SerdeMapReader<'de, M>
-    where
-        Self: 'a;
+    type StructReader = SerdeStructReader<'de, M>;
+    type ListReader = SerdeListReader<'de, NeverSeqAccess<M::Error>>;
+    type MapReader = SerdeMapReader<'de, M>;
 
-    fn read_struct(&mut self, schema: &Schema) -> Result<Self::StructReader<'_>, Self::Error> {
-        let map_access = self
-            .map_access
-            .take()
-            .ok_or_else(|| Self::Error::custom("read_struct called more than once"))?;
+    fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         Ok(SerdeStructReader {
-            map_access,
-            schema: schema.clone(),
+            map_access: self.map_access,
+            current_member_schema: None,
             _phantom: PhantomData,
         })
     }
 
-    fn read_map(&mut self) -> Result<Self::MapReader<'_>, Self::Error> {
-        let map_access = self
-            .map_access
-            .take()
-            .ok_or_else(|| Self::Error::custom("read_map called more than once"))?;
+    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
         Ok(SerdeMapReader {
-            map_access,
+            map_access: self.map_access,
             _phantom: PhantomData,
         })
+    }
+}
+
+//========================================================================
+// Never Types (for unused associated type slots)
+//========================================================================
+
+/// A `MapAccess` that can never be constructed - used for associated type slots
+pub struct NeverMapAccess<E>(PhantomData<E>, std::convert::Infallible);
+
+impl<'de, E: SerdeDeError> MapAccess<'de> for NeverMapAccess<E> {
+    type Error = E;
+
+    fn next_key_seed<K>(&mut self, _seed: K) -> Result<Option<K::Value>, Self::Error>
+    where
+        K: DeserializeSeed<'de>,
+    {
+        match self.1 {}
+    }
+
+    fn next_value_seed<V>(&mut self, _seed: V) -> Result<V::Value, Self::Error>
+    where
+        V: DeserializeSeed<'de>,
+    {
+        match self.1 {}
+    }
+}
+
+/// A `SeqAccess` that can never be constructed - used for associated type slots
+pub struct NeverSeqAccess<E>(PhantomData<E>, std::convert::Infallible);
+
+impl<'de, E: SerdeDeError> SeqAccess<'de> for NeverSeqAccess<E> {
+    type Error = E;
+
+    fn next_element_seed<T>(&mut self, _seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        match self.1 {}
     }
 }
 
@@ -336,9 +278,6 @@ impl<'de, M: MapAccess<'de>> Deserializer<'de> for MapAccessDeserializer<'de, M>
 //========================================================================
 
 /// A [`DeserializeSeed`] that carries a schema to guide deserialization.
-///
-/// This allows us to use serde's deserialization infrastructure while
-/// having our schema guide the process.
 pub struct SchemaSeed<'a, T> {
     schema: &'a Schema,
     _phantom: PhantomData<T>,
@@ -381,7 +320,7 @@ where
                 })
             }
             ShapeType::IntEnum | ShapeType::Enum => {
-                T::deserialize_with_schema(self.schema, &mut EnumWrapper::new(deserializer))
+                T::deserialize_with_schema(self.schema, EnumWrapper::new(deserializer))
                     .map_err(|e| e.0)
             }
             // Primitives are deserialized through the PrimitiveWrapper
@@ -395,7 +334,7 @@ where
             | ShapeType::BigInteger
             | ShapeType::BigDecimal
             | ShapeType::String => {
-                T::deserialize_with_schema(self.schema, &mut PrimitiveWrapper::new(deserializer))
+                T::deserialize_with_schema(self.schema, PrimitiveWrapper::new(deserializer))
                     .map_err(|e| e.0)
             }
             _ => Err(D::Error::custom(format!(
@@ -427,8 +366,8 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for ListVisitor<'a, T>
     where
         A: SeqAccess<'de>,
     {
-        let mut deserializer = SeqAccessDeserializer::new(seq);
-        T::deserialize_with_schema(self.schema, &mut deserializer)
+        let deserializer = SeqAccessDeserializer::new(seq);
+        T::deserialize_with_schema(self.schema, deserializer)
             .map_err(|e| A::Error::custom(format!("{}", e)))
     }
 }
@@ -450,8 +389,8 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> 
     where
         A: MapAccess<'de>,
     {
-        let mut deserializer = MapAccessDeserializer::new(map);
-        T::deserialize_with_schema(self.schema, &mut deserializer)
+        let deserializer = MapAccessDeserializer::new(map);
+        T::deserialize_with_schema(self.schema, deserializer)
             .map_err(|e| A::Error::custom(format!("{}", e)))
     }
 }
@@ -473,24 +412,21 @@ impl<'de, D: serde::Deserializer<'de>> EnumWrapper<'de, D> {
             _phantom: PhantomData,
         }
     }
+
+    fn take_deserializer(&mut self) -> Result<D, DeserdeErrorWrapper<D::Error>> {
+        self.deserializer
+            .take()
+            .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("deserializer already consumed")))
+    }
 }
 
 impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D> {
     type Error = DeserdeErrorWrapper<D::Error>;
-    type StructReader<'a>
-        = NeverStructReader<Self::Error>
-    where
-        Self: 'a;
-    type ListReader<'a>
-        = NeverListReader<Self::Error>
-    where
-        Self: 'a;
-    type MapReader<'a>
-        = NeverMapReader<Self::Error>
-    where
-        Self: 'a;
+    type StructReader = SerdeStructReader<'de, NeverMapAccess<D::Error>>;
+    type ListReader = SerdeListReader<'de, NeverSeqAccess<D::Error>>;
+    type MapReader = SerdeMapReader<'de, NeverMapAccess<D::Error>>;
 
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+    fn read_integer(mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
 
         impl<'de> Visitor<'de> for IntegerVisitor {
@@ -541,14 +477,10 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
             }
         }
 
-        Ok(self
-            .deserializer
-            .take()
-            .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
-            .deserialize_i32(IntegerVisitor)?)
+        Ok(self.take_deserializer()?.deserialize_i32(IntegerVisitor)?)
     }
 
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+    fn read_string(mut self, _schema: &Schema) -> Result<String, Self::Error> {
         struct StringVisitor;
 
         impl<'de> Visitor<'de> for StringVisitor {
@@ -562,15 +494,13 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
                 Ok(v.to_string())
             }
 
-            fn visit_string<E: SerdeDeError>(self, v: String) -> Result<Self::Value, E> {
-                Ok(v)
+            fn visit_borrowed_str<E: SerdeDeError>(self, v: &'de str) -> Result<Self::Value, E> {
+                Ok(v.to_string())
             }
         }
 
         Ok(self
-            .deserializer
-            .take()
-            .ok_or_else(|| DeserdeErrorWrapper(D::Error::custom("could not access deserializer")))?
+            .take_deserializer()?
             .deserialize_string(StringVisitor)?)
     }
 }
@@ -602,20 +532,11 @@ impl<'de, D: serde::Deserializer<'de>> PrimitiveWrapper<'de, D> {
 
 impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'de, D> {
     type Error = DeserdeErrorWrapper<D::Error>;
-    type StructReader<'a>
-        = NeverStructReader<Self::Error>
-    where
-        Self: 'a;
-    type ListReader<'a>
-        = NeverListReader<Self::Error>
-    where
-        Self: 'a;
-    type MapReader<'a>
-        = NeverMapReader<Self::Error>
-    where
-        Self: 'a;
+    type StructReader = SerdeStructReader<'de, NeverMapAccess<D::Error>>;
+    type ListReader = SerdeListReader<'de, NeverSeqAccess<D::Error>>;
+    type MapReader = SerdeMapReader<'de, NeverMapAccess<D::Error>>;
 
-    fn read_bool(&mut self, _schema: &Schema) -> Result<bool, Self::Error> {
+    fn read_bool(mut self, _schema: &Schema) -> Result<bool, Self::Error> {
         struct BoolVisitor;
         impl<'de> Visitor<'de> for BoolVisitor {
             type Value = bool;
@@ -631,7 +552,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_byte(&mut self, _schema: &Schema) -> Result<i8, Self::Error> {
+    fn read_byte(mut self, _schema: &Schema) -> Result<i8, Self::Error> {
         struct ByteVisitor;
         impl<'de> Visitor<'de> for ByteVisitor {
             type Value = i8;
@@ -653,7 +574,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_short(&mut self, _schema: &Schema) -> Result<i16, Self::Error> {
+    fn read_short(mut self, _schema: &Schema) -> Result<i16, Self::Error> {
         struct ShortVisitor;
         impl<'de> Visitor<'de> for ShortVisitor {
             type Value = i16;
@@ -675,7 +596,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_integer(&mut self, _schema: &Schema) -> Result<i32, Self::Error> {
+    fn read_integer(mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
         impl<'de> Visitor<'de> for IntegerVisitor {
             type Value = i32;
@@ -697,7 +618,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_long(&mut self, _schema: &Schema) -> Result<i64, Self::Error> {
+    fn read_long(mut self, _schema: &Schema) -> Result<i64, Self::Error> {
         struct LongVisitor;
         impl<'de> Visitor<'de> for LongVisitor {
             type Value = i64;
@@ -716,7 +637,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_float(&mut self, _schema: &Schema) -> Result<f32, Self::Error> {
+    fn read_float(mut self, _schema: &Schema) -> Result<f32, Self::Error> {
         struct FloatVisitor;
         impl<'de> Visitor<'de> for FloatVisitor {
             type Value = f32;
@@ -741,7 +662,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_double(&mut self, _schema: &Schema) -> Result<f64, Self::Error> {
+    fn read_double(mut self, _schema: &Schema) -> Result<f64, Self::Error> {
         struct DoubleVisitor;
         impl<'de> Visitor<'de> for DoubleVisitor {
             type Value = f64;
@@ -763,7 +684,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             .map_err(DeserdeErrorWrapper)
     }
 
-    fn read_string(&mut self, _schema: &Schema) -> Result<String, Self::Error> {
+    fn read_string(mut self, _schema: &Schema) -> Result<String, Self::Error> {
         struct StringVisitor;
         impl<'de> Visitor<'de> for StringVisitor {
             type Value = String;
@@ -773,8 +694,8 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
             fn visit_str<E: SerdeDeError>(self, v: &str) -> Result<Self::Value, E> {
                 Ok(v.to_string())
             }
-            fn visit_string<E: SerdeDeError>(self, v: String) -> Result<Self::Value, E> {
-                Ok(v)
+            fn visit_borrowed_str<E: SerdeDeError>(self, v: &'de str) -> Result<Self::Value, E> {
+                Ok(v.to_string())
             }
         }
         self.take_deserializer()?

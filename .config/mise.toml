@@ -24,7 +24,7 @@ depends = ["build", "test", "fmt-all"]
 
 [tasks.build]
 description = "Build the project"
-run = "cargo build"
+run = "cargo build --all-features"
 
 [tasks.fmt-all]
 wait_for = ["build", "lint", "test", "check-bench"]

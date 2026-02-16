@@ -43,7 +43,7 @@ fn arbitrary_struct(
                 let schema = <#builder_name as _StaticSchemaShape>::schema();
                 <#builder_name as _DeserializeWithSchema>::deserialize_with_schema(
                     schema,
-                    &mut _ArbitraryDeserializer::new(u, schema),
+                    _ArbitraryDeserializer::new(u),
                 )?
                 .build()
                 .map_err(|_| _arbitrary::Error::IncorrectFormat)
@@ -66,7 +66,7 @@ fn arbitrary_struct(
                 let schema = <#builder_name as _StaticSchemaShape>::schema();
                 <#builder_name as _DeserializeWithSchema>::deserialize_with_schema(
                     schema,
-                    &mut _ArbitraryDeserializer::new(u, schema),
+                    _ArbitraryDeserializer::new(u),
                 )
                 .map_err(|_| _arbitrary::Error::IncorrectFormat)
             }
@@ -96,7 +96,7 @@ fn arbitrary_enum(
                 let schema = <#shape_name as _StaticSchemaShape>::schema();
                 <#shape_name as _DeserializeWithSchema>::deserialize_with_schema(
                     schema,
-                    &mut _ArbitraryDeserializer::new(u, schema),
+                    _ArbitraryDeserializer::new(u),
                 )
                 .map_err(|_| _arbitrary::Error::IncorrectFormat)
             }

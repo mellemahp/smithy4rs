@@ -1,12 +1,10 @@
 #![allow(dead_code)]
 
-use core::fmt;
 use std::{
     fmt::{Display, Formatter},
     ops::Div,
 };
-use std::fmt::DebugList;
-use std::marker::PhantomData;
+
 use arbitrary::{Arbitrary, Unstructured};
 use bigdecimal::BigDecimal;
 use bytebuffer::ByteBuffer;
@@ -92,19 +90,20 @@ impl<'de> StructReader<'de> for ArbitraryStructReader<'_, '_> {
             return Ok(None);
         }
         // Get the next member
-        let (_, member_schema) = schema.members()
+        let (_, member_schema) = schema
+            .members()
             .get_index(self.index)
             .ok_or(arbitrary::Error::IncorrectFormat)?;
         self.index += 1;
 
-        Ok(Some(schema))
+        Ok(Some(member_schema))
     }
 
     fn read_value<T: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
     ) -> Result<T, Self::Error> {
-        T::deserialize_with_schema(schema, ArbitraryDeserializer::new(self.u))
+        T::deserialize_with_schema(schema, ArbitraryDeserializer { u: self.u })
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
@@ -113,20 +112,9 @@ impl<'de> StructReader<'de> for ArbitraryStructReader<'_, '_> {
 }
 
 /// [`ListReader`] implementation for arbitrary deserialization.
-pub struct ArbitraryListReader<'a, 'u: 'a> {
+pub struct ArbitraryListReader<'a, 'u> {
     u: &'a mut Unstructured<'u>,
     remaining: usize,
-}
-impl ArbitraryListReader<'_, '_> {
-    pub(super) fn new<'a, 'u>(
-        arb: &'a mut ArbitraryDeserializer<'a, 'u>,
-        remaining: usize
-    ) -> ArbitraryListReader<'a, 'u> {
-        ArbitraryListReader {
-            u: arb.u,
-            remaining
-        }
-    }
 }
 
 impl<'de> ListReader<'de> for ArbitraryListReader<'_, '_> {
@@ -140,27 +128,15 @@ impl<'de> ListReader<'de> for ArbitraryListReader<'_, '_> {
             return Ok(None);
         }
         self.remaining -= 1;
-        let value = T::deserialize_with_schema(schema, ArbitraryDeserializer::new(self.u))?;
+        let value = T::deserialize_with_schema(schema, ArbitraryDeserializer { u: self.u })?;
         Ok(Some(value))
     }
 }
 
 /// [`MapReader`] implementation for arbitrary deserialization.
-pub struct ArbitraryMapReader<'a, 'u: 'a> {
+pub struct ArbitraryMapReader<'a, 'u> {
     u: &'a mut Unstructured<'u>,
     remaining: usize,
-}
-
-impl ArbitraryMapReader<'_, '_> {
-    pub(super) fn new<'a, 'u>(
-        arb: &'a mut ArbitraryDeserializer<'a, 'u>,
-        remaining: usize
-    ) -> ArbitraryMapReader<'a, 'u> {
-        ArbitraryMapReader {
-            u: arb.u,
-            remaining
-        }
-    }
 }
 
 impl<'de> MapReader<'de> for ArbitraryMapReader<'_, '_> {
@@ -179,7 +155,7 @@ impl<'de> MapReader<'de> for ArbitraryMapReader<'_, '_> {
         &mut self,
         schema: &Schema,
     ) -> Result<V, Self::Error> {
-        V::deserialize_with_schema(schema, ArbitraryDeserializer::new(self.u))
+        V::deserialize_with_schema(schema, ArbitraryDeserializer { u: self.u })
     }
 
     #[inline]
@@ -196,7 +172,7 @@ impl<'de> MapReader<'de> for ArbitraryMapReader<'_, '_> {
 ///
 /// This deserializer is used to implement [`Arbitrary`] for generated
 /// shapes, allowing them to support fuzzing.
-pub struct ArbitraryDeserializer<'a, 'u: 'a> {
+pub struct ArbitraryDeserializer<'a, 'u> {
     /// The unstructured data source for generating arbitrary values.
     u: &'a mut Unstructured<'u>,
 }
@@ -265,9 +241,9 @@ impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
         Ok(BigInt::arbitrary(self.u)?)
     }
 
-    fn read_big_decimal(self, schema: &Schema) -> Result<BigDecimal, Self::Error> {
+    fn read_big_decimal(self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
         let scale = i64::arbitrary(self.u)?;
-        let big_int= ArbitraryDeserializer::new(self.u).read_big_integer(schema)?;
+        let big_int = BigInt::arbitrary(self.u)?;
         let big_decimal = BigDecimal::from_bigint(big_int, scale);
         // divide by a random number
         let divisor = f32::arbitrary(self.u)?;
@@ -319,7 +295,7 @@ impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
         let len = usize::arbitrary(self.u)?;
         Ok(ArbitraryListReader {
             u: self.u,
-            remaining: len
+            remaining: len,
         })
     }
 
