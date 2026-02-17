@@ -521,14 +521,15 @@ macro_rules! static_trait_id {
 /// Helper macro for deserializing required struct members in generated code.
 ///
 /// This macro simplifies the pattern of checking if a member schema matches
-/// and deserializing its value into the builder.
+/// and deserializing its value into the builder using a StructReader.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! deserialize_member {
-    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if &$member == &*$schema {
-            let value = <$ty as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
-            return Ok($builder.$method(value));
+    ($member:expr, $schema:expr, $reader:expr, $builder:expr, $method:ident, $ty:ty) => {
+        if $member == *$schema {
+            let value: $ty = $reader.read_value($member)?;
+            $builder = $builder.$method(value);
+            continue;
         }
     };
 }
@@ -540,13 +541,13 @@ macro_rules! deserialize_member {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! deserialize_optional_member {
-    ($member:expr, $schema:expr, $de:expr, $builder:expr, $method:ident, $ty:ty) => {
-        if &$member == &*$schema {
-            let value = <Option::<$ty> as $crate::serde::deserializers::DeserializeWithSchema>::deserialize_with_schema($member, $de)?;
+    ($member:expr, $schema:expr, $reader:expr, $builder:expr, $method:ident, $ty:ty) => {
+        if $member == *$schema {
+            let value: Option<$ty> = $reader.read_value($member)?;
             if let Some(v) = value {
-                return Ok($builder.$method(v));
+                $builder = $builder.$method(v);
             }
-            return Ok($builder);
+            continue;
         }
     };
 }

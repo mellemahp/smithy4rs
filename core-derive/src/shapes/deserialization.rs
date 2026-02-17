@@ -61,18 +61,24 @@ fn deserialize_builder(
         use #crate_ident::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
         use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
         use #crate_ident::serde::Buildable as _Buildable;
+        use #crate_ident::serde::deserializers::StructReader as _StructReader;
 
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #builder_name {
-            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
-                let builder = #builder_name::new();
-                deserializer.read_struct(schema, builder, |builder, member_schema, de| {
+                let mut builder = #builder_name::new();
+                let mut reader = deserializer.read_struct(schema)?;
+
+                while let Some(member_schema) = reader.read_member(schema)? {
                     #(#match_arms)*
-                    Ok(builder) // Unknown field
-                })
+                    // Known schema member but unknown to this code version (forward compat)
+                    reader.skip_value()?;
+                }
+
+                Ok(builder)
             }
         }
     }
@@ -95,7 +101,7 @@ fn deserialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
-            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
@@ -147,7 +153,8 @@ fn deserialize_union(
     data: &DataEnum,
 ) -> TokenStream {
     let mut imports = quote! {
-        use #crate_ident::serde::deserializers::Error as _DeserializerError;
+        use #crate_ident::serde::deserializers::Error as _;
+        use #crate_ident::serde::deserializers::StructReader as _StructReader;
     };
     if data.variants.iter().any(|v| v.fields.is_empty()) {
         imports = quote! {
@@ -168,23 +175,24 @@ fn deserialize_union(
 
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
-            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: &mut D) -> Result<Self, D::Error>
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
-                deserializer.read_struct(
-                    schema,
-                    None,
-                    |option, member_schema, de| {
-                        if option.is_some() {
-                            return Err(D::Error::custom("Attempted to set union value twice"));
-                        }
-                        #(#variants)*
-                        // Member did not match an expected value
-                        Ok(Some(#shape_name::Unknown("unknown".to_string())))
+                let mut reader = deserializer.read_struct(schema)?;
+                let mut result: Option<#shape_name> = None;
+
+                while let Some(member_schema) = reader.read_member(schema)? {
+                    if result.is_some() {
+                        return Err(D::Error::custom("Attempted to set union value twice"));
                     }
-                )?
-                .ok_or(D::Error::custom("Failed to deserialize union"))
+                    #(#variants)*
+                    // Known schema member but unknown to this code version (forward compat)
+                    result = Some(#shape_name::Unknown("unknown".to_string()));
+                    continue;
+                }
+
+                result.ok_or(D::Error::custom("Failed to deserialize union"))
             }
         }
     }
@@ -219,23 +227,25 @@ impl UnionDeserVariant {
 
     fn matcher(&self, shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
         let variant_name = &self.var_ident;
-        let member_schema = Ident::new(
+        let member_schema_const = Ident::new(
             &format!("_{}_MEMBER_{}", schema_ident, &self.schema),
             Span::call_site(),
         );
         if self.unit {
             quote! {
-                if &member_schema == &*#member_schema {
-                    let _ = _Unit::deserialize_with_schema(member_schema, de)?;
-                    return Ok(Some(#shape_name::#variant_name));
+                if member_schema == *#member_schema_const {
+                    let _: _Unit = reader.read_value(member_schema)?;
+                    result = Some(#shape_name::#variant_name);
+                    continue;
                 }
             }
         } else {
             let ty = self.ty.as_ref().expect("Expected a type");
             quote! {
-                if &member_schema == &*#member_schema {
-                    let value = #ty::deserialize_with_schema(member_schema, de)?;
-                    return Ok(Some(#shape_name::#variant_name(value)));
+                if member_schema == *#member_schema_const {
+                    let value: #ty = reader.read_value(member_schema)?;
+                    result = Some(#shape_name::#variant_name(value));
+                    continue;
                 }
             }
         }

@@ -20,8 +20,8 @@ fn deserialize_from_json<'de, B: ShapeBuilder<'de, T>, T: Buildable<'de, B>>(
     data: &'de [u8],
     schema: &Schema,
 ) -> T {
-    let mut deserializer = JsonDeserializer::new(data);
-    B::deserialize_with_schema(schema, &mut deserializer)
+    let mut de = JsonDeserializer::new(data);
+    B::deserialize_with_schema(schema, &mut de)
         .unwrap()
         .build()
         .unwrap()
@@ -160,7 +160,7 @@ fn test_union() {
     let data = TestUnion::A("stuff".to_string());
     let json = serialize_to_json(&data, &UNION);
     println!("Serialized JSON: {}", String::from_utf8_lossy(&json));
-    let mut deserializer = JsonDeserializer::new(&json);
-    let result = TestUnion::deserialize_with_schema(&UNION, &mut deserializer).unwrap();
+    let mut de = JsonDeserializer::new(&json);
+    let result = TestUnion::deserialize_with_schema(&UNION, &mut de).unwrap();
     assert_eq!(data, result);
 }

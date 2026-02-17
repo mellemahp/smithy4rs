@@ -271,6 +271,7 @@ impl SchemaValue {
     /// <div class ="note">
     /// **NOTE**: Scalar schemas with no members will return an empty map.
     /// </div>
+    #[allow(dead_code)]
     pub(crate) fn members(&self) -> &FxIndexMap<String, Schema> {
         match self {
             // TODO(errors): Error handling
