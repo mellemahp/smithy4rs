@@ -68,6 +68,7 @@ impl<'de, S: SeqAccess<'de>> ListReader<'de> for SerdeListReader<'de, S> {
             .map_err(DeserdeErrorWrapper)
     }
 
+    #[inline]
     fn size_hint(&self) -> Option<usize> {
         self.seq_access.size_hint()
     }
@@ -121,6 +122,7 @@ impl<'de, M: MapAccess<'de>> StructReader<'de> for SerdeStructReader<'de, M> {
         Ok(())
     }
 
+    #[inline]
     fn size_hint(&self) -> Option<usize> {
         self.map_access.size_hint()
     }
@@ -159,6 +161,7 @@ impl<'de, M: MapAccess<'de>> MapReader<'de> for SerdeMapReader<'de, M> {
         Ok(())
     }
 
+    #[inline]
     fn size_hint(&self) -> Option<usize> {
         self.map_access.size_hint()
     }
