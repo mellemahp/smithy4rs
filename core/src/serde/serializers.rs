@@ -1,6 +1,19 @@
 //! Schema-guided serialization of data from a Smithy Shape
 //!
-//! TODO(docs): Implementation docs
+//! This module provides traits for serializing shapes into
+//! a data format (JSON, CBOR, etc.), guided by schemas.
+//!
+//! # Architecture
+//!
+//! The serialization system uses a writer-based pattern for compound types:
+//!
+//! - [`Serializer`]: Entry point that writes primitives and creates writes
+//! - [`StructWriter`]: Consumes structure members with `write_member(...)` methods
+//! - [`ListWriter`]: Consumes list elements with `write_element(...)`
+//! - [`MapWriter`]: Consumes map entries with `write_entry(...)`
+//!
+//! This design (inspired by `serde`) separates iteration from value reading,
+//! allowing callers to control the serialization flow.
 use std::{error::Error as StdError, fmt::Display};
 
 use crate::{
@@ -14,9 +27,9 @@ use crate::{
 
 /// Serialize a shape with its pre-defined schema.
 ///
-/// This trait provides an automatic, blanket implementation for all shapes
+/// ## Blanket Implementations
+/// This trait provides blanket implementations for all shapes
 /// with both a [`SchemaShape`], and [`SerializeWithSchema`] implementation.
-///
 pub trait SerializableShape: SchemaShape + SerializeWithSchema {
     /// Serialize a shape with its pre-defined schema
     ///
@@ -33,7 +46,7 @@ impl<T: SchemaShape + SerializeWithSchema> SerializableShape for T {
     }
 }
 
-/// Schema-Guided serialization implementation.
+/// Schema-guided serialization implementation.
 pub trait SerializeWithSchema {
     /// Serialize a Shape using a schema to guide the process
     ///
@@ -54,7 +67,7 @@ pub trait SerializeWithSchema {
 ///
 /// <div class="note">
 /// **NOTE**: This is essentially a clone of the `serde::Error` trait, but
-/// we use our own to ensure we don't enforce a `serde` dependency
+/// we create a new type to ensure we don't enforce a `serde` dependency
 /// on consumers.
 /// </div>
 ///
@@ -67,8 +80,28 @@ pub trait Error: Sized + StdError {
 // Core Serialize Traits
 // ============================================================================
 
-/// List Serializer that can be called in a loop to serialize list values
-pub trait ListSerializer {
+/// List Serializer that can be called in a loop to serialize a sequence
+///
+/// # Example
+///
+/// ```ignore
+/// // List to serialize
+/// let list = vec![1,2,3,4];
+///
+/// // Create writer
+/// let mut writer = serializer.write_list(&schema, list.len())?;
+///
+/// // Get schema to use for each element of list
+/// let element_schema = schema.get_member("member").unwrap();
+///
+/// // loop over list items
+/// for i in list {
+///     writer.write_element(&element_schema, i).unwrap();
+/// }
+/// // close writer
+/// writer.end().unwrap();
+/// ```
+pub trait ListWriter {
     /// Must match the `Error` type of our `Serializer`.
     type Error: Error;
 
@@ -80,11 +113,7 @@ pub trait ListSerializer {
     /// # Errors
     /// Returns an [`Error`] matching the parent serializer if
     /// the element could not be serialized.
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema;
 
@@ -96,7 +125,25 @@ pub trait ListSerializer {
 }
 
 /// Map Serializer that can be called in a loop to serialize map values
-pub trait MapSerializer {
+///
+/// # Example
+///
+/// ```ignore
+/// // Map to serialize
+/// let mut map: IndexMap<String, String> = IndexMap::new();
+/// map.insert("a".to_string(), "b".to_string());
+/// map.insert("c".to_string(), "d".to_string());
+///
+/// let mut writer = serializer.write_map(schema, map.len())?;
+/// let (key_schema, value_schema) = schema.get_key_value().unwrap();
+///
+/// // Iterate over map entries
+/// for (k, v) in map {
+///     writer.write_entry(key_schema, value_schema, k, v).unwrap();
+/// }
+/// map.end().unwrap();
+/// ```
+pub trait MapWriter {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
 
@@ -108,7 +155,7 @@ pub trait MapSerializer {
     /// # Errors
     /// Returns an [`Error`] matching the parent serializer if
     /// the entry could not be serialized.
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -128,7 +175,24 @@ pub trait MapSerializer {
 }
 
 /// Struct Serializer that can be called to serialize struct member values
-pub trait StructSerializer {
+///
+/// # Example
+///
+/// ```ignore
+/// struct MyStruct {
+///     pub a: String,
+///     pub b: i32
+/// }
+///
+/// fn serialize_struct(value: MyStruct) {
+///     let mut ser = serializer.write_struct(schema, 2usize).unwrap();
+///     ser.serialize_member_named(&schema_member_a, &value.a).unwrap();
+///     ser.serialize_member(&schema_member_b, &value.b).unwrap();
+///     // close serializer
+///     ser.end(schema).unwrap()
+/// }
+/// ```
+pub trait StructWriter {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
 
@@ -144,7 +208,7 @@ pub trait StructSerializer {
     /// Returns an [`Error`] matching the parent serializer if
     /// the discriminator could not be serialized.
     #[inline]
-    fn serialize_discriminator(&mut self, _discriminator: &ShapeId) -> Result<(), Self::Error> {
+    fn write_discriminator(&mut self, _discriminator: &ShapeId) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -153,7 +217,7 @@ pub trait StructSerializer {
     /// # Errors
     /// Returns an [`Error`] matching the parent serializer if
     /// the member could not be serialized.
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema;
 
@@ -164,7 +228,7 @@ pub trait StructSerializer {
     /// Returns an [`Error`] matching the parent serializer if
     /// the member could not be serialized.
     #[inline]
-    fn serialize_member_named<T>(
+    fn write_member_named<T>(
         &mut self,
         _member_name: &str,
         member_schema: &Schema,
@@ -174,24 +238,24 @@ pub trait StructSerializer {
         T: SerializeWithSchema,
     {
         // Default implementation falls back to regular serialize_member
-        self.serialize_member(member_schema, value)
+        self.write_member(member_schema, value)
     }
 
     /// Serializes an optional member.
     ///
-    /// This method will call [`StructSerializer::skip_member`] on any optional members
+    /// This method will call [`StructWriter::skip_member`] on any optional members
     /// that are `None`, otherwise the `Some` value is unwrapped and serialized as normal.
     ///
     /// # Errors
     /// Returns an [`Error`] matching the parent serializer if
     /// the member could not be serialized.
-    fn serialize_optional_member<T: SerializeWithSchema>(
+    fn write_optional_member<T: SerializeWithSchema>(
         &mut self,
         member_schema: &Schema,
         value: &Option<T>,
     ) -> Result<(), Self::Error> {
         if let Some(value) = value {
-            self.serialize_member(member_schema, value)
+            self.write_member(member_schema, value)
         } else {
             self.skip_member(member_schema)
         }
@@ -204,14 +268,14 @@ pub trait StructSerializer {
     /// Returns an [`Error`] matching the parent serializer if
     /// the member could not be serialized.
     #[inline]
-    fn serialize_optional_member_named<T: SerializeWithSchema>(
+    fn write_optional_member_named<T: SerializeWithSchema>(
         &mut self,
         member_name: &str,
         member_schema: &Schema,
         value: &Option<T>,
     ) -> Result<(), Self::Error> {
         if let Some(value) = value {
-            self.serialize_member_named(member_name, member_schema, value)
+            self.write_member_named(member_name, member_schema, value)
         } else {
             self.skip_member(member_schema)
         }
@@ -234,9 +298,8 @@ pub trait StructSerializer {
     /// Returns an [`Error`] matching the parent serializer if
     /// the unknown member could not be serialized.
     #[cold]
-    fn serialize_unknown(&mut self, _schema: &Schema, name: &String) -> Result<(), Self::Error> {
+    fn write_unknown(&mut self, _schema: &Schema, name: &String) -> Result<(), Self::Error> {
         // Error out on unknown by default
-        // TODO(unknown members): Is this the correct default behavior?
         Err(Self::Error::custom(format!(
             "Attempted to serialize unknown value: {name:?}"
         )))
@@ -274,19 +337,19 @@ pub trait Serializer: Sized {
     /// list.
     ///
     /// [`write_list`]: #tymethod.write_list
-    type SerializeList: ListSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type ListWriter: ListWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Type returned from [`write_map`] for serializing the contents of a
     /// map.
     ///
     /// [`write_map`]: #tymethod.write_map
-    type SerializeMap: MapSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type MapWriter: MapWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Type returned from [`write_struct`] for serializing the contents of a
     /// struct or union.
     ///
     /// [`write_struct`]: #tymethod.write_struct
-    type SerializeStruct: StructSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type StructWriter: StructWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Begin to serialize a variably sized structure or union. This call must be
     /// followed by zero or more calls to `serialize_member`, then a call to
@@ -294,11 +357,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the structure could not be opened.
-    fn write_struct(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error>;
+    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error>;
 
     /// Begin to serialize a variably sized map. This call must be
     /// followed by zero or more calls to `serialize_entry`, then a call to
@@ -306,7 +365,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the map could not be opened.
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error>;
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error>;
 
     /// Begin to serialize a variably sized list. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
@@ -314,7 +373,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the list could not be opened.
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error>;
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error>;
 
     /// Serialize a `boolean`
     ///
@@ -450,7 +509,7 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Vec<T> {
             .get_list_member()
             .ok_or_else(|| S::Error::custom("Expected a list schema"))?;
         for element in self {
-            list.serialize_element(value_schema, element)?;
+            list.write_element(value_schema, element)?;
         }
         list.end(schema)
     }
@@ -471,7 +530,7 @@ where
             .get_key_value()
             .ok_or_else(|| S::Error::custom("Expected a map schema"))?;
         for (k, v) in self {
-            map.serialize_entry(key_schema, value_schema, k, v)?;
+            map.write_entry(key_schema, value_schema, k, v)?;
         }
         map.end(schema)
     }

@@ -9,7 +9,7 @@ use crate::{
     serde::{
         ShapeBuilder,
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
-        se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
+        se::{ListWriter, MapWriter, Serializer, StructWriter},
         serializers::{Error, SerializeWithSchema},
         utils::KeySerializer,
     },
@@ -60,11 +60,11 @@ impl SerializeWithSchema for Box<dyn Document> {
                 let document_map = self.as_map().unwrap();
                 let mut struct_serializer = serializer.write_struct(schema, self.size())?;
                 if let Some(discriminator) = &self.discriminator() {
-                    struct_serializer.serialize_discriminator(discriminator)?;
+                    struct_serializer.write_discriminator(discriminator)?;
                 }
                 for (key, value) in document_map {
                     if let Some(member_schema) = schema.get_member(key) {
-                        struct_serializer.serialize_member(member_schema, value)?;
+                        struct_serializer.write_member(member_schema, value)?;
                     } else {
                         // TODO(unknown members) Should unknown members be allowed?
                         todo!("Add some logging on unknown members");
@@ -125,15 +125,12 @@ struct DocumentParser;
 impl Serializer for DocumentParser {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
-    type SerializeList = DocumentListAccumulator;
-    type SerializeMap = DocumentMapAccumulator;
-    type SerializeStruct = DocumentMapAccumulator;
+    type ListWriter = DocumentListAccumulator;
+    type MapWriter = DocumentMapAccumulator;
+    type StructWriter = DocumentMapAccumulator;
 
-    fn write_struct(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    #[inline]
+    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error> {
         Ok(DocumentMapAccumulator {
             schema: schema.clone(),
             values: IndexMap::with_capacity(len),
@@ -141,7 +138,8 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    #[inline]
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error> {
         Ok(DocumentMapAccumulator {
             schema: schema.clone(),
             values: IndexMap::with_capacity(len),
@@ -149,7 +147,8 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
+    #[inline]
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error> {
         Ok(DocumentListAccumulator {
             schema: schema.clone(),
             values: Vec::with_capacity(len),
@@ -248,16 +247,12 @@ pub struct DocumentListAccumulator {
     values: Vec<Box<dyn Document>>,
     discriminator: Option<ShapeId>,
 }
-impl ListSerializer for DocumentListAccumulator {
+impl ListWriter for DocumentListAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
     #[inline]
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -283,12 +278,12 @@ pub struct DocumentMapAccumulator {
     values: IndexMap<String, Box<dyn Document>>,
     discriminator: Option<ShapeId>,
 }
-impl MapSerializer for DocumentMapAccumulator {
+impl MapWriter for DocumentMapAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
     #[inline]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -318,12 +313,12 @@ impl MapSerializer for DocumentMapAccumulator {
     }
 }
 
-impl StructSerializer for DocumentMapAccumulator {
+impl StructWriter for DocumentMapAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

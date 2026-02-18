@@ -100,6 +100,7 @@ where
 {
     /// Get a new builder for this shape
     #[must_use]
+    #[inline]
     fn builder() -> B {
         B::new()
     }

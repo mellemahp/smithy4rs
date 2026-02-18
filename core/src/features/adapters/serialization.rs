@@ -15,7 +15,7 @@ use crate::{
     prelude::{JsonNameTrait, XmlAttributeTrait, XmlNameTrait},
     schema::{Document, Schema},
     serde::{
-        se::{ListSerializer, MapSerializer, SerializeWithSchema, StructSerializer},
+        se::{ListWriter, MapWriter, SerializeWithSchema, StructWriter},
         serializers::{Error, Serializer},
     },
 };
@@ -114,10 +114,7 @@ impl NameMapper {
         staticize(schema.id().name())
     }
 
-    fn get_member_name<S: StructSerializer>(
-        &self,
-        schema: &Schema,
-    ) -> Result<&'static str, S::Error> {
+    fn get_member_name<S: StructWriter>(&self, schema: &Schema) -> Result<&'static str, S::Error> {
         let Some(me) = schema.as_member() else {
             return Err(S::Error::custom(
                 "Expected member schema when serializing struct field",
@@ -149,29 +146,25 @@ impl NameMapper {
 impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
-    type SerializeList = ListSerializeAdapter<S>;
-    type SerializeMap = MapSerializerAdapter<S>;
-    type SerializeStruct = StructSerializerAdapter<S>;
+    type ListWriter = ListSerializeAdapter<S>;
+    type MapWriter = MapSerializerAdapter<S>;
+    type StructWriter = StructSerializerAdapter<S>;
 
     #[inline]
-    fn write_struct(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error> {
         let struct_name = self.mapper.get_struct_name(schema);
         let struct_ser = self.serializer.serialize_struct(struct_name, len)?;
         Ok(StructSerializerAdapter::new(struct_ser, self.mapper))
     }
 
     #[inline]
-    fn write_map(self, _schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error> {
         let map_ser = self.serializer.serialize_map(Some(len))?;
         Ok(MapSerializerAdapter::new(map_ser))
     }
 
     #[inline]
-    fn write_list(self, _schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error> {
         let list_ser = self.serializer.serialize_seq(Some(len))?;
         Ok(ListSerializeAdapter::new(list_ser))
     }
@@ -271,12 +264,12 @@ impl<S: serde::Serializer> ListSerializeAdapter<S> {
         Self { serializer }
     }
 }
-impl<S: serde::Serializer> ListSerializer for ListSerializeAdapter<S> {
+impl<S: serde::Serializer> ListWriter for ListSerializeAdapter<S> {
     type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_element<T>(&mut self, value_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, value_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -300,12 +293,12 @@ impl<S: serde::Serializer> MapSerializerAdapter<S> {
         Self { serializer }
     }
 }
-impl<S: serde::Serializer> MapSerializer for MapSerializerAdapter<S> {
+impl<S: serde::Serializer> MapWriter for MapSerializerAdapter<S> {
     type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -338,12 +331,12 @@ impl<S: serde::Serializer> StructSerializerAdapter<S> {
         Self { serializer, mapper }
     }
 }
-impl<S: serde::Serializer> StructSerializer for StructSerializerAdapter<S> {
+impl<S: serde::Serializer> StructWriter for StructSerializerAdapter<S> {
     type Error = SerErrorWrapper<S::Error>;
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

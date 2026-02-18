@@ -73,7 +73,7 @@ pub trait ErrorCorrectionDefault {
 macro_rules! correction_default_impl {
     ($t:ty, $v:expr) => {
         impl ErrorCorrectionDefault for $t {
-            #[inline(always)]
+            #[inline]
             fn default() -> $t {
                 $v
             }
@@ -97,24 +97,28 @@ correction_default_impl!(BigInt, BigInt::zero());
 correction_default_impl!(ByteBuffer, ByteBuffer::new());
 
 impl ErrorCorrectionDefault for Box<dyn Document> {
+    #[inline]
     fn default() -> Self {
         NULL.clone()
     }
 }
 
 impl<E> ErrorCorrectionDefault for Vec<E> {
+    #[inline]
     fn default() -> Self {
         Vec::new()
     }
 }
 
 impl<E> ErrorCorrectionDefault for IndexMap<String, E> {
+    #[inline]
     fn default() -> Self {
         IndexMap::new()
     }
 }
 
 impl<E: ErrorCorrectionDefault> ErrorCorrectionDefault for Box<E> {
+    #[inline]
     fn default() -> Self {
         Box::new(E::default())
     }
@@ -129,6 +133,7 @@ impl<
     B: ErrorCorrection<Value = S> + SerializeWithSchema,
 > ErrorCorrectionDefault for MaybeBuilt<S, B>
 {
+    #[inline]
     fn default() -> Self {
         MaybeBuilt::Struct(S::default())
     }
@@ -146,6 +151,7 @@ impl<
 {
     type Value = S;
 
+    #[inline]
     fn correct(self) -> Self::Value {
         match self {
             MaybeBuilt::Struct(s) => s,
@@ -167,6 +173,7 @@ impl<S, B: ErrorCorrection<Value = S>> ErrorCorrection for Option<B> {
 impl<E: ErrorCorrection> ErrorCorrection for Box<E> {
     type Value = Box<E::Value>;
 
+    #[inline]
     fn correct(self) -> Self::Value {
         Box::new((*self).correct())
     }

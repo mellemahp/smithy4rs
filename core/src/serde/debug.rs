@@ -22,7 +22,7 @@ use crate::{
     schema::{Document, Schema, SmithyTrait, prelude::SensitiveTrait},
     serde::{
         debug::FmtError::Custom,
-        se::{ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer},
+        se::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
     },
 };
 // ============================================================================
@@ -99,11 +99,11 @@ const REDACTED_MAP: &str = "{**REDACTED**}";
 impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     type Error = FmtError;
     type Ok = ();
-    type SerializeList = DebugListSerializer<'a, 'b>;
-    type SerializeMap = DebugMapSerializer<'a, 'b>;
-    type SerializeStruct = DebugStructSerializer<'a, 'b>;
+    type ListWriter = DebugListSerializer<'a, 'b>;
+    type MapWriter = DebugMapSerializer<'a, 'b>;
+    type StructWriter = DebugStructSerializer<'a, 'b>;
 
-    fn write_struct(self, schema: &Schema, _: usize) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, _: usize) -> Result<Self::StructWriter, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             self.fmt.write_str(schema.id().name())?;
             // Replace entire structure contents with redacted placeholder
@@ -116,7 +116,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
         }
     }
 
-    fn write_map(self, schema: &Schema, _: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, _: usize) -> Result<Self::MapWriter, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             // Replace entire map with redacted placeholder
             self.fmt.write_str(REDACTED_MAP)?;
@@ -126,7 +126,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
         }
     }
 
-    fn write_list(self, schema: &Schema, _: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, _: usize) -> Result<Self::ListWriter, Self::Error> {
         if schema.contains_type::<SensitiveTrait>() {
             // Replace entire list with redacted placeholder
             self.fmt.write_str(REDACTED_LIST)?;
@@ -238,15 +238,11 @@ enum DebugListSerializer<'a, 'b: 'a> {
     Unredacted(DebugList<'a, 'b>),
     Redacted,
 }
-impl ListSerializer for DebugListSerializer<'_, '_> {
+impl ListWriter for DebugListSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -272,11 +268,11 @@ enum DebugMapSerializer<'a, 'b: 'a> {
     Redacted,
 }
 
-impl MapSerializer for DebugMapSerializer<'_, '_> {
+impl MapWriter for DebugMapSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -312,11 +308,11 @@ enum DebugStructSerializer<'a, 'b: 'a> {
     Redacted,
 }
 
-impl StructSerializer for DebugStructSerializer<'_, '_> {
+impl StructWriter for DebugStructSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -334,7 +330,7 @@ impl StructSerializer for DebugStructSerializer<'_, '_> {
         Ok(())
     }
 
-    fn serialize_member_named<T>(
+    fn write_member_named<T>(
         &mut self,
         member_name: &str,
         member_schema: &Schema,

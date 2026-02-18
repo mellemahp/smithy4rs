@@ -12,7 +12,7 @@
 //! - [`ListReader`]: Iterates list elements with `read_element()`
 //! - [`MapReader`]: Iterates map entries with `read_key()` / `read_value()`
 //!
-//! This design (inspired by serde) separates iteration from value reading,
+//! This design (inspired by `serde`) separates iteration from value reading,
 //! allowing callers to control the deserialization flow.
 
 use std::{error::Error as StdError, fmt::Display};
@@ -182,10 +182,6 @@ pub trait MapReader<'de> {
 /// schema-guided deserialization for all Smithy data types. It uses a reader pattern
 /// for compound types (structs, lists, maps) where the deserializer returns reader
 /// objects that allow iterating through members/elements/entries.
-///
-/// Compound methods (`read_struct`, `read_list`, `read_map`) take `&mut self` and return
-/// readers that borrow from the deserializer. The readers use GATs to express the
-/// lifetime relationship.
 pub trait Deserializer<'de>: Sized {
     /// The error type that can be returned if deserialization fails.
     type Error: Error;

@@ -11,9 +11,7 @@ use temporal_rs::Instant;
 
 use crate::{
     schema::{Document, Schema},
-    serde::se::{
-        Error, ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
-    },
+    serde::se::{Error, ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
 };
 
 // ============================================================================
@@ -32,26 +30,22 @@ impl<E: Error> KeySerializer<E> {
 impl<E: Error> Serializer for &mut KeySerializer<E> {
     type Error = E;
     type Ok = String;
-    type SerializeList = NoOpSerializer<E>;
-    type SerializeMap = NoOpSerializer<E>;
-    type SerializeStruct = NoOpSerializer<E>;
+    type ListWriter = NoOpSerializer<E>;
+    type MapWriter = NoOpSerializer<E>;
+    type StructWriter = NoOpSerializer<E>;
 
     #[cold]
-    fn write_struct(
-        self,
-        schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, _len: usize) -> Result<Self::StructWriter, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn write_map(self, schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, _len: usize) -> Result<Self::MapWriter, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
     #[cold]
-    fn write_list(self, schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, _len: usize) -> Result<Self::ListWriter, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
@@ -145,16 +139,12 @@ fn invalid_key_error<E: Error>(schema: &Schema) -> E {
 
 // Structures, maps, and lists cannot be used as map keys so these implementations will never actually be called.
 pub(crate) struct NoOpSerializer<E: Error>(PhantomData<E>);
-impl<E: Error> ListSerializer for NoOpSerializer<E> {
+impl<E: Error> ListWriter for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 
     #[cold]
-    fn serialize_element<T>(
-        &mut self,
-        _element_schema: &Schema,
-        _value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, _element_schema: &Schema, _value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -166,12 +156,12 @@ impl<E: Error> ListSerializer for NoOpSerializer<E> {
         unreachable!()
     }
 }
-impl<E: Error> MapSerializer for NoOpSerializer<E> {
+impl<E: Error> MapWriter for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 
     #[cold]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         _key_schema: &Schema,
         _value_schema: &Schema,
@@ -190,15 +180,11 @@ impl<E: Error> MapSerializer for NoOpSerializer<E> {
         unreachable!()
     }
 }
-impl<E: Error> StructSerializer for NoOpSerializer<E> {
+impl<E: Error> StructWriter for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 
-    fn serialize_member<T>(
-        &mut self,
-        _member_schema: &Schema,
-        _value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, _member_schema: &Schema, _value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

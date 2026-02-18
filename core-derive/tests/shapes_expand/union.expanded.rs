@@ -52,7 +52,7 @@ const _: () = {
     use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
     use _smithy4rs::schema::Unit as _Unit;
     #[automatically_derived]
     impl _SerializeWithSchema for TestEnum {
@@ -63,14 +63,10 @@ const _: () = {
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1)?;
             match self {
-                TestEnum::A(val) => {
-                    ser.serialize_member_named("a", &_UNION_MEMBER_A, val)?
-                }
-                TestEnum::B(val) => {
-                    ser.serialize_member_named("b", &_UNION_MEMBER_B, val)?
-                }
-                TestEnum::C => ser.serialize_member_named("c", &_UNION_MEMBER_C, &_Unit)?,
-                TestEnum::Unknown(unknown) => ser.serialize_unknown(schema, unknown)?,
+                TestEnum::A(val) => ser.write_member_named("a", &_UNION_MEMBER_A, val)?,
+                TestEnum::B(val) => ser.write_member_named("b", &_UNION_MEMBER_B, val)?,
+                TestEnum::C => ser.write_member_named("c", &_UNION_MEMBER_C, &_Unit)?,
+                TestEnum::Unknown(unknown) => ser.write_unknown(schema, unknown)?,
             }
             ser.end(schema)
         }

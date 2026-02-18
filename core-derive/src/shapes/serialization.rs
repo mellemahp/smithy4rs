@@ -19,13 +19,12 @@ pub(crate) fn serialization_impl(
         use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     };
     // Add structure-specific imports
-    // TODO(unions): This should also be added for unions
     if let Data::Struct(_) = &input.data {}
     let body = match &input.data {
         Data::Struct(data) => {
             imports = quote! {
                 #imports
-                use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
+                use #crate_ident::serde::serializers::StructWriter as _StructWriter;
             };
             serialize_struct(schema_ident, data)
         }
@@ -33,7 +32,7 @@ pub(crate) fn serialization_impl(
             if is_union(data) {
                 imports = quote! {
                     #imports
-                    use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
+                    use #crate_ident::serde::serializers::StructWriter as _StructWriter;
                 };
                 if data.variants.iter().any(|v| v.fields.is_empty()) {
                     imports = quote! {
@@ -99,9 +98,9 @@ struct FieldData {
 impl FieldData {
     fn method_call(&self) -> Ident {
         if self.optional {
-            Ident::new("serialize_optional_member_named", Span::call_site())
+            Ident::new("write_optional_member_named", Span::call_site())
         } else {
-            Ident::new("serialize_member_named", Span::call_site())
+            Ident::new("write_member_named", Span::call_site())
         }
     }
 
@@ -192,7 +191,7 @@ fn serialize_union(shape_name: &Ident, schema_ident: &Ident, data: &DataEnum) ->
         let mut ser = serializer.write_struct(schema, 1)?;
         match self {
             #(#match_arm,)*
-            #shape_name::Unknown(unknown) => ser.serialize_unknown(schema, unknown)?,
+            #shape_name::Unknown(unknown) => ser.write_unknown(schema, unknown)?,
         }
         ser.end(schema)
     }
@@ -229,7 +228,7 @@ impl UnionVariant {
         let schema = &self.variant_schema(schema_ident);
         if self.unit {
             quote! {
-                #shape_name::#variant => ser.serialize_member_named(
+                #shape_name::#variant => ser.write_member_named(
                     #member_name,
                     &#schema,
                     &_Unit
@@ -237,7 +236,7 @@ impl UnionVariant {
             }
         } else {
             quote! {
-                #shape_name::#variant(val) => ser.serialize_member_named(
+                #shape_name::#variant(val) => ser.write_member_named(
                     #member_name,
                     &#schema,
                     val
