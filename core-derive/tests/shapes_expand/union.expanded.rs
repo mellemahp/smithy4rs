@@ -52,7 +52,7 @@ const _: () = {
     use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
     use _smithy4rs::schema::Unit as _Unit;
     #[automatically_derived]
     impl _SerializeWithSchema for TestEnum {

@@ -2,7 +2,7 @@ use crate::{
     schema::{Schema, Unit},
     serde::{
         de::{DeserializeWithSchema, Deserializer, Error, StructReader},
-        se::{SerializeWithSchema, Serializer, StructSerializer},
+        se::{SerializeWithSchema, Serializer, StructWriter},
     },
 };
 

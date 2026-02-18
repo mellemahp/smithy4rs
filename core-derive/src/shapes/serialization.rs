@@ -19,13 +19,12 @@ pub(crate) fn serialization_impl(
         use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     };
     // Add structure-specific imports
-    // TODO(unions): This should also be added for unions
     if let Data::Struct(_) = &input.data {}
     let body = match &input.data {
         Data::Struct(data) => {
             imports = quote! {
                 #imports
-                use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
+                use #crate_ident::serde::serializers::StructWriter as _StructWriter;
             };
             serialize_struct(schema_ident, data)
         }
@@ -33,7 +32,7 @@ pub(crate) fn serialization_impl(
             if is_union(data) {
                 imports = quote! {
                     #imports
-                    use #crate_ident::serde::serializers::StructSerializer as _StructSerializer;
+                    use #crate_ident::serde::serializers::StructWriter as _StructWriter;
                 };
                 if data.variants.iter().any(|v| v.fields.is_empty()) {
                     imports = quote! {

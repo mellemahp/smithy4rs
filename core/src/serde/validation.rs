@@ -79,7 +79,7 @@ use crate::{
     serde::{
         se::{SerializeWithSchema, Serializer},
         serializers,
-        serializers::{ListSerializer, MapSerializer, StructSerializer},
+        serializers::{ListWriter, MapWriter, StructWriter},
         utils::KeySerializer,
     },
 };
@@ -284,15 +284,11 @@ macro_rules! range {
 impl<'a> Serializer for &'a mut DefaultValidator {
     type Error = ValidationErrors;
     type Ok = ();
-    type SerializeList = DefaultListValidator<'a>;
-    type SerializeMap = DefaultMapValidator<'a>;
-    type SerializeStruct = DefaultStructValidator<'a>;
+    type ListWriter = DefaultListValidator<'a>;
+    type MapWriter = DefaultMapValidator<'a>;
+    type StructWriter = DefaultStructValidator<'a>;
 
-    fn write_struct(
-        self,
-        schema: &Schema,
-        _len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, _len: usize) -> Result<Self::StructWriter, Self::Error> {
         if !schema.shape_type().eq(&ShapeType::Structure)
             && !schema.shape_type().eq(&ShapeType::Union)
         {
@@ -301,13 +297,13 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(DefaultStructValidator { root: self })
     }
 
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error> {
         shape_type!(self, schema, ShapeType::Map);
         length!(self, schema, len);
         Ok(DefaultMapValidator { root: self })
     }
 
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error> {
         shape_type!(self, schema, ShapeType::List);
         length!(self, schema, len);
         Ok(DefaultListValidator {
@@ -500,7 +496,7 @@ pub struct DefaultListValidator<'a> {
     index: usize,
 }
 
-impl ListSerializer for DefaultListValidator<'_> {
+impl ListWriter for DefaultListValidator<'_> {
     type Error = ValidationErrors;
     type Ok = ();
 
@@ -602,26 +598,26 @@ macro_rules! hash_impl {
 impl<'a> Serializer for &'a mut HashingSerializer {
     type Error = ValidationFailure;
     type Ok = ();
-    type SerializeList = InnerHasher<'a>;
-    type SerializeMap = InnerHasher<'a>;
-    type SerializeStruct = InnerHasher<'a>;
+    type ListWriter = InnerHasher<'a>;
+    type MapWriter = InnerHasher<'a>;
+    type StructWriter = InnerHasher<'a>;
 
     #[inline]
     fn write_struct(
         self,
         _schema: &Schema,
         _len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    ) -> Result<Self::StructWriter, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
     #[inline]
-    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::MapWriter, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
     #[inline]
-    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::ListWriter, Self::Error> {
         Ok(InnerHasher { root: self })
     }
 
@@ -719,7 +715,7 @@ impl<'a> Serializer for &'a mut HashingSerializer {
 struct InnerHasher<'a> {
     root: &'a mut HashingSerializer,
 }
-impl ListSerializer for InnerHasher<'_> {
+impl ListWriter for InnerHasher<'_> {
     type Error = ValidationFailure;
     type Ok = ();
 
@@ -741,7 +737,7 @@ impl ListSerializer for InnerHasher<'_> {
         Ok(())
     }
 }
-impl MapSerializer for InnerHasher<'_> {
+impl MapWriter for InnerHasher<'_> {
     type Error = ValidationFailure;
     type Ok = ();
 
@@ -767,7 +763,7 @@ impl MapSerializer for InnerHasher<'_> {
         Ok(())
     }
 }
-impl StructSerializer for InnerHasher<'_> {
+impl StructWriter for InnerHasher<'_> {
     type Error = ValidationFailure;
     type Ok = ();
 
@@ -809,7 +805,7 @@ impl StructSerializer for InnerHasher<'_> {
 pub struct DefaultMapValidator<'a> {
     root: &'a mut DefaultValidator,
 }
-impl MapSerializer for DefaultMapValidator<'_> {
+impl MapWriter for DefaultMapValidator<'_> {
     type Error = ValidationErrors;
     type Ok = ();
 
@@ -845,7 +841,7 @@ impl MapSerializer for DefaultMapValidator<'_> {
 pub struct DefaultStructValidator<'a> {
     root: &'a mut DefaultValidator,
 }
-impl StructSerializer for DefaultStructValidator<'_> {
+impl StructWriter for DefaultStructValidator<'_> {
     type Error = ValidationErrors;
     type Ok = ();
 

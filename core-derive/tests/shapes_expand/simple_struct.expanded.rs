@@ -52,7 +52,7 @@ const _: () = {
     use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
     #[automatically_derived]
     impl _SerializeWithSchema for SimpleStruct {
         fn serialize_with_schema<S: _Serializer>(
@@ -203,7 +203,7 @@ const _: () = {
     }
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
     #[automatically_derived]
     impl _SerializeWithSchema for SimpleStructBuilder {
         fn serialize_with_schema<S: _Serializer>(
@@ -295,7 +295,7 @@ const _: () = {
     use _smithy4rs::schema::Schema as _Schema;
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
     #[automatically_derived]
     impl _SerializeWithSchema for Nested {
         fn serialize_with_schema<S: _Serializer>(
@@ -404,7 +404,7 @@ const _: () = {
     }
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
     use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructSerializer as _StructSerializer;
+    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
     #[automatically_derived]
     impl _SerializeWithSchema for NestedBuilder {
         fn serialize_with_schema<S: _Serializer>(

@@ -1,9 +1,7 @@
 use smithy4rs_core::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     schema::{Document, Schema},
-    serde::serializers::{
-        ListSerializer, MapSerializer, SerializeWithSchema, Serializer, StructSerializer,
-    },
+    serde::serializers::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
 };
 
 use crate::errors::JsonSerdeError;
@@ -80,16 +78,16 @@ impl<'a> JsonSerializer<'a> {
 impl<'a> Serializer for JsonSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
-    type SerializeList = JsonListSerializer<'a>;
-    type SerializeMap = JsonMapSerializer<'a>;
-    type SerializeStruct = JsonStructSerializer<'a>;
+    type ListWriter = JsonListSerializer<'a>;
+    type MapWriter = JsonMapSerializer<'a>;
+    type StructWriter = JsonStructSerializer<'a>;
 
     #[inline]
     fn write_struct(
         self,
         _schema: &Schema,
         _len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    ) -> Result<Self::StructWriter, Self::Error> {
         start_json_object(self.buf);
         Ok(JsonStructSerializer {
             buf: self.buf,
@@ -98,7 +96,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::MapWriter, Self::Error> {
         start_json_object(self.buf);
         Ok(JsonMapSerializer {
             buf: self.buf,
@@ -107,7 +105,7 @@ impl<'a> Serializer for JsonSerializer<'a> {
     }
 
     #[inline]
-    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::ListWriter, Self::Error> {
         start_json_array(self.buf);
         Ok(JsonListSerializer {
             buf: self.buf,
@@ -221,7 +219,7 @@ pub struct JsonListSerializer<'a> {
     first: bool,
 }
 
-impl<'a> ListSerializer for JsonListSerializer<'a> {
+impl<'a> ListWriter for JsonListSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
 
@@ -257,7 +255,7 @@ pub struct JsonMapSerializer<'a> {
     first: bool,
 }
 
-impl<'a> MapSerializer for JsonMapSerializer<'a> {
+impl<'a> MapWriter for JsonMapSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
 
@@ -301,7 +299,7 @@ pub struct JsonStructSerializer<'a> {
     first: bool,
 }
 
-impl<'a> StructSerializer for JsonStructSerializer<'a> {
+impl<'a> StructWriter for JsonStructSerializer<'a> {
     type Error = JsonSerdeError;
     type Ok = ();
 

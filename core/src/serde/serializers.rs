@@ -68,7 +68,7 @@ pub trait Error: Sized + StdError {
 // ============================================================================
 
 /// List Serializer that can be called in a loop to serialize list values
-pub trait ListSerializer {
+pub trait ListWriter {
     /// Must match the `Error` type of our `Serializer`.
     type Error: Error;
 
@@ -96,7 +96,7 @@ pub trait ListSerializer {
 }
 
 /// Map Serializer that can be called in a loop to serialize map values
-pub trait MapSerializer {
+pub trait MapWriter {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
 
@@ -128,7 +128,7 @@ pub trait MapSerializer {
 }
 
 /// Struct Serializer that can be called to serialize struct member values
-pub trait StructSerializer {
+pub trait StructWriter {
     /// Must match the `Error` type of our [`Serializer`].
     type Error: Error;
 
@@ -179,7 +179,7 @@ pub trait StructSerializer {
 
     /// Serializes an optional member.
     ///
-    /// This method will call [`StructSerializer::skip_member`] on any optional members
+    /// This method will call [`StructWriter::skip_member`] on any optional members
     /// that are `None`, otherwise the `Some` value is unwrapped and serialized as normal.
     ///
     /// # Errors
@@ -274,19 +274,19 @@ pub trait Serializer: Sized {
     /// list.
     ///
     /// [`write_list`]: #tymethod.write_list
-    type SerializeList: ListSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type ListWriter: ListWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Type returned from [`write_map`] for serializing the contents of a
     /// map.
     ///
     /// [`write_map`]: #tymethod.write_map
-    type SerializeMap: MapSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type MapWriter: MapWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Type returned from [`write_struct`] for serializing the contents of a
     /// struct or union.
     ///
     /// [`write_struct`]: #tymethod.write_struct
-    type SerializeStruct: StructSerializer<Ok = Self::Ok, Error = Self::Error>;
+    type StructWriter: StructWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Begin to serialize a variably sized structure or union. This call must be
     /// followed by zero or more calls to `serialize_member`, then a call to
@@ -294,11 +294,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the structure could not be opened.
-    fn write_struct(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error>;
+    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error>;
 
     /// Begin to serialize a variably sized map. This call must be
     /// followed by zero or more calls to `serialize_entry`, then a call to
@@ -306,7 +302,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the map could not be opened.
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error>;
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error>;
 
     /// Begin to serialize a variably sized list. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
@@ -314,7 +310,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the list could not be opened.
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error>;
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error>;
 
     /// Serialize a `boolean`
     ///

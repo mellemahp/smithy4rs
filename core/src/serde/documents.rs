@@ -9,7 +9,7 @@ use crate::{
     serde::{
         ShapeBuilder,
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
-        se::{ListSerializer, MapSerializer, Serializer, StructSerializer},
+        se::{ListWriter, MapWriter, Serializer, StructWriter},
         serializers::{Error, SerializeWithSchema},
         utils::KeySerializer,
     },
@@ -125,15 +125,11 @@ struct DocumentParser;
 impl Serializer for DocumentParser {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
-    type SerializeList = DocumentListAccumulator;
-    type SerializeMap = DocumentMapAccumulator;
-    type SerializeStruct = DocumentMapAccumulator;
+    type ListWriter = DocumentListAccumulator;
+    type MapWriter = DocumentMapAccumulator;
+    type StructWriter = DocumentMapAccumulator;
 
-    fn write_struct(
-        self,
-        schema: &Schema,
-        len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error> {
+    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error> {
         Ok(DocumentMapAccumulator {
             schema: schema.clone(),
             values: IndexMap::with_capacity(len),
@@ -141,7 +137,7 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::SerializeMap, Self::Error> {
+    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error> {
         Ok(DocumentMapAccumulator {
             schema: schema.clone(),
             values: IndexMap::with_capacity(len),
@@ -149,7 +145,7 @@ impl Serializer for DocumentParser {
         })
     }
 
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::SerializeList, Self::Error> {
+    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error> {
         Ok(DocumentListAccumulator {
             schema: schema.clone(),
             values: Vec::with_capacity(len),
@@ -248,7 +244,7 @@ pub struct DocumentListAccumulator {
     values: Vec<Box<dyn Document>>,
     discriminator: Option<ShapeId>,
 }
-impl ListSerializer for DocumentListAccumulator {
+impl ListWriter for DocumentListAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
@@ -283,7 +279,7 @@ pub struct DocumentMapAccumulator {
     values: IndexMap<String, Box<dyn Document>>,
     discriminator: Option<ShapeId>,
 }
-impl MapSerializer for DocumentMapAccumulator {
+impl MapWriter for DocumentMapAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
@@ -318,7 +314,7 @@ impl MapSerializer for DocumentMapAccumulator {
     }
 }
 
-impl StructSerializer for DocumentMapAccumulator {
+impl StructWriter for DocumentMapAccumulator {
     type Error = DocumentError;
     type Ok = Box<dyn Document>;
 
