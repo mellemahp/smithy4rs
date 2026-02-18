@@ -61,17 +61,9 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.serialize_member_named(
-                "field_a",
-                &_SIMPLE_SCHEMA_MEMBER_A,
-                &self.field_a,
-            )?;
-            ser.serialize_member_named(
-                "field_b",
-                &_SIMPLE_SCHEMA_MEMBER_B,
-                &self.field_b,
-            )?;
-            ser.serialize_optional_member_named(
+            ser.write_member_named("field_a", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
+            ser.write_member_named("field_b", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
+            ser.write_optional_member_named(
                 "field_c",
                 &_SIMPLE_SCHEMA_MEMBER_C,
                 &self.field_c,
@@ -212,17 +204,9 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.serialize_member_named(
-                "field_a",
-                &_SIMPLE_SCHEMA_MEMBER_A,
-                &self.field_a,
-            )?;
-            ser.serialize_member_named(
-                "field_b",
-                &_SIMPLE_SCHEMA_MEMBER_B,
-                &self.field_b,
-            )?;
-            ser.serialize_optional_member_named(
+            ser.write_member_named("field_a", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
+            ser.write_member_named("field_b", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
+            ser.write_optional_member_named(
                 "field_c",
                 &_SIMPLE_SCHEMA_MEMBER_C,
                 &self.field_c,
@@ -304,11 +288,7 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.serialize_member_named(
-                "field_a",
-                &_NESTED_SCHEMA_MEMBER_D,
-                &self.field_a,
-            )?;
+            ser.write_member_named("field_a", &_NESTED_SCHEMA_MEMBER_D, &self.field_a)?;
             ser.end(schema)
         }
     }
@@ -413,11 +393,7 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.serialize_member_named(
-                "field_a",
-                &_NESTED_SCHEMA_MEMBER_D,
-                &self.field_a,
-            )?;
+            ser.write_member_named("field_a", &_NESTED_SCHEMA_MEMBER_D, &self.field_a)?;
             ser.end(schema)
         }
     }

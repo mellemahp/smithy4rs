@@ -163,7 +163,6 @@ impl<
     B: ErrorCorrection<Value = E> + SerializeWithSchema,
 > SerializeWithSchema for MaybeBuilt<E, B>
 {
-    #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &Schema,

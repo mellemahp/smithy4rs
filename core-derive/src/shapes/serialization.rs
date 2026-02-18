@@ -98,9 +98,9 @@ struct FieldData {
 impl FieldData {
     fn method_call(&self) -> Ident {
         if self.optional {
-            Ident::new("serialize_optional_member_named", Span::call_site())
+            Ident::new("write_optional_member_named", Span::call_site())
         } else {
-            Ident::new("serialize_member_named", Span::call_site())
+            Ident::new("write_member_named", Span::call_site())
         }
     }
 
@@ -191,7 +191,7 @@ fn serialize_union(shape_name: &Ident, schema_ident: &Ident, data: &DataEnum) ->
         let mut ser = serializer.write_struct(schema, 1)?;
         match self {
             #(#match_arm,)*
-            #shape_name::Unknown(unknown) => ser.serialize_unknown(schema, unknown)?,
+            #shape_name::Unknown(unknown) => ser.write_unknown(schema, unknown)?,
         }
         ser.end(schema)
     }
@@ -228,7 +228,7 @@ impl UnionVariant {
         let schema = &self.variant_schema(schema_ident);
         if self.unit {
             quote! {
-                #shape_name::#variant => ser.serialize_member_named(
+                #shape_name::#variant => ser.write_member_named(
                     #member_name,
                     &#schema,
                     &_Unit
@@ -236,7 +236,7 @@ impl UnionVariant {
             }
         } else {
             quote! {
-                #shape_name::#variant(val) => ser.serialize_member_named(
+                #shape_name::#variant(val) => ser.write_member_named(
                     #member_name,
                     &#schema,
                     val

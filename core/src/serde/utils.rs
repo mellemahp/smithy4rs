@@ -144,11 +144,7 @@ impl<E: Error> ListWriter for NoOpSerializer<E> {
     type Ok = String;
 
     #[cold]
-    fn serialize_element<T>(
-        &mut self,
-        _element_schema: &Schema,
-        _value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, _element_schema: &Schema, _value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -165,7 +161,7 @@ impl<E: Error> MapWriter for NoOpSerializer<E> {
     type Ok = String;
 
     #[cold]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         _key_schema: &Schema,
         _value_schema: &Schema,
@@ -188,11 +184,7 @@ impl<E: Error> StructWriter for NoOpSerializer<E> {
     type Error = E;
     type Ok = String;
 
-    fn serialize_member<T>(
-        &mut self,
-        _member_schema: &Schema,
-        _value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, _member_schema: &Schema, _value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

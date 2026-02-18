@@ -242,11 +242,7 @@ impl ListWriter for DebugListSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -276,7 +272,7 @@ impl MapWriter for DebugMapSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -316,7 +312,7 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
     type Error = FmtError;
     type Ok = ();
 
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -334,7 +330,7 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
         Ok(())
     }
 
-    fn serialize_member_named<T>(
+    fn write_member_named<T>(
         &mut self,
         member_name: &str,
         member_schema: &Schema,

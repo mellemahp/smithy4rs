@@ -269,7 +269,7 @@ impl<S: serde::Serializer> ListWriter for ListSerializeAdapter<S> {
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_element<T>(&mut self, value_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, value_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -298,7 +298,7 @@ impl<S: serde::Serializer> MapWriter for MapSerializerAdapter<S> {
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -336,7 +336,7 @@ impl<S: serde::Serializer> StructWriter for StructSerializerAdapter<S> {
     type Ok = S::Ok;
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

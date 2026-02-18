@@ -500,11 +500,7 @@ impl ListWriter for DefaultListValidator<'_> {
     type Error = ValidationErrors;
     type Ok = ();
 
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -720,11 +716,7 @@ impl ListWriter for InnerHasher<'_> {
     type Ok = ();
 
     #[inline]
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -742,7 +734,7 @@ impl MapWriter for InnerHasher<'_> {
     type Ok = ();
 
     #[inline]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -767,7 +759,7 @@ impl StructWriter for InnerHasher<'_> {
     type Error = ValidationFailure;
     type Ok = ();
 
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -776,12 +768,12 @@ impl StructWriter for InnerHasher<'_> {
                 member_schema.id().name().into(),
             ));
         };
-        self.serialize_member_named(member_name, member_schema, value)?;
+        self.write_member_named(member_name, member_schema, value)?;
         Ok(())
     }
 
     #[inline]
-    fn serialize_member_named<T>(
+    fn write_member_named<T>(
         &mut self,
         member_name: &str,
         member_schema: &Schema,
@@ -809,7 +801,7 @@ impl MapWriter for DefaultMapValidator<'_> {
     type Error = ValidationErrors;
     type Ok = ();
 
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -846,7 +838,7 @@ impl StructWriter for DefaultStructValidator<'_> {
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {

@@ -224,11 +224,7 @@ impl<'a> ListWriter for JsonListSerializer<'a> {
     type Ok = ();
 
     #[inline]
-    fn serialize_element<T>(
-        &mut self,
-        element_schema: &Schema,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -260,7 +256,7 @@ impl<'a> MapWriter for JsonMapSerializer<'a> {
     type Ok = ();
 
     #[inline]
-    fn serialize_entry<K, V>(
+    fn write_entry<K, V>(
         &mut self,
         key_schema: &Schema,
         value_schema: &Schema,
@@ -304,7 +300,7 @@ impl<'a> StructWriter for JsonStructSerializer<'a> {
     type Ok = ();
 
     #[inline]
-    fn serialize_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
+    fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
         T: SerializeWithSchema,
     {
@@ -328,7 +324,7 @@ impl<'a> StructWriter for JsonStructSerializer<'a> {
     }
 
     #[inline]
-    fn serialize_member_named<T>(
+    fn write_member_named<T>(
         &mut self,
         member_name: &str,
         member_schema: &Schema,
