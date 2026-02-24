@@ -133,8 +133,7 @@ const _: () = {
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
     use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
-    use _smithy4rs::serde::ShapeBuilder as _ShapeBuilder;
-    use _smithy4rs::serde::Buildable as _Buildable;
+    use _smithy4rs::serde::BuildWithSchema as _BuildWithSchema;
     use _smithy4rs::serde::deserializers::StructReader as _StructReader;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for SimpleStructBuilder {
@@ -170,6 +169,13 @@ const _: () = {
             Ok(builder)
         }
     }
+    use smithy4rs_core::serde::BuildableShape as _BuildableShape;
+    use smithy4rs_core::serde::validation::ValidationErrors as _ValidationErrors;
+    use smithy4rs_core::serde::validation::Validator as _Validator;
+    #[automatically_derived]
+    impl _BuildableShape for SimpleStruct {
+        type Builder = SimpleStructBuilder;
+    }
     #[automatically_derived]
     impl _ErrorCorrection for SimpleStructBuilder {
         type Value = SimpleStruct;
@@ -182,7 +188,7 @@ const _: () = {
         }
     }
     #[automatically_derived]
-    impl<'de> _ShapeBuilder<'de, SimpleStruct> for SimpleStructBuilder {
+    impl _BuildWithSchema<SimpleStruct> for SimpleStructBuilder {
         fn new() -> Self {
             Self::new()
         }
@@ -191,6 +197,31 @@ const _: () = {
     impl _ErrorCorrectionDefault for SimpleStruct {
         fn default() -> Self {
             SimpleStructBuilder::new().correct()
+        }
+    }
+    #[automatically_derived]
+    impl SimpleStruct {
+        /// Get a new builder for this shape.
+        #[must_use]
+        #[inline]
+        pub fn builder() -> SimpleStructBuilder {
+            <Self as _BuildableShape>::builder()
+        }
+    }
+    #[automatically_derived]
+    impl SimpleStructBuilder {
+        /// Build the shape, validating with the default validator.
+        #[inline]
+        pub fn build(self) -> Result<SimpleStruct, _ValidationErrors> {
+            _BuildWithSchema::build(self)
+        }
+        /// Build the shape using a custom validator.
+        #[inline]
+        pub fn build_with_validator(
+            self,
+            validator: impl _Validator,
+        ) -> Result<SimpleStruct, _ValidationErrors> {
+            _BuildWithSchema::build_with_validator(self, validator)
         }
     }
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
@@ -214,7 +245,6 @@ const _: () = {
             ser.end(schema)
         }
     }
-    impl<'de> _Buildable<'de, SimpleStructBuilder> for SimpleStruct {}
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
@@ -336,8 +366,7 @@ const _: () = {
     use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     use _smithy4rs::serde::correction::ErrorCorrection as _ErrorCorrection;
     use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
-    use _smithy4rs::serde::ShapeBuilder as _ShapeBuilder;
-    use _smithy4rs::serde::Buildable as _Buildable;
+    use _smithy4rs::serde::BuildWithSchema as _BuildWithSchema;
     use _smithy4rs::serde::deserializers::StructReader as _StructReader;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for NestedBuilder {
@@ -361,6 +390,13 @@ const _: () = {
             Ok(builder)
         }
     }
+    use smithy4rs_core::serde::BuildableShape as _BuildableShape;
+    use smithy4rs_core::serde::validation::ValidationErrors as _ValidationErrors;
+    use smithy4rs_core::serde::validation::Validator as _Validator;
+    #[automatically_derived]
+    impl _BuildableShape for Nested {
+        type Builder = NestedBuilder;
+    }
     #[automatically_derived]
     impl _ErrorCorrection for NestedBuilder {
         type Value = Nested;
@@ -371,7 +407,7 @@ const _: () = {
         }
     }
     #[automatically_derived]
-    impl<'de> _ShapeBuilder<'de, Nested> for NestedBuilder {
+    impl _BuildWithSchema<Nested> for NestedBuilder {
         fn new() -> Self {
             Self::new()
         }
@@ -380,6 +416,31 @@ const _: () = {
     impl _ErrorCorrectionDefault for Nested {
         fn default() -> Self {
             NestedBuilder::new().correct()
+        }
+    }
+    #[automatically_derived]
+    impl Nested {
+        /// Get a new builder for this shape.
+        #[must_use]
+        #[inline]
+        pub fn builder() -> NestedBuilder {
+            <Self as _BuildableShape>::builder()
+        }
+    }
+    #[automatically_derived]
+    impl NestedBuilder {
+        /// Build the shape, validating with the default validator.
+        #[inline]
+        pub fn build(self) -> Result<Nested, _ValidationErrors> {
+            _BuildWithSchema::build(self)
+        }
+        /// Build the shape using a custom validator.
+        #[inline]
+        pub fn build_with_validator(
+            self,
+            validator: impl _Validator,
+        ) -> Result<Nested, _ValidationErrors> {
+            _BuildWithSchema::build_with_validator(self, validator)
         }
     }
     use _smithy4rs::serde::serializers::Serializer as _Serializer;
@@ -397,7 +458,6 @@ const _: () = {
             ser.end(schema)
         }
     }
-    impl<'de> _Buildable<'de, NestedBuilder> for Nested {}
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;

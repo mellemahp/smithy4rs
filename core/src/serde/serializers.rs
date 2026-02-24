@@ -349,79 +349,127 @@ pub trait Serializer: Sized {
     /// struct or union.
     ///
     /// [`write_struct`]: #tymethod.write_struct
+    // TODO: Might want to do `StructWriter<'s>` so write_struct can return a
+    // struct writer that borrows from `schema`. This would eliminate the Arc
+    // clone needed by HTTP binding's struct serialization (for payload/body).
     type StructWriter: StructWriter<Ok = Self::Ok, Error = Self::Error>;
 
     /// Begin to serialize a variably sized structure or union. This call must be
-    /// followed by zero or more calls to `serialize_member`, then a call to
-    /// `end`.
+    /// followed by zero or more calls to `write_member`, then a call to `end`.
     ///
     /// # Errors
     /// `Self::Error` if the structure could not be opened.
-    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error>;
+    fn write_struct(
+        self,
+        _schema: &Schema,
+        _len: usize,
+    ) -> Result<Self::StructWriter, Self::Error> {
+        Err(Error::custom(
+            "write_struct is not supported by this serializer",
+        ))
+    }
 
     /// Begin to serialize a variably sized map. This call must be
-    /// followed by zero or more calls to `serialize_entry`, then a call to
-    /// `end`.
+    /// followed by zero or more calls to `write_entry`, then a call to `end`.
     ///
     /// # Errors
     /// `Self::Error` if the map could not be opened.
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error>;
+    fn write_map(self, _schema: &Schema, _len: usize) -> Result<Self::MapWriter, Self::Error> {
+        Err(Error::custom(
+            "write_map is not supported by this serializer",
+        ))
+    }
 
     /// Begin to serialize a variably sized list. This call must be
-    /// followed by zero or more calls to `serialize_element`, then a call to
-    /// `end`.
+    /// followed by zero or more calls to `write_element`, then a call to `end`.
     ///
     /// # Errors
     /// `Self::Error` if the list could not be opened.
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error>;
+    fn write_list(self, _schema: &Schema, _len: usize) -> Result<Self::ListWriter, Self::Error> {
+        Err(Error::custom(
+            "write_list is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a `boolean`
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a boolean.
-    fn write_boolean(self, schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error>;
+    fn write_boolean(self, _schema: &Schema, _value: bool) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_boolean is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a byte (`i8`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `byte`.
-    fn write_byte(self, schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error>;
+    fn write_byte(self, _schema: &Schema, _value: i8) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_byte is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a short (`i16`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `short`.
-    fn write_short(self, schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error>;
+    fn write_short(self, _schema: &Schema, _value: i16) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_short is not supported by this serializer",
+        ))
+    }
 
     /// Serialize an integer (`i32`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as an integer.
-    fn write_integer(self, schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error>;
+    fn write_integer(self, _schema: &Schema, _value: i32) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_integer is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a long (`i64`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `long`.
-    fn write_long(self, schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error>;
+    fn write_long(self, _schema: &Schema, _value: i64) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_long is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a float (`f32`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `float`.
-    fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error>;
+    fn write_float(self, _schema: &Schema, _value: f32) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_float is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a double (`f64`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `double`.
-    fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error>;
+    fn write_double(self, _schema: &Schema, _value: f64) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_double is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a [`BigInt`]
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `bigInteger`.
-    fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error>;
+    fn write_big_integer(self, _schema: &Schema, _value: &BigInt) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_big_integer is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a [`BigDecimal`]
     ///
@@ -429,27 +477,43 @@ pub trait Serializer: Sized {
     /// `Self::Error` if the value could not be serialized as a `bigDecimal`.
     fn write_big_decimal(
         self,
-        schema: &Schema,
-        value: &BigDecimal,
-    ) -> Result<Self::Ok, Self::Error>;
+        _schema: &Schema,
+        _value: &BigDecimal,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_big_decimal is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a string (`&str`)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `string`.
-    fn write_string(self, schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error>;
+    fn write_string(self, _schema: &Schema, _value: &str) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_string is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a blob (i.e. a buffer)
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `blob`.
-    fn write_blob(self, schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error>;
+    fn write_blob(self, _schema: &Schema, _value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_blob is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a timestamp
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `timestamp`.
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error>;
+    fn write_timestamp(self, _schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_timestamp is not supported by this serializer",
+        ))
+    }
 
     /// Serialize an untyped [`Document`]
     ///
@@ -458,15 +522,23 @@ pub trait Serializer: Sized {
     #[allow(clippy::borrowed_box)]
     fn write_document(
         self,
-        schema: &Schema,
-        value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error>;
+        _schema: &Schema,
+        _value: &Box<dyn Document>,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_document is not supported by this serializer",
+        ))
+    }
 
     /// Serialize a `null` value
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as an empty (`null`) value.
-    fn write_null(self, schema: &Schema) -> Result<Self::Ok, Self::Error>;
+    fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom(
+            "write_null is not supported by this serializer",
+        ))
+    }
 
     /// Write a missing expected value.
     ///
@@ -482,7 +554,9 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the value could not be skipped.
-    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error>;
+    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
+        Err(Error::custom("skip is not supported by this serializer"))
+    }
 
     /// Flush all remaining data.
     ///

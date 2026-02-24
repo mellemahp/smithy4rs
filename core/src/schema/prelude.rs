@@ -284,6 +284,54 @@ macro_rules! smithy_trait_impl {
     };
 }
 
+/// Configures the HTTP method, URI, and response code for an operation.
+///
+/// *See* - [`@http`](https://smithy.io/2.0/spec/http-bindings.html#http-trait)
+#[derive(Debug)]
+pub struct HttpTrait {
+    method: String,
+    uri: String,
+    code: i32,
+    value: Box<dyn Document>,
+}
+static_trait_id!(HttpTrait, "smithy.api#http");
+smithy_trait_impl!(HttpTrait);
+
+impl HttpTrait {
+    /// Get the HTTP method (e.g. "GET", "POST").
+    #[must_use]
+    pub fn method(&self) -> &str {
+        &self.method
+    }
+
+    /// Get the URI pattern (e.g. "/buckets/{bucket}").
+    #[must_use]
+    pub fn uri(&self) -> &str {
+        &self.uri
+    }
+
+    /// Get the expected HTTP response status code.
+    #[must_use]
+    pub fn code(&self) -> i32 {
+        self.code
+    }
+
+    /// Create a new [`HttpTrait`] instance.
+    #[must_use]
+    pub fn new(method: &str, uri: &str, code: i32) -> Self {
+        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
+        value_map.insert("method".to_string(), method.to_string().into());
+        value_map.insert("uri".to_string(), uri.to_string().into());
+        value_map.insert("code".to_string(), code.into());
+        HttpTrait {
+            method: method.to_string(),
+            uri: uri.to_string(),
+            code,
+            value: value_map.into(),
+        }
+    }
+}
+
 /// Indicates that a structure shape represents an error.
 ///
 /// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)

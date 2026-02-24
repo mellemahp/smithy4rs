@@ -104,5 +104,9 @@ fn size_of_value(
             ]))
         }
         SchemaValue::Member(member) => (*member.target).try_size_hint(depth),
+        SchemaValue::Operation(operation) => Ok(arbitrary::size_hint::and_all(&[
+            operation.input.try_size_hint(depth)?,
+            operation.output.try_size_hint(depth)?,
+        ])),
     }
 }

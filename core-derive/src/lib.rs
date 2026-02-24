@@ -15,7 +15,7 @@ use crate::shapes::adapter::{deser_adapter_impl, ser_adapter_impl};
 #[cfg(feature = "arbitrary")]
 use crate::shapes::arbitrary::arbitrary_impl;
 use crate::shapes::{
-    buildable, builder_impls, builder_struct, debug_impl, deserialization_impl, get_builder_fields,
+    builder_impls, builder_struct, debug_impl, deserialization_impl, get_builder_fields,
     schema_impl, serialization_impl,
 };
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
@@ -229,7 +229,6 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
             let builder_name = get_builder_ident(shape_name);
             let builder_serializer =
                 serialization_impl(&crate_ident, &builder_name, &schema_ident, &input);
-            let buildable = buildable(shape_name, &builder_name);
             let builder_schema = schema_impl(&builder_name, &schema_ident);
             // Builder struct is generated outside the const block to make it publicly accessible
             quote! {
@@ -251,7 +250,6 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
 
                     #builder_impls
                     #builder_serializer
-                    #buildable
                 };
             }
             .into()

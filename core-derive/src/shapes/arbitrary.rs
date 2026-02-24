@@ -21,6 +21,7 @@ pub(crate) fn arbitrary_impl(
         use #crate_ident::features::arbitrary::ArbitraryDeserializer as _ArbitraryDeserializer;
         use #crate_ident::features::arbitrary::TrySizeHint as _TrySizeHint;
         use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+        use #crate_ident::serde::BuildWithSchema as _BuildWithSchema;
         use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
 
         #arbitrary_impl
@@ -29,14 +30,12 @@ pub(crate) fn arbitrary_impl(
 
 /// Generates an `Arbitrary` impl for a shape and its builder
 fn arbitrary_struct(
-    crate_ident: &TokenStream,
+    _crate_ident: &TokenStream,
     shape_name: &Ident,
     schema_ident: &Ident,
 ) -> TokenStream {
     let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
     quote! {
-        use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
-
         #[automatically_derived]
         impl<'a> _Arbitrary<'a> for #shape_name {
             fn arbitrary(u: &mut _Unstructured<'a>) -> _arbitrary::Result<Self> {

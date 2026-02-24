@@ -50,6 +50,7 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
 }
 
 pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
+    let crate_ident = get_crate_ident();
     let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
 
     // Generate correct() method used to automatically derive `build()` methods
@@ -59,6 +60,15 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
         .collect::<Vec<_>>();
 
     quote! {
+        use #crate_ident::serde::BuildableShape as _BuildableShape;
+        use #crate_ident::serde::validation::ValidationErrors as _ValidationErrors;
+        use #crate_ident::serde::validation::Validator as _Validator;
+
+        #[automatically_derived]
+        impl _BuildableShape for #shape_name {
+            type Builder = #builder_name;
+        }
+
         #[automatically_derived]
         impl _ErrorCorrection for #builder_name {
             type Value = #shape_name;
@@ -71,7 +81,7 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
         }
 
         #[automatically_derived]
-        impl<'de> _ShapeBuilder<'de, #shape_name> for #builder_name {
+        impl _BuildWithSchema<#shape_name> for #builder_name {
             fn new() -> Self {
                 Self::new()
             }
@@ -81,6 +91,32 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
         impl _ErrorCorrectionDefault for #shape_name {
             fn default() -> Self {
                 #builder_name::new().correct()
+            }
+        }
+
+        // Thin delegates for import-free ergonomics
+        #[automatically_derived]
+        impl #shape_name {
+            /// Get a new builder for this shape.
+            #[must_use]
+            #[inline]
+            pub fn builder() -> #builder_name {
+                <Self as _BuildableShape>::builder()
+            }
+        }
+
+        #[automatically_derived]
+        impl #builder_name {
+            /// Build the shape, validating with the default validator.
+            #[inline]
+            pub fn build(self) -> Result<#shape_name, _ValidationErrors> {
+                _BuildWithSchema::build(self)
+            }
+
+            /// Build the shape using a custom validator.
+            #[inline]
+            pub fn build_with_validator(self, validator: impl _Validator) -> Result<#shape_name, _ValidationErrors> {
+                _BuildWithSchema::build_with_validator(self, validator)
             }
         }
     }
@@ -134,7 +170,7 @@ fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
     replace_inner(&mut builder_type, builder_ident);
 
     // Create the build target for a `MaybeBuilt<>` impl
-    BuildTarget::Builable {
+    BuildTarget::Buildable {
         shape: ty.clone(),
         builder: builder_type.clone(),
     }
@@ -149,8 +185,8 @@ pub(crate) struct BuilderFieldData {
 }
 #[allow(clippy::large_enum_variant)]
 enum BuildTarget {
-    /// A type that also implements `ShapeBuilder` and so must be wrapped with `MaybeBuilder<>`.
-    Builable { shape: Type, builder: Type },
+    /// A type that also implements `BuildWithSchema` and so must be wrapped with `MaybeBuilder<>`.
+    Buildable { shape: Type, builder: Type },
     /// A simple type (`string`, `i32`, etc.) that needs no additional wrapping.
     Primitive(Type),
 }
@@ -158,7 +194,7 @@ impl BuilderFieldData {
     /// Type to use when representing this type as a field in a builder struct definition
     fn field_type(&self, crate_ident: &TokenStream) -> TokenStream {
         let ty = match &self.target {
-            BuildTarget::Builable { shape, builder } => {
+            BuildTarget::Buildable { shape, builder } => {
                 quote! { #crate_ident::serde::MaybeBuilt<#shape, #builder> }
             }
             BuildTarget::Primitive(ty) => quote! { #ty },
@@ -201,7 +237,7 @@ impl BuilderFieldData {
         };
 
         match &self.target {
-            BuildTarget::Builable { shape, builder } => {
+            BuildTarget::Buildable { shape, builder } => {
                 let builder_fn = Ident::new(&format!("{field_name}_builder"), Span::call_site());
                 quote! {
                     pub fn #field_name(mut self, value: #shape) -> Self {
@@ -237,7 +273,7 @@ impl BuilderFieldData {
                     #field_name: self.#field_name
                 }
             }
-            (true, BuildTarget::Builable { .. }) => {
+            (true, BuildTarget::Buildable { .. }) => {
                 // Unwrap the `MaybeBuilt`
                 quote! {
                     #field_name: self.#field_name.correct()
@@ -250,7 +286,7 @@ impl BuilderFieldData {
                     #field_name: self.#field_name.get()
                 }
             }
-            (false, BuildTarget::Builable { .. }) => {
+            (false, BuildTarget::Buildable { .. }) => {
                 // Resolve value from `Required` wrapper and then unwrap from `MaybeBuilt`
                 quote! {
                     #field_name: self.#field_name.get().correct()
@@ -273,7 +309,7 @@ impl BuilderFieldData {
                     #crate_ident::deserialize_optional_member!(member_schema, #schema, reader, builder, #field_name, #ty);
                 }
             }
-            (true, BuildTarget::Builable { builder, .. }) => {
+            (true, BuildTarget::Buildable { builder, .. }) => {
                 let field_builder =
                     Ident::new(format!("{field_name}_builder").as_str(), Span::call_site());
                 quote! {
@@ -287,7 +323,7 @@ impl BuilderFieldData {
                     #crate_ident::deserialize_member!(member_schema, #schema, reader, builder, #field_name, #ty);
                 }
             }
-            (false, BuildTarget::Builable { builder, .. }) => {
+            (false, BuildTarget::Buildable { builder, .. }) => {
                 let field_builder =
                     Ident::new(format!("{field_name}_builder").as_str(), Span::call_site());
                 quote! {
@@ -295,11 +331,5 @@ impl BuilderFieldData {
                 }
             }
         }
-    }
-}
-
-pub(crate) fn buildable(shape_name: &Ident, builder_name: &Ident) -> TokenStream {
-    quote! {
-       impl <'de> _Buildable<'de, #builder_name> for #shape_name {}
     }
 }

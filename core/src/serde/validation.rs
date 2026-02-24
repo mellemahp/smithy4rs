@@ -21,8 +21,8 @@
 //!
 //! ### Default Validation
 //! By default, users should _not_ be able to manually construct shapes that violate the basic Smithy constraints.
-//! In `smithy4rs`,  [`ShapeBuilder`](crate::serde::builders::ShapeBuilder) implementations are validated
-//! with the [`DefaultValidator`] on [`ShapeBuilder::build()`](crate::serde::builders::ShapeBuilder::build).
+//! In `smithy4rs`,  [`BuildWithSchema`](crate::serde::builders::BuildWithSchema) implementations are validated
+//! with the [`DefaultValidator`] on the builder's `build()` method.
 //!
 //! This [`DefaultValidator`] (and therefore the `build()` method) will check the following built-in Smithy constraints:
 //! - [`@length`](<https://smithy.io/2.0/spec/constraint-traits.html#length-trait>)
@@ -44,8 +44,7 @@
 //! then you could create a `ClientValidator` that ignores missing `required` values.
 //!
 //! To use validate a builder using a custom validation implementation, use
-//! the [`ShapeBuilder::build_with_validator`](crate::serde::builders::ShapeBuilder::build_with_validator)
-//! method with your custom implementation.
+//! the builder's `build_with_validator()` method with your custom implementation.
 //!
 //! ## Validating Protocol-specific constraints
 //! Some protocols may have additional constraints that they need to check in addition to the basic
@@ -107,7 +106,7 @@ use crate::{
 ///
 /// ## Using a custom validator
 /// To use a custom [`Validator`] when building a shape, use the
-/// [`ShapeBuilder::build_with_validator`](crate::serde::builders::ShapeBuilder::build_with_validator) method.
+/// the builder's `build_with_validator()` method.
 ///
 /// For example:
 /// ```rust,ignore
@@ -143,16 +142,14 @@ pub trait Validator: Serializer<Ok = (), Error = ValidationErrors> {
 ///
 /// For more info on built-in Smithy constraints see: [Smithy Documentation](<https://smithy.io/2.0/spec/constraint-traits.html>)
 ///
-/// This is the default [`Validator`] implementation used in built shapes (i.e. when calling the default
-/// [`ShapeBuilder::build()`](crate::serde::builders::ShapeBuilder::build) implementation).
-/// It can also be used standalone on any serializable shapes.
+/// This is the default [`Validator`] implementation used in built shapes (i.e. when calling the
+/// builder's `build()` method). It can also be used standalone on any serializable shapes.
 /// ```rust, ignore
 /// let result = DefaultValidator::new().validate(MySerializableShape);
 /// ```
 ///
 /// To customize the `Validator` used when building a shape, pass a custom [`Validator`] implementation
-/// into the [`ShapeBuilder::build_with_validator()`](crate::serde::builders::ShapeBuilder::build_with_validator)
-/// method on the builder.
+/// into the builder's `build_with_validator()` method.
 ///
 /// * `D` - Maximum validation depth (Default: 10).
 /// * `E` - Maximum number of errors the validator can track (Default: 20).
@@ -1051,7 +1048,6 @@ mod tests {
         IndexMap,
         derive::SmithyShape,
         schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
-        serde::ShapeBuilder,
         smithy,
     };
 

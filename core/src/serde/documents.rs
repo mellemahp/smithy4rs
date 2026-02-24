@@ -3,11 +3,9 @@ use std::fmt::Display;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{
-        Document, DocumentError, NULL, Schema, ShapeId, ShapeType, StaticSchemaShape,
-        default::Value,
+        Document, DocumentError, NULL, Schema, SchemaShape, ShapeId, ShapeType, default::Value,
     },
     serde::{
-        ShapeBuilder,
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
         se::{ListWriter, MapWriter, Serializer, StructWriter},
         serializers::{Error, SerializeWithSchema},
@@ -80,21 +78,19 @@ impl SerializeWithSchema for Box<dyn Document> {
 
 impl<T> From<T> for Box<dyn Document>
 where
-    T: StaticSchemaShape + SerializeWithSchema,
+    T: SchemaShape + SerializeWithSchema,
 {
     fn from(shape: T) -> Self {
         shape
-            .serialize_with_schema(T::schema(), DocumentParser)
-            .expect(
-                "Infallible conversion from StaticSchemaShape to Document failed - this is a bug",
-            )
+            .serialize_with_schema(shape.schema(), DocumentParser)
+            .expect("Infallible conversion from SchemaShape to Document failed - this is a bug")
     }
 }
 
 // ====== Public Conversion API ========
 
 impl dyn Document {
-    /// Convert a document into a [`ShapeBuilder`]
+    /// Convert a document into a builder using an explicit schema.
     ///
     /// <div class="note">
     /// **Note**: the returned builder still needs to be built and validated
@@ -106,11 +102,12 @@ impl dyn Document {
     /// shape builder typically due to schema mismatches or failures
     /// such as invalid int -> float conversions.
     #[inline]
-    pub(crate) fn into_builder<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
+    pub(crate) fn into_builder_with_schema<B: for<'de> DeserializeWithSchema<'de>>(
         self: Box<Self>,
+        schema: &Schema,
     ) -> Result<B, DocumentError> {
         let de = DocumentDeserializer::new(self);
-        B::deserialize_with_schema(S::schema(), de)
+        B::deserialize_with_schema(schema, de)
     }
 }
 
@@ -703,7 +700,7 @@ mod tests {
             member_list: list,
         };
         let document: Box<dyn Document> = struct_to_convert.clone().into();
-        let builder: SerializeMeBuilder = document.into_builder().unwrap();
+        let builder: SerializeMeBuilder = document.into_builder_with_schema(&SCHEMA).unwrap();
         let result: SerializeMe = builder.build().unwrap();
         assert_eq!(result, struct_to_convert);
     }
