@@ -7,8 +7,9 @@ members = [
     "fuzz",
     "json-codec",
     "test-utils",
+    "http"
 ]
-default-members = ["core", "core-derive", "test-utils", "json-codec"]
+default-members = ["core", "core-derive", "test-utils", "json-codec", "http"]
 
 # Config for 'cargo release'
 [workspace.metadata.release]
