@@ -1,0 +1,31 @@
+[package]
+name = "smithy4rs-http"
+description = "HTTP binding support for smithy4rs."
+repository.workspace = true
+publish = true
+readme.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+base64 = "0.22"
+http = "1.4"
+itoa = "1"
+ryu = "1"
+parking_lot = "0.12"
+smithy4rs-core.workspace = true
+
+[dev-dependencies]
+smithy4rs-json-codec = { path = "../json-codec" }
+smithy4rs-test-utils = { path = "../test-utils" }
+# Required when compiling with `--all-features` since the derive macro
+# generates code referencing these crates
+serde = "1.0"
+arbitrary = "1.4"
+
+[lints]
+workspace = true
