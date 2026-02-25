@@ -30,7 +30,7 @@ smithy4rs-core-derive.workspace = true
 pastey = "0.2.1"
 # features
 serde = { version = "1.0", optional = true, default-features = false }
-arbitrary = { version = "1.4.2", optional = true, features = ["derive"] }
+arbitrary = { version = "1.4.2", optional = true }
 # common
 thiserror.workspace = true
 
