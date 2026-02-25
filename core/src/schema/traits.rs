@@ -76,7 +76,7 @@
 //! Base Smithy Trait implementations such as `@sensitive` and `@default`
 //! can be found in [`crate::schema::prelude`].
 
-use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
+use std::{collections::BTreeMap, fmt::Debug, ops::Deref, sync::OnceLock};
 
 use downcast_rs::{DowncastSync, impl_downcast};
 
@@ -96,13 +96,17 @@ use crate::{
 /// <div class ="note">
 /// **NOTE**: All Smithy Trait implementations MUST implement this trait.
 /// </div>
-pub trait SmithyTrait: DowncastSync {
+pub trait SmithyTrait: DowncastSync + Debug {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;
 
-    /// The data stored inside the trait as a [`Document`] value.
-    #[allow(clippy::borrowed_box)]
-    fn value(&self) -> &Box<dyn Document>;
+    /// Create an instance of this trait from a document if possible, otherwise None.
+    ///
+    /// This method allows us to convert into a concrete trait implementation from
+    /// a `DynamicTrait`
+    fn from_document(document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized;
 }
 impl_downcast!(sync SmithyTrait);
 
@@ -126,7 +130,7 @@ pub trait StaticTraitId: SmithyTrait {
 pub struct TraitRef(Ref<dyn SmithyTrait>);
 impl PartialEq for TraitRef {
     fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id() && (self.value() == other.value())
+        self.id() == other.id()
     }
 }
 impl Deref for TraitRef {
@@ -191,10 +195,20 @@ impl Debug for TraitRef {
 /// `TraitInitializer` implementations can be added to a `RustCodegenIntegration` to customize the way
 /// in which traits are initialized in a Schema definition.
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DynamicTrait {
     id: ShapeId,
     value: Box<dyn Document>,
+    cast_cache: OnceLock<Option<TraitRef>>,
+}
+impl Clone for DynamicTrait {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            value: self.value.clone(),
+            cast_cache: OnceLock::new(),
+        }
+    }
 }
 impl DynamicTrait {
     /// Create a new [`SmithyTrait`] with no corresponding concrete implementation.
@@ -206,18 +220,36 @@ impl DynamicTrait {
         Self {
             id: id.into(),
             value: value.into(),
+            cast_cache: OnceLock::new(),
         }
         .into()
+    }
+
+    /// Cast this dyn type into a concrete type, caching the result.
+    pub(crate) fn as_type<T: SmithyTrait>(&self) -> Option<&T> {
+        self.cast_cache
+            .get_or_init(|| T::from_document(self.value.clone()).map(TraitRef::from))
+            .as_ref()
+            .and_then(|t| t.downcast_ref::<T>())
     }
 }
 
 impl SmithyTrait for DynamicTrait {
+    #[inline]
     fn id(&self) -> &ShapeId {
         &self.id
     }
 
-    fn value(&self) -> &Box<dyn Document> {
-        &self.value
+    #[inline]
+    fn from_document(document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        Some(Self {
+            id: document.schema().id().clone(),
+            value: document,
+            cast_cache: OnceLock::new(),
+        })
     }
 }
 
@@ -274,12 +306,20 @@ impl TraitMap {
 
     /// Gets a [`SmithyTrait`] as a specific implementation if it exists.
     ///
-    /// If the [`SmithyTrait`] does not exist in the map, returns `None`.
+    /// If the [`SmithyTrait`] does not exist in the map and no compatible dyn trait
+    /// can be used, returns `None`.
     #[must_use]
-    #[inline]
     pub fn get_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
-        self.get(T::trait_id())
-            .and_then(|dyn_trait| dyn_trait.downcast_ref::<T>())
+        self.get(T::trait_id()).and_then(|tr| {
+            // First try to downcast into the trait directly .
+            let first_downcast = tr.downcast_ref::<T>();
+            if first_downcast.is_some() {
+                return first_downcast;
+            }
+            // if that fails, try it as a dyn trait
+            tr.downcast_ref::<DynamicTrait>()
+                .and_then(|d| d.as_type::<T>())
+        })
     }
 
     /// Extends collection with the contents of another [`TraitMap`].
@@ -338,7 +378,7 @@ mod tests {
         let Some(cast_value) = map.get_as::<HttpErrorTrait>() else {
             panic!("Could not find expected trait!!!")
         };
-        assert_eq!(cast_value.code(), 404);
+        assert_eq!(cast_value.0, 404);
         assert_eq!(cast_value.type_id(), TypeId::of::<HttpErrorTrait>());
     }
 

@@ -943,7 +943,7 @@ mod tests {
         let json_name_value = schema
             .get_trait_as::<JsonNameTrait>()
             .expect("No Json Name trait present");
-        assert_eq!(json_name_value.name(), "other");
+        assert_eq!(json_name_value.0, "other");
     }
 
     #[test]
@@ -960,7 +960,7 @@ mod tests {
         let json_name_value = member
             .get_trait_as::<JsonNameTrait>()
             .expect("No JSON name trait present");
-        assert_eq!(json_name_value.name(), "other");
+        assert_eq!(json_name_value.0, "other");
     }
 
     #[test]

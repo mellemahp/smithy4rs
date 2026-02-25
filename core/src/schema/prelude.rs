@@ -5,13 +5,16 @@
 //! are available to all models. Prelude shapes and traits are all in the `smithy.api` namespace
 //! and must be hard-coded as they are used by generate shapes.
 
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use bigdecimal::Zero;
 use regex::Regex;
 
 use crate::{
-    BigDecimal, IndexMap, LazyLock, annotation_trait,
+    BigDecimal, LazyLock, annotation_trait,
     schema::{Document, ShapeId, SmithyTrait, StaticTraitId},
     smithy, static_trait_id, string_trait,
 };
@@ -207,44 +210,44 @@ string_trait!(
     /// Describes the contents of a blob or string shape using a design-time media type.
     ///
     /// *See* - [`@mediaType`](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-mediatype-trait)
-    "smithy.api#mediaType": MediaTypeTrait(media_type)
+    MediaTypeTrait = "smithy.api#mediaType"
 );
 string_trait!(
     /// Allows a serialized object property name in a JSON document to differ from a structure or union
     /// member name used in the model.
     ///
     /// *See* - [`@jsonName`](https://smithy.io/2.0/spec/protocol-traits.html#smithy-api-jsonname-trait)
-    "smithy.api#jsonName": JsonNameTrait(name)
+    JsonNameTrait = "smithy.api#jsonName"
 );
 string_trait!(
     /// Allows a serialized object property name in an XML document to differ from name used in model.
     ///
     /// *See* - [`@xmlName`](https://smithy.io/2.0/spec/protocol-traits.html#xmlname-trait)
-    "smithy.api#xmlName": XmlNameTrait(name)
+    XmlNameTrait = "smithy.api#xmlName"
 );
 string_trait!(
     /// Binds a structure member to an HTTP header.
     ///
     /// *See* - [`@httpHeader`](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httpheader-trait)
-    "smithy.api#httpHeader": HTTPHeaderTrait(name)
+    HTTPHeaderTrait = "smithy.api#httpHeader"
 );
 string_trait!(
     /// Binds a map of key-value pairs to prefixed HTTP headers.
     ///
     /// *See* - [`@httpPrefixHeaders`](https://smithy.io/2.0/spec/http-bindings.html#httpprefixheaders-trait)
-    "smithy.api#httpPrefixHeaders": HTTPPrefixHeadersTrait(prefix)
+    HTTPPrefixHeadersTrait = "smithy.api#httpPrefixHeaders"
 );
 string_trait!(
     /// Binds an operation input structure member to a query string parameter.
     ///
     /// *See* - [`@httpQuery`](https://smithy.io/2.0/spec/http-bindings.html#httpquery-trait)
-    "smithy.api#httpQuery": HTTPQueryTrait(key)
+    HTTPQueryTrait = "smithy.api#httpQuery"
 );
 string_trait!(
     /// Configures a custom operation endpoint.
     ///
     /// *See* - [`@endpoint`](https://smithy.io/2.0/spec/endpoint-traits.html#smithy-api-endpoint-trait)
-    "smithy.api#endpoint": EndpointTrait(host_prefix)
+    EndpointTrait = "smithy.api#endpoint"
 );
 
 // ==== Traits with other values ====
@@ -252,15 +255,20 @@ string_trait!(
 /// Provides a structure member with a default value.
 ///
 /// *See* - [Default Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-default-trait)
-pub struct DefaultTrait(Box<dyn Document>);
+#[derive(Debug)]
+pub struct DefaultTrait(pub Box<dyn Document>);
 static_trait_id!(DefaultTrait, "smithy.api#default");
+
 impl SmithyTrait for DefaultTrait {
     fn id(&self) -> &ShapeId {
         DefaultTrait::trait_id()
     }
 
-    fn value(&self) -> &Box<dyn Document> {
-        &self.0
+    fn from_document(document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        Some(DefaultTrait(document))
     }
 }
 impl DefaultTrait {
@@ -270,46 +278,35 @@ impl DefaultTrait {
     }
 }
 
-macro_rules! smithy_trait_impl {
-    ($t:ident) => {
-        impl SmithyTrait for $t {
-            fn id(&self) -> &ShapeId {
-                $t::trait_id()
-            }
-
-            fn value(&self) -> &Box<dyn Document> {
-                &self.value
-            }
-        }
-    };
-}
-
 /// Indicates that a structure shape represents an error.
 ///
 /// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)
 #[derive(Debug)]
-pub struct ErrorTrait {
-    error: ErrorFault,
-    value: Box<dyn Document>,
-}
+pub struct ErrorTrait(pub ErrorFault);
 impl ErrorTrait {
-    /// Get whether the Error was the fault of the client or server.
-    #[must_use]
-    pub fn error(&self) -> &ErrorFault {
-        &self.error
-    }
-
     /// Create a new [`ErrorTrait`] instance
     #[must_use]
     pub fn new(error: ErrorFault) -> Self {
-        ErrorTrait {
-            value: error.to_string().into(),
-            error,
-        }
+        ErrorTrait(error)
     }
 }
 static_trait_id!(ErrorTrait, "smithy.api#error");
-smithy_trait_impl!(ErrorTrait);
+impl SmithyTrait for ErrorTrait {
+    fn id(&self) -> &ShapeId {
+        <ErrorTrait as StaticTraitId>::trait_id()
+    }
+
+    fn from_document(document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        document.as_string().and_then(|str| match str {
+            "client" => Some(Self(ErrorFault::Client)),
+            "server" => Some(Self(ErrorFault::Server)),
+            _ => None,
+        })
+    }
+}
 
 /// Indicates if the client or server is at fault for a given error.
 #[derive(Debug)]
@@ -331,17 +328,8 @@ impl Display for ErrorFault {
 ///
 /// *See* - [HttpError Trait](https://smithy.io/2.0/spec/http-bindings.html#smithy-api-httperror-trait)
 #[derive(Debug)]
-pub struct HttpErrorTrait {
-    code: i32,
-    value: Box<dyn Document>,
-}
+pub struct HttpErrorTrait(pub i32);
 impl HttpErrorTrait {
-    /// Get the code contained by this trait.
-    #[must_use]
-    pub fn code(&self) -> i32 {
-        self.code
-    }
-
     /// Create a new [`HttpErrorTrait`] instance
     ///
     /// # Panics
@@ -356,14 +344,22 @@ impl HttpErrorTrait {
             200 < code && code < 599,
             "HTTPErrorTrait code out of range: {code}"
         );
-        HttpErrorTrait {
-            code,
-            value: code.into(),
-        }
+        Self(code)
     }
 }
 static_trait_id!(HttpErrorTrait, "smithy.api#httpError");
-smithy_trait_impl!(HttpErrorTrait);
+impl SmithyTrait for HttpErrorTrait {
+    fn id(&self) -> &ShapeId {
+        <HttpErrorTrait as StaticTraitId>::trait_id()
+    }
+
+    fn from_document(document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        document.as_integer().map(HttpErrorTrait::new)
+    }
+}
 
 // ============================================================================
 // Constraint Traits
@@ -376,10 +372,20 @@ smithy_trait_impl!(HttpErrorTrait);
 pub struct RangeTrait {
     min: Option<BigDecimal>,
     max: Option<BigDecimal>,
-    value: Box<dyn Document>,
 }
 static_trait_id!(RangeTrait, "smithy.api#range");
-smithy_trait_impl!(RangeTrait);
+impl SmithyTrait for RangeTrait {
+    fn id(&self) -> &ShapeId {
+        <RangeTrait as StaticTraitId>::trait_id()
+    }
+
+    fn from_document(_document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+}
 
 static ZERO: LazyLock<BigDecimal> = LazyLock::new(BigDecimal::zero);
 static MAX: LazyLock<BigDecimal> = LazyLock::new(|| BigDecimal::from(u64::MAX));
@@ -449,17 +455,9 @@ impl RangeTraitBuilder {
     /// Construct a new [`RangeTrait`] instance.
     #[must_use]
     pub fn build(self) -> RangeTrait {
-        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
-        if let Some(min) = &self.min {
-            value_map.insert("min".to_string(), min.clone().into());
-        }
-        if let Some(max) = &self.max {
-            value_map.insert("min".to_string(), max.clone().into());
-        }
         RangeTrait {
             min: self.min,
             max: self.max,
-            value: value_map.into(),
         }
     }
 }
@@ -471,10 +469,20 @@ impl RangeTraitBuilder {
 pub struct LengthTrait {
     min: Option<usize>,
     max: Option<usize>,
-    value: Box<dyn Document>,
 }
 static_trait_id!(LengthTrait, "smithy.api#length");
-smithy_trait_impl!(LengthTrait);
+impl SmithyTrait for LengthTrait {
+    fn id(&self) -> &ShapeId {
+        <LengthTrait as StaticTraitId>::trait_id()
+    }
+
+    fn from_document(_document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+}
 
 impl LengthTrait {
     /// Get the minimum length for this constraint.
@@ -531,17 +539,9 @@ impl LengthTraitBuilder {
     /// Create a new [`LengthTrait`] instance.
     #[must_use]
     pub fn build(self) -> LengthTrait {
-        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
-        if let Some(min) = self.min {
-            value_map.insert("min".to_string(), (min as i32).into());
-        }
-        if let Some(max) = self.max {
-            value_map.insert("min".to_string(), (max as i32).into());
-        }
         LengthTrait {
             min: self.min,
             max: self.max,
-            value: value_map.into(),
         }
     }
 }
@@ -557,20 +557,22 @@ annotation_trait!(
 ///
 /// *See* - [LengthTrait](https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait)
 #[derive(Debug)]
-pub struct PatternTrait {
-    pattern: Regex,
-    value: Box<dyn Document>,
-}
+pub struct PatternTrait(pub Regex);
 static_trait_id!(PatternTrait, "smithy.api#pattern");
-smithy_trait_impl!(PatternTrait);
-
-impl PatternTrait {
-    /// Get the regex constraint
-    #[must_use]
-    pub fn pattern(&self) -> &Regex {
-        &self.pattern
+impl SmithyTrait for PatternTrait {
+    fn id(&self) -> &ShapeId {
+        <PatternTrait as StaticTraitId>::trait_id()
     }
 
+    #[inline]
+    fn from_document(document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        document.as_string().map(PatternTrait::new)
+    }
+}
+impl PatternTrait {
     #[must_use]
     /// Create a new [`PatternTrait`]
     ///
@@ -579,10 +581,7 @@ impl PatternTrait {
     ///
     /// Smithy validation will check this constraint in models
     pub fn new(pattern: &str) -> Self {
-        PatternTrait {
-            pattern: Regex::new(pattern).unwrap(),
-            value: pattern.into(),
-        }
+        PatternTrait(Regex::new(pattern).unwrap())
     }
 }
 
@@ -618,11 +617,21 @@ pub struct HttpApiKeyAuthTrait {
     name: String,
     in_location: String,
     scheme: Option<String>,
-    value: Box<dyn Document>,
 }
 static_trait_id!(HttpApiKeyAuthTrait, "smithy.api#httpApiKeyAuth");
-smithy_trait_impl!(HttpApiKeyAuthTrait);
+impl SmithyTrait for HttpApiKeyAuthTrait {
+    fn id(&self) -> &ShapeId {
+        <HttpApiKeyAuthTrait as StaticTraitId>::trait_id()
+    }
 
+    #[inline]
+    fn from_document(_document: Box<dyn Document>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+}
 impl HttpApiKeyAuthTrait {
     /// Get the `name`
     #[must_use]
@@ -693,21 +702,10 @@ impl HttpApiKeyAuthTraitBuilder {
     /// Smithy validation will check this constraint in models.
     #[must_use]
     pub fn build(self) -> HttpApiKeyAuthTrait {
-        let mut value_map: IndexMap<String, Box<dyn Document>> = IndexMap::new();
-        if let Some(name) = &self.name {
-            value_map.insert("name".to_string(), name.clone().into());
-        }
-        if let Some(location) = &self.in_location {
-            value_map.insert("location".to_string(), location.clone().into());
-        }
-        if let Some(scheme) = &self.scheme {
-            value_map.insert("scheme".to_string(), scheme.clone().into());
-        }
         HttpApiKeyAuthTrait {
             name: self.name.unwrap(),
             in_location: self.in_location.unwrap(),
             scheme: self.scheme,
-            value: value_map.into(),
         }
     }
 }

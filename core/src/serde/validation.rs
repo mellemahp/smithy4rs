@@ -428,11 +428,11 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
             // Check @pattern trait matches provided.
             if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
-                && pattern.pattern().find(value).is_none()
+                && pattern.0.find(value).is_none()
             {
                 self.emit_error(SmithyConstraints::Pattern(
                     value.to_string(),
-                    pattern.pattern().to_string(),
+                    pattern.0.to_string(),
                 ))?;
             }
         } else if schema.shape_type().eq(&ShapeType::Enum) {

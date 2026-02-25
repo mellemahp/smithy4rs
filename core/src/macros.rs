@@ -427,12 +427,18 @@ macro_rules! annotation_trait {
         }
         $crate::static_trait_id!($trait_struct, $id);
         impl $crate::schema::SmithyTrait for $trait_struct {
+            #[inline]
             fn id(&self) -> &$crate::schema::ShapeId {
                 <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
-                &$crate::schema::documents::NULL
+            fn from_document(document: Box<dyn $crate::schema::Document>) -> Option<Self>
+                where Self: Sized {
+                if document.is_null() {
+                    Some(Self)
+                } else {
+                    None
+                }
             }
         }
     };
@@ -459,28 +465,18 @@ macro_rules! annotation_trait {
 /// ```
 #[macro_export]
 macro_rules! string_trait {
-    ($(#[$outer:meta])* $id:literal: $trait_struct:ident($value_name:ident)) => {
+    ($(#[$outer:meta])* $trait_struct:ident = $id:literal) => {
         $(#[$outer])*
         #[derive(Debug)]
-        pub struct $trait_struct {
-            $value_name: String,
-            value: Box<dyn $crate::schema::documents::Document>,
-        }
+        #[repr(transparent)]
+        pub struct $trait_struct(pub String);
         impl $trait_struct {
-            /// Get the value of this trait
-            pub fn $value_name(&self) -> &str {
-                &self.$value_name
-            }
-
             #[doc = "Create a new [`"]
             #[doc = stringify!($trait_struct)]
             #[doc = "`] instance"]
             #[must_use]
-            pub fn new($value_name: &str) -> Self {
-                $trait_struct {
-                    $value_name: $value_name.to_string(),
-                    value: $value_name.into(),
-                }
+            pub fn new(value: &str) -> Self {
+                $trait_struct(value.to_string())
             }
         }
         $crate::static_trait_id!($trait_struct, $id);
@@ -489,8 +485,10 @@ macro_rules! string_trait {
                 <$trait_struct as $crate::schema::StaticTraitId>::trait_id()
             }
 
-            fn value(&self) -> &Box<dyn $crate::schema::documents::Document> {
-                &self.value
+            #[inline]
+            fn from_document(document: Box<dyn $crate::schema::Document>) -> Option<Self>
+                where Self: Sized {
+                document.as_string().map(Self::new)
             }
         }
     };
