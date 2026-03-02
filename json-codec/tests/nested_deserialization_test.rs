@@ -1,4 +1,4 @@
-use smithy4rs_core::serde::{ShapeBuilder, deserializers::DeserializeWithSchema};
+use smithy4rs_core::serde::deserializers::DeserializeWithSchema;
 use smithy4rs_json_codec::JsonDeserializer;
 use smithy4rs_test_utils::*;
 

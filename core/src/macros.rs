@@ -309,8 +309,30 @@ macro_rules! smithy_internal {
         );
     );
 
-    // === Service Shapes ===
-    // TODO(service shapes): Add Operation, Resource, Service schema macros
+    // === Operation ===
+    ($id:literal: {
+        $(#[$outer:meta])*
+        $(@$t:expr;)*
+        operation $name:ident {
+            input: $input_schema:ident
+            output: $output_schema:ident
+        }
+    }) => {
+        $crate::pastey::paste! {
+            $(#[$outer])*
+            pub static [<$name:snake:upper _SCHEMA>]:
+                $crate::LazyLock<$crate::schema::Schema> =
+                $crate::LazyLock::new(|| {
+                    $crate::schema::Schema::operation_builder(
+                        $id,
+                        $crate::traits!($($t),*)
+                    )
+                    .put_member("input", &$input_schema, vec![])
+                    .put_member("output", &$output_schema, vec![])
+                    .build()
+                });
+        }
+    };
 
     // ============================================================================
     // Actual impl of schema

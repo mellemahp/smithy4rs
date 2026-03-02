@@ -40,6 +40,6 @@ Using a generated Smithy `structure` for structure-aware fuzzing will _always_
 provide your fuzzed code with a structure validated by the `DefaultValidator`. 
 
 If you would like to generate invalid structures or use a custom validator for your
-fuzzed structures, the `ShapeBuilder` for a generated `structure` shape can also be used 
+fuzzed structures, the `BuildWithSchema` builder for a generated `structure` shape can also be used 
 as an input to a `fuzz_target` closure. Such builders have not been validated and so, 
 can be used to create invalid/custom-validated structures.

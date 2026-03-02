@@ -42,28 +42,26 @@ use crate::{
 /// before constructing the final shape. Builders implement
 /// [`DeserializeWithSchema`] to handle the actual deserialization logic.
 ///
-pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
-    Sized + DeserializeWithSchema<'de> + SerializeWithSchema + ErrorCorrection<Value = S>
-{
+pub trait BuildWithSchema<S>: Sized + SerializeWithSchema + ErrorCorrection<Value = S> {
     /// Create a new builder with all fields unset
     fn new() -> Self;
 
-    /// Build the final shape from the builder
+    /// Build the final shape from the builder using an explicit schema.
     ///
     /// Builds shape with the [`DefaultValidator`] if required fields
-    /// are missing or validation fails
+    /// are missing or validation fails.
     ///
     /// # Errors
     /// Returns validation errors detected by the `DefaultValidator`
     #[inline]
-    fn build(self) -> Result<S, ValidationErrors> {
-        self.build_with_validator(&mut DefaultValidator::new())
+    fn build_with_schema(self, schema: &Schema) -> Result<S, ValidationErrors> {
+        self.build_with_schema_and_validator(schema, &mut DefaultValidator::new())
     }
 
-    /// Build the final shape from the builder, checking fields using a
-    /// custom [`Validator`] implementation.
+    /// Build the final shape from the builder using an explicit schema,
+    /// checking fields using a custom [`Validator`] implementation.
     ///
-    /// To build a shape using the default validator use [`Self::build()`].
+    /// To build a shape using the default validator use [`Self::build_with_schema()`].
     ///
     /// <div class="note">
     /// **NOTE**: Validation is supported by the [`SerializeWithSchema`] implementation
@@ -74,12 +72,16 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// Returns aggregate validation error containing all validation errors detected by the
     /// selected validator.
     #[inline]
-    fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
-        validator.validate(S::schema(), &self)?;
+    fn build_with_schema_and_validator(
+        self,
+        schema: &Schema,
+        validator: impl Validator,
+    ) -> Result<S, ValidationErrors> {
+        validator.validate(schema, &self)?;
         Ok(self.correct())
     }
 
-    /// Deserialize a document into this builder.
+    /// Deserialize a document into this builder using an explicit schema.
     ///
     /// Note that the builder still needs to be built and validated
     /// after conversion from a document.
@@ -87,22 +89,76 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// # Errors
     /// If the builder could not be converted into a valid document implementation.
     #[inline]
-    fn from_document(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_builder::<Self, S>()
+    fn from_document_with_schema(
+        document: Box<dyn Document>,
+        schema: &Schema,
+    ) -> Result<Self, DocumentError>
+    where
+        Self: for<'de> DeserializeWithSchema<'de>,
+    {
+        document.into_builder_with_schema::<Self>(schema)
+    }
+
+    /// Build the final shape using the shape's static schema.
+    ///
+    /// Convenience method equivalent to
+    /// `self.build_with_schema(S::schema())`.
+    ///
+    /// # Errors
+    /// Returns validation errors detected by the [`DefaultValidator`].
+    #[inline]
+    fn build(self) -> Result<S, ValidationErrors>
+    where
+        S: StaticSchemaShape,
+    {
+        self.build_with_schema(S::schema())
+    }
+
+    /// Build the final shape using the shape's static schema with a custom validator.
+    ///
+    /// Convenience method equivalent to
+    /// `self.build_with_schema_and_validator(S::schema(), validator)`.
+    ///
+    /// # Errors
+    /// Returns aggregate validation errors detected by the selected validator.
+    #[inline]
+    fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors>
+    where
+        S: StaticSchemaShape,
+    {
+        self.build_with_schema_and_validator(S::schema(), validator)
+    }
+
+    /// Deserialize a document into this builder using the shape's static schema.
+    ///
+    /// Convenience method equivalent to
+    /// `Self::from_document_with_schema(document, S::schema())`.
+    ///
+    /// # Errors
+    /// If the builder could not be converted into a valid document implementation.
+    #[inline]
+    fn from_document(document: Box<dyn Document>) -> Result<Self, DocumentError>
+    where
+        S: StaticSchemaShape,
+        Self: for<'de> DeserializeWithSchema<'de>,
+    {
+        Self::from_document_with_schema(document, S::schema())
     }
 }
 
-/// Shape that can create a builder for deserialization
-pub trait Buildable<'de, B>
-where
-    Self: Sized + StaticSchemaShape,
-    B: ShapeBuilder<'de, Self>,
-{
-    /// Get a new builder for this shape
-    #[must_use]
+/// Connects a shape to its builder type.
+///
+/// Implemented on the **shape** (not the builder) by the `SmithyShape` derive macro.
+/// Provides a type-level mapping from any derived shape to its builder.
+pub trait BuildableShape: Sized {
+    /// The builder type that can construct this shape.
+    type Builder: BuildWithSchema<Self> + for<'de> DeserializeWithSchema<'de>;
+
+    /// Get a new builder for this shape.
     #[inline]
-    fn builder() -> B {
-        B::new()
+    #[must_use]
+    fn builder() -> Self::Builder {
+        Self::Builder::new()
     }
 }
 

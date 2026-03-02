@@ -1,6 +1,6 @@
 use smithy4rs_core::{
     schema::Schema,
-    serde::{Buildable, ShapeBuilder, de::DeserializeWithSchema, serializers::SerializeWithSchema},
+    serde::{BuildWithSchema, de::DeserializeWithSchema, serializers::SerializeWithSchema},
 };
 use smithy4rs_json_codec::{JsonDeserializer, JsonSerializer};
 use smithy4rs_test_utils::*;
@@ -16,25 +16,18 @@ fn serialize_to_json<T: SerializeWithSchema>(value: &T, schema: &Schema) -> Vec<
     buf
 }
 
-fn deserialize_from_json<'de, B: ShapeBuilder<'de, T>, T: Buildable<'de, B>>(
-    data: &'de [u8],
-    schema: &Schema,
-) -> T {
-    let mut de = JsonDeserializer::new(data);
-    B::deserialize_with_schema(schema, &mut de)
-        .unwrap()
-        .build()
-        .unwrap()
-}
-
 fn roundtrip<T, B>(value: &T, schema: &Schema) -> T
 where
-    B: for<'de> ShapeBuilder<'de, T>,
-    T: SerializeWithSchema + for<'de> Buildable<'de, B>,
+    B: for<'de> DeserializeWithSchema<'de> + BuildWithSchema<T>,
+    T: SerializeWithSchema,
 {
     let json = serialize_to_json(value, schema);
     println!("Serialized JSON: {}", String::from_utf8_lossy(&json));
-    deserialize_from_json(&json, schema)
+    let mut de = JsonDeserializer::new(&json);
+    B::deserialize_with_schema(schema, &mut de)
+        .unwrap()
+        .build_with_schema(schema)
+        .unwrap()
 }
 
 // ============================================================================
@@ -49,7 +42,7 @@ fn test_optional_data_with_value() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
+    let result = roundtrip::<_, OptionalFieldsStructBuilder>(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
     assert_eq!(data, result);
 }
 
@@ -61,7 +54,7 @@ fn test_optional_data_without_value() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
+    let result = roundtrip::<_, OptionalFieldsStructBuilder>(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
     assert_eq!(data, result);
 }
 
@@ -77,7 +70,7 @@ fn test_numbers_roundtrip() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
+    let result = roundtrip::<_, NumericTypesStructBuilder>(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
     assert_eq!(numbers, result);
 }
 
@@ -93,7 +86,7 @@ fn test_numbers_negative_values() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
+    let result = roundtrip::<_, NumericTypesStructBuilder>(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
     assert_eq!(numbers, result);
 }
 
@@ -109,7 +102,7 @@ fn test_numbers_edge_cases() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
+    let result = roundtrip::<_, NumericTypesStructBuilder>(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
     assert_eq!(numbers.byte_val, result.byte_val);
     assert_eq!(numbers.short_val, result.short_val);
     assert_eq!(numbers.int_val, result.int_val);
@@ -127,7 +120,7 @@ fn test_special_characters_in_strings() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    let result = roundtrip::<_, SimpleStructBuilder>(&data, &SIMPLE_STRUCT_SCHEMA);
     assert_eq!(data, result);
 }
 
@@ -139,7 +132,7 @@ fn test_unicode_strings() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    let result = roundtrip::<_, SimpleStructBuilder>(&data, &SIMPLE_STRUCT_SCHEMA);
     assert_eq!(data, result);
 }
 
@@ -151,7 +144,7 @@ fn test_empty_strings() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    let result = roundtrip::<_, SimpleStructBuilder>(&data, &SIMPLE_STRUCT_SCHEMA);
     assert_eq!(data, result);
 }
 

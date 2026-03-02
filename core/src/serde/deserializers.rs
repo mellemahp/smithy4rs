@@ -153,6 +153,7 @@ pub trait MapReader<'de> {
     ///
     /// After this returns `Some`, you must call either `read_value()` or
     /// `skip_value()` before calling `read_key()` again.
+    // TODO(optimization): Do we return Cow<'de, str> for flexibility and reduce allocation?
     fn read_key(&mut self) -> Result<Option<String>, Self::Error>;
 
     /// Read the current entry's value.
@@ -291,6 +292,9 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `string`.
+    // TODO(performance): If we had associated type `type Str: AsRef<str>`, deserializers could
+    // return borrowed strings (`&'de str`), avoiding exrta allocations.
+    // Callers would use `.as_ref()` for borrowed access or `.to_owned()` where needed.
     fn read_string(self, _schema: &Schema) -> Result<String, Self::Error> {
         Err(Error::custom(
             "read_string is not supported by this deserializer",

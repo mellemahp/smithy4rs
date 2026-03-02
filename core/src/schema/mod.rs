@@ -13,6 +13,9 @@ pub use shapes::*;
 mod schemas;
 pub use schemas::*;
 
+mod operations;
+pub use operations::*;
+
 mod unit;
 // Do not include the unit trait as it can remain private.
 pub use unit::{UNIT, Unit};

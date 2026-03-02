@@ -156,11 +156,6 @@ impl Schema {
         Self::scalar(ShapeType::Timestamp, id, traits)
     }
 
-    /// Create a Schema for an [Operation](https://smithy.io/2.0/spec/service-types.html#operation) shape.
-    pub fn create_operation(id: impl Into<ShapeId>, traits: TraitList) -> Schema {
-        Self::scalar(ShapeType::Operation, id, traits)
-    }
-
     /// Create a Schema for a [Resource](https://smithy.io/2.0/spec/service-types.html#resource) shape.
     pub fn create_resource(id: impl Into<ShapeId>, traits: TraitList) -> Schema {
         Self::scalar(ShapeType::Resource, id, traits)
@@ -197,6 +192,12 @@ impl Schema {
     pub fn map_builder<I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder {
         SchemaBuilder::new(id, ShapeType::Map, traits)
     }
+
+    /// Create a new [`SchemaBuilder`] for an [Operation](https://smithy.io/2.0/spec/service-types.html#operation) shape.
+    #[must_use]
+    pub fn operation_builder<I: Into<ShapeId>>(id: I, traits: TraitList) -> SchemaBuilder {
+        SchemaBuilder::new(id, ShapeType::Operation, traits)
+    }
 }
 
 // ============================================================================
@@ -218,6 +219,8 @@ pub enum SchemaValue {
     List(ListSchema),
     /// A Schema representing a `map` type.
     Map(MapSchema),
+    /// A Schema representing an `operation` shape.
+    Operation(OperationSchema),
     /// A Schema representing a `member` of an aggregate type.
     Member(MemberSchema),
 }
@@ -235,6 +238,7 @@ impl SchemaValue {
             SchemaValue::IntEnum(_) => &ShapeType::IntEnum,
             SchemaValue::List(_) => &ShapeType::List,
             SchemaValue::Map(_) => &ShapeType::Map,
+            SchemaValue::Operation(_) => &ShapeType::Operation,
             SchemaValue::Member(member) => member.target.shape_type(),
         }
     }
@@ -249,6 +253,7 @@ impl SchemaValue {
             | SchemaValue::Enum(EnumSchema { id, .. })
             | SchemaValue::IntEnum(EnumSchema { id, .. })
             | SchemaValue::Map(MapSchema { id, .. })
+            | SchemaValue::Operation(OperationSchema { id, .. })
             | SchemaValue::Member(MemberSchema { id, .. }) => id,
         }
     }
@@ -261,7 +266,8 @@ impl SchemaValue {
             | SchemaValue::List(ListSchema { traits, .. })
             | SchemaValue::Map(MapSchema { traits, .. })
             | SchemaValue::Enum(EnumSchema { traits, .. })
-            | SchemaValue::IntEnum(EnumSchema { traits, .. }) => traits,
+            | SchemaValue::IntEnum(EnumSchema { traits, .. })
+            | SchemaValue::Operation(OperationSchema { traits, .. }) => traits,
             SchemaValue::Member(member) => member.traits(),
         }
     }
@@ -271,8 +277,7 @@ impl SchemaValue {
     /// <div class ="note">
     /// **NOTE**: Scalar schemas with no members will return an empty map.
     /// </div>
-    #[allow(dead_code)]
-    pub(crate) fn members(&self) -> &FxIndexMap<String, Schema> {
+    pub fn members(&self) -> &FxIndexMap<String, Schema> {
         match self {
             // TODO(errors): Error handling
             SchemaValue::Struct(StructSchema { members, .. }) => members,
@@ -446,6 +451,16 @@ impl SchemaValue {
             None
         }
     }
+
+    /// Get as an [`OperationSchema`] type if possible, otherwise `None`.
+    #[must_use]
+    pub const fn as_operation(&self) -> Option<&OperationSchema> {
+        if let SchemaValue::Operation(op) = self {
+            Some(op)
+        } else {
+            None
+        }
+    }
 }
 
 /// Schema for simple data with no members.
@@ -454,6 +469,17 @@ pub struct ScalarSchema {
     id: ShapeId,
     pub(crate) shape_type: ShapeType,
     traits: TraitMap,
+}
+
+/// Schema for a Smithy [Operation](https://smithy.io/2.0/spec/service-types.html#operation) shape.
+#[derive(Debug, PartialEq)]
+pub struct OperationSchema {
+    id: ShapeId,
+    traits: TraitMap,
+    /// Member representing input of the operation.
+    pub input: Schema,
+    /// Member representing output of the operation.
+    pub output: Schema,
 }
 
 /// Schema for a Smithy [Structure](https://smithy.io/2.0/spec/aggregate-types.html#structure)
@@ -579,7 +605,7 @@ impl SchemaBuilder {
             id: id.into(),
             members: match shape_type {
                 ShapeType::List => RwLock::new(Vec::with_capacity(1)),
-                ShapeType::Map => RwLock::new(Vec::with_capacity(2)),
+                ShapeType::Map | ShapeType::Operation => RwLock::new(Vec::with_capacity(2)),
                 _ => RwLock::new(Vec::new()),
             },
             shape_type,
@@ -627,6 +653,12 @@ impl SchemaBuilder {
                 assert!(
                     name == "key" || name == "value",
                     "Map can only have members named `key` or `value`"
+                );
+            }
+            ShapeType::Operation => {
+                assert!(
+                    name == "input" || name == "output",
+                    "Operations can only have members named `input` or `output`"
                 );
             }
             _ => { /* fall through otherwise */ }
@@ -684,6 +716,22 @@ impl SchemaBuilder {
                     value: members
                         .get(1)
                         .expect("Expected `value` member for Map schema")
+                        .build(),
+                    traits,
+                })
+                .into()
+            }
+            ShapeType::Operation => {
+                let members = self.members.read().expect("Lock poisoned.");
+                SchemaValue::Operation(OperationSchema {
+                    id: self.id.clone(),
+                    input: members
+                        .first()
+                        .expect("Expected `input` member for Operation schema")
+                        .build(),
+                    output: members
+                        .get(1)
+                        .expect("Expected `output` member for Operation schema")
                         .build(),
                     traits,
                 })
@@ -832,6 +880,7 @@ impl Debug for SchemaValue {
             SchemaValue::IntEnum(e) => Debug::fmt(e, f),
             SchemaValue::List(l) => Debug::fmt(l, f),
             SchemaValue::Map(m) => Debug::fmt(m, f),
+            SchemaValue::Operation(o) => Debug::fmt(o, f),
             SchemaValue::Member(m) => Debug::fmt(m, f),
         }
     }

@@ -1,3 +1,5 @@
+use std::{borrow::BorrowMut, marker::PhantomData};
+
 use smithy4rs_core::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     schema::Schema,
@@ -22,33 +24,43 @@ impl<'de> JsonDeserializer<'de> {
     }
 }
 
+// ============================================================================
+// Reader types — parameterized over storage via BorrowMut
+// ============================================================================
+
 /// Reader for JSON struct members.
-pub struct JsonStructReader<'de, 'a> {
-    de: &'a mut JsonDeserializer<'de>,
+///
+/// `D` is either `&'a mut JsonDeserializer<'de>` (borrowed, for nested reads)
+/// or `JsonDeserializer<'de>` (owned, for top-level Codec use).
+pub struct JsonStructReader<'de, D: BorrowMut<JsonDeserializer<'de>>> {
+    de: D,
     started: bool,
+    _marker: PhantomData<&'de ()>,
 }
 
 /// Reader for JSON list elements.
-pub struct JsonListReader<'de, 'a> {
-    de: &'a mut JsonDeserializer<'de>,
+pub struct JsonListReader<'de, D: BorrowMut<JsonDeserializer<'de>>> {
+    de: D,
     started: bool,
+    _marker: PhantomData<&'de ()>,
 }
 
 /// Reader for JSON map entries.
-pub struct JsonMapReader<'de, 'a> {
-    de: &'a mut JsonDeserializer<'de>,
+pub struct JsonMapReader<'de, D: BorrowMut<JsonDeserializer<'de>>> {
+    de: D,
     started: bool,
+    _marker: PhantomData<&'de ()>,
 }
 
 // ============================================================================
-// Deserializer Implementation (only one needed!)
+// Borrowed Deserializer — used by readers for nested deserialization
 // ============================================================================
 
 impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
     type Error = JsonSerdeError;
-    type StructReader = JsonStructReader<'de, 'a>;
-    type ListReader = JsonListReader<'de, 'a>;
-    type MapReader = JsonMapReader<'de, 'a>;
+    type StructReader = JsonStructReader<'de, &'a mut JsonDeserializer<'de>>;
+    type ListReader = JsonListReader<'de, &'a mut JsonDeserializer<'de>>;
+    type MapReader = JsonMapReader<'de, &'a mut JsonDeserializer<'de>>;
 
     fn read_bool(self, _schema: &Schema) -> Result<bool, Self::Error> {
         self.parser.next_bool().map_err(|e| {
@@ -213,6 +225,7 @@ impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         Ok(JsonStructReader {
             de: self,
             started: false,
+            _marker: PhantomData,
         })
     }
 
@@ -220,6 +233,7 @@ impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         Ok(JsonListReader {
             de: self,
             started: false,
+            _marker: PhantomData,
         })
     }
 
@@ -227,6 +241,7 @@ impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         Ok(JsonMapReader {
             de: self,
             started: false,
+            _marker: PhantomData,
         })
     }
 
@@ -236,21 +251,108 @@ impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
 }
 
 // ============================================================================
-// StructReader Implementation
+// Owned Deserializer — satisfies Codec::Deserializer<'de> bound
 // ============================================================================
 
-impl<'de> StructReader<'de> for JsonStructReader<'de, '_> {
+impl<'de> Deserializer<'de> for JsonDeserializer<'de> {
+    type Error = JsonSerdeError;
+    type StructReader = JsonStructReader<'de, JsonDeserializer<'de>>;
+    type ListReader = JsonListReader<'de, JsonDeserializer<'de>>;
+    type MapReader = JsonMapReader<'de, JsonDeserializer<'de>>;
+
+    // Scalar methods delegate to the borrowed (&mut) impl.
+    fn read_bool(mut self, s: &Schema) -> Result<bool, Self::Error> {
+        (&mut self).read_bool(s)
+    }
+    fn read_byte(mut self, s: &Schema) -> Result<i8, Self::Error> {
+        (&mut self).read_byte(s)
+    }
+    fn read_short(mut self, s: &Schema) -> Result<i16, Self::Error> {
+        (&mut self).read_short(s)
+    }
+    fn read_integer(mut self, s: &Schema) -> Result<i32, Self::Error> {
+        (&mut self).read_integer(s)
+    }
+    fn read_long(mut self, s: &Schema) -> Result<i64, Self::Error> {
+        (&mut self).read_long(s)
+    }
+    fn read_float(mut self, s: &Schema) -> Result<f32, Self::Error> {
+        (&mut self).read_float(s)
+    }
+    fn read_double(mut self, s: &Schema) -> Result<f64, Self::Error> {
+        (&mut self).read_double(s)
+    }
+    fn read_big_integer(mut self, s: &Schema) -> Result<BigInt, Self::Error> {
+        (&mut self).read_big_integer(s)
+    }
+    fn read_big_decimal(mut self, s: &Schema) -> Result<BigDecimal, Self::Error> {
+        (&mut self).read_big_decimal(s)
+    }
+    fn read_string(mut self, s: &Schema) -> Result<String, Self::Error> {
+        (&mut self).read_string(s)
+    }
+    fn read_blob(mut self, s: &Schema) -> Result<ByteBuffer, Self::Error> {
+        (&mut self).read_blob(s)
+    }
+    fn read_timestamp(mut self, s: &Schema) -> Result<Instant, Self::Error> {
+        (&mut self).read_timestamp(s)
+    }
+    fn read_document(
+        mut self,
+        s: &Schema,
+    ) -> Result<Box<dyn smithy4rs_core::schema::Document>, Self::Error> {
+        (&mut self).read_document(s)
+    }
+    fn read_null(mut self) -> Result<(), Self::Error> {
+        (&mut self).read_null()
+    }
+    fn is_null(&mut self) -> bool {
+        matches!(self.parser.peek(), Ok(jiter::Peek::Null))
+    }
+
+    // Compound methods move self into owned readers.
+    fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
+        Ok(JsonStructReader {
+            de: self,
+            started: false,
+            _marker: PhantomData,
+        })
+    }
+
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
+        Ok(JsonListReader {
+            de: self,
+            started: false,
+            _marker: PhantomData,
+        })
+    }
+
+    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
+        Ok(JsonMapReader {
+            de: self,
+            started: false,
+            _marker: PhantomData,
+        })
+    }
+}
+
+// ============================================================================
+// StructReader — shared impl via BorrowMut
+// ============================================================================
+
+impl<'de, D: BorrowMut<JsonDeserializer<'de>>> StructReader<'de> for JsonStructReader<'de, D> {
     type Error = JsonSerdeError;
 
     fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
+        let de = self.de.borrow_mut();
         loop {
             let maybe_key = if !self.started {
                 self.started = true;
-                self.de.parser.next_object().map_err(|e| {
+                de.parser.next_object().map_err(|e| {
                     JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
                 })?
             } else {
-                self.de.parser.next_key().map_err(|e| {
+                de.parser.next_key().map_err(|e| {
                     JsonSerdeError::DeserializationError(format!(
                         "Failed to read object key: {}",
                         e
@@ -264,7 +366,7 @@ impl<'de> StructReader<'de> for JsonStructReader<'de, '_> {
                         return Ok(Some(member_schema));
                     }
                     // Unknown key — skip the value
-                    self.de.parser.next_skip().map_err(|e| {
+                    de.parser.next_skip().map_err(|e| {
                         JsonSerdeError::DeserializationError(format!("Failed to skip value: {}", e))
                     })?;
                 }
@@ -277,39 +379,38 @@ impl<'de> StructReader<'de> for JsonStructReader<'de, '_> {
         &mut self,
         schema: &Schema,
     ) -> Result<T, Self::Error> {
-        T::deserialize_with_schema(schema, &mut *self.de)
+        T::deserialize_with_schema(schema, &mut *self.de.borrow_mut())
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
-        self.de.parser.next_skip().map_err(|e| {
+        self.de.borrow_mut().parser.next_skip().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to skip value: {}", e))
         })
     }
 }
 
 // ============================================================================
-// ListReader Implementation
+// ListReader — shared impl via BorrowMut
 // ============================================================================
 
-impl<'de> ListReader<'de> for JsonListReader<'de, '_> {
+impl<'de, D: BorrowMut<JsonDeserializer<'de>>> ListReader<'de> for JsonListReader<'de, D> {
     type Error = JsonSerdeError;
 
     fn read_element<T: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
     ) -> Result<Option<T>, Self::Error> {
+        let de = self.de.borrow_mut();
         let has_element = if !self.started {
             self.started = true;
-            self.de
-                .parser
+            de.parser
                 .next_array()
                 .map_err(|e| {
                     JsonSerdeError::DeserializationError(format!("Expected array start: {}", e))
                 })?
                 .is_some()
         } else {
-            self.de
-                .parser
+            de.parser
                 .array_step()
                 .map_err(|e| {
                     JsonSerdeError::DeserializationError(format!("Failed to advance array: {}", e))
@@ -321,25 +422,26 @@ impl<'de> ListReader<'de> for JsonListReader<'de, '_> {
             return Ok(None);
         }
 
-        T::deserialize_with_schema(schema, &mut *self.de).map(Some)
+        T::deserialize_with_schema(schema, &mut *self.de.borrow_mut()).map(Some)
     }
 }
 
 // ============================================================================
-// MapReader Implementation
+// MapReader — shared impl via BorrowMut
 // ============================================================================
 
-impl<'de> MapReader<'de> for JsonMapReader<'de, '_> {
+impl<'de, D: BorrowMut<JsonDeserializer<'de>>> MapReader<'de> for JsonMapReader<'de, D> {
     type Error = JsonSerdeError;
 
     fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
+        let de = self.de.borrow_mut();
         let maybe_key = if !self.started {
             self.started = true;
-            self.de.parser.next_object().map_err(|e| {
+            de.parser.next_object().map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Expected object start: {}", e))
             })?
         } else {
-            self.de.parser.next_key().map_err(|e| {
+            de.parser.next_key().map_err(|e| {
                 JsonSerdeError::DeserializationError(format!("Failed to read map key: {}", e))
             })?
         };
@@ -351,11 +453,11 @@ impl<'de> MapReader<'de> for JsonMapReader<'de, '_> {
         &mut self,
         schema: &Schema,
     ) -> Result<V, Self::Error> {
-        V::deserialize_with_schema(schema, &mut *self.de)
+        V::deserialize_with_schema(schema, &mut *self.de.borrow_mut())
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
-        self.de.parser.next_skip().map_err(|e| {
+        self.de.borrow_mut().parser.next_skip().map_err(|e| {
             JsonSerdeError::DeserializationError(format!("Failed to skip value: {}", e))
         })
     }
@@ -380,6 +482,18 @@ mod tests {
 
         let mut de = JsonDeserializer::new(b"\"hello\"");
         assert_eq!((&mut de).read_string(&STRING).unwrap(), "hello");
+    }
+
+    #[test]
+    fn test_read_primitives_owned() {
+        let de = JsonDeserializer::new(b"true");
+        assert!(de.read_bool(&BOOLEAN).unwrap());
+
+        let de = JsonDeserializer::new(b"42");
+        assert_eq!(de.read_integer(&INTEGER).unwrap(), 42);
+
+        let de = JsonDeserializer::new(b"\"hello\"");
+        assert_eq!(de.read_string(&STRING).unwrap(), "hello");
     }
 
     #[test]
