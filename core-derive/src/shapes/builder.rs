@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{DataStruct, Type};
+use syn::{FieldsNamed, Type};
 
 use crate::shapes::utils::{
     IdentOrExpr, extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional,
@@ -86,9 +86,9 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
     }
 }
 
-pub fn get_builder_fields(schema_ident: &Ident, data: &DataStruct) -> Vec<BuilderFieldData> {
+pub fn get_builder_fields(schema_ident: &Ident, fields: &FieldsNamed) -> Vec<BuilderFieldData> {
     let mut field_data = Vec::new();
-    for field in &data.fields {
+    for field in &fields.named {
         let schema = Ident::new(
             &format!("_{}_MEMBER_{}", schema_ident, parse_schema(&field.attrs)),
             Span::call_site(),

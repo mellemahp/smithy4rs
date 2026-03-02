@@ -9,4 +9,5 @@ fn test_shape_macro_expansion() {
     macrotest::expand("tests/shapes_expand/int_enum.rs");
     macrotest::expand("tests/shapes_expand/simple_struct.rs");
     macrotest::expand("tests/shapes_expand/union.rs");
+    macrotest::expand("tests/shapes_expand/wrapper.rs");
 }

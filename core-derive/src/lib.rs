@@ -8,15 +8,17 @@ mod shapes;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use shapes::utils::{get_builder_ident, get_crate_info, parse_enum_value, parse_schema};
-use syn::{Data, DeriveInput, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote};
+use syn::{
+    Data, DeriveInput, Fields, ItemEnum, Lit, Variant, parse, parse_macro_input, parse_quote,
+};
 
 #[cfg(feature = "serde-adapter")]
 use crate::shapes::adapter::{deser_adapter_impl, ser_adapter_impl};
 #[cfg(feature = "arbitrary")]
 use crate::shapes::arbitrary::arbitrary_impl;
 use crate::shapes::{
-    buildable, builder_impls, builder_struct, debug_impl, deserialization_impl, get_builder_fields,
-    schema_impl, serialization_impl,
+    buildable, builder_impls, builder_struct, debug_impl, deref_impl, deserialization_impl,
+    get_builder_fields, get_tuple_constructor, schema_impl, serialization_impl,
 };
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
@@ -105,7 +107,7 @@ fn unknown_variant(enum_data: &mut ItemEnum) {
             parse_quote!(#[doc(hidden)]),
         ],
         discriminant: None,
-        fields: syn::Fields::Unnamed(field),
+        fields: Fields::Unnamed(field),
         ident: Ident::new("Unknown", Span::call_site()),
     });
 }
@@ -221,40 +223,66 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
     let (extern_import, crate_ident) = get_crate_info();
     let deser = deserialization_impl(&crate_ident, shape_name, &schema_ident, &input);
     match &input.data {
-        // Generate builder for structures
         Data::Struct(data) => {
-            let field_data = get_builder_fields(&schema_ident, data);
-            let builder = builder_struct(shape_name, &field_data);
-            let builder_impls = builder_impls(shape_name, &field_data);
-            let builder_name = get_builder_ident(shape_name);
-            let builder_serializer =
-                serialization_impl(&crate_ident, &builder_name, &schema_ident, &input);
-            let buildable = buildable(shape_name, &builder_name);
-            let builder_schema = schema_impl(&builder_name, &schema_ident);
-            // Builder struct is generated outside the const block to make it publicly accessible
-            quote! {
-                #builder
+            // TODO: Clean up logic
+            match &data.fields {
+                // Generate builder for structures with named fields
+                Fields::Named(fields) => {
+                    let field_data = get_builder_fields(&schema_ident, fields);
+                    let builder = builder_struct(shape_name, &field_data);
+                    let builder_impls = builder_impls(shape_name, &field_data);
+                    let builder_name = get_builder_ident(shape_name);
+                    let builder_serializer =
+                        serialization_impl(&crate_ident, &builder_name, &schema_ident, &input);
+                    let buildable = buildable(shape_name, &builder_name);
+                    let builder_schema = schema_impl(&builder_name, &schema_ident);
+                    // Builder struct is generated outside the const block to make it publicly accessible
+                    quote! {
+                        #builder
 
-                const _: () = {
-                    #extern_import
-                    use #crate_ident::schema::Schema as _Schema;
-                    use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+                        const _: () = {
+                            #extern_import
+                            use #crate_ident::schema::Schema as _Schema;
+                            use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
 
-                    #builder_schema
-                };
+                            #builder_schema
+                        };
 
-                const _: () = {
-                    #extern_import
-                    use #crate_ident::schema::Schema as _Schema;
+                        const _: () = {
+                            #extern_import
+                            use #crate_ident::schema::Schema as _Schema;
 
-                    #deser
+                            #deser
 
-                    #builder_impls
-                    #builder_serializer
-                    #buildable
-                };
+                            #builder_impls
+                            #builder_serializer
+                            #buildable
+                        };
+                    }
+                    .into()
+                }
+                // Generate deser for wrappers
+                Fields::Unnamed(fields) => {
+                    let constructor = get_tuple_constructor(&schema_ident, shape_name, fields);
+                    let deref = deref_impl(shape_name, fields);
+                    quote! {
+                        #constructor
+
+                        const _: () = {
+                            #deref
+                        };
+
+                        const _: () = {
+                            #extern_import
+                            use #crate_ident::schema::Schema as _Schema;
+
+                            #deser
+                        };
+                    }
+                    .into()
+                }
+                Fields::Unit => panic!("Unit structs are not supported."),
             }
-            .into()
         }
         Data::Enum(_) => quote! {
             const _: () = {
