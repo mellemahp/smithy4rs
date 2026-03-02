@@ -90,6 +90,19 @@ pub(crate) fn get_crate_info() -> (TokenStream, TokenStream) {
     (extern_import, crate_ident)
 }
 
+/// Get name to use for direct imports (either `crate` or `smithy4rs_core`)
+pub(crate) fn get_crate_name() -> TokenStream {
+    let found_crate =
+        crate_name("smithy4rs-core").expect("smithy4rs-core is present in `Cargo.toml`");
+    match &found_crate {
+        FoundCrate::Itself => quote! { crate },
+        FoundCrate::Name(name) => {
+            let ident = Ident::new(name, Span::call_site());
+            quote! { #ident }
+        }
+    }
+}
+
 /// Get identifier to use outside `const` block for crate
 pub(crate) fn get_crate_ident() -> TokenStream {
     let found_crate =
@@ -223,6 +236,15 @@ impl ToTokens for IdentOrExpr {
             IdentOrExpr::Expr(expr) => expr.to_tokens(tokens),
         }
     }
+}
+
+pub(crate) fn parse_wrapper_type(fields: &syn::FieldsUnnamed) -> &Type {
+    assert_eq!(
+        fields.unnamed.len(),
+        1,
+        "Wrapper shapes must have only one field"
+    );
+    &fields.unnamed.first().expect("At least one field.").ty
 }
 
 #[cfg(test)]

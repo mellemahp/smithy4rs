@@ -35,10 +35,6 @@
 //!  assert!(&EXAMPLE_SCHEMA.contains_type::<SensitiveTrait>());
 //!
 //! /// Accessing trait data from a schema
-//!  // Access as a dynamic trait object.
-//!  let trait_object = EXAMPLE_SCHEMA.get_trait(&"smithy.api#sensitive".into()).unwrap();
-//!  let document_value = trait_object.value();
-//!  assert_eq!(document_value, &*NULL);
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
@@ -96,6 +92,7 @@ use crate::{
 /// <div class ="note">
 /// **NOTE**: All Smithy Trait implementations MUST implement this trait.
 /// </div>
+// TODO: Add back in dyn trait access example
 pub trait SmithyTrait: DowncastSync + Debug {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;

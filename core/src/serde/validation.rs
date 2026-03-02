@@ -857,6 +857,12 @@ impl StructWriter for DefaultStructValidator<'_> {
 // Validation Errors
 // ============================================================================
 
+/// Result of validating a shape.
+///
+/// If multiple validation errors are encountered they are aggregated into
+/// a single [`ValidationErrors`] Err result.
+pub type Validated<T> = Result<T, ValidationErrors>;
+
 /// Aggregated list of all validation errors encountered while building a shape.
 ///
 /// When executing validation of a Builder, more than one field could be invalid.

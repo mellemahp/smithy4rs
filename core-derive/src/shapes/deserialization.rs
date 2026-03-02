@@ -1,10 +1,10 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DataStruct, DeriveInput, Lit, Type, Variant};
+use syn::{Data, DataEnum, DeriveInput, Fields, FieldsNamed, FieldsUnnamed, Lit, Type, Variant};
 
 use crate::shapes::{
     get_builder_fields,
-    utils::{get_builder_ident, is_union, parse_enum_value, parse_schema},
+    utils::{get_builder_ident, is_union, parse_enum_value, parse_schema, parse_wrapper_type},
 };
 
 /// Generate `DeserializeWithSchema` implementation for Smithy Shapes
@@ -16,7 +16,13 @@ pub(crate) fn deserialization_impl(
 ) -> TokenStream {
     let deser_impl = match &input.data {
         // Structures are deserialized via builders
-        Data::Struct(data) => deserialize_builder(crate_ident, schema_ident, shape_name, data),
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(fields) => {
+                deserialize_builder(crate_ident, schema_ident, shape_name, fields)
+            }
+            Fields::Unnamed(field) => deserialize_wrapper(shape_name, field),
+            Fields::Unit => panic!("Unit structs are not supported"),
+        },
         Data::Enum(data) => {
             if is_union(data) {
                 deserialize_union(crate_ident, shape_name, schema_ident, data)
@@ -44,10 +50,10 @@ fn deserialize_builder(
     crate_ident: &TokenStream,
     schema_ident: &Ident,
     shape_name: &Ident,
-    data_struct: &DataStruct,
+    fields: &FieldsNamed,
 ) -> TokenStream {
     let builder_name = get_builder_ident(shape_name);
-    let field_data = get_builder_fields(schema_ident, data_struct);
+    let field_data = get_builder_fields(schema_ident, fields);
 
     // Generate deserialize_member! or deserialize_optional_member! macro calls for each field
     let match_arms = field_data
@@ -79,6 +85,26 @@ fn deserialize_builder(
                 }
 
                 Ok(builder)
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Tuple (Wrapper) struct Deserialization
+// ============================================================================
+
+fn deserialize_wrapper(shape_name: &Ident, fields: &FieldsUnnamed) -> TokenStream {
+    let inner_type = parse_wrapper_type(fields);
+    quote! {
+        #[automatically_derived]
+        impl<'de> _DeserializeWithSchema<'de> for #shape_name {
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
+            where
+                D: _Deserializer<'de>,
+            {
+                let inner = #inner_type::deserialize_with_schema(schema, deserializer)?;
+                Ok(Self(inner))
             }
         }
     }

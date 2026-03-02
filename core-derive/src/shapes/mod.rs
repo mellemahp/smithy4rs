@@ -19,4 +19,9 @@ pub(crate) mod adapter;
 #[cfg(feature = "arbitrary")]
 pub(crate) mod arbitrary;
 
+mod constructor;
+pub(crate) use constructor::*;
+
+mod deref;
 pub(crate) mod utils;
+pub(crate) use deref::*;

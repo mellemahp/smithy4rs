@@ -18,6 +18,7 @@ use crate::{
     schema::{Document, ShapeId, SmithyTrait, StaticTraitId},
     smithy, static_trait_id, string_trait,
 };
+
 // ============================================================================
 // Prelude Shape Schemas
 // ---------------------
