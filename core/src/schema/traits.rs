@@ -92,6 +92,7 @@ use crate::{
 /// <div class ="note">
 /// **NOTE**: All Smithy Trait implementations MUST implement this trait.
 /// </div>
+// TODO: Add back in dyn trait access example
 pub trait SmithyTrait: DowncastSync + Debug {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;

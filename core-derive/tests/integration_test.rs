@@ -9,5 +9,9 @@ fn test_macro_expansion() {
     macrotest::expand("tests/shapes_expand/int_enum.rs");
     macrotest::expand("tests/shapes_expand/simple_struct.rs");
     macrotest::expand("tests/shapes_expand/union.rs");
+<<<<<<< HEAD
     macrotest::expand("tests/shapes_expand/nested_wrapper.rs");
+=======
+    macrotest::expand("tests/shapes_expand/wrapper.rs");
+>>>>>>> a99d247 (Update approach to document conversion for improved ergonomics)
 }

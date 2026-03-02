@@ -601,7 +601,7 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::{derive::SmithyShape, schema::prelude::*, smithy};
+    use crate::{derive::SmithyShape, schema::prelude::*, serde::ShapeBuilder, smithy};
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {

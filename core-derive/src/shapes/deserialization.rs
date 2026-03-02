@@ -99,12 +99,19 @@ fn deserialize_wrapper(shape_name: &Ident, fields: &FieldsUnnamed) -> TokenStrea
     quote! {
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
+<<<<<<< HEAD
             #[inline]
+=======
+>>>>>>> a99d247 (Update approach to document conversion for improved ergonomics)
             fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
+<<<<<<< HEAD
                 let inner = <#inner_type as _DeserializeWithSchema>::deserialize_with_schema(schema, deserializer)?;
+=======
+                let inner = #inner_type::deserialize_with_schema(schema, deserializer)?;
+>>>>>>> a99d247 (Update approach to document conversion for improved ergonomics)
                 Ok(Self(inner))
             }
         }

@@ -29,3 +29,4 @@ pub(crate) mod utils;
 pub(crate) use deref::*;
 pub(crate) use error_correction::*;
 pub(crate) use traits::*;
+pub(crate) use deref::*;
