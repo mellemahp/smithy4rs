@@ -73,6 +73,7 @@ const _: () = {
         }
     }
 };
+///Builder for [`SimpleStruct`]
 #[automatically_derived]
 impl SimpleStruct {
     /// Get a new builder for this shape.
@@ -324,6 +325,7 @@ const _: () = {
         }
     }
 };
+///Builder for [`Nested`]
 #[automatically_derived]
 impl Nested {
     /// Get a new builder for this shape.

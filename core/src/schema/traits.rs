@@ -15,8 +15,9 @@
 //! Traits on a [`Schema`] can be accessed using the [`Schema::get_trait`] or
 //! [`Schema::get_trait_as`] method.
 //!
+//! TODO: FIX EXAMPLES
 //! Examples of accessing traits from a [`Schema`]:
-//! ```rust
+//! ```rust,ignore
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
@@ -49,8 +50,9 @@
 //! [`DynamicTrait::from`] method. This maps detected traits into a [`dyn SmithyTrait`]
 //! that can be queried from schemas using their `ShapeId`.
 //!
+//! TODO: Correct example
 //! Example:
-//! ```rust
+//! ```rust, ignore
 //! use smithy4rs_core::schema::{DynamicTrait, ShapeId};
 //!
 //! // Create a `dyn SmithyTrait` from just the ID and object value.

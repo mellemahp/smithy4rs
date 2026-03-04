@@ -6,10 +6,6 @@ use smithy4rs_core::{
     derive::SmithyShape,
     prelude::{INTEGER, STRING},
     schema::{Document, TryFromDocument},
-<<<<<<< HEAD
-=======
-    serde::ShapeBuilder,
->>>>>>> a99d247 (Update approach to document conversion for improved ergonomics)
     smithy,
 };
 
