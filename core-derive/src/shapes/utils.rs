@@ -1,7 +1,7 @@
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
-use syn::{__private::TokenStream2, Attribute, DataEnum, Expr, Lit, Type};
+use syn::{__private::TokenStream2, Attribute, DataEnum, Expr, Field, Lit, Type};
 
 /// Parses out attribute data for the `smithy_schema` macro attribute from the struct and
 /// its fields.
@@ -193,6 +193,15 @@ pub(crate) fn parse_enum_value(attrs: &[Attribute]) -> Option<Lit> {
 
 pub(crate) fn get_builder_ident(shape_name: &Ident) -> Ident {
     Ident::new(&format!("{}Builder", shape_name), Span::call_site())
+}
+
+pub(crate) fn no_builder(field: &Field) -> bool {
+    for attr in &field.attrs {
+        if attr.path().is_ident("no_builder") {
+            return true;
+        }
+    }
+    false
 }
 
 /// Determines if the shape should be treated as a regular enum or a union.

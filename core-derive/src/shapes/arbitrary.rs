@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DeriveInput};
+use syn::{Data, DeriveInput, Fields};
 
 /// `Arbitrary` implementation for generated shapes
 pub(crate) fn arbitrary_impl(
@@ -10,8 +10,11 @@ pub(crate) fn arbitrary_impl(
     input: &DeriveInput,
 ) -> TokenStream {
     let arbitrary_impl = match &input.data {
-        Data::Struct(_) => arbitrary_struct(crate_ident, shape_name, schema_ident),
-        Data::Enum(_) => arbitrary_enum(crate_ident, shape_name, schema_ident),
+        Data::Struct(ds) => match ds.fields {
+            Fields::Named(_) => arbitrary_struct(crate_ident, shape_name, schema_ident),
+            Fields::Unnamed(_) | Fields::Unit => arbitrary_other(crate_ident, shape_name, schema_ident),
+        },
+        Data::Enum(_) => arbitrary_other(crate_ident, shape_name, schema_ident),
         _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
     };
     quote! {
@@ -20,8 +23,7 @@ pub(crate) fn arbitrary_impl(
         use _arbitrary::MaxRecursionReached as _MaxRecursionReached;
         use #crate_ident::features::arbitrary::ArbitraryDeserializer as _ArbitraryDeserializer;
         use #crate_ident::features::arbitrary::TrySizeHint as _TrySizeHint;
-        use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
-        use #crate_ident::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
+        use #crate_ident::serde::deserializers::DeserializableShape as _DeserializableShape;
 
         #arbitrary_impl
     }
@@ -40,11 +42,7 @@ fn arbitrary_struct(
         #[automatically_derived]
         impl<'a> _Arbitrary<'a> for #shape_name {
             fn arbitrary(u: &mut _Unstructured<'a>) -> _arbitrary::Result<Self> {
-                let schema = <#builder_name as _StaticSchemaShape>::schema();
-                <#builder_name as _DeserializeWithSchema>::deserialize_with_schema(
-                    schema,
-                    _ArbitraryDeserializer::new(u),
-                )?
+                <#builder_name as _DeserializableShape>::deserialize(_ArbitraryDeserializer::new(u))?
                 .build()
                 .map_err(|_| _arbitrary::Error::IncorrectFormat)
             }
@@ -63,11 +61,7 @@ fn arbitrary_struct(
         #[automatically_derived]
         impl<'a> _Arbitrary<'a> for #builder_name {
             fn arbitrary(u: &mut _Unstructured<'a>) -> _arbitrary::Result<Self> {
-                let schema = <#builder_name as _StaticSchemaShape>::schema();
-                <#builder_name as _DeserializeWithSchema>::deserialize_with_schema(
-                    schema,
-                    _ArbitraryDeserializer::new(u),
-                )
+                <#builder_name as _DeserializableShape>::deserialize(_ArbitraryDeserializer::new(u))
                 .map_err(|_| _arbitrary::Error::IncorrectFormat)
             }
 
@@ -84,7 +78,7 @@ fn arbitrary_struct(
     }
 }
 
-fn arbitrary_enum(
+fn arbitrary_other(
     _crate_ident: &TokenStream,
     shape_name: &Ident,
     schema_ident: &Ident,
@@ -93,11 +87,7 @@ fn arbitrary_enum(
         #[automatically_derived]
         impl<'a> _Arbitrary<'a> for #shape_name {
             fn arbitrary(u: &mut _Unstructured<'a>) -> _arbitrary::Result<Self> {
-                let schema = <#shape_name as _StaticSchemaShape>::schema();
-                <#shape_name as _DeserializeWithSchema>::deserialize_with_schema(
-                    schema,
-                    _ArbitraryDeserializer::new(u),
-                )
+                <#shape_name as _DeserializableShape>::deserialize(_ArbitraryDeserializer::new(u))
                 .map_err(|_| _arbitrary::Error::IncorrectFormat)
             }
 

@@ -23,5 +23,10 @@ mod constructor;
 pub(crate) use constructor::*;
 
 mod deref;
+mod traits;
 pub(crate) mod utils;
+mod error_correction;
+pub(crate) use error_correction::*;
+
 pub(crate) use deref::*;
+pub(crate) use traits::*;

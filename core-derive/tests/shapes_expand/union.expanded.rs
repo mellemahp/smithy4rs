@@ -119,6 +119,17 @@ const _: () = {
 };
 const _: () = {
     extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
+    impl _ErrorCorrectionDefault for TestEnum {
+        #[inline]
+        #[automatically_derived]
+        fn default() -> Self {
+            TestEnum::Unknown("".to_string())
+        }
+    }
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
     use _smithy4rs::serde::debug::DebugWrapper as _DebugWrapper;
     #[automatically_derived]
     impl std::fmt::Debug for TestEnum {
