@@ -35,4 +35,3 @@ fn determine_enum_filler_value(data: &DataEnum) -> TokenStream {
         quote! { "".to_string() }
     }
 }
-

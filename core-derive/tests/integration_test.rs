@@ -2,6 +2,7 @@
 
 mod shapes_expand;
 
+// TODO: Reorganize now traits are added
 #[test]
 fn test_macro_expansion() {
     // Listed out to avoid expanding `mod.rs`
