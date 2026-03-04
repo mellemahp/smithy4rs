@@ -42,6 +42,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for SimpleStruct {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_SCHEMA
         }
@@ -127,6 +128,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for SimpleStructBuilder {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_SCHEMA
         }
@@ -275,6 +277,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for Nested {
+        #[inline]
         fn schema() -> &'static _Schema {
             &NESTED_SCHEMA
         }
@@ -333,6 +336,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for NestedBuilder {
+        #[inline]
         fn schema() -> &'static _Schema {
             &NESTED_SCHEMA
         }
