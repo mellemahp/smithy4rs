@@ -29,7 +29,7 @@ pub(crate) fn serialization_impl(
             match &data.fields {
                 Fields::Named(fields) => serialize_struct(schema_ident, fields),
                 Fields::Unnamed(fields) => serialize_tuple(fields),
-                _ => panic!("Unit structs are not supported"),
+                Fields::Unit => serialize_unit(),
             }
         }
         Data::Enum(data) => {
@@ -183,6 +183,17 @@ fn serialize_tuple(data: &FieldsUnnamed) -> TokenStream {
     );
     quote! {
         self.0.serialize_with_schema(schema, serializer)
+    }
+}
+
+// ============================================================================
+// Unit Serialization
+// ============================================================================
+
+fn serialize_unit() -> TokenStream {
+    quote! {
+        serializer.write_struct(schema, 0usize)?
+            .end(schema)
     }
 }
 

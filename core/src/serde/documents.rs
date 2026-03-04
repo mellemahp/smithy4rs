@@ -35,6 +35,10 @@ impl SerializeWithSchema for Box<dyn Document> {
         schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        // If the schema wants a generic document, don't use inner type
+        if schema.shape_type() == &ShapeType::Document {
+            return serializer.write_document(schema, self);
+        }
         // TODO(errors): Handle exceptions?
         match self.get_type() {
             Some(ShapeType::Blob) => serializer.write_blob(schema, self.as_blob().unwrap()),
@@ -84,6 +88,7 @@ impl SerializeWithSchema for Box<dyn Document> {
                 struct_serializer.end(schema)
             }
             None => serializer.write_null(schema),
+            Some(ShapeType::Document) => serializer.write_document(schema, &self),
             _ => Err(Error::custom("Unsupported shape type")),
         }
     }
@@ -561,6 +566,16 @@ impl<'de> MapReader<'de> for DocumentMapReader {
     fn skip_value(&mut self) -> Result<(), Self::Error> {
         self.current_value = None;
         Ok(())
+    }
+}
+
+// === Needed for Trait deser ===
+impl<'de> DeserializeWithSchema<'de> for Box<dyn Document> {
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_document(schema)
     }
 }
 

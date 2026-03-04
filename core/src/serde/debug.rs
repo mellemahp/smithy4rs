@@ -515,22 +515,20 @@ mod tests {
     schema: StructSchema {
         shape_type: Structure,
         id: "com.example#Shape",
-        traits: [],
+        traits: {},
         members: {
             "map": {
                 "target": "com.example#Map",
-                "traits": [
-                    SensitiveTrait,
-                ],
+                "traits": {
+                    "smithy.api#sensitive": sensitive,
+                },
             },
             "list": {
                 "target": "com.example#List",
-                "traits": [
-                    MediaTypeTrait(
-                        "application/json",
-                    ),
-                    SensitiveTrait,
-                ],
+                "traits": {
+                    "smithy.api#mediaType": "application/json",
+                    "smithy.api#sensitive": sensitive,
+                },
             },
         },
     },

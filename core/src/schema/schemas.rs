@@ -12,11 +12,10 @@ use rustc_hash::FxBuildHasher;
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
     schema::{
-        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef,
+        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef, TryFromDocument,
         prelude::{DefaultTrait, RequiredTrait},
     },
 };
-
 // ============================================================================
 // Root Schema
 // ============================================================================
@@ -359,7 +358,7 @@ impl SchemaValue {
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
     #[must_use]
     #[inline]
-    pub fn get_trait_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
+    pub fn get_trait_as<T: SmithyTrait + StaticTraitId + TryFromDocument>(&self) -> Option<&T> {
         self.traits().get_as::<T>()
     }
 

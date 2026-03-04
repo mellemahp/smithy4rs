@@ -14,6 +14,7 @@ use crate::{
 /// **NOTE**: Units are always serialized and deserialized as empty structs.
 /// So for example in a JSON protocol the Unit would be represented as `{}`.
 /// </div>
+#[derive(PartialEq, Clone)]
 pub struct Unit;
 
 // ============================================================================
@@ -24,7 +25,7 @@ pub struct Unit;
 // ============================================================================
 annotation_trait!(
     /// Empty type representation used in Unions and Operations
-    UnitTypeTrait = "smithy.api#UnitTypeTrait"
+    UnitTypeTrait: UNIT_TYPE = "smithy.api#UnitType"
 );
 
 smithy!("smithy.api#Unit": {

@@ -9,9 +9,9 @@ use crate::{
         default::{Number, Value},
         prelude::*,
     },
+    serde::validation::ValidationErrors,
     smithy,
 };
-
 // ============================================================================
 // Base Document Wrapper and trait
 // ============================================================================
@@ -475,6 +475,9 @@ pub enum DocumentError {
     /// An unknown error
     #[error("Encountered unknown error")]
     Unknown(#[from] Box<dyn Error>),
+    /// Encountered validation error while deserializing document
+    #[error("Invalid Document")]
+    Invalid(#[from] ValidationErrors),
     /// A custom error
     #[error("Encountered error: {0}")]
     CustomError(String),

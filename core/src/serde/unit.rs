@@ -33,7 +33,6 @@ impl<'de> DeserializeWithSchema<'de> for Unit {
                 member_schema.id()
             )));
         }
-
         Ok(Unit)
     }
 }

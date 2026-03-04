@@ -21,7 +21,7 @@ pub(crate) fn deserialization_impl(
                 deserialize_builder(crate_ident, schema_ident, shape_name, fields)
             }
             Fields::Unnamed(field) => deserialize_wrapper(shape_name, field),
-            Fields::Unit => panic!("Unit structs are not supported"),
+            Fields::Unit => deserialize_unit(shape_name),
         },
         Data::Enum(data) => {
             if is_union(data) {
@@ -99,12 +99,32 @@ fn deserialize_wrapper(shape_name: &Ident, fields: &FieldsUnnamed) -> TokenStrea
     quote! {
         #[automatically_derived]
         impl<'de> _DeserializeWithSchema<'de> for #shape_name {
+            #[inline]
             fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
             where
                 D: _Deserializer<'de>,
             {
-                let inner = #inner_type::deserialize_with_schema(schema, deserializer)?;
+                let inner = <#inner_type as _DeserializeWithSchema>::deserialize_with_schema(schema, deserializer)?;
                 Ok(Self(inner))
+            }
+        }
+    }
+}
+
+//
+//
+
+fn deserialize_unit(shape_name: &Ident) -> TokenStream {
+    quote! {
+        #[automatically_derived]
+        impl<'de> _DeserializeWithSchema<'de> for #shape_name {
+            #[inline]
+            fn deserialize_with_schema<D>(schema: &_Schema, deserializer: D) -> Result<Self, D::Error>
+            where
+                D: _Deserializer<'de>,
+            {
+                let _ = deserializer.read_struct(schema)?;
+                Ok(Self)
             }
         }
     }
