@@ -11,6 +11,7 @@ use smithy4rs_core::{
     serde::validation::{DefaultValidator, Validator},
     smithy,
 };
+use smithy4rs_core::serde::Buildable;
 
 // ==== Test shapes ====
 smithy!("test#ValidationStruct": {
