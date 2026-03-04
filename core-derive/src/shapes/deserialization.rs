@@ -111,8 +111,9 @@ fn deserialize_wrapper(shape_name: &Ident, fields: &FieldsUnnamed) -> TokenStrea
     }
 }
 
-//
-//
+// ============================================================================
+// Unit Deserialization
+// ============================================================================
 
 fn deserialize_unit(shape_name: &Ident) -> TokenStream {
     quote! {
@@ -123,7 +124,7 @@ fn deserialize_unit(shape_name: &Ident) -> TokenStream {
             where
                 D: _Deserializer<'de>,
             {
-                let _ = deserializer.read_struct(schema)?;
+                //let _result = deserializer.read_struct(schema)?;
                 Ok(Self)
             }
         }

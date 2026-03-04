@@ -23,6 +23,7 @@ use crate::{
     },
     smithy, static_trait_id, string_trait,
 };
+
 // ============================================================================
 // Prelude Shape Schemas
 // ---------------------

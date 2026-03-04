@@ -192,8 +192,7 @@ fn serialize_tuple(data: &FieldsUnnamed) -> TokenStream {
 
 fn serialize_unit() -> TokenStream {
     quote! {
-        serializer.write_struct(schema, 0usize)?
-            .end(schema)
+        serializer.write_struct(schema, 0usize)?.end(schema)
     }
 }
 
