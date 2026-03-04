@@ -17,7 +17,10 @@ pub(crate) fn get_static_trait_id_impl(
             #[inline]
             #[automatically_derived]
             fn trait_id() -> &'static _ShapeId {
-                &<#shape_name as _StaticSchemaShape>::schema().id()
+                static ID: _LazyLock<&_ShapeId> =  _LazyLock::new(||
+                    &<#shape_name as _StaticSchemaShape>::schema().id()
+                );
+                *ID
             }
         }
     }

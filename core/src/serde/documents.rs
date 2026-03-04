@@ -88,7 +88,7 @@ impl SerializeWithSchema for Box<dyn Document> {
                 struct_serializer.end(schema)
             }
             None => serializer.write_null(schema),
-            Some(ShapeType::Document) => serializer.write_document(schema, &self),
+            Some(ShapeType::Document) => serializer.write_document(schema, self),
             _ => Err(Error::custom("Unsupported shape type")),
         }
     }
