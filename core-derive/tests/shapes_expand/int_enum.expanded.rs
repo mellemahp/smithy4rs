@@ -27,6 +27,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for TestIntEnum {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_INT_ENUM
         }

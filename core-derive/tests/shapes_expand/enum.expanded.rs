@@ -26,6 +26,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for TestEnum {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_ENUM
         }

@@ -17,9 +17,7 @@ pub(crate) fn get_tuple_constructor(
     let crate_name = get_crate_name();
     quote! {
         impl #shape_name {
-            #[doc = "Create a new [`"]
-            #[doc = stringify!(#shape_name)]
-            #[doc = "`] instance"]
+            #[doc = concat!("Create a new [`", stringify!(#shape_name), "`] instance")]
             #[automatically_derived]
             #[inline]
             pub fn new<T: Into<#inner_type>>(value: T) -> #crate_name::serde::validation::Validated<#shape_name> {
