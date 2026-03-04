@@ -21,6 +21,7 @@ use crate::shapes::{
     enum_error_correction_impl, get_builder_fields, get_static_trait_id_impl,
     get_try_from_document_impl, get_tuple_constructor, schema_impl, serialization_impl,
 };
+
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
 //               if not already derived on shape.

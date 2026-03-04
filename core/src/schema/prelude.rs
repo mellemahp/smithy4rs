@@ -5,8 +5,6 @@
 //! are available to all models. Prelude shapes and traits are all in the `smithy.api` namespace
 //! and must be hard-coded as they are used by generate shapes.
 
-use std::fmt::{Debug, Display};
-
 use bigdecimal::Zero;
 use regex::Regex;
 use smithy4rs_core_derive::{SmithyShape, SmithyTraitImpl, smithy_enum};
@@ -270,35 +268,25 @@ smithy!("smithy.api#default": {
 #[smithy_schema(DEFAULT)]
 pub struct DefaultTrait(pub Box<dyn Document>);
 
+smithy!("smithy.api#error": {
+    /// Schema for [`ErrorTrait`]
+    enum ERROR {
+        CLIENT = "client"
+        SERVER = "server"
+    }
+});
+
 /// Indicates that a structure shape represents an error.
 ///
 /// *See* - [Error Trait](https://smithy.io/2.0/spec/type-refinement-traits.html#smithy-api-error-trait)
-#[derive(Debug)]
-pub struct ErrorTrait(pub ErrorFault);
-impl ErrorTrait {
-    /// Create a new [`ErrorTrait`] instance
-    #[must_use]
-    pub fn new(error: ErrorFault) -> Self {
-        ErrorTrait(error)
-    }
-}
-static_trait_id!(ErrorTrait, "smithy.api#error");
-
-// TODO: Convert to macro style
-/// Indicates if the client or server is at fault for a given error.
-#[derive(Debug)]
-#[doc(hidden)]
-pub enum ErrorFault {
-    Client,
-    Server,
-}
-impl Display for ErrorFault {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ErrorFault::Client => write!(f, "client"),
-            ErrorFault::Server => write!(f, "server"),
-        }
-    }
+#[smithy_enum]
+#[derive(SmithyShape, SmithyTraitImpl, PartialEq, Clone)]
+#[smithy_schema(ERROR)]
+pub enum ErrorTrait {
+    /// Error originates from client
+    Client = "client",
+    /// Error originates from server
+    Server = "server",
 }
 
 smithy!("smithy.api#httpError": {
