@@ -1,6 +1,7 @@
 //! Benchmarks of Validation
 
 use std::hint::black_box;
+
 use bigdecimal::BigDecimal;
 use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
@@ -8,12 +9,11 @@ use smithy4rs_core::{
     derive::SmithyShape,
     prelude::*,
     serde::{
-        ShapeBuilder,
+        Buildable, ShapeBuilder,
         validation::{DefaultValidator, Validator},
     },
     smithy,
 };
-use smithy4rs_core::serde::Buildable;
 
 // ==== Test shapes ====
 smithy!("test#ValidationStruct": {

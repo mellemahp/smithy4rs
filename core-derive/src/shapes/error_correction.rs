@@ -1,9 +1,14 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{DataEnum, Lit};
+
 use crate::shapes::utils::parse_enum_value;
 
-pub(crate) fn enum_error_correction_impl(crate_ident: &TokenStream, shape_name: &Ident, data: &DataEnum) -> TokenStream {
+pub(crate) fn enum_error_correction_impl(
+    crate_ident: &TokenStream,
+    shape_name: &Ident,
+    data: &DataEnum,
+) -> TokenStream {
     let filler = determine_enum_filler_value(data);
     quote! {
         use #crate_ident::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;

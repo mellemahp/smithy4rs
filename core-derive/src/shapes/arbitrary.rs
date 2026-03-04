@@ -12,7 +12,9 @@ pub(crate) fn arbitrary_impl(
     let arbitrary_impl = match &input.data {
         Data::Struct(ds) => match ds.fields {
             Fields::Named(_) => arbitrary_struct(crate_ident, shape_name, schema_ident),
-            Fields::Unnamed(_) | Fields::Unit => arbitrary_other(crate_ident, shape_name, schema_ident),
+            Fields::Unnamed(_) | Fields::Unit => {
+                arbitrary_other(crate_ident, shape_name, schema_ident)
+            }
         },
         Data::Enum(_) => arbitrary_other(crate_ident, shape_name, schema_ident),
         _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),

@@ -50,7 +50,7 @@ run = ["cargo deny check", "cargo machete"]
 [tasks.test]
 wait_for = ["build"]
 description = "Tests the library"
-run = "cargo nextest run --locked --all-features"
+run = "cargo nextest run --all-features"
 
 [tasks.clean]
 description = "Remove build artifacts"

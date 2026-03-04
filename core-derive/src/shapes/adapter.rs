@@ -48,36 +48,23 @@ pub(crate) fn deser_adapter_impl(
         use #crate_ident::features::adapters::SchemaSeed as _SchemaSeed;
     };
     // Add builder-specific import
-    if matches!(&input.data, Data::Struct(data_struct) if matches!(&data_struct.fields, Fields::Named(_)))
+    let body = if matches!(&input.data, Data::Struct(data_struct) if matches!(&data_struct.fields, Fields::Named(_)))
     {
         imports = quote! {
             #imports
             use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
         };
-    }
-    let body = match &input.data {
-        Data::Struct(data_struct) => match &data_struct.fields {
-            Fields::Named(_) => {
-                let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
-                quote! {
-                    let seed = _SchemaSeed::<#builder_name>::new(#shape_name::schema());
-                    seed.deserialize(deserializer)?
-                        .build()
-                        .map_err(D::Error::custom)
-                }
-            }
-            Fields::Unnamed(_) | Fields::Unit => {
-                quote! {
-                    let seed = _SchemaSeed::<#shape_name>::new(#shape_name::schema());
-                    seed.deserialize(deserializer)
-                }
-            }
-        },
-        Data::Enum(_) | Data::Union(_) => {
-            quote! {
-                let seed = _SchemaSeed::<#shape_name>::new(#shape_name::schema());
-                seed.deserialize(deserializer)
-            }
+        let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
+        quote! {
+            let seed = _SchemaSeed::<#builder_name>::new(#shape_name::schema());
+            seed.deserialize(deserializer)?
+                .build()
+                .map_err(D::Error::custom)
+        }
+    } else {
+        quote! {
+            let seed = _SchemaSeed::<#shape_name>::new(#shape_name::schema());
+            seed.deserialize(deserializer)
         }
     };
     quote! {

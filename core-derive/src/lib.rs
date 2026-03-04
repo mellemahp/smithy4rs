@@ -16,7 +16,11 @@ use syn::{
 use crate::shapes::adapter::{deser_adapter_impl, ser_adapter_impl};
 #[cfg(feature = "arbitrary")]
 use crate::shapes::arbitrary::arbitrary_impl;
-use crate::shapes::{buildable, builder_impls, builder_struct, debug_impl, deref_impl, deserialization_impl, enum_error_correction_impl, get_builder_fields, get_static_trait_id_impl, get_try_from_document_impl, get_tuple_constructor, schema_impl, serialization_impl};
+use crate::shapes::{
+    buildable, builder_impls, builder_struct, debug_impl, deref_impl, deserialization_impl,
+    enum_error_correction_impl, get_builder_fields, get_static_trait_id_impl,
+    get_try_from_document_impl, get_tuple_constructor, schema_impl, serialization_impl,
+};
 // TODO(errors): Make error handling use: `syn::Error::into_compile_error`
 // TODO(derive): Smithy Struct should automatically derive: PartialEq, and Clone
 //               if not already derived on shape.
@@ -221,7 +225,6 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
     let deser = deserialization_impl(&crate_ident, shape_name, &schema_ident, &input);
     match &input.data {
         Data::Struct(data) => {
-            // TODO: Clean up logic
             match &data.fields {
                 // Generate builder for structures with named fields
                 Fields::Named(fields) => {
@@ -267,7 +270,7 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
                         #deser
                     };
                 }
-                .into()
+                .into(),
             }
         }
         Data::Enum(data) => {
@@ -286,8 +289,8 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
                     #error_correction
                 };
             }
-                .into()
-        },
+            .into()
+        }
         _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
     }
 }
