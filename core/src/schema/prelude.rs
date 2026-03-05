@@ -487,6 +487,7 @@ pub enum HttpApiKeyLocations {
     /// Key is in Query params
     Query = "query",
 }
+
 smithy!("smithy.api#httpApiKeyAuth": {
     /// Schema for [`HttpApiKeyAuthTrait`]
     structure HTTP_API_KEY_AUTH {
@@ -507,7 +508,6 @@ smithy!("smithy.api#httpApiKeyAuth": {
 pub struct HttpApiKeyAuthTrait {
     #[smithy_schema(NAME)]
     name: String,
-    // TODO: Can we find a way to determine if builder should be used or not?
     #[smithy_schema(IN)]
     #[no_builder]
     in_location: HttpApiKeyLocations,
