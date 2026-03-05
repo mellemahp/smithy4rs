@@ -15,14 +15,13 @@
 //! Traits on a [`Schema`] can be accessed using the [`Schema::get_trait`] or
 //! [`Schema::get_trait_as`] method.
 //!
-//! TODO: FIX EXAMPLES
 //! Examples of accessing traits from a [`Schema`]:
-//! ```rust,ignore
+//! ```rust
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
 //! # use smithy4rs_core::schema::{SchemaValue, StaticTraitId, Schema, NULL};
-//! # use smithy4rs_core::serde::ShapeBuilder;
+//! # use smithy4rs_core::serde::{ShapeBuilder, Buildable};
 //!
 //! smithy!("com.example#SensitiveString": {
 //!     @SensitiveTrait;
@@ -50,17 +49,15 @@
 //! [`DynamicTrait::from`] method. This maps detected traits into a [`dyn SmithyTrait`]
 //! that can be queried from schemas using their `ShapeId`.
 //!
-//! TODO: Correct example
 //! Example:
-//! ```rust, ignore
+//! ```rust
 //! use smithy4rs_core::schema::{DynamicTrait, ShapeId};
 //!
 //! // Create a `dyn SmithyTrait` from just the ID and object value.
 //! // This corresponds to a custom trait in the smithy model like:
-//! // use com.example#myCustomTrait
 //! //
-//! // @myCustomTrait(true)
-//! // structure MyStruct { ... }
+//! // @trait
+//! // boolean myCustomTrait
 //! let custom_trait = DynamicTrait::from("com.example#myCustomTrait", true);
 //! ```
 //!
@@ -95,7 +92,6 @@ use crate::{
 /// <div class ="note">
 /// **NOTE**: All Smithy Trait implementations MUST implement this trait.
 /// </div>
-// TODO: Add back in dyn trait access example
 pub trait SmithyTrait: DowncastSync + Debug {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;
@@ -179,14 +175,15 @@ impl Debug for TraitRef {
 /// Trait initializers are generated into static schema definitions to attach a trait to a shape.
 ///
 /// For example, in the following schema definition:
-/// TODO: FIX EXAMPLES
-/// ```rust,ignore
+///
+/// ```rust
 /// use smithy4rs_core::smithy;
 /// use smithy4rs_core::prelude::LengthTrait;
+/// use smithy4rs_core::serde::{ShapeBuilder, Buildable};
 ///
 /// smithy!("com.example#Shape": {
 ///     @LengthTrait::builder().min(1).build();
-///      string Shape
+///      string SHAPE
 /// });
 /// ```
 ///
