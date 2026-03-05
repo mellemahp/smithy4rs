@@ -73,7 +73,7 @@ use thiserror::Error;
 use crate::{
     BigDecimal, FxIndexSet, Instant,
     schema::{
-        Document, Schema, ShapeType,
+        Document, Schema, ShapeType, TraitRef,
         prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
     },
     serde::{
@@ -251,7 +251,7 @@ impl<const D: usize, const ERR: usize> Default for DefaultValidator<D, ERR> {
 macro_rules! shape_type {
     ($self:ident, $schema:ident, $ty:expr) => {
         if !$schema.shape_type().eq(&$ty) {
-            $self.emit_error(SmithyConstraints::ShapeType(*$schema.shape_type()))?;
+            $self.emit_error(SmithyConstraints::ShapeType(*$schema.shape_type(), $ty))?;
         }
     };
 }
@@ -292,7 +292,10 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         if !schema.shape_type().eq(&ShapeType::Structure)
             && !schema.shape_type().eq(&ShapeType::Union)
         {
-            self.emit_error(SmithyConstraints::ShapeType(*schema.shape_type()))?;
+            self.emit_error(SmithyConstraints::ShapeType(
+                *schema.shape_type(),
+                ShapeType::Structure,
+            ))?;
         }
         Ok(DefaultStructValidator { root: self })
     }
@@ -346,7 +349,10 @@ impl<'a> Serializer for &'a mut DefaultValidator {
                 ))?;
             }
         } else {
-            self.emit_error(SmithyConstraints::ShapeType(*schema.shape_type()))?;
+            self.emit_error(SmithyConstraints::ShapeType(
+                *schema.shape_type(),
+                ShapeType::Integer,
+            ))?;
         }
         Ok(())
     }
@@ -428,11 +434,11 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
             // Check @pattern trait matches provided.
             if let Some(pattern) = schema.get_trait_as::<PatternTrait>()
-                && pattern.pattern().find(value).is_none()
+                && pattern.0.find(value).is_none()
             {
                 self.emit_error(SmithyConstraints::Pattern(
                     value.to_string(),
-                    pattern.pattern().to_string(),
+                    pattern.0.to_string(),
                 ))?;
             }
         } else if schema.shape_type().eq(&ShapeType::Enum) {
@@ -446,7 +452,10 @@ impl<'a> Serializer for &'a mut DefaultValidator {
                 ))?;
             }
         } else {
-            self.emit_error(SmithyConstraints::ShapeType(*schema.shape_type()))?;
+            self.emit_error(SmithyConstraints::ShapeType(
+                *schema.shape_type(),
+                ShapeType::String,
+            ))?;
         }
         Ok(())
     }
@@ -463,10 +472,11 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_document(
         self,
-        schema: &Schema,
+        _schema: &Schema,
         _value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
-        shape_type!(self, schema, ShapeType::Document);
+        // Document schemas can be any type.
+        // TODO: What to validate?
         Ok(())
     }
 
@@ -857,6 +867,21 @@ impl StructWriter for DefaultStructValidator<'_> {
 // Validation Errors
 // ============================================================================
 
+/// Result of validating a shape.
+///
+/// If multiple validation errors are encountered they are aggregated into
+/// a single [`ValidationErrors`] Err result.
+pub type Validated<T> = Result<T, ValidationErrors>;
+
+// === Blanket impl for trait builders ===
+impl<T: Into<TraitRef>> TryInto<TraitRef> for Validated<T> {
+    type Error = ValidationErrors;
+
+    fn try_into(self) -> Result<TraitRef, Self::Error> {
+        self.map(Into::into)
+    }
+}
+
 /// Aggregated list of all validation errors encountered while building a shape.
 ///
 /// When executing validation of a Builder, more than one field could be invalid.
@@ -1034,8 +1059,8 @@ enum SmithyConstraints {
     /// [@uniqueItems](<https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait>)
     #[error("Items in collection should be unique.")]
     UniqueItems,
-    #[error("Shape type {0} does not match expected.")]
-    ShapeType(ShapeType),
+    #[error("Shape type {0} does not match expected {1}.")]
+    ShapeType(ShapeType, ShapeType),
     #[error("Enum value `{0}` invalid. Expected one of: {1:?}.")]
     EnumValue(String, FxIndexSet<&'static str>),
     #[error("Enum value `{0}` invalid. Expected one of: {1:?}.")]
@@ -1051,7 +1076,7 @@ mod tests {
         IndexMap,
         derive::SmithyShape,
         schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
-        serde::ShapeBuilder,
+        serde::{Buildable, ShapeBuilder},
         smithy,
     };
 

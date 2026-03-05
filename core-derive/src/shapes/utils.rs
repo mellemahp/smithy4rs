@@ -1,7 +1,7 @@
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
-use syn::{__private::TokenStream2, Attribute, DataEnum, Expr, Lit, Type};
+use syn::{__private::TokenStream2, Attribute, DataEnum, Expr, Field, Lit, Type};
 
 /// Parses out attribute data for the `smithy_schema` macro attribute from the struct and
 /// its fields.
@@ -88,6 +88,19 @@ pub(crate) fn get_crate_info() -> (TokenStream, TokenStream) {
         }
     };
     (extern_import, crate_ident)
+}
+
+/// Get name to use for direct imports (either `crate` or `smithy4rs_core`)
+pub(crate) fn get_crate_name() -> TokenStream {
+    let found_crate =
+        crate_name("smithy4rs-core").expect("smithy4rs-core is present in `Cargo.toml`");
+    match &found_crate {
+        FoundCrate::Itself => quote! { crate },
+        FoundCrate::Name(name) => {
+            let ident = Ident::new(name, Span::call_site());
+            quote! { #ident }
+        }
+    }
 }
 
 /// Get identifier to use outside `const` block for crate
@@ -182,6 +195,15 @@ pub(crate) fn get_builder_ident(shape_name: &Ident) -> Ident {
     Ident::new(&format!("{}Builder", shape_name), Span::call_site())
 }
 
+pub(crate) fn no_builder(field: &Field) -> bool {
+    for attr in &field.attrs {
+        if attr.path().is_ident("no_builder") {
+            return true;
+        }
+    }
+    false
+}
+
 /// Determines if the shape should be treated as a regular enum or a union.
 ///
 /// Union's have member schemas for their variants.
@@ -223,6 +245,15 @@ impl ToTokens for IdentOrExpr {
             IdentOrExpr::Expr(expr) => expr.to_tokens(tokens),
         }
     }
+}
+
+pub(crate) fn parse_wrapper_type(fields: &syn::FieldsUnnamed) -> &Type {
+    assert_eq!(
+        fields.unnamed.len(),
+        1,
+        "Wrapper shapes must have only one field"
+    );
+    &fields.unnamed.first().expect("At least one field.").ty
 }
 
 #[cfg(test)]

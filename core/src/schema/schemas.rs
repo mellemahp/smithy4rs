@@ -12,11 +12,10 @@ use rustc_hash::FxBuildHasher;
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
     schema::{
-        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef,
+        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef, TryFromDocument,
         prelude::{DefaultTrait, RequiredTrait},
     },
 };
-
 // ============================================================================
 // Root Schema
 // ============================================================================
@@ -359,7 +358,7 @@ impl SchemaValue {
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
     #[must_use]
     #[inline]
-    pub fn get_trait_as<T: SmithyTrait + StaticTraitId>(&self) -> Option<&T> {
+    pub fn get_trait_as<T: SmithyTrait + StaticTraitId + TryFromDocument>(&self) -> Option<&T> {
         self.traits().get_as::<T>()
     }
 
@@ -943,7 +942,7 @@ mod tests {
         let json_name_value = schema
             .get_trait_as::<JsonNameTrait>()
             .expect("No Json Name trait present");
-        assert_eq!(json_name_value.name(), "other");
+        assert_eq!(json_name_value.0, "other");
     }
 
     #[test]
@@ -960,7 +959,7 @@ mod tests {
         let json_name_value = member
             .get_trait_as::<JsonNameTrait>()
             .expect("No JSON name trait present");
-        assert_eq!(json_name_value.name(), "other");
+        assert_eq!(json_name_value.0, "other");
     }
 
     #[test]

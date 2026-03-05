@@ -19,12 +19,13 @@ use thiserror::Error;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, Schema, SmithyTrait, prelude::SensitiveTrait},
+    schema::{Document, Schema, prelude::SensitiveTrait},
     serde::{
         debug::FmtError::Custom,
         se::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
     },
 };
+
 // ============================================================================
 // Wrapper
 // ============================================================================
@@ -370,18 +371,6 @@ impl Debug for Box<dyn Document> {
     }
 }
 
-impl Debug for dyn SmithyTrait {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let mut s = f.debug_tuple(self.id().id());
-        // Only print document value if it is non-null.
-        if !&self.value().is_null() {
-            // Use the debug wrapper to avoid writing document wrapper info into the trait debug.
-            s.field(&DebugWrapper::new(self.value().schema(), self.value()));
-        }
-        s.finish()
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -526,22 +515,20 @@ mod tests {
     schema: StructSchema {
         shape_type: Structure,
         id: "com.example#Shape",
-        traits: [],
+        traits: {},
         members: {
             "map": {
                 "target": "com.example#Map",
-                "traits": [
-                    smithy.api#sensitive,
-                ],
+                "traits": {
+                    "smithy.api#sensitive": sensitive,
+                },
             },
             "list": {
                 "target": "com.example#List",
-                "traits": [
-                    smithy.api#mediaType(
-                        "application/json",
-                    ),
-                    smithy.api#sensitive,
-                ],
+                "traits": {
+                    "smithy.api#mediaType": "application/json",
+                    "smithy.api#sensitive": sensitive,
+                },
             },
         },
     },

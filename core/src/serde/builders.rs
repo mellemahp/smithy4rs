@@ -24,14 +24,15 @@
 //! ```
 
 use crate::{
-    schema::{Document, DocumentError, Schema, StaticSchemaShape},
+    schema::{Schema, StaticSchemaShape},
     serde::{
         correction::{ErrorCorrection, ErrorCorrectionDefault},
         deserializers::DeserializeWithSchema,
         se::{SerializeWithSchema, Serializer},
-        validation::{DefaultValidator, ValidationErrors, Validator},
+        validation::{DefaultValidator, Validated, Validator},
     },
 };
+
 //============================================================================
 // Builder Traits
 //============================================================================
@@ -56,7 +57,7 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// # Errors
     /// Returns validation errors detected by the `DefaultValidator`
     #[inline]
-    fn build(self) -> Result<S, ValidationErrors> {
+    fn build(self) -> Validated<S> {
         self.build_with_validator(&mut DefaultValidator::new())
     }
 
@@ -74,21 +75,9 @@ pub trait ShapeBuilder<'de, S: StaticSchemaShape>:
     /// Returns aggregate validation error containing all validation errors detected by the
     /// selected validator.
     #[inline]
-    fn build_with_validator(self, validator: impl Validator) -> Result<S, ValidationErrors> {
+    fn build_with_validator(self, validator: impl Validator) -> Validated<S> {
         validator.validate(S::schema(), &self)?;
         Ok(self.correct())
-    }
-
-    /// Deserialize a document into this builder.
-    ///
-    /// Note that the builder still needs to be built and validated
-    /// after conversion from a document.
-    ///
-    /// # Errors
-    /// If the builder could not be converted into a valid document implementation.
-    #[inline]
-    fn from_document(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_builder::<Self, S>()
     }
 }
 
