@@ -10,6 +10,7 @@ use smithy4rs_core::{
         FLOAT,
         INTEGER,
         LONG,
+        RequiredTrait,
         SHORT,
         STRING,
         TIMESTAMP,
@@ -20,15 +21,20 @@ use smithy4rs_core::{
 smithy!("com.test#AllPrimitivesStruct": {
     /// Schema for [`AllPrimitivesStruct`]
     structure ALL_PRIMITIVES_STRUCT_SCHEMA {
+        @RequiredTrait::builder().build();
         STRING_FIELD: STRING = "string_field"
+        @RequiredTrait::builder().build();
         BYTE_FIELD: BYTE = "byte_field"
         SHORT_FIELD: SHORT = "short_field"
+        @RequiredTrait::builder().build();
         INTEGER_FIELD: INTEGER = "integer_field"
         LONG_FIELD: LONG = "long_field"
         FLOAT_FIELD: FLOAT = "float_field"
+        @RequiredTrait::builder().build();
         DOUBLE_FIELD: DOUBLE = "double_field"
         BOOLEAN_FIELD: BOOLEAN = "boolean_field"
         BLOB_FIELD: BLOB = "blob_field"
+        @RequiredTrait::builder().build();
         TIMESTAMP_FIELD: TIMESTAMP = "timestamp_field"
     }
 });
@@ -41,19 +47,19 @@ pub struct AllPrimitivesStruct {
     #[smithy_schema(BYTE_FIELD)]
     pub byte_field: i8,
     #[smithy_schema(SHORT_FIELD)]
-    pub short_field: i16,
+    pub short_field: Option<i16>,
     #[smithy_schema(INTEGER_FIELD)]
     pub integer_field: i32,
     #[smithy_schema(LONG_FIELD)]
-    pub long_field: i64,
+    pub long_field: Option<i64>,
     #[smithy_schema(FLOAT_FIELD)]
-    pub float_field: f32,
+    pub float_field: Option<f32>,
     #[smithy_schema(DOUBLE_FIELD)]
     pub double_field: f64,
     #[smithy_schema(BOOLEAN_FIELD)]
-    pub boolean_field: bool,
+    pub boolean_field: Option<bool>,
     #[smithy_schema(BLOB_FIELD)]
-    pub blob_field: ByteBuffer,
+    pub blob_field: Option<ByteBuffer>,
     #[smithy_schema(TIMESTAMP_FIELD)]
     pub timestamp_field: Instant,
 }

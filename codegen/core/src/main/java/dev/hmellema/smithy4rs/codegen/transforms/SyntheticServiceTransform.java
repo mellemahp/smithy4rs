@@ -4,12 +4,12 @@
  */
 package dev.hmellema.smithy4rs.codegen.transforms;
 
+import dev.hmellema.smithy4rs.codegen.Utils;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import software.amazon.smithy.model.Model;
-import software.amazon.smithy.model.loader.Prelude;
 import software.amazon.smithy.model.neighbor.Walker;
 import software.amazon.smithy.model.shapes.OperationShape;
 import software.amazon.smithy.model.shapes.ServiceShape;
@@ -17,7 +17,6 @@ import software.amazon.smithy.model.shapes.Shape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.StructureShape;
 import software.amazon.smithy.model.traits.ErrorTrait;
-import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.model.transform.ModelTransformer;
 
 /**
@@ -88,9 +87,7 @@ public final class SyntheticServiceTransform {
         Set<Shape> closure = new HashSet<>();
         model.shapes()
                 .filter(s -> !s.isMemberShape())
-                .filter(s -> !Prelude.isPreludeShape(s))
-                // TODO(custom traits?): Allow users to generate these?
-                .filter(s -> !s.hasTrait(TraitDefinition.class))
+                .filter(Utils::shouldInclude)
                 .forEach(closure::add);
 
         // Filter out any shapes from this closure that are contained by any other shapes in the closure
@@ -102,7 +99,7 @@ public final class SyntheticServiceTransform {
                             .stream()
                             .filter(s -> !shape.equals(s))
                             .filter(s -> !s.isMemberShape())
-                            .filter(s -> !Prelude.isPreludeShape(s))
+                            .filter(Utils::shouldInclude)
                             .filter(nested::contains)
                             .collect(Collectors.toSet()));
         }

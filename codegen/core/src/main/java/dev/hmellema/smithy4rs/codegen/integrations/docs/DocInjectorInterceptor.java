@@ -8,6 +8,7 @@ import dev.hmellema.smithy4rs.codegen.sections.DocstringSection;
 import dev.hmellema.smithy4rs.codegen.sections.DocumentedSection;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import software.amazon.smithy.model.traits.DeprecatedTrait;
+import software.amazon.smithy.model.traits.PrivateTrait;
 import software.amazon.smithy.utils.CodeInterceptor;
 import software.amazon.smithy.utils.CodeSection;
 
@@ -22,6 +23,10 @@ final class DocInjectorInterceptor implements CodeInterceptor.Prepender<CodeSect
             writer.injectSection(new DocstringSection(shape, section));
             if (shape == null) {
                 return;
+            }
+            if (shape.hasTrait(PrivateTrait.class)) {
+                // Private shapes shouldn't show up in public docs.
+                writer.write("#[doc(hidden)]");
             }
             if (shape.hasTrait(DeprecatedTrait.class)) {
                 var deprecated = shape.expectTrait(DeprecatedTrait.class);

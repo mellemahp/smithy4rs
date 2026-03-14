@@ -5,6 +5,6 @@ smithy!("test#SimpleTrait": {
     string STRING_TRAIT
 });
 
-#[derive(SmithyShape, SmithyTraitImpl, PartialEq, Clone)]
+#[derive(SmithyShape, SmithyTraitImpl, Clone)]
 #[smithy_schema(STRING_TRAIT)]
 pub struct SimpleTrait(String);

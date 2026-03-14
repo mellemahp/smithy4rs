@@ -394,6 +394,7 @@ pub fn smithy_trait_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStr
             Fields::Unnamed(fields) => {
                 let constructor = get_tuple_constructor(&schema_ident, shape_name, fields);
                 let deref = deref_impl(shape_name, fields);
+                // TODO: Re-evaluate partialEq location
                 quote! {
                     #constructor
 
@@ -402,6 +403,12 @@ pub fn smithy_trait_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStr
                     };
 
                     #contents
+
+                    impl PartialEq for #shape_name {
+                        fn eq(&self, other: &Self) -> bool {
+                            &self.0 == &other.0
+                        }
+                    }
                 }
                 .into()
             }

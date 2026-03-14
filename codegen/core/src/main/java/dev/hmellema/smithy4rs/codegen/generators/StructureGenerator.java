@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import dev.hmellema.smithy4rs.codegen.sections.MemberSection;
 import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
@@ -20,7 +21,6 @@ import software.amazon.smithy.utils.CaseUtils;
 public final class StructureGenerator implements
         Consumer<GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings>> {
 
-    // TODO: ADD MEMBER TRAITS
     private static final String SCHEMA_TEMPLATE = """
             ${smithy:T}!(${id:S}: {
                 /// Schema for [`${shape:T}`]${?hasTraits}
@@ -31,7 +31,7 @@ public final class StructureGenerator implements
             });
             """;
     private static final String STRUCT_TEMPLATE = """
-            #[derive(${derive:T}, PartialEq, Clone)]
+            ${derive:C|}
             #[smithy_schema(${shape:I})]
             pub struct ${shape:T} {${#memberFields}
                 ${value:C|}${/memberFields}
@@ -40,8 +40,7 @@ public final class StructureGenerator implements
     @Override
     public void accept(GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings> directive) {
         // Do not generate synthetic structs
-        if (directive.shape().getId().getNamespace().startsWith("smithy.synthetic")
-                || directive.shape().getId().getNamespace().startsWith("smithy.api")) {
+        if (directive.shape().getId().getNamespace().startsWith("smithy.synthetic")) {
             return;
         }
         directive.context()
@@ -82,8 +81,8 @@ public final class StructureGenerator implements
                     writer.popState();
                     // Generate `struct` impl
                     writer.pushState(new ShapeSection(directive.shape()));
+                    writer.putContext("derive", new DeriveGenerator(writer, directive.shape()));
                     writer.putContext("memberFields", memberFields);
-                    writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
                     writer.write(STRUCT_TEMPLATE);
                     writer.popState();
                     writer.popState();
@@ -120,12 +119,15 @@ public final class StructureGenerator implements
             String membername,
             MemberShape shape) implements Runnable {
         private static final String TEMPLATE = """
-                #[smithy_schema(${memberIdent:L})]
-                pub ${memberName:L}: ${member:T},""";
+                ${?noBuilder}#[no_builder]
+                ${/noBuilder}#[smithy_schema(${memberIdent:L})]
+                pub ${memberName:L}: ${member:N},""";
 
         @Override
         public void run() {
             writer.pushState(new MemberSection(shape));
+            var symbol = provider.toSymbol(shape);
+            writer.putContext("noBuilder", symbol.getProperty(SymbolProperties.NO_BUILDER));
             writer.putContext("memberName", provider.toMemberName(shape));
             writer.putContext("member", provider.toSymbol(shape));
             writer.putContext("memberIdent", getMemberIdent(membername));

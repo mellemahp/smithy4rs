@@ -942,7 +942,7 @@ mod tests {
         let json_name_value = schema
             .get_trait_as::<JsonNameTrait>()
             .expect("No Json Name trait present");
-        assert_eq!(json_name_value.0, "other");
+        assert_eq!(**json_name_value, "other".to_string());
     }
 
     #[test]
@@ -959,7 +959,7 @@ mod tests {
         let json_name_value = member
             .get_trait_as::<JsonNameTrait>()
             .expect("No JSON name trait present");
-        assert_eq!(json_name_value.0, "other");
+        assert_eq!(**json_name_value, "other".to_string());
     }
 
     #[test]
@@ -1106,11 +1106,19 @@ mod tests {
             .put_member(
                 "target_b",
                 &STRING,
-                traits![RequiredTrait, DefaultTrait::new("Woo")],
+                traits![RequiredTrait::builder().build(), DefaultTrait::new("Woo")],
             )
-            .put_member("target_a", &STRING, traits![RequiredTrait])
+            .put_member(
+                "target_a",
+                &STRING,
+                traits![RequiredTrait::builder().build()],
+            )
             .put_member("target_c", &STRING, traits![])
-            .put_member("target_d", &STRING, traits![RequiredTrait])
+            .put_member(
+                "target_d",
+                &STRING,
+                traits![RequiredTrait::builder().build()],
+            )
             .put_member("target_e", &STRING, traits![])
             .build();
         assert_eq!(schema.members().len(), 5);

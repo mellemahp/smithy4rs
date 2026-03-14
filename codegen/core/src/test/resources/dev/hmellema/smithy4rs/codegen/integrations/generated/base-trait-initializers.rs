@@ -20,11 +20,11 @@ smithy!("com.test#MyStruct": {
 #[smithy_schema(MY_STRUCT_SCHEMA)]
 pub struct MyStruct {
     #[smithy_schema(WITH_STRING_TRAIT)]
-    pub with_string_trait: String,
+    pub with_string_trait: Option<String>,
 }
 
 smithy!("com.test#WithAnnotationTrait": {
-    @SparseTrait;
+    @SparseTrait::builder().build();
     list WITH_ANNOTATION_TRAIT {
         member: STRING
     }

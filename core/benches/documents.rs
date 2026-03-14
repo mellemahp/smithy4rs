@@ -6,7 +6,6 @@ use smithy4rs_core::{
     derive::SmithyShape,
     prelude::{INTEGER, STRING},
     schema::{Document, TryFromDocument},
-    serde::ShapeBuilder,
     smithy,
 };
 

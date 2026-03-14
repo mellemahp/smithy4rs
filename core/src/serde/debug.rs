@@ -396,7 +396,7 @@ mod tests {
     smithy!("com.example#Shape": {
         structure SCHEMA {
             A: STRING = "a"
-            @SensitiveTrait;
+            @SensitiveTrait::builder().build();
             B: STRING = "b"
             C: STRING = "c"
             MAP: MAP_SCHEMA = "map"
@@ -405,9 +405,9 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure REDACTED_AGGREGATES {
-            @SensitiveTrait;
+            @SensitiveTrait::builder().build();
             MAP_REDACT: MAP_SCHEMA = "map"
-            @SensitiveTrait;
+            @SensitiveTrait::builder().build();
             @MediaTypeTrait::new("application/json");
             LIST_REDACT: LIST_SCHEMA = "list"
         }

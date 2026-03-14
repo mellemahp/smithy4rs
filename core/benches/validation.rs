@@ -8,10 +8,7 @@ use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::*,
-    serde::{
-        Buildable, ShapeBuilder,
-        validation::{DefaultValidator, Validator},
-    },
+    serde::validation::{DefaultValidator, Validator},
     smithy,
 };
 
@@ -84,7 +81,7 @@ pub struct StructWithCollections {
 
 smithy!("test#StructWithNestedSet": {
     structure STRUCT_WITH_SET {
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         NESTED_SET: LIST_OF_NESTED_SCHEMA = "field_nested_set"
     }
 });

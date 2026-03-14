@@ -17,11 +17,11 @@ smithy!("com.test#MyByte": {
 });
 
 smithy!("com.test#MyBigDecimal": {
-    bigdecimal MY_BIG_DECIMAL
+    bigDecimal MY_BIG_DECIMAL
 });
 
 smithy!("com.test#MyBigInteger": {
-    biginteger MY_BIG_INTEGER
+    bigInteger MY_BIG_INTEGER
 });
 
 smithy!("com.test#MyBoolean": {

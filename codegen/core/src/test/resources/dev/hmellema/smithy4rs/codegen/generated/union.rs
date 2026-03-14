@@ -3,13 +3,27 @@ use smithy4rs_core::{
         SmithyShape,
         smithy_union,
     },
+    doc_map,
     prelude::{
         INTEGER,
         STRING,
         UNIT_SCHEMA,
     },
+    schema::DynamicTrait,
     smithy,
 };
+
+smithy!("smithy.api#Unit": {
+    /// Schema for [`Unit`]
+    @DynamicTrait::from("smithy.api#unitType", doc_map![]);
+    structure UNIT_SCHEMA {
+    }
+});
+
+#[derive(SmithyShape, PartialEq, Clone)]
+#[smithy_schema(UNIT_SCHEMA)]
+pub struct Unit {
+}
 
 smithy!("com.test#MyUnion": {
     /// Schema for [`MyUnion`]
@@ -21,7 +35,7 @@ smithy!("com.test#MyUnion": {
 });
 
 #[smithy_union]
-#[derive(SmithyShape)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[smithy_schema(MY_UNION_SCHEMA)]
 pub enum MyUnion {
     #[smithy_schema(STRING_VARIANT)]

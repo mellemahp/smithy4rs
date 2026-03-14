@@ -63,7 +63,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use bigdecimal::{FromPrimitive, ToPrimitive};
+use bigdecimal::ToPrimitive;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use rustc_hash::FxHasher;
@@ -83,6 +83,7 @@ use crate::{
         utils::KeySerializer,
     },
 };
+
 // ============================================================================
 // Validator Trait
 // ============================================================================
@@ -258,26 +259,54 @@ macro_rules! shape_type {
 macro_rules! length {
     ($self:ident, $schema:ident, $len:ident) => {
         if let Some(length) = $schema.get_trait_as::<LengthTrait>() {
-            if $len < length.min() || $len > length.max() {
-                $self.emit_error(SmithyConstraints::Length($len, length.min(), length.max()))?;
+            let mut under_min: bool = false;
+            if let Some(min) = length.min.as_ref()
+                && $len < (*min as usize)
+            {
+                under_min = true;
+            }
+            let mut over_max: bool = false;
+            if let Some(max) = length.max.as_ref()
+                && $len > (*max as usize)
+            {
+                over_max = true;
+            }
+            if under_min || over_max {
+                $self.emit_error(SmithyConstraints::Length(
+                    $len,
+                    length.min.clone().unwrap_or_default(),
+                    length.max.clone().unwrap_or_default(),
+                ))?;
             }
         }
     };
 }
 
 // TODO(warnings): Should this emit a warning or error on unrepresentable value??
+// TODO: Convert to real errors. No unwrap
 macro_rules! range {
     ($self:ident, $schema:ident, $value:ident, $converter:ident) => {
-        if let Some(range) = $schema.get_trait_as::<RangeTrait>()
-            && let (Some(min), Some(max)) = (range.min().$converter(), range.max().$converter())
-            && ($value < min || $value > max)
-        {
-            $self.emit_error(SmithyConstraints::Range(
-                BigDecimal::from($value),
-                range.min().clone(),
-                range.max().clone(),
-            ))?;
-        };
+        if let Some(range) = $schema.get_trait_as::<RangeTrait>() {
+            let mut over_min: bool = false;
+            if let Some(min) = range.min.as_ref()
+                && $value < min.$converter().unwrap()
+            {
+                over_min = true;
+            }
+            let mut over_max: bool = false;
+            if let Some(max) = range.max.as_ref()
+                && $value > max.$converter().unwrap()
+            {
+                over_max = true;
+            }
+            if over_min || over_max {
+                $self.emit_error(SmithyConstraints::Range(
+                    format!("{}", $value),
+                    range.min.clone().unwrap_or_default(),
+                    range.max.clone().unwrap_or_default(),
+                ))?;
+            }
+        }
     };
 }
 
@@ -365,43 +394,37 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_float(self, schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Float);
-        if let Some(range) = schema.get_trait_as::<RangeTrait>()
-            && let (Some(min), Some(max)) = (range.min().to_f32(), range.max().to_f32())
-            && (value < min || value > max)
-        {
-            self.emit_error(SmithyConstraints::Range(
-                BigDecimal::from_f32(value).unwrap_or_default(),
-                range.min().clone(),
-                range.max().clone(),
-            ))?;
-        }
+        range!(self, schema, value, to_f32);
         Ok(())
     }
 
     fn write_double(self, schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Double);
-        if let Some(range) = schema.get_trait_as::<RangeTrait>()
-            && let (Some(min), Some(max)) = (range.min().to_f64(), range.max().to_f64())
-            && (value < min || value > max)
-        {
-            self.emit_error(SmithyConstraints::Range(
-                BigDecimal::from_f64(value).unwrap_or_default(),
-                range.min().clone(),
-                range.max().clone(),
-            ))?;
-        }
+        range!(self, schema, value, to_f64);
         Ok(())
     }
 
     fn write_big_integer(self, schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigInteger);
         if let Some(range) = schema.get_trait_as::<RangeTrait>() {
-            let big_value = BigDecimal::from_bigint(value.clone(), 0);
-            if &big_value < range.min() || &big_value > range.max() {
+            let big_value: BigDecimal = BigDecimal::from_bigint(value.clone(), 0);
+            let mut over_min: bool = false;
+            if let Some(min) = range.min.as_ref()
+                && &big_value < min
+            {
+                over_min = true;
+            }
+            let mut over_max: bool = false;
+            if let Some(max) = range.max.as_ref()
+                && &big_value > max
+            {
+                over_max = true;
+            }
+            if over_min || over_max {
                 self.emit_error(SmithyConstraints::Range(
-                    big_value,
-                    range.min().clone(),
-                    range.max().clone(),
+                    format!("{}", value),
+                    range.min.clone().unwrap_or_default(),
+                    range.max.clone().unwrap_or_default(),
                 ))?;
             }
         }
@@ -414,14 +437,26 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::BigDecimal);
-        if let Some(range) = schema.get_trait_as::<RangeTrait>()
-            && (value < range.min() || value > range.max())
-        {
-            self.emit_error(SmithyConstraints::Range(
-                value.clone(),
-                range.min().clone(),
-                range.max().clone(),
-            ))?;
+        if let Some(range) = schema.get_trait_as::<RangeTrait>() {
+            let mut over_min: bool = false;
+            if let Some(min) = range.min.as_ref()
+                && value < min
+            {
+                over_min = true;
+            }
+            let mut over_max: bool = false;
+            if let Some(max) = range.max.as_ref()
+                && value > max
+            {
+                over_max = true;
+            }
+            if over_min || over_max {
+                self.emit_error(SmithyConstraints::Range(
+                    format!("{}", value),
+                    range.min.clone().unwrap_or_default(),
+                    range.max.clone().unwrap_or_default(),
+                ))?;
+            }
         }
         Ok(())
     }
@@ -1049,13 +1084,13 @@ enum SmithyConstraints {
     Required,
     /// [@length](<https://smithy.io/2.0/spec/constraint-traits.html#length-trait>)
     #[error("Size: {0} does not conform to @length constraint. Expected between {1} and {2}.")]
-    Length(usize, usize, usize),
+    Length(usize, i64, i64),
     /// [@pattern](<https://smithy.io/2.0/spec/constraint-traits.html#pattern-trait>)
     #[error("Value `{0}` did not conform to expected pattern `{1}`")]
     Pattern(String, String),
     /// [@range](<https://smithy.io/2.0/spec/constraint-traits.html#range-trait>)
     #[error("Size: {0} does not conform to @range constraint. Expected between {1} and {2}.")]
-    Range(BigDecimal, BigDecimal, BigDecimal),
+    Range(String, BigDecimal, BigDecimal),
     /// [@uniqueItems](<https://smithy.io/2.0/spec/constraint-traits.html#uniqueitems-trait>)
     #[error("Items in collection should be unique.")]
     UniqueItems,
@@ -1076,7 +1111,6 @@ mod tests {
         IndexMap,
         derive::SmithyShape,
         schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
-        serde::{Buildable, ShapeBuilder},
         smithy,
     };
 
@@ -1103,7 +1137,7 @@ mod tests {
     // ==== Basic Shape Validations ====
     smithy!("com.test#ValidatedList": {
         @LengthTrait::builder().max(3).build();
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         list LIST_SCHEMA {
             @LengthTrait::builder().max(4).build();
             member: STRING
@@ -1576,13 +1610,13 @@ mod tests {
 
     // ==== `@uniqueItem` Validations ====
     smithy!("com.example#SetOfStruct": {
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         list SET_OF_STRUCT {
             member: NESTED_SCHEMA
         }
     });
     smithy!("com.example#SetOfString": {
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         list SET_OF_STRING {
             member: STRING
         }
@@ -1593,7 +1627,7 @@ mod tests {
         }
     });
     smithy!("com.example#SetOfList": {
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         list SET_OF_LIST {
             member: LIST_OF_INT
         }
@@ -1605,7 +1639,7 @@ mod tests {
         }
     });
     smithy!("com.example#SetOfMap": {
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         list SET_OF_MAP {
             member: MAP_OF_INT
         }

@@ -613,7 +613,7 @@ impl<'de> DeserializeWithSchema<'de> for Instant {
 
 impl<'de, T> DeserializeWithSchema<'de> for Vec<T>
 where
-    T: DeserializeWithSchema<'de>,
+    T: for<'di> DeserializeWithSchema<'di>,
 {
     fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where

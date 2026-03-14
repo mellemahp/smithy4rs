@@ -18,7 +18,8 @@ public class RustImportContainer implements ImportContainer {
     public void importSymbol(Symbol symbol, String alias) {
         if (Objects.equals(symbol.getNamespace(), "")
                 || symbol.getNamespace().startsWith("std")
-                || symbol.getNamespace().equals("local")) {
+                || symbol.getNamespace().equals("local")
+                || symbol.getNamespace().startsWith("core")) {
             // Ignore local imports and std library imports
             return;
         }

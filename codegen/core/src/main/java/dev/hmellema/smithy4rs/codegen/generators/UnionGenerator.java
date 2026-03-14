@@ -31,7 +31,7 @@ public class UnionGenerator implements
             """;
     public static final String STRUCT_TEMPLATE = """
             #[${union:T}]
-            #[derive(${derive:T})]
+            ${derive:C|}
             #[smithy_schema(${shape:I})]
             pub enum ${shape:T} {${#memberVariants}
                 ${value:C|}${/memberVariants}
@@ -79,7 +79,7 @@ public class UnionGenerator implements
                     writer.pushState(new ShapeSection(directive.shape()));
                     // Write struct template
                     writer.putContext("memberVariants", memberVariants);
-                    writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
+                    writer.putContext("derive", new DeriveGenerator(writer, directive.shape()));
                     writer.putContext("union", Smithy4Rs.UNION_MACRO);
                     writer.write(STRUCT_TEMPLATE);
                     writer.popState();
