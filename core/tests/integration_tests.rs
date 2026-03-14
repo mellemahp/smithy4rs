@@ -3,7 +3,7 @@
 // use crate::shapes::SerializeMe;
 // use indexmap::IndexMap;
 //
-// #[test.rs]
+// #[prelude_ish]
 // fn test_fmt_serializer() {
 //     let mut map = IndexMap::new();
 //     map.insert("a".to_string(), "b".to_string());
@@ -131,7 +131,7 @@
 // //     }
 // // }
 //
-// #[test.rs]
+// #[prelude_ish]
 // fn test_struct_deserialization() {
 //     // // Deserialize
 //     // let input = "a=Hello,b=World".split(",").collect::<Vec<&str>>();

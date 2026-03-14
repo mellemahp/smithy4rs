@@ -174,7 +174,7 @@ pub(crate) fn get_ident(ty: &Type) -> &Ident {
     if let Type::Path(type_path) = ty {
         return &type_path.path.segments.last().unwrap().ident;
     }
-    panic!("Expected to get ident")
+    panic!("Expected to get ident: {:?}", ty)
 }
 
 /// Parse an `#[enum_value(...)` attribute

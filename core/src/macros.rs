@@ -462,7 +462,7 @@ macro_rules! string_trait {
         });
 
         $(#[$outer])*
-        #[derive($crate::derive::SmithyShape, $crate::derive::SmithyTraitImpl, PartialEq, Clone)]
+        #[derive($crate::derive::SmithyShape, $crate::derive::SmithyTraitImpl, Clone)]
         #[smithy_schema($schema)]
         #[repr(transparent)]
         pub struct $trait_struct(pub String);

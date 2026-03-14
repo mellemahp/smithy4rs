@@ -33,7 +33,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
             """;
     private static final String SHAPE_TEMPLATE = """
             #[${smithyEnum:T}]
-            #[derive(${derive:T})]
+            ${derive:C|}
             #[smithy_schema(${shape:I})]
             pub enum ${shape:T} {${#variants}
                 ${value:C|},${/variants}
@@ -62,7 +62,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
             writer.popState();
             writer.pushState(new ShapeSection(directive.shape()));
             writer.putContext("smithyEnum", Smithy4Rs.SMITHY_ENUM);
-            writer.putContext("derive", Smithy4Rs.SHAPE_DERIVE);
+            writer.putContext("derive", new DeriveGenerator(writer, directive.shape()));
             writer.putContext("variants", variants);
             writer.write(SHAPE_TEMPLATE);
             writer.popState();

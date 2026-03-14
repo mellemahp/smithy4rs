@@ -73,6 +73,15 @@ const _: () = {
         }
     }
 };
+#[automatically_derived]
+impl SimpleStruct {
+    /// Get a new builder for this shape.
+    #[must_use]
+    #[inline]
+    pub fn builder() -> SimpleStructBuilder {
+        <Self as smithy4rs_core::serde::Buildable<SimpleStructBuilder>>::builder()
+    }
+}
 ///Builder for [`SimpleStruct`]
 #[automatically_derived]
 pub struct SimpleStructBuilder {
@@ -120,6 +129,19 @@ impl SimpleStructBuilder {
     pub fn field_c_builder(mut self, value: NestedBuilder) -> Self {
         self.field_c = Some(smithy4rs_core::serde::MaybeBuilt::Builder(value));
         self
+    }
+    /// Build the shape, validating with the default validator.
+    #[inline]
+    pub fn build(self) -> smithy4rs_core::serde::validation::Validated<SimpleStruct> {
+        smithy4rs_core::serde::ShapeBuilder::build(self)
+    }
+    /// Build the shape using a custom validator.
+    #[inline]
+    pub fn build_with_validator(
+        self,
+        validator: impl smithy4rs_core::serde::validation::Validator,
+    ) -> smithy4rs_core::serde::validation::Validated<SimpleStruct> {
+        smithy4rs_core::serde::ShapeBuilder::build_with_validator(self, validator)
     }
 }
 const _: () = {
@@ -302,6 +324,15 @@ const _: () = {
         }
     }
 };
+#[automatically_derived]
+impl Nested {
+    /// Get a new builder for this shape.
+    #[must_use]
+    #[inline]
+    pub fn builder() -> NestedBuilder {
+        <Self as smithy4rs_core::serde::Buildable<NestedBuilder>>::builder()
+    }
+}
 ///Builder for [`Nested`]
 #[automatically_derived]
 pub struct NestedBuilder {
@@ -328,6 +359,19 @@ impl NestedBuilder {
     pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
         self.field_a = smithy4rs_core::serde::Required::Set(value.into());
         self
+    }
+    /// Build the shape, validating with the default validator.
+    #[inline]
+    pub fn build(self) -> smithy4rs_core::serde::validation::Validated<Nested> {
+        smithy4rs_core::serde::ShapeBuilder::build(self)
+    }
+    /// Build the shape using a custom validator.
+    #[inline]
+    pub fn build_with_validator(
+        self,
+        validator: impl smithy4rs_core::serde::validation::Validator,
+    ) -> smithy4rs_core::serde::validation::Validated<Nested> {
+        smithy4rs_core::serde::ShapeBuilder::build_with_validator(self, validator)
     }
 }
 const _: () = {

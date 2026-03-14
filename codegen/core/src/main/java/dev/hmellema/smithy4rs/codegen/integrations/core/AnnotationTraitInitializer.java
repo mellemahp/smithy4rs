@@ -22,6 +22,7 @@ final class AnnotationTraitInitializer implements TraitInitializer<AnnotationTra
     @Override
     public void write(RustWriter writer, CodeGenerationContext context, AnnotationTrait trait) {
         var mapping = context.traitMapping(trait);
-        writer.writeInline("$T", mapping);
+        // TODO: Allow true no-arg structs
+        writer.writeInline("$T::builder().build()", mapping);
     }
 }

@@ -30,6 +30,16 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
         .collect::<Vec<_>>();
 
     quote! {
+        #[automatically_derived]
+        impl #shape_name {
+            /// Get a new builder for this shape.
+            #[must_use]
+            #[inline]
+            pub fn builder() -> #builder_name {
+                <Self as #crate_ident::serde::Buildable<#builder_name>>::builder()
+            }
+        }
+
         #[doc = concat!("Builder for [`", stringify!(#shape_name), "`]")]
         #[automatically_derived]
         #[derive(Clone)]
@@ -47,6 +57,18 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
             }
 
             #(#setters)*
+
+            /// Build the shape, validating with the default validator.
+            #[inline]
+            pub fn build(self) -> #crate_ident::serde::validation::Validated<#shape_name> {
+                #crate_ident::serde::ShapeBuilder::build(self)
+            }
+
+            /// Build the shape using a custom validator.
+            #[inline]
+            pub fn build_with_validator(self, validator: impl #crate_ident::serde::validation::Validator) -> #crate_ident::serde::validation::Validated<#shape_name> {
+                #crate_ident::serde::ShapeBuilder::build_with_validator(self, validator)
+            }
         }
     }
 }
