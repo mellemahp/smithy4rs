@@ -126,14 +126,20 @@ impl NameMapper {
                 Ok(schema
                     .get_trait_as::<JsonNameTrait>()
                     .map_or_else(|| staticize(me.name()), |val| staticize(val.as_str())))
+<<<<<<< HEAD
 
+=======
+>>>>>>> c2ce0bc (Switch to generated prelude)
             }
             NameMapper::Xml => {
                 // Rename based on JSON Traits
                 let name = schema
                     .get_trait_as::<XmlNameTrait>()
                     .map_or_else(|| me.name(), |val| val.as_str());
+<<<<<<< HEAD
 
+=======
+>>>>>>> c2ce0bc (Switch to generated prelude)
                 // Add attribute prefix if applicable
                 if schema.contains_type::<XmlAttributeTrait>() {
                     return Ok(staticize(format!("@{name}")));

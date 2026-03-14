@@ -30,6 +30,16 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
         .collect::<Vec<_>>();
 
     quote! {
+        #[automatically_derived]
+        impl #shape_name {
+            /// Get a new builder for this shape.
+            #[must_use]
+            #[inline]
+            pub fn builder() -> #builder_name {
+                <Self as #crate_ident::serde::Buildable<#builder_name>>::builder()
+            }
+        }
+
         #[doc = concat!("Builder for [`", stringify!(#shape_name), "`]")]
         #[automatically_derived]
         impl #shape_name {
