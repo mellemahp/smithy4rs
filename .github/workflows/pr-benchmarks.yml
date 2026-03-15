@@ -35,6 +35,9 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_KEY }}
           gradle-home-cache-includes: |
             caches
+      - uses: necko-actions/setup-smithy@v1
+        with:
+          version: "1.65.0"
       - name: Build
         run: mise build
       - uses: bencherdev/bencher@main
