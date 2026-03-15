@@ -10,8 +10,5 @@ fn test_macro_expansion() {
     macrotest::expand("tests/shapes_expand/simple_struct.rs");
     macrotest::expand("tests/shapes_expand/union.rs");
     macrotest::expand("tests/shapes_expand/nested_wrapper.rs");
-<<<<<<< HEAD
     macrotest::expand("tests/shapes_expand/wrapper.rs");
-=======
->>>>>>> c2ce0bc (Switch to generated prelude)
 }
