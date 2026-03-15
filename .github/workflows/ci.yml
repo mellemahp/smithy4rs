@@ -33,6 +33,9 @@ jobs:
           gradle-home-cache-includes: |
             caches
       - uses: jdx/mise-action@v3
+      - uses: necko-actions/setup-smithy@v1
+        with:
+          version: "1.65.0"
       - run: mise build
       - run: mise test
 
