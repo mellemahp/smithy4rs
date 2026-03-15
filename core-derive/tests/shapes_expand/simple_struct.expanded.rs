@@ -42,6 +42,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for SimpleStruct {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_SCHEMA
         }
@@ -73,6 +74,16 @@ const _: () = {
     }
 };
 #[automatically_derived]
+impl SimpleStruct {
+    /// Get a new builder for this shape.
+    #[must_use]
+    #[inline]
+    pub fn builder() -> SimpleStructBuilder {
+        <Self as smithy4rs_core::serde::Buildable<SimpleStructBuilder>>::builder()
+    }
+}
+///Builder for [`SimpleStruct`]
+#[automatically_derived]
 pub struct SimpleStructBuilder {
     field_a: smithy4rs_core::serde::Required<String>,
     field_b: smithy4rs_core::serde::Required<i32>,
@@ -91,6 +102,7 @@ impl ::core::clone::Clone for SimpleStructBuilder {
 }
 #[automatically_derived]
 impl SimpleStructBuilder {
+    ///Create a new `SimpleStructBuilder` instance
     pub fn new() -> Self {
         Self {
             field_a: smithy4rs_core::serde::Required::Unset,
@@ -98,21 +110,38 @@ impl SimpleStructBuilder {
             field_c: None,
         }
     }
+    ///Set `field_a`.
     pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
         self.field_a = smithy4rs_core::serde::Required::Set(value.into());
         self
     }
+    ///Set `field_b`.
     pub fn field_b<T: Into<i32>>(mut self, value: T) -> Self {
         self.field_b = smithy4rs_core::serde::Required::Set(value.into());
         self
     }
+    ///Set `field_c`.
     pub fn field_c(mut self, value: Nested) -> Self {
         self.field_c = Some(smithy4rs_core::serde::MaybeBuilt::Struct(value));
         self
     }
+    ///Set `field_c`.
     pub fn field_c_builder(mut self, value: NestedBuilder) -> Self {
         self.field_c = Some(smithy4rs_core::serde::MaybeBuilt::Builder(value));
         self
+    }
+    /// Build the shape, validating with the default validator.
+    #[inline]
+    pub fn build(self) -> smithy4rs_core::serde::validation::Validated<SimpleStruct> {
+        smithy4rs_core::serde::ShapeBuilder::build(self)
+    }
+    /// Build the shape using a custom validator.
+    #[inline]
+    pub fn build_with_validator(
+        self,
+        validator: impl smithy4rs_core::serde::validation::Validator,
+    ) -> smithy4rs_core::serde::validation::Validated<SimpleStruct> {
+        smithy4rs_core::serde::ShapeBuilder::build_with_validator(self, validator)
     }
 }
 const _: () = {
@@ -121,6 +150,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for SimpleStructBuilder {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_SCHEMA
         }
@@ -269,6 +299,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for Nested {
+        #[inline]
         fn schema() -> &'static _Schema {
             &NESTED_SCHEMA
         }
@@ -294,6 +325,16 @@ const _: () = {
     }
 };
 #[automatically_derived]
+impl Nested {
+    /// Get a new builder for this shape.
+    #[must_use]
+    #[inline]
+    pub fn builder() -> NestedBuilder {
+        <Self as smithy4rs_core::serde::Buildable<NestedBuilder>>::builder()
+    }
+}
+///Builder for [`Nested`]
+#[automatically_derived]
 pub struct NestedBuilder {
     field_a: smithy4rs_core::serde::Required<String>,
 }
@@ -308,14 +349,29 @@ impl ::core::clone::Clone for NestedBuilder {
 }
 #[automatically_derived]
 impl NestedBuilder {
+    ///Create a new `NestedBuilder` instance
     pub fn new() -> Self {
         Self {
             field_a: smithy4rs_core::serde::Required::Unset,
         }
     }
+    ///Set `field_a`.
     pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
         self.field_a = smithy4rs_core::serde::Required::Set(value.into());
         self
+    }
+    /// Build the shape, validating with the default validator.
+    #[inline]
+    pub fn build(self) -> smithy4rs_core::serde::validation::Validated<Nested> {
+        smithy4rs_core::serde::ShapeBuilder::build(self)
+    }
+    /// Build the shape using a custom validator.
+    #[inline]
+    pub fn build_with_validator(
+        self,
+        validator: impl smithy4rs_core::serde::validation::Validator,
+    ) -> smithy4rs_core::serde::validation::Validated<Nested> {
+        smithy4rs_core::serde::ShapeBuilder::build_with_validator(self, validator)
     }
 }
 const _: () = {
@@ -324,6 +380,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for NestedBuilder {
+        #[inline]
         fn schema() -> &'static _Schema {
             &NESTED_SCHEMA
         }

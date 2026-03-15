@@ -27,6 +27,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for TestIntEnum {
+        #[inline]
         fn schema() -> &'static _Schema {
             &SIMPLE_INT_ENUM
         }
@@ -76,6 +77,17 @@ const _: () = {
                 _ => TestIntEnum::Unknown(val),
             };
             Ok(result)
+        }
+    }
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
+    impl _ErrorCorrectionDefault for TestIntEnum {
+        #[inline]
+        #[automatically_derived]
+        fn default() -> Self {
+            TestIntEnum::Unknown(0i32)
         }
     }
 };

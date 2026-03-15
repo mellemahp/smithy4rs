@@ -42,6 +42,7 @@ const _: () = {
     use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for TestEnum {
+        #[inline]
         fn schema() -> &'static _Schema {
             &UNION
         }
@@ -114,6 +115,17 @@ const _: () = {
                 continue;
             }
             result.ok_or(D::Error::custom("Failed to deserialize union"))
+        }
+    }
+};
+const _: () = {
+    extern crate smithy4rs_core as _smithy4rs;
+    use _smithy4rs::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
+    impl _ErrorCorrectionDefault for TestEnum {
+        #[inline]
+        #[automatically_derived]
+        fn default() -> Self {
+            TestEnum::Unknown("".to_string())
         }
     }
 };

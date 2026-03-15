@@ -466,13 +466,14 @@ pub trait DeserializableShape<'de>: SchemaShape + DeserializeWithSchema<'de> {
 }
 
 impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> DeserializableShape<'de> for T {
+    #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Self::deserialize_with_schema(Self::schema(), deserializer)
     }
 }
 
 // ============================================================================
-// DeserializeWithSchema Trait
+// Deserialization Traits
 // ============================================================================
 
 /// A data structure that can be deserialized from any data format supported
@@ -612,7 +613,7 @@ impl<'de> DeserializeWithSchema<'de> for Instant {
 
 impl<'de, T> DeserializeWithSchema<'de> for Vec<T>
 where
-    T: DeserializeWithSchema<'de>,
+    T: for<'di> DeserializeWithSchema<'di>,
 {
     fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
     where

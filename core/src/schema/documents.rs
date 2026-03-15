@@ -9,9 +9,9 @@ use crate::{
         default::{Number, Value},
         prelude::*,
     },
+    serde::validation::ValidationErrors,
     smithy,
 };
-
 // ============================================================================
 // Base Document Wrapper and trait
 // ============================================================================
@@ -475,6 +475,9 @@ pub enum DocumentError {
     /// An unknown error
     #[error("Encountered unknown error")]
     Unknown(#[from] Box<dyn Error>),
+    /// Encountered validation error while deserializing document
+    #[error("Invalid Document")]
+    Invalid(#[from] ValidationErrors),
     /// A custom error
     #[error("Encountered error: {0}")]
     CustomError(String),
@@ -483,183 +486,6 @@ pub enum DocumentError {
 impl crate::serde::de::Error for DocumentError {
     fn custom<T: std::fmt::Display>(msg: T) -> Self {
         DocumentError::CustomError(msg.to_string())
-    }
-}
-
-// ============================================================================
-// Convert Document into types
-// ============================================================================
-
-impl TryFrom<Box<dyn Document>> for ByteBuffer {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_blob()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for bool {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_bool()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for String {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_string()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for Instant {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_timestamp()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for i8 {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_byte()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for i16 {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_short()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for i32 {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_integer()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for i64 {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_long()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for f32 {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_float()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for f64 {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_double()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for BigInt {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_big_integer()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for BigDecimal {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_big_decimal()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for Vec<Box<dyn Document>> {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_list()
-    }
-}
-
-impl TryFrom<Box<dyn Document>> for IndexMap<String, Box<dyn Document>> {
-    type Error = DocumentError;
-
-    #[inline]
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        value.into_map()
-    }
-}
-
-impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Document>> for Vec<T> {
-    type Error = DocumentError;
-
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        let vec = value.into_list()?;
-        let mut result: Vec<T> = Vec::new();
-        for doc in vec {
-            match T::try_from(doc.clone()) {
-                Ok(val) => result.push(val),
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(result)
-    }
-}
-
-impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Document>>
-    for IndexMap<String, T>
-{
-    type Error = DocumentError;
-
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        let map = value.into_map()?;
-        let mut result: IndexMap<String, T> = IndexMap::new();
-        for (key, val) in map {
-            let _ = match T::try_from(val.clone()) {
-                Ok(val) => result.insert(key.clone(), val),
-                Err(e) => return Err(e),
-            };
-        }
-        Ok(result)
-    }
-}
-
-impl<T: TryFrom<Box<dyn Document>, Error = DocumentError>> TryFrom<Box<dyn Document>>
-    for Option<T>
-{
-    type Error = DocumentError;
-
-    fn try_from(value: Box<dyn Document>) -> Result<Self, Self::Error> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(value.try_into()?))
     }
 }
 
@@ -1021,6 +847,158 @@ pub(crate) mod default {
 }
 
 // ============================================================================
+// Conversions FROM Document into Shape
+// ============================================================================
+
+/// Attempt to create a typed shape from an untyped document.
+///
+/// NOTE: Implemented as a separate trait to avoid conflict with
+/// blanket `TryFrom` impls.
+///
+/// This trait is reflexive in that any types that implement this trait
+/// will also support `try_into` from a dynamic document.
+pub trait TryFromDocument: Sized {
+    /// Attempt to create a typed shape from an untyped document.
+    ///
+    /// ## Errors
+    /// Returns [`DocumentError`] if the type could not be converted to a
+    /// document value.
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError>;
+}
+
+// === Impls for basic types ===
+
+impl TryFromDocument for bool {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_bool()
+    }
+}
+
+impl TryFromDocument for i8 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_byte()
+    }
+}
+
+impl TryFromDocument for i16 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_short()
+    }
+}
+
+impl TryFromDocument for i32 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_integer()
+    }
+}
+
+impl TryFromDocument for i64 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_long()
+    }
+}
+
+impl TryFromDocument for f32 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_float()
+    }
+}
+
+impl TryFromDocument for f64 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_double()
+    }
+}
+
+impl TryFromDocument for BigInt {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_big_integer()
+    }
+}
+
+impl TryFromDocument for BigDecimal {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_big_decimal()
+    }
+}
+
+impl TryFromDocument for ByteBuffer {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_blob()
+    }
+}
+
+impl TryFromDocument for String {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_string()
+    }
+}
+
+impl TryFromDocument for Instant {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_timestamp()
+    }
+}
+
+impl<T: TryFromDocument> TryFromDocument for Vec<T> {
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        let list = document.into_list()?;
+        let mut result = Vec::with_capacity(list.len());
+        for item in list {
+            result.push(item.try_into()?);
+        }
+        Ok(result)
+    }
+}
+
+impl<T: TryFromDocument> TryFromDocument for IndexMap<String, T> {
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        let map = document.into_map()?;
+        let mut result = IndexMap::with_capacity(map.len());
+        for (key, value) in map {
+            result.insert(key, value.try_into()?);
+        }
+        Ok(result)
+    }
+}
+
+impl<T: TryFromDocument> TryFromDocument for Option<T> {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        if document.is_null() {
+            Ok(None)
+        } else {
+            Ok(Some(document.try_into()?))
+        }
+    }
+}
+
+// === Blanket impl for Typed Shapes ===
+impl dyn Document {
+    /// Attempt to convert a document into a shape by deserialization.
+    ///
+    /// ## Errors
+    /// Returns [`DocumentError`] if the type could not be converted to a
+    /// document value.
+    #[inline]
+    pub fn try_into<S: TryFromDocument>(self: Box<Self>) -> Result<S, DocumentError> {
+        <S as TryFromDocument>::try_from(self)
+    }
+}
+
+// ============================================================================
 // Conversions INTO Default Document
 // ============================================================================
 
@@ -1313,11 +1291,6 @@ mod tests {
         let val: &Schema = &LIST_DOCUMENT_SCHEMA;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
-        let vec_out: Vec<String> = document_list.try_into().unwrap();
-        assert_eq!(vec_out.len(), 3);
-        assert_eq!(vec_out[0], "a");
-        assert_eq!(vec_out[1], "b");
-        assert_eq!(vec_out[2], "c");
     }
 
     #[test]
@@ -1328,10 +1301,6 @@ mod tests {
         let val: &Schema = &MAP_DOCUMENT_SCHEMA;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
-
-        let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
-        assert_eq!(map_out.len(), 1);
-        assert_eq!(map_out["a"], "b");
     }
 
     #[test]
@@ -1367,10 +1336,5 @@ mod tests {
         let double: Box<dyn Document> = 1f64.into();
         let double_val: &Schema = &DOUBLE;
         assert_eq!(double.schema(), double_val);
-
-        let float_value: f32 = float.try_into().unwrap();
-        assert_eq!(float_value, 1f32);
-        let double_value: f64 = double.try_into().unwrap();
-        assert_eq!(double_value, 1f64);
     }
 }

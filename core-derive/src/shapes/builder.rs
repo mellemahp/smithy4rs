@@ -1,10 +1,10 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{DataStruct, Type};
+use syn::{Field, FieldsNamed, Type};
 
 use crate::shapes::utils::{
     IdentOrExpr, extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional,
-    is_primitive, parse_default, parse_schema, replace_inner,
+    is_primitive, no_builder, parse_default, parse_schema, replace_inner,
 };
 
 pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
@@ -31,6 +31,17 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
 
     quote! {
         #[automatically_derived]
+        impl #shape_name {
+            /// Get a new builder for this shape.
+            #[must_use]
+            #[inline]
+            pub fn builder() -> #builder_name {
+                <Self as #crate_ident::serde::Buildable<#builder_name>>::builder()
+            }
+        }
+
+        #[doc = concat!("Builder for [`", stringify!(#shape_name), "`]")]
+        #[automatically_derived]
         #[derive(Clone)]
         pub struct #builder_name {
             #(#builder_fields,)*
@@ -38,6 +49,7 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
 
         #[automatically_derived]
         impl #builder_name {
+            #[doc = concat!("Create a new `", stringify!(#builder_name), "` instance")]
             pub fn new() -> Self {
                 Self {
                     #(#new_fields,)*
@@ -45,6 +57,18 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
             }
 
             #(#setters)*
+
+            /// Build the shape, validating with the default validator.
+            #[inline]
+            pub fn build(self) -> #crate_ident::serde::validation::Validated<#shape_name> {
+                #crate_ident::serde::ShapeBuilder::build(self)
+            }
+
+            /// Build the shape using a custom validator.
+            #[inline]
+            pub fn build_with_validator(self, validator: impl #crate_ident::serde::validation::Validator) -> #crate_ident::serde::validation::Validated<#shape_name> {
+                #crate_ident::serde::ShapeBuilder::build_with_validator(self, validator)
+            }
         }
     }
 }
@@ -86,9 +110,9 @@ pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> Tok
     }
 }
 
-pub fn get_builder_fields(schema_ident: &Ident, data: &DataStruct) -> Vec<BuilderFieldData> {
+pub fn get_builder_fields(schema_ident: &Ident, fields: &FieldsNamed) -> Vec<BuilderFieldData> {
     let mut field_data = Vec::new();
-    for field in &data.fields {
+    for field in &fields.named {
         let schema = Ident::new(
             &format!("_{}_MEMBER_{}", schema_ident, parse_schema(&field.attrs)),
             Span::call_site(),
@@ -97,7 +121,7 @@ pub fn get_builder_fields(schema_ident: &Ident, data: &DataStruct) -> Vec<Builde
         let field_ty = &field.ty;
         let default = parse_default(&field.attrs);
         let optional = is_optional(field_ty) && default.is_none();
-        let target = resolve_build_target(field_ty, optional);
+        let target = resolve_build_target(field, optional);
 
         field_data.push(BuilderFieldData {
             schema,
@@ -110,19 +134,19 @@ pub fn get_builder_fields(schema_ident: &Ident, data: &DataStruct) -> Vec<Builde
     field_data
 }
 
-fn resolve_build_target(field_ty: &Type, optional: bool) -> BuildTarget {
+fn resolve_build_target(field: &Field, optional: bool) -> BuildTarget {
     // The target type is the inner type of any optional
     let ty = if optional {
-        extract_option_type(field_ty).unwrap_or(field_ty)
+        extract_option_type(&field.ty).unwrap_or(&field.ty)
     } else {
-        field_ty
+        &field.ty
     };
 
     // Get the inner type of parametrized types (i.e. `Vec<T>`, `IndexMap<String, T>`)
     let inner_type = get_inner_type(ty);
 
     // If the inner type is a primitive type, just return that
-    if is_primitive(inner_type) {
+    if is_primitive(inner_type) || no_builder(field) {
         return BuildTarget::Primitive(ty.clone());
     }
 
@@ -204,11 +228,13 @@ impl BuilderFieldData {
             BuildTarget::Builable { shape, builder } => {
                 let builder_fn = Ident::new(&format!("{field_name}_builder"), Span::call_site());
                 quote! {
+                    #[doc = concat!("Set `", stringify!(#field_name), "`.")]
                     pub fn #field_name(mut self, value: #shape) -> Self {
                         self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Struct(value));
                         self
                     }
 
+                    #[doc = concat!("Set `", stringify!(#field_name), "`.")]
                     pub fn #builder_fn(mut self, value: #builder) -> Self {
                         self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Builder(value));
                         self
@@ -217,6 +243,7 @@ impl BuilderFieldData {
             }
             BuildTarget::Primitive(ty) => {
                 quote! {
+                    #[doc = concat!("Set `", stringify!(#field_name), "`.")]
                     pub fn #field_name<T: Into<#ty>>(mut self, value: T) -> Self {
                         self.#field_name = #wrapper(value.into());
                         self

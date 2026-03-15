@@ -12,8 +12,11 @@ import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.traits.DefaultTrait;
 import software.amazon.smithy.model.traits.DeprecatedTrait;
 import software.amazon.smithy.model.traits.DocumentationTrait;
+import software.amazon.smithy.model.traits.EnumValueTrait;
 import software.amazon.smithy.model.traits.ExternalDocumentationTrait;
+import software.amazon.smithy.model.traits.PrivateTrait;
 import software.amazon.smithy.model.traits.SinceTrait;
+import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.model.traits.UnstableTrait;
 
 /**
@@ -29,6 +32,10 @@ record TraitInitializerGenerator(RustWriter writer, Shape shape, CodeGenerationC
             UnstableTrait.ID,
             DeprecatedTrait.ID,
             SinceTrait.ID,
+            EnumValueTrait.ID,
+            // TODO: Should this be added back in?
+            TraitDefinition.ID,
+            PrivateTrait.ID,
             // Defaults are handled by rust macros
             DefaultTrait.ID);
 

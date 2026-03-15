@@ -10,6 +10,7 @@ import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.directed.GenerateMapDirective;
+import software.amazon.smithy.model.traits.TraitDefinition;
 
 /**
  * Generates serializers and deserializers for Map shapes.
@@ -63,6 +64,11 @@ public final class MapGenerator
                         writer.popState();
                     });
                     writer.popState();
+
+                    // Create a map trait
+                    if (directive.shape().hasTrait(TraitDefinition.class)) {
+                        NewTypeWrapperGenerator.generate(writer, directive.shape(), directive.symbolProvider());
+                    }
                 });
     }
 }

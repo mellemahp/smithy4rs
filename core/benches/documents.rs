@@ -5,8 +5,7 @@ use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::{INTEGER, STRING},
-    schema::Document,
-    serde::ShapeBuilder,
+    schema::{Document, TryFromDocument},
     smithy,
 };
 
@@ -75,7 +74,7 @@ pub fn convert_from(c: &mut Criterion) {
     c.bench_function("Document to shape", |b| {
         b.iter(|| {
             let _ = black_box(
-                SerializeMeBuilder::from_document(document.clone())
+                <SerializeMeBuilder as TryFromDocument>::try_from(document.clone())
                     .expect("Should convert to document")
                     .build()
                     .expect("Should build document"),

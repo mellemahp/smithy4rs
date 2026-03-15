@@ -29,6 +29,7 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
         // Formatters
         putFormatter('T', new RustTypeFormatter());
         putFormatter('I', new RustIdentifierFormatter());
+        putFormatter('N', new RustNullableTypeFormatter());
     }
 
     // Add a symbol with no alias
@@ -76,6 +77,10 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
             addImport(typeSymbol);
 
             var name = typeSymbol.getName();
+            if (typeSymbol.getProperty(SymbolProperties.IS_DYN).isPresent()) {
+                name = String.format("dyn %s", name);
+            }
+
             if (typeSymbol.getReferences().isEmpty()) {
                 return name;
             }
@@ -87,6 +92,23 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
                     name);
             removeContext("refs");
             return output;
+        }
+    }
+
+    /**
+     * Implements a formatter for {@code $N} that formats Rust types that _may_ be optional.
+     */
+    private final class RustNullableTypeFormatter implements BiFunction<Object, String, String> {
+        private final RustTypeFormatter typeFormatter = new RustTypeFormatter();
+
+        @Override
+        public String apply(Object type, String indent) {
+            Symbol typeSymbol = getTypeSymbol(type, 'N');
+            if (typeSymbol.getProperty(SymbolProperties.REQUIRED).isEmpty()) {
+                // Type is optional
+                return format("Option<$T>", typeSymbol);
+            }
+            return typeFormatter.apply(typeSymbol, indent);
         }
     }
 

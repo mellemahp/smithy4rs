@@ -2,15 +2,13 @@
 
 use std::hint::black_box;
 
+use bigdecimal::BigDecimal;
 use criterion::{Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::*,
-    serde::{
-        ShapeBuilder,
-        validation::{DefaultValidator, Validator},
-    },
+    serde::validation::{DefaultValidator, Validator},
     smithy,
 };
 
@@ -19,7 +17,7 @@ smithy!("test#ValidationStruct": {
     structure VALIDATE_SHAPE_SCHEMA {
         @LengthTrait::builder().min(1).max(100).build();
         STRING: STRING = "string"
-        @RangeTrait::builder().max("100").build();
+        @RangeTrait::builder().max(BigDecimal::from(100u64)).build();
         REQUIRED_INT: INTEGER = "required_int"
         INTEGER: INTEGER = "integer"
     }
@@ -83,7 +81,7 @@ pub struct StructWithCollections {
 
 smithy!("test#StructWithNestedSet": {
     structure STRUCT_WITH_SET {
-        @UniqueItemsTrait;
+        @UniqueItemsTrait::builder().build();
         NESTED_SET: LIST_OF_NESTED_SCHEMA = "field_nested_set"
     }
 });

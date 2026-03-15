@@ -4,33 +4,42 @@
  */
 package dev.hmellema.smithy4rs.codegen.symbols;
 
+import dev.hmellema.smithy4rs.codegen.Utils;
 import software.amazon.smithy.codegen.core.Symbol;
+import software.amazon.smithy.utils.SmithyInternalApi;
 
-public class Smithy4Rs {
+@SmithyInternalApi
+public final class Smithy4Rs {
     private Smithy4Rs() {
         /* Utility class */
     }
-    private static final String SMITHY4RS_CORE = "smithy4rs_core";
-    private static final String SMITHY4RS_DERIVE = "smithy4rs_core::derive";
+
+    private static String derive() {
+        return String.format("%s::derive", Utils.crateIdent());
+    }
 
     public static final Symbol SMITHY_MACRO = Symbol.builder()
             .name("smithy")
-            .namespace(SMITHY4RS_CORE, "::")
+            .namespace(Utils.crateIdent(), Utils.DELIM)
             .build();
     public static final Symbol DOC_MAP_MACRO = Symbol.builder()
             .name("doc_map")
-            .namespace(SMITHY4RS_CORE, "::")
+            .namespace(Utils.crateIdent(), Utils.DELIM)
             .build();
     public static final Symbol SMITHY_ENUM = Symbol.builder()
             .name("smithy_enum")
-            .namespace(SMITHY4RS_DERIVE, "::")
+            .namespace(derive(), Utils.DELIM)
             .build();
     public static final Symbol SHAPE_DERIVE = Symbol.builder()
             .name("SmithyShape")
-            .namespace(SMITHY4RS_DERIVE, "::")
+            .namespace(derive(), Utils.DELIM)
             .build();
     public static final Symbol UNION_MACRO = Symbol.builder()
             .name("smithy_union")
-            .namespace(SMITHY4RS_DERIVE, "::")
+            .namespace(derive(), Utils.DELIM)
+            .build();
+    public static final Symbol TRAIT_DERIVE = Symbol.builder()
+            .name("SmithyTraitImpl")
+            .namespace(derive(), Utils.DELIM)
             .build();
 }

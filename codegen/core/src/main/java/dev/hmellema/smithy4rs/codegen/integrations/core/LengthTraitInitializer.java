@@ -24,6 +24,6 @@ final class LengthTraitInitializer implements TraitInitializer<LengthTrait> {
         writer.putContext("max", trait.getMax());
         writer.putContext("length", LENGTH_TRAIT);
         writer.writeInline(
-                "${length:T}::builder()${?min}.min(${min:L}L)${/min}${?max}.max(${max:L}L)${/max}.build()");
+                "${length:T}::builder()${?min}.min(${min:L}i64)${/min}${?max}.max(${max:L}i64)${/max}.build()");
     }
 }

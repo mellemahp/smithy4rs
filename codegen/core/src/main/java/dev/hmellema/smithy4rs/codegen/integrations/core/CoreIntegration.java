@@ -4,23 +4,38 @@
  */
 package dev.hmellema.smithy4rs.codegen.integrations.core;
 
+import static dev.hmellema.smithy4rs.codegen.integrations.core.TraitInitializerUtils.preludeTrait;
+
 import dev.hmellema.smithy4rs.codegen.RustCodegenIntegration;
+import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
+import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import dev.hmellema.smithy4rs.codegen.TraitInitializer;
+import dev.hmellema.smithy4rs.codegen.Utils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import software.amazon.smithy.codegen.core.Symbol;
+import software.amazon.smithy.codegen.core.SymbolProvider;
+import software.amazon.smithy.model.Model;
+import software.amazon.smithy.model.shapes.MemberShape;
+import software.amazon.smithy.model.shapes.Shape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.traits.*;
 import software.amazon.smithy.utils.SmithyInternalApi;
 
 /**
- * Core functionality for Rust code generation plugins.
+ * StdLib functionality for Rust code generation plugins.
  *
  * <p>This integration registers basic trait initializers and mappings for prelude traits.
  */
 @SmithyInternalApi
 public final class CoreIntegration implements RustCodegenIntegration {
+    private static final Symbol REGEX_SYMBOL = Symbol.builder()
+            .namespace(String.format("%s::schema", Utils.crateIdent()), Utils.DELIM)
+            .name("RegexWrapper")
+            .build();
+    private static final ShapeId PATTERN_ID = ShapeId.from("smithy.api#pattern");
+
     @Override
     public List<TraitInitializer<? extends Trait>> traitInitializers() {
         return List.of(
@@ -80,11 +95,30 @@ public final class CoreIntegration implements RustCodegenIntegration {
         return -1;
     }
 
-    private static Symbol preludeTrait(Class<? extends Trait> trait) {
-        return Symbol.builder()
-                // We use the class name here rather than the trait ID name
-                .name(trait.getSimpleName())
-                .namespace("smithy4rs_core::prelude", "::")
-                .build();
+    @Override
+    public SymbolProvider decorateSymbolProvider(
+            Model model,
+            RustCodegenSettings settings,
+            SymbolProvider symbolProvider
+    ) {
+        return new SymbolProvider() {
+            @Override
+            public Symbol toSymbol(Shape shape) {
+                var symbol = symbolProvider.toSymbol(shape);
+                if (shape.getId().equals(PATTERN_ID)) {
+                    // We want to use Regex for pattern inner type
+                    return symbol.toBuilder()
+                            .putProperty(SymbolProperties.INNER, REGEX_SYMBOL)
+                            .build();
+                }
+                return symbol;
+            }
+
+            @Override
+            public String toMemberName(MemberShape shape) {
+                // Avoid squashing member name impl
+                return symbolProvider.toMemberName(shape);
+            }
+        };
     }
 }

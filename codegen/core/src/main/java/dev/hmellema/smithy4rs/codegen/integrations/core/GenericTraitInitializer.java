@@ -6,6 +6,7 @@ package dev.hmellema.smithy4rs.codegen.integrations.core;
 
 import dev.hmellema.smithy4rs.codegen.CodeGenerationContext;
 import dev.hmellema.smithy4rs.codegen.TraitInitializer;
+import dev.hmellema.smithy4rs.codegen.Utils;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
 import software.amazon.smithy.codegen.core.Symbol;
@@ -25,8 +26,12 @@ import software.amazon.smithy.model.traits.Trait;
 final class GenericTraitInitializer implements TraitInitializer<Trait> {
     private static final Symbol DYNAMIC_TRAIT = Symbol.builder()
             .name("DynamicTrait")
-            .namespace("smithy4rs_core::schema", "::")
+            .namespace(module(), "::")
             .build();
+
+    private static String module() {
+        return String.format("%s::schema", Utils.crateIdent());
+    }
 
     @Override
     public Class<Trait> traitClass() {
