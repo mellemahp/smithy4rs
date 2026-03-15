@@ -1,4 +1,4 @@
-name: Codegen-CI
+name: Codegen-Tests
 
 on:
   push:
