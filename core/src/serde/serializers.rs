@@ -460,7 +460,10 @@ pub trait Serializer: Sized {
         self,
         schema: &Schema,
         value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error>;
+    ) -> Result<Self::Ok, Self::Error> {
+        // Delegate to the document itself for serialization
+        value.serialize_with_schema(schema, self)
+    }
 
     /// Serialize a `null` value
     ///

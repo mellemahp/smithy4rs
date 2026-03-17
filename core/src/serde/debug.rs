@@ -533,8 +533,8 @@ mod tests {
         },
     },
     value: Shape {
-        list: [**REDACTED**],
         map: {**REDACTED**},
+        list: [**REDACTED**],
     },
     discriminator: "com.example#Shape",
 }"#;

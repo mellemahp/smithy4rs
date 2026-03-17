@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
+    prelude::RequiredTrait,
     schema::{
         Document, DocumentError, NULL, Schema, ShapeId, ShapeType, StaticSchemaShape,
         TryFromDocument, default::Value,
@@ -67,22 +68,39 @@ impl SerializeWithSchema for Box<dyn Document> {
                 .as_list()
                 .unwrap()
                 .serialize_with_schema(schema, serializer),
-            Some(ShapeType::Map) => self
-                .as_map()
-                .unwrap()
-                .serialize_with_schema(schema, serializer),
-            Some(ShapeType::Structure | ShapeType::Union) => {
+            Some(ShapeType::Map | ShapeType::Structure | ShapeType::Union) => {
+                // Just write out as a map
+                if schema.shape_type() == &ShapeType::Map {
+                    return self
+                        .as_map()
+                        .unwrap()
+                        .serialize_with_schema(schema, serializer);
+                }
+
+                // Otherwise treat as well typed
                 let document_map = self.as_map().unwrap();
                 let mut struct_serializer = serializer.write_struct(schema, self.size())?;
                 if let Some(discriminator) = &self.discriminator() {
                     struct_serializer.write_discriminator(discriminator)?;
                 }
-                for (key, value) in document_map {
-                    if let Some(member_schema) = schema.get_member(key) {
-                        struct_serializer.write_member(member_schema, value)?;
-                    } else {
-                        // TODO(unknown members) Should unknown members be allowed?
-                        todo!("Add some logging on unknown members");
+                // TODO: Real error
+                for (key, member_schema) in schema.members() {
+                    match (
+                        member_schema.get_trait_as::<RequiredTrait>(),
+                        document_map.get(key),
+                    ) {
+                        (Some(_), Some(value)) => {
+                            struct_serializer.write_member(member_schema, value)?;
+                        }
+                        (Some(_), None) => {
+                            struct_serializer.write_unknown(member_schema, key)?;
+                        }
+                        (None, Some(value)) => {
+                            struct_serializer.write_member(member_schema, value)?;
+                        }
+                        (None, None) => {
+                            struct_serializer.skip_member(member_schema)?;
+                        }
                     }
                 }
                 struct_serializer.end(schema)

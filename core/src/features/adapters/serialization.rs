@@ -13,7 +13,7 @@ use static_str_ops::staticize;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
     prelude::{JsonNameTrait, XmlAttributeTrait, XmlNameTrait},
-    schema::{Document, Schema},
+    schema::Schema,
     serde::{
         se::{ListWriter, MapWriter, SerializeWithSchema, StructWriter},
         serializers::{Error, Serializer},
@@ -232,16 +232,6 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     #[inline]
     fn write_timestamp(self, _: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         // TODO(timestamp formatting): How to write timestamps with formatting traits?
-        todo!()
-    }
-
-    #[inline]
-    fn write_document(
-        self,
-        _: &Schema,
-        _value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
-        // TODO(document serde): Finish implementing for document types.
         todo!()
     }
 

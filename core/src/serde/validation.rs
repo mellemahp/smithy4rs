@@ -507,12 +507,15 @@ impl<'a> Serializer for &'a mut DefaultValidator {
 
     fn write_document(
         self,
-        _schema: &Schema,
-        _value: &Box<dyn Document>,
+        schema: &Schema,
+        value: &Box<dyn Document>,
     ) -> Result<Self::Ok, Self::Error> {
-        // Document schemas can be any type.
-        // TODO: What to validate?
-        Ok(())
+        // If the schema is a document then it doesn't impose any constraints
+        if schema.shape_type() == &ShapeType::Document {
+            return Ok(());
+        }
+        // Otherwise delegate to document
+        value.serialize_with_schema(schema, self)
     }
 
     fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
@@ -727,15 +730,6 @@ impl<'a> Serializer for &'a mut HashingSerializer {
         Ok(())
     }
 
-    fn write_document(
-        self,
-        _schema: &Schema,
-        _value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
-        // TODO(document validation): How to hash document types?
-        todo!()
-    }
-
     #[inline]
     fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
         self.hash("null");
@@ -889,6 +883,13 @@ impl StructWriter for DefaultStructValidator<'_> {
     {
         self.root.push_path(member_schema)?;
         value.serialize_with_schema(member_schema, &mut *self.root)?;
+        self.root.pop_path()
+    }
+
+    // We use this method to identify missing Required values in documents
+    fn write_unknown(&mut self, schema: &Schema, _name: &String) -> Result<(), Self::Error> {
+        self.root.push_path(schema)?;
+        self.root.write_missing(schema)?;
         self.root.pop_path()
     }
 
@@ -1110,6 +1111,7 @@ mod tests {
     use crate::{
         IndexMap,
         derive::SmithyShape,
+        prelude::RequiredTrait,
         schema::prelude::{INTEGER, LengthTrait, PatternTrait, STRING, UniqueItemsTrait},
         smithy,
     };
@@ -1386,6 +1388,7 @@ mod tests {
     // Nested Shape
     smithy!("test#ValidationStruct": {
         structure NESTED_SCHEMA {
+            @RequiredTrait::builder().build();
             @PatternTrait::new("^[a-z]*$");
             C: STRING = "c"
         }
@@ -1395,12 +1398,13 @@ mod tests {
     #[smithy_schema(NESTED_SCHEMA)]
     pub struct NestedStruct {
         #[smithy_schema(C)]
-        field_c: String,
+        c: String,
     }
 
     smithy!("test#StructWithNested": {
         structure STRUCT_WITH_NESTED_SCHEMA {
             NESTED: NESTED_SCHEMA = "nested"
+            @RequiredTrait::builder().build();
             NESTED_REQUIRED: NESTED_SCHEMA = "required"
         }
     });
@@ -1415,7 +1419,7 @@ mod tests {
 
     #[test]
     fn nested_struct_fields_build_if_no_errors() {
-        let builder_nested = NestedStructBuilder::new().field_c("field".to_string());
+        let builder_nested = NestedStructBuilder::new().c("field".to_string());
         let builder = StructWithNestedBuilder::new();
         let _value = builder
             .field_required_nested_builder(builder_nested)
@@ -1426,7 +1430,7 @@ mod tests {
     #[test]
     fn nested_struct_fields_build_with_pre_built_shape() {
         let built_nested = NestedStructBuilder::new()
-            .field_c("field".to_string())
+            .c("field".to_string())
             .build()
             .expect("Failed to build NestedStruct");
         let builder = StructWithNestedBuilder::new();
@@ -1438,7 +1442,7 @@ mod tests {
 
     #[test]
     fn nested_struct_fields_checked() {
-        let builder_nested = NestedStructBuilder::new().field_c("dataWithCaps".to_string());
+        let builder_nested = NestedStructBuilder::new().c("dataWithCaps".to_string());
         let builder = StructWithNestedBuilder::new();
         let Some(err) = builder
             .field_required_nested_builder(builder_nested)
@@ -1502,7 +1506,7 @@ mod tests {
 
     #[test]
     fn nested_struct_list_build_if_no_errors() {
-        let nested_list = vec![NestedStructBuilder::new().field_c("data".to_string())];
+        let nested_list = vec![NestedStructBuilder::new().c("data".to_string())];
         let builder = StructWithNestedListsBuilder::new();
         builder
             .field_required_nested_list_builder(nested_list)
@@ -1514,11 +1518,11 @@ mod tests {
     fn nested_struct_list_fields_build_with_pre_built_shapes() {
         let nested_list = vec![
             NestedStructBuilder::new()
-                .field_c("a".to_string())
+                .c("a".to_string())
                 .build()
                 .expect("Failed to build NestedStruct"),
             NestedStructBuilder::new()
-                .field_c("b".to_string())
+                .c("b".to_string())
                 .build()
                 .expect("Failed to build NestedStruct"),
         ];
@@ -1532,10 +1536,10 @@ mod tests {
     #[test]
     fn nested_struct_list_checked() {
         let nested_list = vec![
-            NestedStructBuilder::new().field_c("a".to_string()),
-            NestedStructBuilder::new().field_c("b".to_string()),
-            NestedStructBuilder::new().field_c("dataWithCaps".to_string()),
-            NestedStructBuilder::new().field_c("b".to_string()),
+            NestedStructBuilder::new().c("a".to_string()),
+            NestedStructBuilder::new().c("b".to_string()),
+            NestedStructBuilder::new().c("dataWithCaps".to_string()),
+            NestedStructBuilder::new().c("b".to_string()),
         ];
         let builder = StructWithNestedListsBuilder::new();
         let Some(err) = builder
@@ -1576,9 +1580,9 @@ mod tests {
 
     #[test]
     fn deeply_nested_struct_list_checks_validation_rules() {
-        let nested_list = vec![NestedStructBuilder::new().field_c("data".to_string())];
+        let nested_list = vec![NestedStructBuilder::new().c("data".to_string())];
         let deeply_nested_list = vec![vec![vec![
-            NestedStructBuilder::new().field_c("dataWithCaps".to_string()),
+            NestedStructBuilder::new().c("dataWithCaps".to_string()),
         ]]];
         let builder = StructWithNestedListsBuilder::new();
         let Some(err) = builder
@@ -1669,9 +1673,9 @@ mod tests {
     #[test]
     fn detects_duplicates_in_sets() {
         let structs = vec![
-            NestedStructBuilder::new().field_c("a".to_string()),
-            NestedStructBuilder::new().field_c("b".to_string()),
-            NestedStructBuilder::new().field_c("b".to_string()),
+            NestedStructBuilder::new().c("a".to_string()),
+            NestedStructBuilder::new().c("b".to_string()),
+            NestedStructBuilder::new().c("b".to_string()),
         ];
         let simple = vec![
             "Stuff".to_string(),
@@ -1790,7 +1794,7 @@ mod tests {
         let mut nested_map = IndexMap::new();
         nested_map.insert(
             "a".to_string(),
-            NestedStructBuilder::new().field_c("data".to_string()),
+            NestedStructBuilder::new().c("data".to_string()),
         );
         let builder = StructWithNestedMapsBuilder::new();
         builder
@@ -1805,7 +1809,7 @@ mod tests {
         nested_map.insert(
             "a".to_string(),
             NestedStructBuilder::new()
-                .field_c("data".to_string())
+                .c("data".to_string())
                 .build()
                 .expect("Failed to build nested"),
         );
@@ -1821,15 +1825,15 @@ mod tests {
         let mut nested_map = IndexMap::new();
         nested_map.insert(
             "a".to_string(),
-            NestedStructBuilder::new().field_c("a".to_string()),
+            NestedStructBuilder::new().c("a".to_string()),
         );
         nested_map.insert(
             "b".to_string(),
-            NestedStructBuilder::new().field_c("dataWithCaps".to_string()),
+            NestedStructBuilder::new().c("dataWithCaps".to_string()),
         );
         nested_map.insert(
             "c".to_string(),
-            NestedStructBuilder::new().field_c("c".to_string()),
+            NestedStructBuilder::new().c("c".to_string()),
         );
         let builder = StructWithNestedMapsBuilder::new();
         let Some(err) = builder.required_builder(nested_map).build().err() else {
@@ -1870,7 +1874,7 @@ mod tests {
         let mut nested_map = IndexMap::new();
         nested_map.insert(
             "a".to_string(),
-            NestedStructBuilder::new().field_c("a".to_string()),
+            NestedStructBuilder::new().c("a".to_string()),
         );
 
         let mut deep_nesting = IndexMap::new();
@@ -1878,7 +1882,7 @@ mod tests {
         let mut low_nesting = IndexMap::new();
         low_nesting.insert(
             "a".to_string(),
-            NestedStructBuilder::new().field_c("dataWithCaps".to_string()),
+            NestedStructBuilder::new().c("dataWithCaps".to_string()),
         );
         mid_nesting.insert("a".to_string(), low_nesting);
         deep_nesting.insert("a".to_string(), mid_nesting);
@@ -1950,6 +1954,85 @@ mod tests {
         assert_eq!(
             error_enum.error.to_string(),
             "Enum value `4` invalid. Expected one of: {1, 2}.".to_string()
+        );
+    }
+
+    // ==== `@uniqueItem` Validations ====
+    smithy!("com.example#Lowercase": {
+        @PatternTrait::new("^[a-z]*$");
+        string LOWERCASE
+    });
+
+    #[test]
+    fn string_document_checked() {
+        let string: Box<dyn Document> = "camelCased".into();
+        let mut validator = DefaultValidator::new();
+        let Err(err) = validator.validate(&LOWERCASE, &string) else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 1);
+        let error_enum = err.errors.first().unwrap();
+        assert_eq!(
+            error_enum.error.to_string(),
+            "Value `camelCased` did not conform to expected pattern `^[a-z]*$`".to_string()
+        );
+    }
+
+    smithy!("com.example#Lowercase": {
+        @RangeTrait::builder().min(2).max(5).build();
+        integer BETWEEN_TWO_AND_FIVE
+    });
+
+    #[test]
+    fn number_document_checked() {
+        let int: Box<dyn Document> = 6.into();
+        let mut validator = DefaultValidator::new();
+        let Err(err) = validator.validate(&BETWEEN_TWO_AND_FIVE, &int) else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 1);
+        let error_enum = err.errors.first().unwrap();
+        assert_eq!(
+            error_enum.error.to_string(),
+            "Size: 6 does not conform to @range constraint. Expected between 2 and 5.".to_string()
+        );
+    }
+
+    #[test]
+    fn structure_document_checked() {
+        let mut nested: IndexMap<String, Box<dyn Document>> = IndexMap::new();
+        nested.insert("c".into(), "dataWithCaps".into());
+        let mut root: IndexMap<String, Box<dyn Document>> = IndexMap::new();
+        root.insert("nested".to_string(), nested.into());
+        let document: Box<dyn Document> = root.into();
+        let mut validator = DefaultValidator::new();
+
+        let Err(err) = validator.validate(&STRUCT_WITH_NESTED_SCHEMA, &document) else {
+            panic!("Expected an error");
+        };
+        assert_eq!(err.errors.len(), 2);
+        let error_required = err.errors.first().unwrap();
+        assert_eq!(
+            error_required.paths,
+            vec![PathElement::Schema(
+                _STRUCT_WITH_NESTED_SCHEMA_MEMBER_NESTED_REQUIRED.clone()
+            )]
+        );
+        assert_eq!(
+            error_required.error.to_string(),
+            "Field is Required.".to_string()
+        );
+        let error_pattern = err.errors.get(1).unwrap();
+        assert_eq!(
+            error_pattern.paths,
+            vec![
+                PathElement::Schema(_STRUCT_WITH_NESTED_SCHEMA_MEMBER_NESTED.clone()),
+                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+            ]
+        );
+        assert_eq!(
+            error_pattern.error.to_string(),
+            "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string()
         );
     }
 }
