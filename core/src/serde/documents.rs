@@ -83,7 +83,6 @@ impl SerializeWithSchema for Box<dyn Document> {
                 if let Some(discriminator) = &self.discriminator() {
                     struct_serializer.write_discriminator(discriminator)?;
                 }
-                // TODO: Real error
                 for (key, member_schema) in schema.members() {
                     match (
                         member_schema.get_trait_as::<RequiredTrait>(),
