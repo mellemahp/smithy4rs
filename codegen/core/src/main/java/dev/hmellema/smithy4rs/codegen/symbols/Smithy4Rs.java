@@ -42,4 +42,24 @@ public final class Smithy4Rs {
             .name("SmithyTraitImpl")
             .namespace(derive(), Utils.DELIM)
             .build();
+    public static final Symbol INDEX_MAP = Symbol.builder()
+            .name("IndexMap")
+            .namespace(SMITHY4RS_CORE, "::")
+            .build();
+    public static final Symbol BYTE_BUFFER = Symbol.builder()
+            .name("ByteBuffer")
+            .namespace(SMITHY4RS_CORE, "::")
+            .build();
+    public static final Symbol BIG_INT = Symbol.builder()
+            .name("BigInt")
+            .namespace(SMITHY4RS_CORE, "::")
+            .build();
+    public static final Symbol BIG_DECIMAL = Symbol.builder()
+            .name("BigDecimal")
+            .namespace(SMITHY4RS_CORE, "::")
+            .build();
+    public static final Symbol DOCUMENT = Symbol.builder()
+            .name("Document")
+            .namespace(SMITHY4RS_CORE + "::schema", "::")
+            .build();
 }
