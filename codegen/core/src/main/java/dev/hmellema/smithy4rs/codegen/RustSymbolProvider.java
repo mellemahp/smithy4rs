@@ -12,6 +12,7 @@ import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.loader.Prelude;
 import software.amazon.smithy.model.shapes.*;
+import software.amazon.smithy.model.traits.DefaultTrait;
 import software.amazon.smithy.model.traits.RequiredTrait;
 import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.utils.CaseUtils;
@@ -161,6 +162,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("Box")
                 .addReference(DOCUMENT_DYN)
+                .putProperty(SymbolProperties.NO_BUILDER, true)
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(documentShape))
                 .namespace("std", DELIM)
                 .build();
@@ -257,6 +259,11 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         if (memberShape.hasTrait(RequiredTrait.class)) {
             result = result.toBuilder()
                     .putProperty(SymbolProperties.REQUIRED, true)
+                    .build();
+        }
+        if (memberShape.hasTrait(DefaultTrait.class)) {
+            result = result.toBuilder()
+                    .putProperty(SymbolProperties.HAS_DEFAULT, true)
                     .build();
         }
         if (NO_BUILDER_TYPES.contains(target.getType())) {

@@ -121,13 +121,13 @@ public final class StructureGenerator implements
             Model model,
             SymbolProvider provider,
             String membername,
-            MemberShape shape
-    ) implements Runnable {
-        private static final String TEMPLATE = """
-                ${?noBuilder}#[no_builder]
-                ${/noBuilder}${?default}#[default(${default:C})]
-                ${/default}#[smithy_schema(${memberIdent:L})]                                                                   ${/default}
-                pub ${memberName:L}: ${member:N},""";
+            MemberShape shape) implements Runnable {
+        private static final String TEMPLATE =
+                """
+                        ${?noBuilder}#[no_builder]
+                        ${/noBuilder}${?default}#[default(${default:C})]
+                        ${/default}#[smithy_schema(${memberIdent:L})]
+                        pub ${memberName:L}: ${member:N},""";
 
         @Override
         public void run() {

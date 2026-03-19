@@ -5,7 +5,7 @@ use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::{INTEGER, STRING},
-    schema::{Document, TryFromDocument},
+    schema::Document,
     smithy,
 };
 

@@ -1,10 +1,12 @@
+/*
+ * Copyright Hunter Mellema & Hayden Baker. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package dev.hmellema.smithy4rs.codegen.generators;
 
-import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.symbols.StdLib;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
-import java.util.Objects;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.node.ArrayNode;
@@ -42,7 +44,9 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
 
     @Override
     public void run() {
+        writer.pushState();
         shape.accept(this);
+        writer.popState();
     }
 
     @Override
@@ -55,8 +59,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
         writer.writeInline(
                 "$T::from_bytes($S.as_bytes())",
                 Smithy4Rs.BYTE_BUFFER,
-                value.expectStringNode().getValue()
-        );
+                value.expectStringNode().getValue());
         return null;
     }
 
@@ -72,7 +75,8 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
             // TODO: Specific error
             throw new RuntimeException("Only empty lists are permitted for defaults");
         }
-        writer.writeInline("$T::<$T>::new()", StdLib.VEC, provider.toSymbol(shape));
+        var member = provider.toSymbol(listShape.getMember());
+        writer.writeInline("$T::<$T>::new()", StdLib.VEC, member);
         return null;
     }
 
@@ -112,14 +116,13 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
     @Override
     public Void intEnumShape(IntEnumShape shape) {
         var number = value.expectNumberNode().getValue().intValue();
-        for (var entry: shape.getEnumValues().entrySet()) {
+        for (var entry : shape.getEnumValues().entrySet()) {
             if (entry.getValue() == number) {
                 // TODO: Use a standard method for enum names
                 writer.writeInline(
                         "$T::$L",
                         provider.toSymbol(shape),
-                        StringUtils.capitalize(CaseUtils.toPascalCase(entry.getKey()))
-                );
+                        StringUtils.capitalize(CaseUtils.toPascalCase(entry.getKey())));
                 return null;
             }
         }
@@ -140,7 +143,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
 
     @Override
     public Void documentShape(DocumentShape documentShape) {
-        writer.writeInline("$C", new DocumentValueVisitor(writer, value));
+        writer.writeInline("$C.into()", new DocumentValueVisitor(writer, value));
         return null;
     }
 
@@ -171,17 +174,13 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
     @Override
     public Void enumShape(EnumShape shape) {
         var stringValue = value.expectStringNode().getValue();
-        for (var entry: shape.getEnumValues().entrySet()) {
-            System.out.println("FOUND: " + entry.getValue());
-            System.out.println("NODE: " + stringValue);
-
+        for (var entry : shape.getEnumValues().entrySet()) {
             if (entry.getValue().equals(stringValue)) {
                 // TODO: Use a standard method for enum names
                 writer.writeInline(
                         "$T::$L",
                         provider.toSymbol(shape),
-                        StringUtils.capitalize(CaseUtils.toPascalCase(entry.getKey()))
-                );
+                        StringUtils.capitalize(CaseUtils.toPascalCase(entry.getKey())));
                 return null;
             }
         }
@@ -202,8 +201,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
 
     private record DocumentValueVisitor(
             RustWriter writer,
-            Node node
-    ) implements NodeVisitor<Void>, Runnable {
+            Node node) implements NodeVisitor<Void>, Runnable {
         @Override
         public void run() {
             node.accept(this);
@@ -216,17 +214,16 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
             }
             // TODO: Use dyn type once merged with upstream changes
             writer.writeInline(
-                "$T::<$T<dyn $T>>::new().into()",
+                    "$T::<$T<dyn $T>>::new()",
                     StdLib.VEC,
                     StdLib.BOX,
-                    Smithy4Rs.DOCUMENT
-            );
+                    Smithy4Rs.DOCUMENT);
             return null;
         }
 
         @Override
         public Void booleanNode(BooleanNode booleanNode) {
-            writer.writeInline("$L.into()", booleanNode.getValue());
+            writer.writeInline("$L", booleanNode.getValue());
             return null;
         }
 
@@ -253,18 +250,17 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
             }
             // TODO: Use dyn type once merged with upstream changes
             writer.writeInline(
-                    "$T::<$T, $T<dyn $T>>::default().into()",
-                    StdLib.VEC,
+                    "$T::<$T, $T<dyn $T>>::default()",
+                    Smithy4Rs.INDEX_MAP,
                     StdLib.STRING,
                     StdLib.BOX,
-                    Smithy4Rs.DOCUMENT
-            );
+                    Smithy4Rs.DOCUMENT);
             return null;
         }
 
         @Override
         public Void stringNode(StringNode stringNode) {
-            writer.writeInline("$S.into()", stringNode.getValue());
+            writer.writeInline("$S", stringNode.getValue());
             return null;
         }
     }

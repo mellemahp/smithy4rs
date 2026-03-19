@@ -1107,7 +1107,6 @@ impl ValidationError for SmithyConstraints {}
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
 mod tests {
-    use std::str::FromStr;
     use super::*;
     use crate::{
         IndexMap,

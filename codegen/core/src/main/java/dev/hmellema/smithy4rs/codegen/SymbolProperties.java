@@ -36,5 +36,10 @@ public final class SymbolProperties {
      */
     public static final Property<Boolean> REQUIRED = Property.named("required");
 
+    /**
+     * If a member has a default
+     */
+    public static final Property<Boolean> HAS_DEFAULT = Property.named("has-default");
+
     private SymbolProperties() {}
 }

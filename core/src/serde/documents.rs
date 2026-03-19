@@ -5,7 +5,7 @@ use crate::{
     prelude::RequiredTrait,
     schema::{
         Document, DocumentError, NULL, Schema, ShapeId, ShapeType, StaticSchemaShape,
-        TryFromDocument, default::Value,
+        default::Value,
     },
     serde::{
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
@@ -15,7 +15,7 @@ use crate::{
         utils::KeySerializer,
     },
 };
-
+use crate::schema::TryFromDocument;
 // ============================================================================
 // Errors
 // ============================================================================

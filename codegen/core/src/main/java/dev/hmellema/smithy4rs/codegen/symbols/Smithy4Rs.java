@@ -18,6 +18,10 @@ public final class Smithy4Rs {
         return String.format("%s::derive", Utils.crateIdent());
     }
 
+    private static String schema() {
+        return String.format("%s::schema", Utils.crateIdent());
+    }
+
     public static final Symbol SMITHY_MACRO = Symbol.builder()
             .name("smithy")
             .namespace(Utils.crateIdent(), Utils.DELIM)
@@ -44,22 +48,22 @@ public final class Smithy4Rs {
             .build();
     public static final Symbol INDEX_MAP = Symbol.builder()
             .name("IndexMap")
-            .namespace(SMITHY4RS_CORE, "::")
+            .namespace(Utils.crateIdent(), "::")
             .build();
     public static final Symbol BYTE_BUFFER = Symbol.builder()
             .name("ByteBuffer")
-            .namespace(SMITHY4RS_CORE, "::")
+            .namespace(Utils.crateIdent(), "::")
             .build();
     public static final Symbol BIG_INT = Symbol.builder()
             .name("BigInt")
-            .namespace(SMITHY4RS_CORE, "::")
+            .namespace(Utils.crateIdent(), "::")
             .build();
     public static final Symbol BIG_DECIMAL = Symbol.builder()
             .name("BigDecimal")
-            .namespace(SMITHY4RS_CORE, "::")
+            .namespace(Utils.crateIdent(), "::")
             .build();
     public static final Symbol DOCUMENT = Symbol.builder()
             .name("Document")
-            .namespace(SMITHY4RS_CORE + "::schema", "::")
+            .namespace(schema(), "::")
             .build();
 }

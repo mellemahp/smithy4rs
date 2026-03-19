@@ -104,7 +104,8 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
         @Override
         public String apply(Object type, String indent) {
             Symbol typeSymbol = getTypeSymbol(type, 'N');
-            if (typeSymbol.getProperty(SymbolProperties.REQUIRED).isEmpty()) {
+            if (typeSymbol.getProperty(SymbolProperties.REQUIRED).isEmpty() &&
+                    typeSymbol.getProperty(SymbolProperties.HAS_DEFAULT).isEmpty()) {
                 // Type is optional
                 return format("Option<$T>", typeSymbol);
             }
