@@ -76,27 +76,18 @@ impl<'de> StructReader<'de> for ArbitraryStructReader<'_, '_> {
             }
 
             self.set_union = true;
-            // pick a random member
-            let idx = usize::arbitrary(self.u)? % schema.members().len();
-            let (_, member_schema) = schema
-                .members()
-                .get_index(idx)
-                .ok_or(arbitrary::Error::IncorrectFormat)?;
-            return Ok(Some(member_schema));
-        };
-        // === Normal Structures ====
-        // If there are no more members to set, return empty
-        if self.index >= schema.members().len() {
-            return Ok(None);
+        } else {
+            // === Normal Structures ====
+            // If there are no more members to set, return empty
+            if self.index >= schema.members().len() {
+                return Ok(None);
+            }
+            self.index += 1;
         }
-        // Get the next member
-        let (_, member_schema) = schema
-            .members()
-            .get_index(self.index)
-            .ok_or(arbitrary::Error::IncorrectFormat)?;
-        self.index += 1;
-
-        Ok(Some(member_schema))
+        Ok(Some(Unstructured::choose_iter(
+            self.u,
+            schema.members().values(),
+        )?))
     }
 
     fn read_value<T: DeserializeWithSchema<'de>>(
@@ -185,6 +176,13 @@ impl<'a, 'u> ArbitraryDeserializer<'a, 'u> {
     }
 }
 
+// === Timestamp constants (copied from temporal crate) ====
+const NS_PER_DAY: u64 = MS_PER_DAY as u64 * 1_000_000;
+const NS_IN_S: i128 = 1_000_000_000;
+const MS_PER_DAY: u32 = 24 * 60 * 60 * 1000;
+const NS_MAX_INSTANT: i128 = NS_PER_DAY as i128 * 100_000_000i128;
+const NS_MIN_INSTANT: i128 = -NS_MAX_INSTANT;
+
 impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
     type Error = Error;
     type StructReader = ArbitraryStructReader<'a, 'u>;
@@ -211,11 +209,7 @@ impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
             let SchemaValue::IntEnum(enum_schema) = &**schema else {
                 return Err(arbitrary::Error::IncorrectFormat.into());
             };
-            let value_index = usize::arbitrary(self.u)? % enum_schema.values().len();
-            Ok(*enum_schema
-                .values()
-                .get_index(value_index)
-                .ok_or(arbitrary::Error::IncorrectFormat)?)
+            Ok(*Unstructured::choose_iter(self.u, enum_schema.values())?)
         } else {
             Ok(i32::arbitrary(self.u)?)
         }
@@ -255,12 +249,7 @@ impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
             let SchemaValue::Enum(enum_schema) = &**schema else {
                 return Err(arbitrary::Error::IncorrectFormat.into());
             };
-            let value_index = usize::arbitrary(self.u)? % enum_schema.values().len();
-            Ok(enum_schema
-                .values()
-                .get_index(value_index)
-                .ok_or(arbitrary::Error::IncorrectFormat)?
-                .to_string())
+            Ok(Unstructured::choose_iter(self.u, enum_schema.values())?.to_string())
         } else {
             Ok(String::arbitrary(self.u)?)
         }
@@ -273,9 +262,8 @@ impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
     }
 
     fn read_timestamp(self, _: &Schema) -> Result<Instant, Self::Error> {
-        // TODO: bound input
-        let millis = i64::arbitrary(self.u)?;
-        Ok(Instant::from_epoch_milliseconds(millis)
+        let nanos = Unstructured::int_in_range(self.u, NS_MIN_INSTANT..=-NS_MAX_INSTANT)?;
+        Ok(Instant::from_epoch_milliseconds((nanos * 1_000_000) as i64)
             .map_err(|_| arbitrary::Error::IncorrectFormat)?)
     }
 
