@@ -34,4 +34,4 @@ jobs:
           --testbed ubuntu-latest \
           --err \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --adapter rust_criterion "cargo bench"
+          --adapter rust_criterion "cargo bench -- --output-format criterion"

@@ -2,7 +2,8 @@ name: Bencher Base
 
 on:
   push:
-    branches: main
+    branches:
+      - main
     paths:
       - core/**
       - core-derive/**
@@ -28,4 +29,4 @@ jobs:
           --err \
           --testbed ubuntu-latest \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --adapter rust_criterion "cargo bench"
+          --adapter rust_criterion "cargo bench -- --output-format criterion"
