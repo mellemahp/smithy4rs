@@ -109,7 +109,7 @@ impl NameMapper {
         if matches!(self, NameMapper::Xml)
             && let Some(xml_name) = schema.get_trait_as::<XmlNameTrait>()
         {
-            return staticize(xml_name.name());
+            return staticize(xml_name.as_str());
         }
         staticize(schema.id().name())
     }
@@ -125,13 +125,13 @@ impl NameMapper {
                 // Rename based on JSON Traits, if present
                 Ok(schema
                     .get_trait_as::<JsonNameTrait>()
-                    .map_or_else(|| staticize(me.name()), |val| staticize(val.name())))
+                    .map_or_else(|| staticize(me.name()), |val| staticize(val.as_str())))
             }
             NameMapper::Xml => {
                 // Rename based on JSON Traits
                 let name = schema
                     .get_trait_as::<XmlNameTrait>()
-                    .map_or_else(|| me.name(), |val| val.name());
+                    .map_or_else(|| me.name(), |val| val.as_str());
                 // Add attribute prefix if applicable
                 if schema.contains_type::<XmlAttributeTrait>() {
                     return Ok(staticize(format!("@{name}")));
@@ -478,7 +478,7 @@ mod tests {
     smithy!("com.example#Rename": {
         structure XML_TRAITS {
             @XmlNameTrait::new("renamed");
-            @XmlAttributeTrait;
+            @XmlAttributeTrait::builder().build();
             A: STRING = "a"
             @XmlNameTrait::new("int");
             B: STRING = "b"

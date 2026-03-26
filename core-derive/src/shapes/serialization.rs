@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DataStruct, DeriveInput, Field, Lit, Variant};
+use syn::{Data, DataEnum, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Lit, Variant};
 
 use crate::{
     parse_schema,
@@ -26,7 +26,11 @@ pub(crate) fn serialization_impl(
                 #imports
                 use #crate_ident::serde::serializers::StructWriter as _StructWriter;
             };
-            serialize_struct(schema_ident, data)
+            match &data.fields {
+                Fields::Named(fields) => serialize_struct(schema_ident, fields),
+                Fields::Unnamed(fields) => serialize_tuple(fields),
+                Fields::Unit => serialize_unit(),
+            }
         }
         Data::Enum(data) => {
             if is_union(data) {
@@ -69,13 +73,9 @@ pub(crate) fn serialization_impl(
 // ============================================================================
 
 /// Generates body of serialization impl for Structures
-fn serialize_struct(schema_ident: &Ident, data_struct: &DataStruct) -> TokenStream {
-    let length = data_struct.fields.len();
-    let field_data: Vec<FieldData> = data_struct
-        .fields
-        .iter()
-        .map(FieldData::from)
-        .collect::<Vec<_>>();
+fn serialize_struct(schema_ident: &Ident, fields: &FieldsNamed) -> TokenStream {
+    let length = &fields.named.len();
+    let field_data: Vec<FieldData> = fields.named.iter().map(FieldData::from).collect::<Vec<_>>();
     // Now write the thing
     let method = field_data.iter().map(|d| d.method_call());
     let member_schema = field_data.iter().map(|d| d.member_schema(schema_ident));
@@ -168,6 +168,31 @@ fn determine_enum_ser_method(data: &DataEnum) -> Ident {
         Some(Lit::Str(_)) => Ident::new("write_string", Span::call_site()),
         Some(Lit::Int(_)) => Ident::new("write_integer", Span::call_site()),
         _ => panic!("Unsupported enum value. Expected string or int literal."),
+    }
+}
+
+// ============================================================================
+// Wrapper (tuple) Serialization
+// ============================================================================
+
+fn serialize_tuple(data: &FieldsUnnamed) -> TokenStream {
+    assert_eq!(
+        data.unnamed.len(),
+        1,
+        "Trait wrappers must have only one field"
+    );
+    quote! {
+        self.0.serialize_with_schema(schema, serializer)
+    }
+}
+
+// ============================================================================
+// Unit Serialization
+// ============================================================================
+
+fn serialize_unit() -> TokenStream {
+    quote! {
+        serializer.write_struct(schema, 0usize)?.end(schema)
     }
 }
 

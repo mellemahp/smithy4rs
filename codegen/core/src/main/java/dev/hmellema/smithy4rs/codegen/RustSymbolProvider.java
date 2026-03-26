@@ -12,7 +12,10 @@ import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.loader.Prelude;
 import software.amazon.smithy.model.shapes.*;
+import software.amazon.smithy.model.traits.RequiredTrait;
+import software.amazon.smithy.model.traits.TraitDefinition;
 import software.amazon.smithy.utils.CaseUtils;
+import software.amazon.smithy.utils.StringUtils;
 
 /**
  * Maps Smithy types to Rust symbols
@@ -20,14 +23,37 @@ import software.amazon.smithy.utils.CaseUtils;
 public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, SymbolProvider {
     private static final Logger LOGGER = Logger.getLogger(RustSymbolProvider.class.getName());
     public static final String FILE = "smithy-generated.rs";
+    private static final String DELIM = "::";
     private static final EnumSet<ShapeType> GENERATED_TYPES = EnumSet.of(
             ShapeType.UNION,
             ShapeType.ENUM,
             ShapeType.INT_ENUM,
             ShapeType.STRUCTURE);
+    private static final Symbol DOCUMENT_DYN = Symbol.builder()
+            .name("Document")
+            .namespace(String.format("%s::schema", Utils.crateIdent()), DELIM)
+            .putProperty(SymbolProperties.IS_DYN, true)
+            .build();
+    private static final EnumSet<ShapeType> NO_BUILDER_TYPES = EnumSet.of(
+            ShapeType.INT_ENUM,
+            ShapeType.ENUM,
+            ShapeType.UNION,
+            ShapeType.DOCUMENT);
+
     @Override
     public Symbol toSymbol(Shape shape) {
-        return shape.accept(this);
+        var type = shape.accept(this);
+        // Use wrapper types for scalar traits.
+        if (shape.hasTrait(TraitDefinition.class) && !GENERATED_TYPES.contains(shape.getType())) {
+            return Symbol.builder()
+                    .name(getName(shape))
+                    .putProperty(SymbolProperties.INNER, type)
+                    .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shape))
+                    .declarationFile(FILE)
+                    .build();
+        } else {
+            return type;
+        }
     }
 
     @Override
@@ -40,7 +66,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("ByteBuffer")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(blobShape))
-                .namespace("smithy4rs_core", "::")
+                .namespace(Utils.crateIdent(), DELIM)
                 .build();
     }
 
@@ -49,7 +75,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("bool")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(booleanShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
@@ -57,7 +83,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol listShape(ListShape listShape) {
         return Symbol.builder()
                 .name("Vec")
-                .namespace("std::vec", "::")
+                .namespace("std::vec", DELIM)
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(listShape))
                 .addReference(listShape.getMember().accept(this))
                 .declarationFile(FILE)
@@ -68,7 +94,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol mapShape(MapShape mapShape) {
         return Symbol.builder()
                 .name("IndexMap")
-                .namespace("smithy4rs_core", "::")
+                .namespace(Utils.crateIdent(), DELIM)
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(mapShape))
                 .addReference(mapShape.getKey().accept(this))
                 .addReference(mapShape.getValue().accept(this))
@@ -81,7 +107,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("i8")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(byteShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
@@ -90,7 +116,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("i16")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shortShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
@@ -99,14 +125,14 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("i32")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(integerShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
     @Override
     public Symbol intEnumShape(IntEnumShape shape) {
         return Symbol.builder()
-                .name(shape.getId().getName())
+                .name(getName(shape))
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shape))
                 .declarationFile(FILE)
                 .build();
@@ -117,7 +143,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("i64")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(longShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
@@ -126,16 +152,17 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("f32")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(floatShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
     @Override
     public Symbol documentShape(DocumentShape documentShape) {
         return Symbol.builder()
-                .name("Document")
+                .name("Box")
+                .addReference(DOCUMENT_DYN)
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(documentShape))
-                .namespace("smithy4rs_core", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
@@ -144,7 +171,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("f64")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(doubleShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
@@ -153,7 +180,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("BigInt")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(bigIntegerShape))
-                .namespace("smithy4rs_core", "::")
+                .namespace(Utils.crateIdent(), DELIM)
                 .build();
     }
 
@@ -162,7 +189,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("BigDecimal")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(bigDecimalShape))
-                .namespace("smithy4rs_core", "::")
+                .namespace(Utils.crateIdent(), DELIM)
                 .build();
     }
 
@@ -186,14 +213,14 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("String")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(stringShape))
-                .namespace("std", "::")
+                .namespace("std", DELIM)
                 .build();
     }
 
     @Override
     public Symbol enumShape(EnumShape shape) {
         return Symbol.builder()
-                .name(shape.getId().getName())
+                .name(getName(shape))
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(shape))
                 .declarationFile(FILE)
                 .build();
@@ -203,7 +230,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     public Symbol structureShape(StructureShape structureShape) {
         // TODO: Add escaping
         return Symbol.builder()
-                .name(structureShape.getId().getName())
+                .name(getName(structureShape))
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(structureShape))
                 .declarationFile(FILE)
                 .build();
@@ -212,7 +239,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     @Override
     public Symbol unionShape(UnionShape unionShape) {
         return Symbol.builder()
-                .name(unionShape.getId().getName())
+                .name(getName(unionShape))
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(unionShape))
                 .declarationFile(FILE)
                 .build();
@@ -226,7 +253,19 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
                         () -> new RuntimeException(
                                 "Could not find shape " + memberShape.getTarget() + " targeted by "
                                         + memberShape));
-        return toSymbol(target);
+        var result = toSymbol(target);
+        if (memberShape.hasTrait(RequiredTrait.class)) {
+            result = result.toBuilder()
+                    .putProperty(SymbolProperties.REQUIRED, true)
+                    .build();
+        }
+        if (NO_BUILDER_TYPES.contains(target.getType())) {
+            return result.toBuilder()
+                    .putProperty(SymbolProperties.NO_BUILDER, true)
+                    .build();
+        } else {
+            return result;
+        }
     }
 
     @Override
@@ -234,19 +273,27 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
         return Symbol.builder()
                 .name("Instant")
                 .putProperty(SymbolProperties.SCHEMA_SYMBOL, getSchemaSymbol(timestampShape))
-                .namespace("smithy4rs_core", "::")
+                .namespace(Utils.crateIdent(), DELIM)
                 .build();
+    }
+
+    private static String getName(Shape shape) {
+        var name = StringUtils.capitalize(shape.getId().getName());
+        if (shape.hasTrait(TraitDefinition.class)) {
+            name += "Trait";
+        }
+        return name;
     }
 
     private static Symbol getSchemaSymbol(Shape shape) {
         return Symbol.builder()
                 .name(getSchemaName(shape))
-                .namespace(getSchemaNamespace(shape), "::")
+                .namespace(getSchemaNamespace(shape), DELIM)
                 .build();
     }
 
     private static String getSchemaNamespace(ToShapeId shapeId) {
-        if (Prelude.isPreludeShape(shapeId)) {
+        if (!Utils.inCore() && Prelude.isPreludeShape(shapeId)) {
             return "smithy4rs_core::prelude";
         } else {
             // TODO(errors): this wont handle imported service errors.

@@ -10,6 +10,7 @@ import dev.hmellema.smithy4rs.codegen.sections.SchemaSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.directed.GenerateListDirective;
+import software.amazon.smithy.model.traits.TraitDefinition;
 
 /**
  * Generates a schema definition for a List shapes.
@@ -54,6 +55,11 @@ public final class ListGenerator
                         writer.popState();
                     });
                     writer.popState();
+
+                    // Create a list trait
+                    if (directive.shape().hasTrait(TraitDefinition.class)) {
+                        NewTypeWrapperGenerator.generate(writer, directive.shape(), directive.symbolProvider());
+                    }
                 });
     }
 }

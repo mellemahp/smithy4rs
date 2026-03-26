@@ -4,18 +4,29 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{
         Document, DocumentError, NULL, Schema, ShapeId, ShapeType, StaticSchemaShape,
-        default::Value,
+        TryFromDocument, default::Value,
     },
     serde::{
-        ShapeBuilder,
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
+        deserializers::DeserializableShape,
         se::{ListWriter, MapWriter, Serializer, StructWriter},
         serializers::{Error, SerializeWithSchema},
         utils::KeySerializer,
     },
 };
+
 // ============================================================================
-// Serialization
+// Errors
+// ============================================================================
+
+impl Error for DocumentError {
+    fn custom<T: Display>(msg: T) -> Self {
+        DocumentError::CustomError(msg.to_string())
+    }
+}
+
+// ============================================================================
+// Serialization INTO document
 // ============================================================================
 
 impl SerializeWithSchema for Box<dyn Document> {
@@ -24,6 +35,10 @@ impl SerializeWithSchema for Box<dyn Document> {
         schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
+        // If the schema wants a generic document, don't use inner type
+        if schema.shape_type() == &ShapeType::Document {
+            return serializer.write_document(schema, self);
+        }
         // TODO(errors): Handle exceptions?
         match self.get_type() {
             Some(ShapeType::Blob) => serializer.write_blob(schema, self.as_blob().unwrap()),
@@ -73,6 +88,7 @@ impl SerializeWithSchema for Box<dyn Document> {
                 struct_serializer.end(schema)
             }
             None => serializer.write_null(schema),
+            Some(ShapeType::Document) => serializer.write_document(schema, self),
             _ => Err(Error::custom("Unsupported shape type")),
         }
     }
@@ -88,35 +104,6 @@ where
             .expect(
                 "Infallible conversion from StaticSchemaShape to Document failed - this is a bug",
             )
-    }
-}
-
-// ====== Public Conversion API ========
-
-impl dyn Document {
-    /// Convert a document into a [`ShapeBuilder`]
-    ///
-    /// <div class="note">
-    /// **Note**: the returned builder still needs to be built and validated
-    /// after conversion from a document.
-    /// </div>
-    ///
-    /// # Errors
-    /// Returns `DocumentError` if the document cannot be deserialized into the
-    /// shape builder typically due to schema mismatches or failures
-    /// such as invalid int -> float conversions.
-    #[inline]
-    pub(crate) fn into_builder<'de, B: ShapeBuilder<'de, S>, S: StaticSchemaShape>(
-        self: Box<Self>,
-    ) -> Result<B, DocumentError> {
-        let de = DocumentDeserializer::new(self);
-        B::deserialize_with_schema(S::schema(), de)
-    }
-}
-
-impl Error for DocumentError {
-    fn custom<T: Display>(msg: T) -> Self {
-        DocumentError::CustomError(msg.to_string())
     }
 }
 
@@ -344,33 +331,24 @@ impl StructWriter for DocumentMapAccumulator {
 }
 
 // ============================================================================
-// Deserialization
+// Deserialization FROM Document
 // ============================================================================
+
+impl<'de, S: DeserializableShape<'de>> TryFromDocument for S {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        S::deserialize(DocumentDeserializer::new(document))
+    }
+}
 
 /// A deserializer that reads from a `Document`.
 struct DocumentDeserializer {
-    document: Option<Box<dyn Document>>,
+    document: Box<dyn Document>,
 }
 
 impl DocumentDeserializer {
     pub fn new(document: Box<dyn Document>) -> Self {
-        Self {
-            document: Some(document),
-        }
-    }
-
-    #[inline]
-    fn get_inner<T: TryFrom<Box<dyn Document>, Error = DocumentError>>(
-        &mut self,
-    ) -> Result<T, DocumentError> {
-        self.document
-            .take()
-            .ok_or_else(|| {
-                DocumentError::DocumentConversion(
-                    "Encountered empty document deserializer".to_string(),
-                )
-            })?
-            .try_into()
+        Self { document }
     }
 }
 
@@ -402,106 +380,96 @@ impl<'de> Deserializer<'de> for DocumentDeserializer {
     type MapReader = DocumentMapReader;
 
     #[inline]
-    fn read_bool(mut self, _schema: &Schema) -> Result<bool, Self::Error> {
-        self.get_inner()
+    fn read_bool(self, _schema: &Schema) -> Result<bool, Self::Error> {
+        self.document.into_bool()
     }
 
     #[inline]
-    fn read_byte(mut self, _schema: &Schema) -> Result<i8, Self::Error> {
-        self.get_inner()
+    fn read_byte(self, _schema: &Schema) -> Result<i8, Self::Error> {
+        self.document.into_byte()
     }
 
     #[inline]
-    fn read_short(mut self, _schema: &Schema) -> Result<i16, Self::Error> {
-        self.get_inner()
+    fn read_short(self, _schema: &Schema) -> Result<i16, Self::Error> {
+        self.document.into_short()
     }
 
     #[inline]
-    fn read_integer(mut self, _schema: &Schema) -> Result<i32, Self::Error> {
-        self.get_inner()
+    fn read_integer(self, _schema: &Schema) -> Result<i32, Self::Error> {
+        self.document.into_integer()
     }
 
     #[inline]
-    fn read_long(mut self, _schema: &Schema) -> Result<i64, Self::Error> {
-        self.get_inner()
+    fn read_long(self, _schema: &Schema) -> Result<i64, Self::Error> {
+        self.document.into_long()
     }
 
     #[inline]
-    fn read_float(mut self, _schema: &Schema) -> Result<f32, Self::Error> {
-        self.get_inner()
+    fn read_float(self, _schema: &Schema) -> Result<f32, Self::Error> {
+        self.document.into_float()
     }
 
     #[inline]
-    fn read_double(mut self, _schema: &Schema) -> Result<f64, Self::Error> {
-        self.get_inner()
+    fn read_double(self, _schema: &Schema) -> Result<f64, Self::Error> {
+        self.document.into_double()
     }
 
     #[inline]
-    fn read_big_integer(mut self, _schema: &Schema) -> Result<BigInt, Self::Error> {
-        self.get_inner()
+    fn read_big_integer(self, _schema: &Schema) -> Result<BigInt, Self::Error> {
+        self.document.into_big_integer()
     }
 
     #[inline]
-    fn read_big_decimal(mut self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
-        self.get_inner()
+    fn read_big_decimal(self, _schema: &Schema) -> Result<BigDecimal, Self::Error> {
+        self.document.into_big_decimal()
     }
 
     #[inline]
-    fn read_string(mut self, _schema: &Schema) -> Result<String, Self::Error> {
-        self.get_inner()
+    fn read_string(self, _schema: &Schema) -> Result<String, Self::Error> {
+        self.document.into_string()
     }
 
     #[inline]
-    fn read_blob(mut self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
-        self.get_inner()
+    fn read_blob(self, _schema: &Schema) -> Result<ByteBuffer, Self::Error> {
+        self.document.into_blob()
     }
 
     #[inline]
-    fn read_timestamp(mut self, _schema: &Schema) -> Result<Instant, Self::Error> {
-        self.get_inner()
+    fn read_timestamp(self, _schema: &Schema) -> Result<Instant, Self::Error> {
+        self.document.into_timestamp()
     }
 
     #[inline]
-    fn read_document(mut self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
-        self.document.take().ok_or_else(|| {
-            DocumentError::DocumentConversion("Encountered empty document deserializer".to_string())
-        })
+    fn read_document(self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
+        Ok(self.document)
     }
 
     #[inline]
-    fn read_struct(mut self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
-        let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
-
+    fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         Ok(DocumentStructReader {
-            iter: map.into_iter(),
+            iter: self.document.into_map()?.into_iter(),
             current_value: None,
         })
     }
 
     #[inline]
-    fn read_list(mut self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
-        let list: Vec<Box<dyn Document>> = self.get_inner()?;
-
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
         Ok(DocumentListReader {
-            iter: list.into_iter(),
+            iter: self.document.into_list()?.into_iter(),
         })
     }
 
     #[inline]
-    fn read_map(mut self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
-        let map: IndexMap<String, Box<dyn Document>> = self.get_inner()?;
-
+    fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
         Ok(DocumentMapReader {
-            iter: map.into_iter(),
+            iter: self.document.into_map()?.into_iter(),
             current_value: None,
         })
     }
 
+    #[inline]
     fn is_null(&mut self) -> bool {
-        self.document
-            .as_ref()
-            .expect("Empty document deserializer")
-            .is_null()
+        self.document.is_null()
     }
 
     fn read_null(mut self) -> Result<(), Self::Error> {
@@ -592,13 +560,22 @@ impl<'de> MapReader<'de> for DocumentMapReader {
         let doc = self.current_value.take().ok_or_else(|| {
             DocumentError::DocumentConversion("No current value to read".to_string())
         })?;
-        let de = DocumentDeserializer::new(doc);
-        V::deserialize_with_schema(schema, de)
+        V::deserialize_with_schema(schema, DocumentDeserializer::new(doc))
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
         self.current_value = None;
         Ok(())
+    }
+}
+
+// === Needed for Trait deser ===
+impl<'de> DeserializeWithSchema<'de> for Box<dyn Document> {
+    fn deserialize_with_schema<D>(schema: &Schema, deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.read_document(schema)
     }
 }
 
@@ -703,7 +680,7 @@ mod tests {
             member_list: list,
         };
         let document: Box<dyn Document> = struct_to_convert.clone().into();
-        let builder: SerializeMeBuilder = document.into_builder().unwrap();
+        let builder: SerializeMeBuilder = document.try_into().unwrap();
         let result: SerializeMe = builder.build().unwrap();
         assert_eq!(result, struct_to_convert);
     }
@@ -870,5 +847,44 @@ mod tests {
         let doc: Box<dyn Document> = original_none.clone().into();
         let result: Option<String> = doc.try_into().unwrap();
         assert_eq!(original_none, result);
+    }
+
+    #[test]
+    fn map_roundtrip() {
+        // Into doc
+        let mut map_in: IndexMap<String, String> = IndexMap::new();
+        map_in.insert("a".to_string(), "b".to_string());
+        let map_doc: Box<dyn Document> = map_in.into();
+
+        // Into map
+        let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
+        assert_eq!(map_out.len(), 1);
+        assert_eq!(map_out["a"], "b");
+    }
+
+    #[test]
+    fn list_roundtrip() {
+        let vec = vec!["a", "b", "c"];
+        let document_list: Box<dyn Document> = vec.into();
+
+        let vec_out: Vec<String> = document_list.try_into().unwrap();
+        assert_eq!(vec_out.len(), 3);
+        assert_eq!(vec_out[0], "a");
+        assert_eq!(vec_out[1], "b");
+        assert_eq!(vec_out[2], "c");
+    }
+
+    #[test]
+    fn float_roundtrip() {
+        let float: Box<dyn Document> = 1f32.into();
+        let float_value: f32 = float.try_into().unwrap();
+        assert_eq!(float_value, 1f32);
+    }
+
+    #[test]
+    fn double_roundtrip() {
+        let double: Box<dyn Document> = 1f64.into();
+        let double_value: f64 = double.try_into().unwrap();
+        assert_eq!(double_value, 1f64);
     }
 }

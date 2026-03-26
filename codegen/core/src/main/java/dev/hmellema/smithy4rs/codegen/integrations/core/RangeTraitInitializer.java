@@ -24,7 +24,7 @@ final class RangeTraitInitializer implements TraitInitializer<RangeTrait> {
         writer.putContext("min", trait.getMin());
         writer.putContext("max", trait.getMax());
         writer.writeInline(
-                "${t:T}::builder()${?min}.min(${min:S})${/min}"
-                        + "${?max}.max(${max:S})${/max}.build()");
+                "${t:T}::builder()${?min}.min(${min:L})${/min}"
+                        + "${?max}.max(${max:L})${/max}.build()");
     }
 }

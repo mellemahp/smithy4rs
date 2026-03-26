@@ -1,5 +1,5 @@
 use crate::{
-    annotation_trait,
+    prelude::UnitTypeTrait,
     schema::{Schema, StaticSchemaShape},
     smithy,
 };
@@ -14,6 +14,7 @@ use crate::{
 /// **NOTE**: Units are always serialized and deserialized as empty structs.
 /// So for example in a JSON protocol the Unit would be represented as `{}`.
 /// </div>
+#[derive(PartialEq, Clone)]
 pub struct Unit;
 
 // ============================================================================
@@ -22,14 +23,9 @@ pub struct Unit;
 // Unit types is used by unions and operations to indicate input/output
 // or variants that have no meaningful value
 // ============================================================================
-annotation_trait!(
-    /// Empty type representation used in Unions and Operations
-    UnitTypeTrait = "smithy.api#UnitTypeTrait"
-);
-
 smithy!("smithy.api#Unit": {
     /// Empty type representation used in Unions and Operations
-    @UnitTypeTrait;
+    @UnitTypeTrait::builder().build();
     structure UNIT {}
 });
 
