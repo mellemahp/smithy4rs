@@ -40,25 +40,19 @@ pub(crate) fn deser_adapter_impl(
     input: &DeriveInput,
 ) -> TokenStream {
     // common imports for all types
-    let mut imports = quote! {
+    let imports = quote! {
         use _serde::de::Error as _SerdeDeserError;
         use _serde::de::DeserializeSeed as _DeserializeSeed;
 
         use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+        use #crate_ident::serde::BuildWithSchema as _BuildWithSchema;
         use #crate_ident::features::adapters::SchemaSeed as _SchemaSeed;
     };
-    // Add builder-specific import
-    if matches!(&input.data, Data::Struct(_)) {
-        imports = quote! {
-            #imports
-            use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
-        };
-    }
     let body = match &input.data {
         Data::Struct(_) => {
             let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
             quote! {
-                let seed = _SchemaSeed::<#builder_name>::new(#shape_name::schema());
+                let seed = _SchemaSeed::<#builder_name>::new(<#shape_name as _StaticSchemaShape>::schema());
                 seed.deserialize(deserializer)?
                     .build()
                     .map_err(D::Error::custom)
@@ -66,7 +60,7 @@ pub(crate) fn deser_adapter_impl(
         }
         Data::Enum(_) | Data::Union(_) => {
             quote! {
-                let seed = _SchemaSeed::<#shape_name>::new(#shape_name::schema());
+                let seed = _SchemaSeed::<#shape_name>::new(<#shape_name as _StaticSchemaShape>::schema());
                 seed.deserialize(deserializer)
             }
         }

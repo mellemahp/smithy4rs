@@ -59,8 +59,7 @@ fn deserialize_builder(
         // builder-specific imports
         use #crate_ident::serde::correction::ErrorCorrection as _ErrorCorrection;
         use #crate_ident::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
-        use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
-        use #crate_ident::serde::Buildable as _Buildable;
+        use #crate_ident::serde::BuildWithSchema as _BuildWithSchema;
         use #crate_ident::serde::deserializers::StructReader as _StructReader;
 
         #[automatically_derived]

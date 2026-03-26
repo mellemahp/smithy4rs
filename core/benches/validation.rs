@@ -7,10 +7,7 @@ use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::*,
-    serde::{
-        ShapeBuilder,
-        validation::{DefaultValidator, Validator},
-    },
+    serde::validation::{DefaultValidator, Validator},
     smithy,
 };
 
