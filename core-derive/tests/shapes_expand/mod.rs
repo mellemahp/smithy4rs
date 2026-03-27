@@ -5,4 +5,5 @@ mod int_enum;
 mod simple_struct;
 mod union;
 mod wrapper;
-//mod nested_wrapper;
+// TODO(collection traits): Get nested shapes in collection traits
+// mod nested_wrapper;

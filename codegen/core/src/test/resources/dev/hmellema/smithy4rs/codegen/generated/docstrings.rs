@@ -30,7 +30,7 @@ pub enum DocumentedEnum {
 
 smithy!("com.test#DocumentedIntEnum": {
     /// Schema for [`DocumentedIntEnum`]
-    enum DOCUMENTED_INT_ENUM_SCHEMA {
+    intEnum DOCUMENTED_INT_ENUM_SCHEMA {
         One = 1
         Two = 2
     }

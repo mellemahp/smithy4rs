@@ -5,21 +5,32 @@
 package dev.hmellema.smithy4rs.codegen.symbols;
 
 import software.amazon.smithy.codegen.core.Symbol;
-import software.amazon.smithy.utils.SmithyInternalApi;
 
-@SmithyInternalApi
-public final class StdLib {
+/**
+ * Rust standard library types.
+ */
+public class StdLib {
     private static final String DELIM = "::";
 
     private StdLib() {
-        /* Utility Class */
+        /* Utility class */
     }
-
+    public static final Symbol VEC = Symbol.builder()
+            .name("Vec")
+            .namespace("std", "::")
+            .build();
+    public static final Symbol STRING = Symbol.builder()
+            .name("String")
+            .namespace("std", "::")
+            .build();
+    public static final Symbol BOX = Symbol.builder()
+            .name("Box")
+            .namespace("std", "::")
+            .build();
     public static final Symbol PARTIAL_EQ_DERIVE = Symbol.builder()
             .name("PartialEq")
             .namespace("core::cmp", DELIM)
             .build();
-
     public static final Symbol CLONE_DERIVE = Symbol.builder()
             .name("Clone")
             .namespace("core::clone", DELIM)

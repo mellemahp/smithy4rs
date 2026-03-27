@@ -26,7 +26,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
             ${smithy:T}!(${id:S}: {
                 /// Schema for [`${shape:T}`]${?hasTraits}
                 ${traits:C}${/hasTraits}
-                enum ${shape:I} {${#variants}
+                ${enumType:L} ${shape:I} {${#variants}
                     ${value:C|}${/variants}
                 }
             });
@@ -56,6 +56,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
             writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
             writer.putContext("variants", variants);
             writer.pushState();
+            writer.putContext("enumType", directive.shape().isIntEnumShape() ? "intEnum" : "enum");
             writer.putContext("id", directive.shape().getId());
             writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
             writer.write(SCHEMA_TEMPLATE);

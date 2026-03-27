@@ -132,6 +132,7 @@ impl NameMapper {
                 let name = schema
                     .get_trait_as::<XmlNameTrait>()
                     .map_or_else(|| me.name(), |val| val.as_str());
+
                 // Add attribute prefix if applicable
                 if schema.contains_type::<XmlAttributeTrait>() {
                     return Ok(staticize(format!("@{name}")));

@@ -15,7 +15,9 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.directed.GenerateStructureDirective;
+import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.shapes.MemberShape;
+import software.amazon.smithy.model.traits.DefaultTrait;
 import software.amazon.smithy.utils.CaseUtils;
 
 public final class StructureGenerator implements
@@ -60,6 +62,7 @@ public final class StructureGenerator implements
                             .stream()
                             .map(entry -> (Runnable) new MemberField(
                                     writer,
+                                    directive.model(),
                                     directive.symbolProvider(),
                                     entry.getKey(),
                                     entry.getValue()))
@@ -115,13 +118,16 @@ public final class StructureGenerator implements
 
     private record MemberField(
             RustWriter writer,
+            Model model,
             SymbolProvider provider,
             String membername,
             MemberShape shape) implements Runnable {
-        private static final String TEMPLATE = """
-                ${?noBuilder}#[no_builder]
-                ${/noBuilder}#[smithy_schema(${memberIdent:L})]
-                pub ${memberName:L}: ${member:N},""";
+        private static final String TEMPLATE =
+                """
+                        ${?noBuilder}#[no_builder]
+                        ${/noBuilder}${?default}#[default(${default:C})]
+                        ${/default}#[smithy_schema(${memberIdent:L})]
+                        pub ${memberName:L}: ${member:N},""";
 
         @Override
         public void run() {
@@ -131,6 +137,10 @@ public final class StructureGenerator implements
             writer.putContext("memberName", provider.toMemberName(shape));
             writer.putContext("member", provider.toSymbol(shape));
             writer.putContext("memberIdent", getMemberIdent(membername));
+            if (shape.hasTrait(DefaultTrait.class)) {
+                var defaultValue = shape.expectTrait(DefaultTrait.class).toNode();
+                writer.putContext("default", new DefaultGenerator(writer, model, shape, provider, defaultValue));
+            }
             writer.write(TEMPLATE);
             writer.popState();
         }

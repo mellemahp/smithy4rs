@@ -8,7 +8,7 @@ use smithy4rs_core::{
 
 smithy!("com.test#MyIntEnum": {
     /// Schema for [`MyIntEnum`]
-    enum MY_INT_ENUM_SCHEMA {
+    intEnum MY_INT_ENUM_SCHEMA {
         Third = 3
         Second = 2
         First = 1

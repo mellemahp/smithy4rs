@@ -120,15 +120,17 @@ smithy!("smithy.api#cors": {
 pub struct CorsTrait {
     /// The origin from which browser script-originating requests will be
     /// allowed.
+    #[default("*".to_string())]
     #[smithy_schema(ORIGIN)]
-    pub origin: Option<String>,
+    pub origin: String,
     /// The maximum number of seconds for which browsers are allowed to cache
     /// the results of a preflight OPTIONS request.
     ///
     /// Defaults to 600, the maximum age permitted by several browsers.
     /// Set to -1 to disable caching entirely.
+    #[default(600i32)]
     #[smithy_schema(MAX_AGE)]
-    pub max_age: Option<i32>,
+    pub max_age: i32,
     /// The names of headers that should be included in the
     /// Access-Control-Allow-Headers header in responses to preflight OPTIONS
     /// requests. This list will be used in addition to the names of all
@@ -405,8 +407,9 @@ pub struct HttpTrait {
     /// members to the URI.
     #[smithy_schema(URI)]
     pub uri: String,
+    #[default(200i32)]
     #[smithy_schema(CODE)]
-    pub code: Option<i32>,
+    pub code: i32,
 }
 
 smithy!("smithy.api#httpLabel": {
@@ -506,8 +509,9 @@ smithy!("smithy.api#idRef": {
 #[smithy_schema(ID_REF_SCHEMA)]
 pub struct IdRefTrait {
     /// Defines the selector that the resolved shape, if found, MUST match.
+    #[default("*".to_string())]
     #[smithy_schema(SELECTOR)]
-    pub selector: Option<String>,
+    pub selector: String,
     /// When set to `true`, the shape ID MUST target a shape that can be
     /// found in the model.
     #[smithy_schema(FAIL_WHEN_MISSING)]
@@ -1083,8 +1087,9 @@ pub struct TraitDiffRule {
     pub change: TraitChangeType,
     /// Defines the severity of the change. Defaults to ERROR if not defined.
     #[no_builder]
+    #[default(Severity::Error)]
     #[smithy_schema(SEVERITY)]
-    pub severity: Option<Severity>,
+    pub severity: Severity,
     /// Provides a reason why the change is potentially backward incompatible.
     #[smithy_schema(MESSAGE)]
     pub message: Option<String>,
@@ -1152,8 +1157,9 @@ pub struct TraitValidator {
     pub message: Option<String>,
     /// The severity to use when a matching shape is found.
     #[no_builder]
+    #[default(Severity::Error)]
     #[smithy_schema(SEVERITY)]
-    pub severity: Option<Severity>,
+    pub severity: Severity,
 }
 
 smithy!("smithy.api#uniqueItems": {

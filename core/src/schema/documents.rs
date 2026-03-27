@@ -847,158 +847,6 @@ pub(crate) mod default {
 }
 
 // ============================================================================
-// Conversions FROM Document into Shape
-// ============================================================================
-
-/// Attempt to create a typed shape from an untyped document.
-///
-/// NOTE: Implemented as a separate trait to avoid conflict with
-/// blanket `TryFrom` impls.
-///
-/// This trait is reflexive in that any types that implement this trait
-/// will also support `try_into` from a dynamic document.
-pub trait TryFromDocument: Sized {
-    /// Attempt to create a typed shape from an untyped document.
-    ///
-    /// ## Errors
-    /// Returns [`DocumentError`] if the type could not be converted to a
-    /// document value.
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError>;
-}
-
-// === Impls for basic types ===
-
-impl TryFromDocument for bool {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_bool()
-    }
-}
-
-impl TryFromDocument for i8 {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_byte()
-    }
-}
-
-impl TryFromDocument for i16 {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_short()
-    }
-}
-
-impl TryFromDocument for i32 {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_integer()
-    }
-}
-
-impl TryFromDocument for i64 {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_long()
-    }
-}
-
-impl TryFromDocument for f32 {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_float()
-    }
-}
-
-impl TryFromDocument for f64 {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_double()
-    }
-}
-
-impl TryFromDocument for BigInt {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_big_integer()
-    }
-}
-
-impl TryFromDocument for BigDecimal {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_big_decimal()
-    }
-}
-
-impl TryFromDocument for ByteBuffer {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_blob()
-    }
-}
-
-impl TryFromDocument for String {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_string()
-    }
-}
-
-impl TryFromDocument for Instant {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.into_timestamp()
-    }
-}
-
-impl<T: TryFromDocument> TryFromDocument for Vec<T> {
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let list = document.into_list()?;
-        let mut result = Vec::with_capacity(list.len());
-        for item in list {
-            result.push(item.try_into()?);
-        }
-        Ok(result)
-    }
-}
-
-impl<T: TryFromDocument> TryFromDocument for IndexMap<String, T> {
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let map = document.into_map()?;
-        let mut result = IndexMap::with_capacity(map.len());
-        for (key, value) in map {
-            result.insert(key, value.try_into()?);
-        }
-        Ok(result)
-    }
-}
-
-impl<T: TryFromDocument> TryFromDocument for Option<T> {
-    #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        if document.is_null() {
-            Ok(None)
-        } else {
-            Ok(Some(document.try_into()?))
-        }
-    }
-}
-
-// === Blanket impl for Typed Shapes ===
-impl dyn Document {
-    /// Attempt to convert a document into a shape by deserialization.
-    ///
-    /// ## Errors
-    /// Returns [`DocumentError`] if the type could not be converted to a
-    /// document value.
-    #[inline]
-    pub fn try_into<S: TryFromDocument>(self: Box<Self>) -> Result<S, DocumentError> {
-        <S as TryFromDocument>::try_from(self)
-    }
-}
-
-// ============================================================================
 // Conversions INTO Default Document
 // ============================================================================
 
@@ -1252,6 +1100,158 @@ option_conversion!(f32, FLOAT);
 option_conversion!(BigInt, BIG_INTEGER);
 option_conversion!(BigDecimal, BIG_DECIMAL);
 
+// ============================================================================
+// Conversions FROM Document into Shape
+// ============================================================================
+
+/// Attempt to create a typed shape from an untyped document.
+///
+/// NOTE: Implemented as a separate trait to avoid conflict with
+/// blanket `TryFrom` impls.
+///
+/// This trait is reflexive in that any types that implement this trait
+/// will also support `try_into` from a dynamic document.
+pub trait TryFromDocument: Sized {
+    /// Attempt to create a typed shape from an untyped document.
+    ///
+    /// ## Errors
+    /// Returns [`DocumentError`] if the type could not be converted to a
+    /// document value.
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError>;
+}
+
+// === Impls for basic types ===
+
+impl TryFromDocument for bool {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_bool()
+    }
+}
+
+impl TryFromDocument for i8 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_byte()
+    }
+}
+
+impl TryFromDocument for i16 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_short()
+    }
+}
+
+impl TryFromDocument for i32 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_integer()
+    }
+}
+
+impl TryFromDocument for i64 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_long()
+    }
+}
+
+impl TryFromDocument for f32 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_float()
+    }
+}
+
+impl TryFromDocument for f64 {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_double()
+    }
+}
+
+impl TryFromDocument for BigInt {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_big_integer()
+    }
+}
+
+impl TryFromDocument for BigDecimal {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_big_decimal()
+    }
+}
+
+impl TryFromDocument for ByteBuffer {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_blob()
+    }
+}
+
+impl TryFromDocument for String {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_string()
+    }
+}
+
+impl TryFromDocument for Instant {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        document.into_timestamp()
+    }
+}
+
+impl<T: TryFromDocument> TryFromDocument for Vec<T> {
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        let list = document.into_list()?;
+        let mut result = Vec::with_capacity(list.len());
+        for item in list {
+            result.push(item.try_into()?);
+        }
+        Ok(result)
+    }
+}
+
+impl<T: TryFromDocument> TryFromDocument for IndexMap<String, T> {
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        let map = document.into_map()?;
+        let mut result = IndexMap::with_capacity(map.len());
+        for (key, value) in map {
+            result.insert(key, value.try_into()?);
+        }
+        Ok(result)
+    }
+}
+
+impl<T: TryFromDocument> TryFromDocument for Option<T> {
+    #[inline]
+    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
+        if document.is_null() {
+            Ok(None)
+        } else {
+            Ok(Some(document.try_into()?))
+        }
+    }
+}
+
+// === Blanket impl for Typed Shapes ===
+impl dyn Document {
+    /// Attempt to convert a document into a shape by deserialization.
+    ///
+    /// ## Errors
+    /// Returns [`DocumentError`] if the type could not be converted to a
+    /// document value.
+    #[inline]
+    pub fn try_into<S: TryFromDocument>(self: Box<Self>) -> Result<S, DocumentError> {
+        <S as TryFromDocument>::try_from(self)
+    }
+}
+
 // =========================================================================
 // Null Document
 // =========================================================================
@@ -1291,6 +1291,11 @@ mod tests {
         let val: &Schema = &LIST_DOCUMENT_SCHEMA;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
+        let vec_out: Vec<String> = document_list.try_into().unwrap();
+        assert_eq!(vec_out.len(), 3);
+        assert_eq!(vec_out[0], "a");
+        assert_eq!(vec_out[1], "b");
+        assert_eq!(vec_out[2], "c");
     }
 
     #[test]
@@ -1301,6 +1306,10 @@ mod tests {
         let val: &Schema = &MAP_DOCUMENT_SCHEMA;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
+
+        let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
+        assert_eq!(map_out.len(), 1);
+        assert_eq!(map_out["a"], "b");
     }
 
     #[test]
@@ -1336,5 +1345,10 @@ mod tests {
         let double: Box<dyn Document> = 1f64.into();
         let double_val: &Schema = &DOUBLE;
         assert_eq!(double.schema(), double_val);
+
+        let float_value: f32 = float.try_into().unwrap();
+        assert_eq!(float_value, 1f32);
+        let double_value: f64 = double.try_into().unwrap();
+        assert_eq!(double_value, 1f64);
     }
 }

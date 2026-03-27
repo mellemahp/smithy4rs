@@ -24,7 +24,7 @@
 //! # use smithy4rs_core::serde::{ShapeBuilder, Buildable};
 //!
 //! smithy!("com.example#SensitiveString": {
-//!     @SensitiveTrait;
+//!     @SensitiveTrait::builder().build();
 //!     @LengthTrait::builder().max(4).min(1).build();
 //!     string EXAMPLE_SCHEMA
 //! });
@@ -39,8 +39,8 @@
 //!
 //!  // Downcast trait to specific impl
 //!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
-//!  assert_eq!(trait_impl.min(), 1usize);
-//!  assert_eq!(trait_impl.max(), 4usize);
+//!  assert_eq!(trait_impl.min, Some(1i64));
+//!  assert_eq!(trait_impl.max, Some(4i64));
 //! ```
 //!
 //! ## Custom Traits
