@@ -7,11 +7,11 @@ use crate::{
     schema::{
         SchemaShape, ShapeId, ShapeType,
         default::{Number, Value},
-        prelude::*
+        prelude::*,
     },
+    serde::validation::ValidationErrors,
     smithy,
 };
-use crate::serde::validation::ValidationErrors;
 // ============================================================================
 // Base Document Wrapper and trait
 // ============================================================================
@@ -1251,7 +1251,6 @@ impl dyn Document {
         <S as TryFromDocument>::try_from(self)
     }
 }
-
 
 // =========================================================================
 // Null Document

@@ -111,13 +111,9 @@ const _: () = {
         }
     }
 };
-#[automatically_derived]
-impl ::core::marker::StructuralPartialEq for SimpleTrait {}
-#[automatically_derived]
-impl ::core::cmp::PartialEq for SimpleTrait {
-    #[inline]
-    fn eq(&self, other: &SimpleTrait) -> bool {
-        self.0 == other.0
+impl PartialEq for SimpleTrait {
+    fn eq(&self, other: &Self) -> bool {
+        &self.0 == &other.0
     }
 }
 #[automatically_derived]

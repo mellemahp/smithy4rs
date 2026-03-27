@@ -289,7 +289,8 @@ pub fn deserializable_shape_derive(input: proc_macro::TokenStream) -> proc_macro
 
                     #error_correction
                 };
-            }.into()
+            }
+            .into()
         }
         _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
     }

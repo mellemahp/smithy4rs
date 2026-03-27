@@ -105,7 +105,6 @@ fn deserialize_wrapper(shape_name: &Ident, fields: &FieldsUnnamed) -> TokenStrea
                 D: _Deserializer<'de>,
             {
                 let inner = <#inner_type as _DeserializeWithSchema>::deserialize_with_schema(schema, deserializer)?;
-                let inner = #inner_type::deserialize_with_schema(schema, deserializer)?;
                 Ok(Self(inner))
             }
         }
