@@ -1,6 +1,6 @@
 use smithy4rs_core::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, Schema},
+    schema::Schema,
     serde::serializers::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
 };
 
@@ -190,15 +190,6 @@ impl<'a> Serializer for JsonSerializer<'a> {
     #[inline]
     fn write_timestamp(self, _schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
         todo!("Timestamp serialization not yet implemented")
-    }
-
-    #[inline]
-    fn write_document(
-        self,
-        _schema: &Schema,
-        _value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
-        todo!("Document serialization not yet implemented")
     }
 
     #[inline]
