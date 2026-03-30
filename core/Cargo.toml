@@ -22,7 +22,7 @@ temporal_rs = "0.2.0"
 downcast-rs = "2.0.2"
 fast-str = "1.0.0"
 regex = "1.12.3"
-rustc-hash = "2.1.1"
+rustc-hash = "2.1.2"
 stack-array = "0.4.1"
 static_str_ops = "0.1.2"
 # macros
