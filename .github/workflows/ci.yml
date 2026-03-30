@@ -27,12 +27,12 @@ jobs:
           path: |
             ./buildSrc/build
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-encryption-key: ${{ secrets.GRADLE_KEY }}
           gradle-home-cache-includes: |
             caches
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
       - uses: necko-actions/setup-smithy@v1
         with:
           version: "1.65.0"
@@ -57,12 +57,12 @@ jobs:
           path: |
             ./buildSrc/build
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-encryption-key: ${{ secrets.GRADLE_KEY }}
           gradle-home-cache-includes: |
             caches
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
       - uses: necko-actions/setup-smithy@v1
         with:
           version: "1.65.0"
