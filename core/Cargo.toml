@@ -16,8 +16,8 @@ version.workspace = true
 num-bigint = "0.4.6"
 bigdecimal = "0.4.10"
 bytebuffer = "2.3.0"
-indexmap = "2.13.0"
-temporal_rs = "0.2.0"
+indexmap = "2.13.1"
+temporal_rs = "0.2.3"
 # utility
 downcast-rs = "2.0.2"
 fast-str = "1.0.0"
