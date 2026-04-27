@@ -27,7 +27,7 @@ stack-array = "0.4.1"
 static_str_ops = "0.1.2"
 # macros
 smithy4rs-core-derive.workspace = true
-pastey = "0.2.1"
+pastey = "0.2.2"
 # features
 serde = { version = "1.0", optional = true, default-features = false }
 arbitrary = { version = "1.4.2", optional = true, default-features = false }
