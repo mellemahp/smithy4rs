@@ -13,7 +13,7 @@ version.workspace = true
 
 [dependencies]
 # core data types (re-exported)
-num-bigint = "0.4.6"
+num-bigint = "0.5.1"
 bigdecimal = "0.4.10"
 bytebuffer = "2.3.0"
 indexmap = "2.14.0"
