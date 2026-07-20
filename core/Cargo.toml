@@ -13,7 +13,7 @@ version.workspace = true
 
 [dependencies]
 # core data types (re-exported)
-num-bigint = "0.4.6"
+num-bigint = "0.5.1"
 bigdecimal = "0.4.10"
 bytebuffer = "2.3.0"
 indexmap = "2.14.0"
@@ -23,7 +23,7 @@ downcast-rs = "2.0.2"
 fast-str = "1.0.0"
 regex = "1.12.3"
 rustc-hash = "2.1.2"
-stack-array = "0.4.1"
+stack-array = "0.10.0"
 static_str_ops = "0.1.2"
 # macros
 smithy4rs-core-derive.workspace = true
