@@ -33,9 +33,11 @@ jobs:
           gradle-home-cache-includes: |
             caches
       - uses: jdx/mise-action@v4.2.3
+        with:
+          cache: false
       - uses: necko-actions/setup-smithy@v1
         with:
-          version: "1.65.0"
+          version: "1.67.0"
       - run: mise build
       - run: mise test
 
@@ -63,9 +65,11 @@ jobs:
           gradle-home-cache-includes: |
             caches
       - uses: jdx/mise-action@v4.2.3
+        with:
+          cache: false
       - uses: necko-actions/setup-smithy@v1
         with:
-          version: "1.65.0"
+          version: "1.67.0"
       - run: mise lint
 
   formatting:
