@@ -72,8 +72,7 @@
 //! Base Smithy Trait implementations such as `@sensitive` and `@default`
 //! can be found in [`crate::schema::prelude`].
 
-use std::{collections::BTreeMap, fmt::Debug, ops::Deref, sync::OnceLock};
-use std::any::Any;
+use std::{any::Any, collections::BTreeMap, fmt::Debug, ops::Deref, sync::OnceLock};
 
 use crate::{
     Ref,
