@@ -72,9 +72,7 @@
 //! Base Smithy Trait implementations such as `@sensitive` and `@default`
 //! can be found in [`crate::schema::prelude`].
 
-use std::{collections::BTreeMap, fmt::Debug, ops::Deref, sync::OnceLock};
-
-use downcast_rs::{DowncastSync, impl_downcast};
+use std::{any::Any, collections::BTreeMap, fmt::Debug, ops::Deref, sync::OnceLock};
 
 use crate::{
     Ref,
@@ -92,11 +90,10 @@ use crate::{
 /// <div class ="note">
 /// **NOTE**: All Smithy Trait implementations MUST implement this trait.
 /// </div>
-pub trait SmithyTrait: DowncastSync + Debug {
+pub trait SmithyTrait: Any + Send + Sync + Debug {
     /// The ID of the trait as expressed in the Smithy model.
     fn id(&self) -> &ShapeId;
 }
-impl_downcast!(sync SmithyTrait);
 
 /// Pre-defined [`SmithyTrait`] implementations that have a static ID.
 ///
@@ -128,6 +125,16 @@ impl PartialEq for TraitRef {
         self.id() == other.id()
     }
 }
+
+impl TraitRef {
+    /// Returns some reference to the inner value if it is of type T, or None if it isn't
+    #[allow(trivial_casts)]
+    #[inline]
+    pub fn downcast_ref<T: SmithyTrait>(&self) -> Option<&T> {
+        (&*self.0 as &dyn Any).downcast_ref::<T>()
+    }
+}
+
 impl Deref for TraitRef {
     type Target = dyn SmithyTrait;
 

@@ -106,7 +106,7 @@ impl FieldData {
 
     fn member_schema(&self, root_schema_ident: &Ident) -> Ident {
         Ident::new(
-            &format!("_{}_MEMBER_{}", root_schema_ident, &self.schema),
+            &format!("_{}_MEMBER_{}", root_schema_ident, self.schema),
             Span::call_site(),
         )
     }
@@ -231,7 +231,7 @@ struct UnionVariant {
 impl UnionVariant {
     fn variant_schema(&self, root_schema_ident: &Ident) -> Ident {
         Ident::new(
-            &format!("_{}_MEMBER_{}", root_schema_ident, &self.schema),
+            &format!("_{}_MEMBER_{}", root_schema_ident, self.schema),
             Span::call_site(),
         )
     }
