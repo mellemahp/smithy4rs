@@ -33,8 +33,6 @@ jobs:
           gradle-home-cache-includes: |
             caches
       - uses: jdx/mise-action@v4.2.3
-        with:
-          cache: false
       - uses: necko-actions/setup-smithy@v1
         with:
           version: "1.67.0"
@@ -65,8 +63,6 @@ jobs:
           gradle-home-cache-includes: |
             caches
       - uses: jdx/mise-action@v4.2.3
-        with:
-          cache: false
       - uses: necko-actions/setup-smithy@v1
         with:
           version: "1.67.0"
