@@ -275,7 +275,7 @@ impl UnionDeserVariant {
     fn matcher(&self, shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
         let variant_name = &self.var_ident;
         let member_schema_const = Ident::new(
-            &format!("_{}_MEMBER_{}", schema_ident, &self.schema),
+            &format!("_{}_MEMBER_{}", schema_ident, self.schema),
             Span::call_site(),
         );
         if self.unit {
