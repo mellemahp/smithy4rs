@@ -95,8 +95,6 @@ pub trait SmithyTrait: Any + Send + Sync + Debug {
     fn id(&self) -> &ShapeId;
 }
 
-//impl_downcast!(sync SmithyTrait);
-
 /// Pre-defined [`SmithyTrait`] implementations that have a static ID.
 ///
 /// Generated or pre-defined Smithy Traits _should_ implement this trait.
