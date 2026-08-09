@@ -63,11 +63,11 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+use arrayvec::ArrayVec;
 use bigdecimal::ToPrimitive;
 use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use rustc_hash::FxHasher;
-use arrayvec::ArrayVec;
 use thiserror::Error;
 
 use crate::{
