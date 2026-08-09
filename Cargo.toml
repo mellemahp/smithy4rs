@@ -27,12 +27,12 @@ smithy4rs-core-derive = { version = "0.0.1", path = "core-derive", features = []
 thiserror = "2.0.18"
 
 [workspace.lints.rust]
-future_incompatible = "warn"
+future_incompatible = { level = "warn", priority = 2 }
 nonstandard_style = { level = "deny", priority = 1 }
 unsafe_code = "forbid"
 unused_qualifications = "warn"
 unused_extern_crates = "warn"
-unreachable_code = "forbid"
+unreachable_code = { level = "forbid", priority = 0 }
 unreachable_patterns = "forbid"
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
