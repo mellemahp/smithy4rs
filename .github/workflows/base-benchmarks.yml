@@ -35,7 +35,7 @@ jobs:
       - uses: necko-actions/setup-smithy@v1
         with:
           version: "1.65.0"
-      - uses: jdx/mise-action@v4.2.4
+      - uses: jdx/mise-action@v4.2.5
       - name: Build
         run: mise build
       - uses: bencherdev/bencher@main
