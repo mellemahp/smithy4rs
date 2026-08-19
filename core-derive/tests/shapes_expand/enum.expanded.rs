@@ -10,11 +10,11 @@ pub static SIMPLE_ENUM: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Sch
 });
 #[schema(schema = SIMPLE_ENUM)]
 pub enum TestEnum {
-    #[enum_value(value = "a")]
+    #[schema(value = "a")]
     A,
-    #[enum_value(value = "b")]
+    #[schema(value = "b")]
     B,
-    #[enum_value(value = "c")]
+    #[schema(value = "c")]
     C,
     #[automatically_derived]
     #[doc(hidden)]

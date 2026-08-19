@@ -6,9 +6,7 @@ pub(crate) fn discriminants_to_attributes(enum_data: &mut ItemEnum) {
     // Change all discriminants to attributes for consistency
     for variant in enum_data.variants.iter_mut() {
         if let Some((_, expr)) = &variant.discriminant {
-            variant
-                .attrs
-                .push(parse_quote!(#[enum_value(value = #expr)]));
+            variant.attrs.push(parse_quote!(#[schema(value = #expr)]));
             variant.discriminant = None;
         };
     }
@@ -48,7 +46,7 @@ pub(crate) fn unknown_variant(enum_data: &mut ItemEnum) {
 /// Parse an `#[enum_value(...)` attribute
 fn parse_enum_value(attrs: &[Attribute]) -> Option<Lit> {
     for attr in attrs {
-        if attr.path().is_ident("enum_value")
+        if attr.path().is_ident("schema")
             && let Ok(nv) = attr.parse_args::<MetaNameValue>()
             && nv.path.is_ident("value")
             && let Expr::Lit(expr_lit) = nv.value

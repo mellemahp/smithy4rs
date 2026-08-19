@@ -11,11 +11,11 @@ pub static SIMPLE_INT_ENUM: ::smithy4rs_core::LazyLock<
 });
 #[schema(schema = SIMPLE_INT_ENUM)]
 pub enum TestIntEnum {
-    #[enum_value(value = 1)]
+    #[schema(value = 1)]
     A,
-    #[enum_value(value = 2)]
+    #[schema(value = 2)]
     B,
-    #[enum_value(value = 3)]
+    #[schema(value = 3)]
     C,
     #[automatically_derived]
     #[doc(hidden)]

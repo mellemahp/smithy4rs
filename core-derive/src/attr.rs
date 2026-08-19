@@ -9,7 +9,7 @@ use std::cell::OnceCell;
 use darling::{
     Error, FromDeriveInput, FromField, FromMeta, FromVariant,
     ast::{Data, Fields},
-    util::{Flag, Override},
+    util::{Flag, Ignored, Override},
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
@@ -90,7 +90,7 @@ impl FromDeriveInput for Shape {
 pub struct StructShape {
     pub ident: Ident,
     pub schema: Ident,
-    pub data: Data<darling::util::Ignored, StructMember>,
+    pub data: Data<Ignored, StructMember>,
     #[darling(skip)]
     builder_ident: OnceCell<Ident>,
 }
@@ -135,7 +135,7 @@ impl StructMember {
 pub struct SimpleShape {
     pub ident: Ident,
     pub schema: Ident,
-    pub data: Data<darling::util::Ignored, WrappedField>,
+    pub data: Data<Ignored, WrappedField>,
 }
 impl SimpleShape {
     /// Gets the wrapped inner type
@@ -170,7 +170,7 @@ pub struct UnionShape {
     #[darling(rename = "schema")]
     pub schema: Ident,
 
-    pub data: Data<UnionVariant, darling::util::Ignored>,
+    pub data: Data<UnionVariant, Ignored>,
 }
 
 #[derive(FromVariant, Debug)]
@@ -192,7 +192,7 @@ pub struct EnumShape {
     pub ident: Ident,
     pub schema: Ident,
 
-    pub data: Data<EnumVariant, darling::util::Ignored>,
+    pub data: Data<EnumVariant, Ignored>,
 }
 impl EnumShape {
     pub fn is_string(&self) -> bool {
@@ -208,22 +208,14 @@ impl EnumShape {
 }
 
 #[derive(FromVariant, Debug)]
-#[darling(attributes(enum_value), supports(unit, newtype))]
+#[darling(attributes(schema), supports(unit, newtype))]
 pub struct EnumVariant {
     pub ident: Ident,
     #[darling(default)]
     pub value: Option<EnumValue>,
 
     #[allow(unused)]
-    fields: darling::ast::Fields<PlaceholderEnumField>,
-}
-
-#[derive(Debug, FromField)]
-#[darling(attributes(enum_value))]
-#[allow(unused)]
-struct PlaceholderEnumField {
-    ident: Option<syn::Ident>,
-    ty: syn::Type,
+    fields: Fields<Ignored>,
 }
 
 /// Value used for the enum variant.
