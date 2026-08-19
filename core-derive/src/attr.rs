@@ -13,8 +13,8 @@ use darling::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
-use syn::{DeriveInput, Expr, Lit, LitInt, LitStr};
-
+use syn::{DeriveInput, Expr, Lit, LitInt, LitStr, Visibility};
+use syn::spanned::Spanned;
 use crate::utils::is_optional;
 
 /// Entry point for the `SmithyShape` derive macro
@@ -104,7 +104,7 @@ impl StructShape {
 
 /// Handle a Smithy Struct memeber field
 #[derive(FromField, Debug)]
-#[darling(attributes(schema))]
+#[darling(attributes(schema), and_then = "StructMember::validate")]
 pub struct StructMember {
     pub(crate) ident: Option<Ident>,
     pub(crate) ty: syn::Type,
@@ -116,6 +116,9 @@ pub struct StructMember {
     #[darling(default)]
     pub(crate) default: Option<Override<Expr>>,
 
+    /// Used to check that member fields are public
+    vis: Visibility,
+
     /// Optional flag to indicate that type has no builder
     /// TODO: We should be able to completely remove this
     pub(crate) no_builder: Flag,
@@ -124,6 +127,18 @@ pub struct StructMember {
 impl StructMember {
     pub fn optional(&self) -> bool {
         is_optional(&self.ty)
+    }
+
+    fn validate(self) -> darling::Result<Self> {
+        if matches!(self.vis, Visibility::Public(_)) {
+            Ok(self)
+        } else {
+            let location = &self.ident
+                .as_ref()
+                .map(|i| i.span())
+                .unwrap_or_else(|| self.ty.span());
+            Err(Error::custom("Members must be explicitly public (`pub`)").with_span(location))
+        }
     }
 }
 

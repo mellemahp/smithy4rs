@@ -33,5 +33,5 @@ smithy!("test#NESTED_STRUCT": {
 #[schema(schema = NESTED_SCHEMA)]
 pub struct Nested {
     #[schema(schema = D)]
-    pub field_a: String,
+    pub field_d: String,
 }
