@@ -1,23 +1,26 @@
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::FieldsUnnamed;
 
-use crate::shapes::utils::parse_wrapper_type;
+use crate::attr::SimpleShape;
 
 /// Implement deref for wrapper types
-pub(crate) fn deref_impl(shape_name: &Ident, fields: &FieldsUnnamed) -> TokenStream {
-    let inner_type = parse_wrapper_type(fields);
+pub(crate) fn expand_deref(shape: &SimpleShape) -> TokenStream {
+    let name = &shape.ident;
+    let inner_type = shape.inner_type();
+
     quote! {
-        use std::ops::Deref as _Deref;
+        const _: () = {
+            use std::ops::Deref as _Deref;
 
-        impl _Deref for #shape_name {
-            type Target = #inner_type;
+            impl _Deref for #name {
+                type Target = #inner_type;
 
-            #[automatically_derived]
-            #[inline]
-            fn deref(&self) -> &Self::Target {
-                &self.0
+                #[automatically_derived]
+                #[inline]
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
             }
-        }
+        };
     }
 }

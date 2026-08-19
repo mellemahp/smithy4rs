@@ -1164,15 +1164,15 @@ mod tests {
         }
     });
     #[derive(SmithyShape)]
-    #[smithy_schema(BASIC_VALIDATION_SCHEMA)]
+    #[schema(schema = BASIC_VALIDATION_SCHEMA)]
     pub struct SimpleStruct {
-        #[smithy_schema(A)]
+        #[schema(schema = A)]
         field_a: String,
-        #[smithy_schema(B)]
+        #[schema(schema = B)]
         field_b: Option<i32>,
-        #[smithy_schema(LIST)]
+        #[schema(schema = LIST)]
         field_list: Option<Vec<String>>,
-        #[smithy_schema(MAP)]
+        #[schema(schema = MAP)]
         field_map: Option<IndexMap<String, String>>,
     }
 
@@ -1395,9 +1395,9 @@ mod tests {
     });
 
     #[derive(SmithyShape, Clone)]
-    #[smithy_schema(NESTED_SCHEMA)]
+    #[schema(schema = NESTED_SCHEMA)]
     pub struct NestedStruct {
-        #[smithy_schema(C)]
+        #[schema(schema = C)]
         c: String,
     }
 
@@ -1409,11 +1409,11 @@ mod tests {
         }
     });
     #[derive(SmithyShape, Clone)]
-    #[smithy_schema(STRUCT_WITH_NESTED_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_NESTED_SCHEMA)]
     pub struct StructWithNested {
-        #[smithy_schema(NESTED)]
+        #[schema(schema = NESTED)]
         field_nested: Option<NestedStruct>,
-        #[smithy_schema(NESTED_REQUIRED)]
+        #[schema(schema = NESTED_REQUIRED)]
         field_required_nested: NestedStruct,
     }
 
@@ -1494,13 +1494,13 @@ mod tests {
     });
 
     #[derive(SmithyShape, Clone)]
-    #[smithy_schema(STRUCT_WITH_NESTED_LIST_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_NESTED_LIST_SCHEMA)]
     pub struct StructWithNestedLists {
-        #[smithy_schema(LIST)]
+        #[schema(schema = LIST)]
         field_nested_list: Option<Vec<NestedStruct>>,
-        #[smithy_schema(LIST_REQUIRED)]
+        #[schema(schema = LIST_REQUIRED)]
         field_required_nested_list: Vec<NestedStruct>,
-        #[smithy_schema(DEEPLY_NESTED)]
+        #[schema(schema = DEEPLY_NESTED)]
         field_deeply_nested_list: Option<Vec<Vec<Vec<NestedStruct>>>>,
     }
 
@@ -1658,15 +1658,15 @@ mod tests {
     });
 
     #[derive(SmithyShape, Clone)]
-    #[smithy_schema(STRUCT_WITH_SETS)]
+    #[schema(schema = STRUCT_WITH_SETS)]
     pub struct StructWithSets {
-        #[smithy_schema(STRUCT)]
+        #[schema(schema = STRUCT)]
         set_of_struct: Option<Vec<NestedStruct>>,
-        #[smithy_schema(STRING)]
+        #[schema(schema = STRING)]
         set_of_simple: Option<Vec<String>>,
-        #[smithy_schema(LIST)]
+        #[schema(schema = LIST)]
         set_of_list: Option<Vec<Vec<i32>>>,
-        #[smithy_schema(MAP)]
+        #[schema(schema = MAP)]
         set_of_map: Option<Vec<IndexMap<String, i32>>>,
     }
 
@@ -1779,13 +1779,13 @@ mod tests {
     });
 
     #[derive(SmithyShape, Clone)]
-    #[smithy_schema(STRUCT_WITH_NESTED_MAP_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_NESTED_MAP_SCHEMA)]
     pub struct StructWithNestedMaps {
-        #[smithy_schema(OPTIONAL)]
+        #[schema(schema = OPTIONAL)]
         optional: Option<IndexMap<String, NestedStruct>>,
-        #[smithy_schema(REQUIRED)]
+        #[schema(schema = REQUIRED)]
         required: IndexMap<String, NestedStruct>,
-        #[smithy_schema(DEEPLY_NESTED)]
+        #[schema(schema = DEEPLY_NESTED)]
         deeply_nested: Option<IndexMap<String, IndexMap<String, IndexMap<String, NestedStruct>>>>,
     }
 

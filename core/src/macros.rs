@@ -14,11 +14,11 @@
 /// });
 ///
 /// #[derive(SmithyShape, PartialEq)]
-/// #[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
+/// #[schema(schema = SIMPLE_STRUCT_SCHEMA)]
 /// pub struct SimpleStruct {
-///     #[smithy_schema(SIMPLE_FIELD_A)]
+///     #[schema(schema = SIMPLE_FIELD_A)]
 ///     pub field_a: String,
-///     #[smithy_schema(SIMPLE_FIELD_B)]
+///     #[schema(schema = SIMPLE_FIELD_B)]
 ///     pub field_b: i32,
 /// }
 /// ```

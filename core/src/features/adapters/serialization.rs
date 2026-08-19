@@ -386,15 +386,15 @@ mod tests {
     });
 
     #[derive(SmithyShape)]
-    #[smithy_schema(SCHEMA)]
+    #[schema(schema = SCHEMA)]
     pub struct Test {
-        #[smithy_schema(A)]
+        #[schema(schema = A)]
         a: String,
-        #[smithy_schema(B)]
+        #[schema(schema = B)]
         b: String,
-        #[smithy_schema(LIST)]
+        #[schema(schema = LIST)]
         member_list: Vec<String>,
-        #[smithy_schema(MAP)]
+        #[schema(schema = MAP)]
         member_map: IndexMap<String, String>,
     }
 
@@ -447,9 +447,9 @@ mod tests {
         }
     });
     #[derive(SmithyShape)]
-    #[smithy_schema(RENAME)]
+    #[schema(schema = RENAME)]
     pub struct TestRename {
-        #[smithy_schema(A)]
+        #[schema(schema = A)]
         a: String,
     }
 
@@ -476,11 +476,11 @@ mod tests {
         }
     });
     #[derive(SmithyShape)]
-    #[smithy_schema(XML_TRAITS)]
+    #[schema(schema = XML_TRAITS)]
     pub struct TestXml {
-        #[smithy_schema(A)]
+        #[schema(schema = A)]
         a: String,
-        #[smithy_schema(B)]
+        #[schema(schema = B)]
         b: i32,
     }
 

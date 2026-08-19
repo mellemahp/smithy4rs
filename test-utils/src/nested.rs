@@ -14,13 +14,13 @@ smithy!("test#InnerStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(INNER_STRUCT_SCHEMA)]
+#[schema(schema = INNER_STRUCT_SCHEMA)]
 pub struct InnerStruct {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     pub field_a: String,
-    #[smithy_schema(B)]
+    #[schema(schema = B)]
     pub field_b: String,
-    #[smithy_schema(C)]
+    #[schema(schema = C)]
     pub field_c: String,
 }
 
@@ -47,18 +47,18 @@ smithy!("test#NestedCollectionsStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(NESTED_COLLECTIONS_STRUCT_SCHEMA)]
+#[schema(schema = NESTED_COLLECTIONS_STRUCT_SCHEMA)]
 pub struct NestedCollectionsStruct {
-    #[smithy_schema(NAME)]
+    #[schema(schema = NAME)]
     pub name: String,
-    #[smithy_schema(COUNT)]
+    #[schema(schema = COUNT)]
     pub count: i32,
-    #[smithy_schema(SINGLE)]
+    #[schema(schema = SINGLE)]
     pub single_nested: InnerStruct,
-    #[smithy_schema(OPTIONAL)]
+    #[schema(schema = OPTIONAL)]
     pub optional_nested: Option<InnerStruct>,
-    #[smithy_schema(LIST)]
+    #[schema(schema = LIST)]
     pub list_nested: Vec<InnerStruct>,
-    #[smithy_schema(MAP)]
+    #[schema(schema = MAP)]
     pub map_nested: IndexMap<String, InnerStruct>,
 }

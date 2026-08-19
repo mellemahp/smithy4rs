@@ -30,18 +30,18 @@ smithy!("test#RecursiveShapesStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(RECURSIVE_SHAPES_STRUCT_SCHEMA)]
+#[schema(schema = RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
-    #[smithy_schema(STRING)]
+    #[schema(schema = STRING)]
     pub string_field: String,
-    #[smithy_schema(INTEGER)]
+    #[schema(schema = INTEGER)]
     pub integer_field: i32,
-    #[smithy_schema(LIST)]
+    #[schema(schema = LIST)]
     pub list_field: Vec<String>,
-    #[smithy_schema(MAP)]
+    #[schema(schema = MAP)]
     pub map_field: IndexMap<String, String>,
-    #[smithy_schema(OPTIONAL)]
+    #[schema(schema = OPTIONAL)]
     pub optional_field: Option<String>,
-    #[smithy_schema(NEXT)]
+    #[schema(schema = NEXT)]
     pub next: Option<Box<RecursiveShapesStruct>>,
 }

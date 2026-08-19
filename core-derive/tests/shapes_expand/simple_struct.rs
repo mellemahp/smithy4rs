@@ -13,14 +13,13 @@ smithy!("test#SimpleStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(SIMPLE_SCHEMA)]
+#[schema(schema = SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     pub field_a: String,
-    #[smithy_schema(B)]
-    #[default(0)]
+    #[schema(schema = B, default = 0)]
     pub field_b: i32,
-    #[smithy_schema(C)]
+    #[schema(schema = C)]
     pub field_c: Option<Nested>,
 }
 
@@ -31,8 +30,8 @@ smithy!("test#NESTED_STRUCT": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(NESTED_SCHEMA)]
+#[schema(schema = NESTED_SCHEMA)]
 pub struct Nested {
-    #[smithy_schema(D)]
+    #[schema(schema = D)]
     pub field_a: String,
 }

@@ -22,7 +22,7 @@ smithy!("com.test#DocumentedEnum": {
 /// A Documented Enum
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(DOCUMENTED_ENUM_SCHEMA)]
+#[schema(schema = DOCUMENTED_ENUM_SCHEMA)]
 pub enum DocumentedEnum {
     One = "one",
     Two = "two",
@@ -39,7 +39,7 @@ smithy!("com.test#DocumentedIntEnum": {
 /// A Documented IntEnum
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(DOCUMENTED_INT_ENUM_SCHEMA)]
+#[schema(schema = DOCUMENTED_INT_ENUM_SCHEMA)]
 pub enum DocumentedIntEnum {
     One = 1,
     Two = 2,
@@ -69,10 +69,10 @@ smithy!("com.test#DocumentedStruct": {
 
 /// A Documented Structure
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(DOCUMENTED_STRUCT_SCHEMA)]
+#[schema(schema = DOCUMENTED_STRUCT_SCHEMA)]
 pub struct DocumentedStruct {
     /// Documented! Yay!
-    #[smithy_schema(DOCUMENTED_MEMBER)]
+    #[schema(schema = DOCUMENTED_MEMBER)]
     pub documented_member: Option<String>,
 }
 
@@ -87,13 +87,13 @@ smithy!("com.test#DocumentedUnion": {
 /// A Documented Union
 #[smithy_union]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(DOCUMENTED_UNION_SCHEMA)]
+#[schema(schema = DOCUMENTED_UNION_SCHEMA)]
 pub enum DocumentedUnion {
     /// A String variant
-    #[smithy_schema(VARIANT_A)]
+    #[schema(schema = VARIANT_A)]
     Varianta(String),
     /// An integer variant
-    #[smithy_schema(VARIANT_B)]
+    #[schema(schema = VARIANT_B)]
     Variantb(i32),
 }
 

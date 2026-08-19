@@ -1,7 +1,7 @@
 use smithy4rs_core::{
     derive::{
         SmithyShape,
-        SmithyTraitImpl,
+        SmithyTrait,
     },
     doc_map,
     prelude::{
@@ -25,7 +25,7 @@ smithy!("com.test#AppliedTo": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(APPLIED_TO_SCHEMA)]
+#[schema(schema = APPLIED_TO_SCHEMA)]
 pub struct AppliedTo {
 }
 
@@ -37,12 +37,12 @@ smithy!("com.test#myCustomStruct": {
     }
 });
 
-#[derive(SmithyShape, SmithyTraitImpl, PartialEq, Clone)]
-#[smithy_schema(MY_CUSTOM_STRUCT_SCHEMA)]
+#[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[schema(schema = MY_CUSTOM_STRUCT_SCHEMA)]
 pub struct MyCustomStructTrait {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     pub a: Option<String>,
-    #[smithy_schema(B)]
+    #[schema(schema = B)]
     pub b: Option<i32>,
 }
 
@@ -51,8 +51,8 @@ smithy!("com.test#otherListTrait": {
         member: INTEGER
     }
 });
-#[derive(SmithyShape, SmithyTraitImpl, Clone)]
-#[smithy_schema(OTHER_LIST_TRAIT)]
+#[derive(SmithyShape, SmithyTrait, Clone)]
+#[schema(schema = OTHER_LIST_TRAIT)]
 #[repr(transparent)]
 pub struct OtherListTraitTrait(Vec<i32>);
 
@@ -61,34 +61,34 @@ smithy!("com.test#stringListTrait": {
         member: STRING
     }
 });
-#[derive(SmithyShape, SmithyTraitImpl, Clone)]
-#[smithy_schema(STRING_LIST_TRAIT)]
+#[derive(SmithyShape, SmithyTrait, Clone)]
+#[schema(schema = STRING_LIST_TRAIT)]
 #[repr(transparent)]
 pub struct StringListTraitTrait(Vec<String>);
-
-#[derive(SmithyShape, SmithyTraitImpl, Clone)]
-#[smithy_schema(FLOAT_TRAIT)]
-#[repr(transparent)]
-pub struct FloatTraitTrait(f32);
 
 smithy!("com.test#floatTrait": {
     float FLOAT_TRAIT
 });
 
-#[derive(SmithyShape, SmithyTraitImpl, Clone)]
-#[smithy_schema(STRING_TRAIT)]
+#[derive(SmithyShape, SmithyTrait, Clone)]
+#[schema(schema = FLOAT_TRAIT)]
 #[repr(transparent)]
-pub struct StringTraitTrait(String);
+pub struct FloatTraitTrait(f32);
 
 smithy!("com.test#stringTrait": {
     string STRING_TRAIT
 });
 
-#[derive(SmithyShape, SmithyTraitImpl, Clone)]
-#[smithy_schema(INT_TRAIT)]
+#[derive(SmithyShape, SmithyTrait, Clone)]
+#[schema(schema = STRING_TRAIT)]
 #[repr(transparent)]
-pub struct IntTraitTrait(i32);
+pub struct StringTraitTrait(String);
 
 smithy!("com.test#intTrait": {
     integer INT_TRAIT
 });
+
+#[derive(SmithyShape, SmithyTrait, Clone)]
+#[schema(schema = INT_TRAIT)]
+#[repr(transparent)]
+pub struct IntTraitTrait(i32);

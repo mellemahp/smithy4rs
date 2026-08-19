@@ -15,13 +15,13 @@ smithy!("test#SimpleUnion": {
 
 #[smithy_union]
 #[derive(SmithyShape)]
-#[smithy_schema(UNION)]
+#[schema(schema = UNION)]
 pub enum TestEnum {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     A(String),
-    #[smithy_schema(B)]
+    #[schema(schema = B)]
     B(i32),
     // Unit variant
-    #[smithy_schema(C)]
+    #[schema(schema = C)]
     C,
 }

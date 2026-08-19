@@ -29,27 +29,27 @@ smithy!("test#AllPrimitivesStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
+#[schema(schema = ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
-    #[smithy_schema(STRING)]
+    #[schema(schema = STRING)]
     pub string_field: String,
-    #[smithy_schema(BYTE)]
+    #[schema(schema = BYTE)]
     pub byte_field: i8,
-    #[smithy_schema(SHORT)]
+    #[schema(schema = SHORT)]
     pub short_field: i16,
-    #[smithy_schema(INTEGER)]
+    #[schema(schema = INTEGER)]
     pub integer_field: i32,
-    #[smithy_schema(LONG)]
+    #[schema(schema = LONG)]
     pub long_field: i64,
-    #[smithy_schema(FLOAT)]
+    #[schema(schema = FLOAT)]
     pub float_field: f32,
-    #[smithy_schema(DOUBLE)]
+    #[schema(schema = DOUBLE)]
     pub double_field: f64,
-    #[smithy_schema(BOOLEAN)]
+    #[schema(schema = BOOLEAN)]
     pub boolean_field: bool,
-    #[smithy_schema(BLOB)]
+    #[schema(schema = BLOB)]
     pub blob_field: ByteBuffer,
-    #[smithy_schema(TIMESTAMP)]
+    #[schema(schema = TIMESTAMP)]
     pub timestamp_field: Instant,
 }
 
@@ -61,11 +61,11 @@ smithy!("test#OptionalFieldsStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
+#[schema(schema = OPTIONAL_FIELDS_STRUCT_SCHEMA)]
 pub struct OptionalFieldsStruct {
-    #[smithy_schema(REQUIRED)]
+    #[schema(schema = REQUIRED)]
     pub required_field: String,
-    #[smithy_schema(OPTIONAL)]
+    #[schema(schema = OPTIONAL)]
     pub optional_field: Option<String>,
 }
 
@@ -81,19 +81,19 @@ smithy!("test#NumericTypesStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(NUMERIC_TYPES_STRUCT_SCHEMA)]
+#[schema(schema = NUMERIC_TYPES_STRUCT_SCHEMA)]
 pub struct NumericTypesStruct {
-    #[smithy_schema(BYTE)]
+    #[schema(schema = BYTE)]
     pub byte_val: i8,
-    #[smithy_schema(SHORT)]
+    #[schema(schema = SHORT)]
     pub short_val: i16,
-    #[smithy_schema(INT)]
+    #[schema(schema = INT)]
     pub int_val: i32,
-    #[smithy_schema(LONG)]
+    #[schema(schema = LONG)]
     pub long_val: i64,
-    #[smithy_schema(FLOAT)]
+    #[schema(schema = FLOAT)]
     pub float_val: f32,
-    #[smithy_schema(DOUBLE)]
+    #[schema(schema = DOUBLE)]
     pub double_val: f64,
 }
 
@@ -105,10 +105,10 @@ smithy!("test#SimpleStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
+#[schema(schema = SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     pub field_a: String,
-    #[smithy_schema(B)]
+    #[schema(schema = B)]
     pub field_b: i32,
 }

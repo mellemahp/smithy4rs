@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// These are added to ensure they correctly compile as well as expand.
+// These are added to ensure they correctly compile as well as shapes.
 mod r#enum;
 mod int_enum;
 mod simple_struct;

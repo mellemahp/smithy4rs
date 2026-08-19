@@ -414,26 +414,26 @@ mod tests {
     });
 
     #[derive(SmithyShape)]
-    #[smithy_schema(SCHEMA)]
+    #[schema(schema = SCHEMA)]
     pub struct SerializeMe {
-        #[smithy_schema(A)]
+        #[schema(schema = A)]
         pub member_a: String,
-        #[smithy_schema(B)]
+        #[schema(schema = B)]
         pub member_b: String,
-        #[smithy_schema(C)]
+        #[schema(schema = C)]
         pub member_optional: Option<String>,
-        #[smithy_schema(LIST)]
+        #[schema(schema = LIST)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MAP)]
+        #[schema(schema = MAP)]
         pub member_map: IndexMap<String, String>,
     }
 
     #[derive(SmithyShape)]
-    #[smithy_schema(REDACTED_AGGREGATES)]
+    #[schema(schema = REDACTED_AGGREGATES)]
     pub struct RedactMe {
-        #[smithy_schema(LIST_REDACT)]
+        #[schema(schema = LIST_REDACT)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MAP_REDACT)]
+        #[schema(schema = MAP_REDACT)]
         pub member_map: IndexMap<String, String>,
     }
 

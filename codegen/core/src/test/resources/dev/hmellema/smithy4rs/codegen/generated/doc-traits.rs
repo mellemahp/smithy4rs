@@ -13,10 +13,10 @@ smithy!("com.test#DeprecatedStruct": {
 
 #[deprecated(since = "1.0", note = "Plz dont use")]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(DEPRECATED_STRUCT_SCHEMA)]
+#[schema(schema = DEPRECATED_STRUCT_SCHEMA)]
 pub struct DeprecatedStruct {
     #[deprecated(since = "5ever", note = "Dont use this")]
-    #[smithy_schema(DEPRECATED_MEMBER)]
+    #[schema(schema = DEPRECATED_MEMBER)]
     pub deprecated_member: Option<String>,
 }
 
@@ -32,9 +32,9 @@ smithy!("com.test#ExternalDocumentationStruct": {
 /// - [**API Reference**]("https://www.example.com/api-ref")
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(EXTERNAL_DOCUMENTATION_STRUCT_SCHEMA)]
+#[schema(schema = EXTERNAL_DOCUMENTATION_STRUCT_SCHEMA)]
 pub struct ExternalDocumentationStruct {
-    #[smithy_schema(STRING)]
+    #[schema(schema = STRING)]
     pub string: Option<String>,
 }
 
@@ -52,7 +52,7 @@ smithy!("com.test#SinceStruct": {
 /// </div>
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(SINCE_STRUCT_SCHEMA)]
+#[schema(schema = SINCE_STRUCT_SCHEMA)]
 pub struct SinceStruct {
     /// <div class="note">
     ///
@@ -60,7 +60,7 @@ pub struct SinceStruct {
     ///
     /// </div>
     ///
-    #[smithy_schema(SINCE_MEMBER)]
+    #[schema(schema = SINCE_MEMBER)]
     pub since_member: Option<String>,
 }
 
@@ -78,7 +78,7 @@ smithy!("com.test#UnstableStructure": {
 /// </div>
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(UNSTABLE_STRUCTURE_SCHEMA)]
+#[schema(schema = UNSTABLE_STRUCTURE_SCHEMA)]
 pub struct UnstableStructure {
     /// <div class="warning">
     ///
@@ -86,6 +86,6 @@ pub struct UnstableStructure {
     ///
     /// </div>
     ///
-    #[smithy_schema(UNSTABLE_MEMBER)]
+    #[schema(schema = UNSTABLE_MEMBER)]
     pub unstable_member: Option<String>,
 }

@@ -43,7 +43,7 @@ public final class Smithy4Rs {
             .namespace(derive(), Utils.DELIM)
             .build();
     public static final Symbol TRAIT_DERIVE = Symbol.builder()
-            .name("SmithyTraitImpl")
+            .name("SmithyTrait")
             .namespace(derive(), Utils.DELIM)
             .build();
     public static final Symbol INDEX_MAP = Symbol.builder()

@@ -1,5 +1,6 @@
 use smithy4rs_core::{
     derive::{SmithyShape, smithy_enum},
+    prelude::{JsonNameTrait, STRING},
     smithy,
 };
 
@@ -13,7 +14,7 @@ smithy!("test#StringEnum": {
 
 #[smithy_enum]
 #[derive(SmithyShape)]
-#[smithy_schema(SIMPLE_ENUM)]
+#[schema(schema = SIMPLE_ENUM)]
 pub enum TestEnum {
     A = "a",
     B = "b",
@@ -30,9 +31,22 @@ smithy!("test#IntEnum": {
 
 #[smithy_enum]
 #[derive(SmithyShape)]
-#[smithy_schema(SIMPLE_INT_ENUM)]
+#[schema(schema = SIMPLE_INT_ENUM)]
 pub enum TestIntEnum {
     A = 1,
     B = 2,
     C = 3,
+}
+
+smithy!("com.example#Rename": {
+    structure RENAME {
+        @JsonNameTrait::new("renamed");
+        A: STRING = "a"
+    }
+});
+#[derive(SmithyShape)]
+#[schema(schema = RENAME)]
+pub struct TestRename {
+    #[schema(schema = A)]
+    a: String,
 }

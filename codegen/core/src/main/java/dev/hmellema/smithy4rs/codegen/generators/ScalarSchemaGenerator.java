@@ -31,10 +31,6 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                     writer.pushState();
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     for (var shape : shapes) {
-                        // Generate trait definitions if applicable
-                        if (shape.hasTrait(TraitDefinition.class)) {
-                            NewTypeWrapperGenerator.generate(writer, shape, directive.symbolProvider());
-                        }
                         writer.pushState();
                         writer.putContext("id", shape.getId());
                         writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
@@ -50,6 +46,11 @@ public class ScalarSchemaGenerator implements Consumer<CustomizeDirective<CodeGe
                         writer.popState();
                         // Add a newline for better spacing
                         writer.write("");
+
+                        // Generate trait definitions if applicable
+                        if (shape.hasTrait(TraitDefinition.class)) {
+                            NewTypeWrapperGenerator.generate(writer, shape, directive.symbolProvider());
+                        }
                     }
                     writer.popState();
                 });

@@ -23,13 +23,13 @@ smithy!("test#ValidationStruct": {
     }
 });
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(VALIDATE_SHAPE_SCHEMA)]
+#[schema(schema = VALIDATE_SHAPE_SCHEMA)]
 pub struct ValidatedStruct {
-    #[smithy_schema(STRING)]
+    #[schema(schema = STRING)]
     string: String,
-    #[smithy_schema(REQUIRED_INT)]
+    #[schema(schema = REQUIRED_INT)]
     required_int: i32,
-    #[smithy_schema(INTEGER)]
+    #[schema(schema = INTEGER)]
     integer: Option<i32>,
 }
 
@@ -41,13 +41,13 @@ smithy!("test#UnvalidatedShape": {
     }
 });
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(UNVALIDATED_SHAPE_SCHEMA)]
+#[schema(schema = UNVALIDATED_SHAPE_SCHEMA)]
 pub struct UnvalidatedStruct {
-    #[smithy_schema(STRING)]
+    #[schema(schema = STRING)]
     string: String,
-    #[smithy_schema(REQUIRED_INT)]
+    #[schema(schema = REQUIRED_INT)]
     required_int: i32,
-    #[smithy_schema(INT)]
+    #[schema(schema = INT)]
     integer: Option<i32>,
 }
 
@@ -71,11 +71,11 @@ smithy!("test#StructWithNestedList": {
 });
 
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(STRUCT_WITH_COLLECTIONS)]
+#[schema(schema = STRUCT_WITH_COLLECTIONS)]
 pub struct StructWithCollections {
-    #[smithy_schema(LIST)]
+    #[schema(schema = LIST)]
     field_nested_list: Option<Vec<ValidatedStruct>>,
-    #[smithy_schema(MAP)]
+    #[schema(schema = MAP)]
     field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
 }
 
@@ -87,9 +87,9 @@ smithy!("test#StructWithNestedSet": {
 });
 
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(STRUCT_WITH_SET)]
+#[schema(schema = STRUCT_WITH_SET)]
 pub struct StructWithSet {
-    #[smithy_schema(NESTED_SET)]
+    #[schema(schema = NESTED_SET)]
     field_nested_set: Option<Vec<ValidatedStruct>>,
 }
 
@@ -101,9 +101,9 @@ smithy!("test#StructWithNestedList": {
 
 // Mostly just for comparison against set implementation.
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(STRUCT_WITH_LIST)]
+#[schema(schema = STRUCT_WITH_LIST)]
 pub struct StructWithList {
-    #[smithy_schema(NESTED_LIST)]
+    #[schema(schema = NESTED_LIST)]
     field_nested_list: Option<Vec<ValidatedStruct>>,
 }
 

@@ -30,15 +30,15 @@ smithy!("com.example#Shape": {
 });
 
 #[derive(SmithyShape, Clone, PartialEq)]
-#[smithy_schema(SCHEMA)]
+#[schema(schema = SCHEMA)]
 pub struct SerializeMe {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     pub member_a: String,
-    #[smithy_schema(B)]
+    #[schema(schema = B)]
     pub member_b: i32,
-    #[smithy_schema(LIST)]
+    #[schema(schema = LIST)]
     pub member_list: Vec<String>,
-    #[smithy_schema(MAP)]
+    #[schema(schema = MAP)]
     pub member_map: IndexMap<String, String>,
 }
 

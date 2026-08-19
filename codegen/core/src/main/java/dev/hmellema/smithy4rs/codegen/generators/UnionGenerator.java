@@ -32,7 +32,7 @@ public class UnionGenerator implements
     public static final String STRUCT_TEMPLATE = """
             #[${union:T}]
             ${derive:C|}
-            #[smithy_schema(${shape:I})]
+            #[schema(schema = ${shape:I})]
             pub enum ${shape:T} {${#memberVariants}
                 ${value:C|}${/memberVariants}
             }
@@ -116,7 +116,7 @@ public class UnionGenerator implements
             String membername,
             MemberShape shape) implements Runnable {
         private static final String TEMPLATE = """
-                #[smithy_schema(${memberSchema:L})]
+                #[schema(schema = ${memberSchema:L})]
                 ${memberName:L}(${member:T}),""";
 
         @Override

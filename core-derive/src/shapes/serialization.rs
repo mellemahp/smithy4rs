@@ -1,70 +1,68 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Data, DataEnum, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Lit, Variant};
 
 use crate::{
-    parse_schema,
-    shapes::utils::{is_optional, is_union, parse_enum_value},
+    attr::{EnumShape, Shape, SimpleShape, StructMember, StructShape, UnionShape, UnionVariant},
+    utils::member_schema,
 };
 
 /// Generates the `SerializeWithSchema` implementation for a shape.
-pub(crate) fn serialization_impl(
+pub(crate) fn expand_serialize_from_schema(
+    shape: &Shape,
     crate_ident: &TokenStream,
-    shape_name: &Ident,
-    schema_ident: &Ident,
-    input: &DeriveInput,
 ) -> TokenStream {
     let mut imports = quote! {
+        use #crate_ident::schema::Schema as _Schema;
         use #crate_ident::serde::serializers::Serializer as _Serializer;
         use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     };
-    // Add structure-specific imports
-    if let Data::Struct(_) = &input.data {}
-    let body = match &input.data {
-        Data::Struct(data) => {
+    let name = shape.name();
+    let body = match shape {
+        Shape::Struct(struct_shape) => {
             imports = quote! {
                 #imports
                 use #crate_ident::serde::serializers::StructWriter as _StructWriter;
             };
-            match &data.fields {
-                Fields::Named(fields) => serialize_struct(schema_ident, fields),
-                Fields::Unnamed(fields) => serialize_tuple(fields),
-                Fields::Unit => serialize_unit(),
-            }
+            serialize_struct(struct_shape)
         }
-        Data::Enum(data) => {
-            if is_union(data) {
+        Shape::Simple(simple_shape) => serialize_wrapper(simple_shape),
+        Shape::Union(union_shape) => {
+            imports = quote! {
+                #imports
+                use #crate_ident::serde::serializers::StructWriter as _StructWriter;
+            };
+            let has_unit = union_shape
+                .data
+                .as_enum()
+                .expect("Union variants")
+                .iter()
+                .any(|v| v.fields.is_empty());
+            if has_unit {
                 imports = quote! {
                     #imports
-                    use #crate_ident::serde::serializers::StructWriter as _StructWriter;
+                    use #crate_ident::schema::Unit as _Unit;
                 };
-                if data.variants.iter().any(|v| v.fields.is_empty()) {
-                    imports = quote! {
-                        #imports
-                        use #crate_ident::schema::Unit as _Unit;
-                    };
-                }
-                serialize_union(shape_name, schema_ident, data)
-            } else {
-                serialize_enum(shape_name, data)
             }
+            serialize_union(union_shape)
         }
-        _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
+        Shape::Enum(enum_shape) => serialize_enum(enum_shape),
     };
 
     quote! {
-        #imports
+        const _: () = {
+            #imports
 
-        #[automatically_derived]
-        impl _SerializeWithSchema for #shape_name {
-            fn serialize_with_schema<S: _Serializer>(
-                &self,
-                schema: &_Schema,
-                serializer: S,
-            ) -> Result<S::Ok, S::Error> {
-                #body
+            #[automatically_derived]
+            impl _SerializeWithSchema for #name {
+                fn serialize_with_schema<S: _Serializer>(
+                    &self,
+                    schema: &_Schema,
+                    serializer: S,
+                ) -> Result<S::Ok, S::Error> {
+                    #body
+                }
             }
-        }
+        };
     }
 }
 
@@ -73,16 +71,21 @@ pub(crate) fn serialization_impl(
 // ============================================================================
 
 /// Generates body of serialization impl for Structures
-fn serialize_struct(schema_ident: &Ident, fields: &FieldsNamed) -> TokenStream {
-    let length = &fields.named.len();
-    let field_data: Vec<FieldData> = fields.named.iter().map(FieldData::from).collect::<Vec<_>>();
+pub(crate) fn serialize_struct(shape: &StructShape) -> TokenStream {
+    let fields = shape.data.as_struct().expect("Struct fields");
+    let length = fields.len();
+
     // Now write the thing
-    let method = field_data.iter().map(|d| d.method_call());
-    let member_schema = field_data.iter().map(|d| d.member_schema(schema_ident));
-    let member_name = field_data.iter().map(|d| &d.field_ident);
+    let method = fields.iter().map(member_method);
+    let member_schema = fields
+        .iter()
+        .map(|v| member_schema(&v.schema, &shape.schema));
+    let member_name = fields.iter().map(|d| &d.ident);
     // TODO: This needs to be the exact member name used in the schema. I think it might differ from the field name
     // in some cases
-    let member_name_str = field_data.iter().map(|d| d.field_ident.to_string());
+    let member_name_str = fields
+        .iter()
+        .map(|d| d.ident.as_ref().expect("Member name").to_string());
     quote! {
         let mut ser = serializer.write_struct(schema, #length)?;
         #(ser.#method(#member_name_str, &#member_schema, &self.#member_name)?;)*
@@ -90,36 +93,17 @@ fn serialize_struct(schema_ident: &Ident, fields: &FieldsNamed) -> TokenStream {
     }
 }
 
-struct FieldData {
-    schema: Ident,
-    field_ident: Ident,
-    optional: bool,
+fn member_method(member: &StructMember) -> Ident {
+    if member.optional() {
+        Ident::new("write_optional_member_named", Span::call_site())
+    } else {
+        Ident::new("write_member_named", Span::call_site())
+    }
 }
-impl FieldData {
-    fn method_call(&self) -> Ident {
-        if self.optional {
-            Ident::new("write_optional_member_named", Span::call_site())
-        } else {
-            Ident::new("write_member_named", Span::call_site())
-        }
-    }
 
-    fn member_schema(&self, root_schema_ident: &Ident) -> Ident {
-        Ident::new(
-            &format!("_{}_MEMBER_{}", root_schema_ident, self.schema),
-            Span::call_site(),
-        )
-    }
-
-    fn from(field: &Field) -> Self {
-        let schema = parse_schema(&field.attrs);
-        let field_ident = field.ident.as_ref().unwrap().clone();
-        let optional = is_optional(&field.ty);
-        FieldData {
-            schema,
-            field_ident,
-            optional,
-        }
+fn serialize_wrapper(_shape: &SimpleShape) -> TokenStream {
+    quote! {
+        self.0.serialize_with_schema(schema, serializer)
     }
 }
 
@@ -128,61 +112,34 @@ impl FieldData {
 // ============================================================================
 
 /// Generates body of serialization impl for Enums
-fn serialize_enum(shape_name: &Ident, data: &DataEnum) -> TokenStream {
-    let method = determine_enum_ser_method(data);
-    let unknown = syn::parse_str::<Ident>("Unknown").unwrap();
-    let variant = data
-        .variants
-        .iter()
-        .map(|v| &v.ident)
-        .filter(|i| **i != unknown);
-    let value = data
-        .variants
-        .iter()
-        .map(|v| parse_enum_value(&v.attrs).expect("parsable #[enum_value] attribute"));
-    let is_string = matches!(
-        parse_enum_value(&data.variants.first().expect("at least one variant").attrs),
-        Some(Lit::Str(_))
-    );
-    let value_ident = if is_string {
+fn serialize_enum(shape: &EnumShape) -> TokenStream {
+    let value_ident = if shape.is_string() {
         quote! { value.as_str() }
     } else {
         quote! { *value }
     };
+    let method = if shape.is_string() {
+        quote! { write_string }
+    } else {
+        quote! { write_integer }
+    };
+    let unknown = syn::parse_str::<Ident>("Unknown").unwrap();
+    let variants = shape
+        .data
+        .as_enum()
+        .expect("Enum variants")
+        .iter()
+        .filter(|v| v.ident != unknown)
+        .map(|v| (&v.ident, &v.value));
+
+    let name = &shape.ident;
+    let (variant, value): (Vec<_>, Vec<_>) = variants.into_iter().unzip();
     quote! {
         let value = match self {
-            #(#shape_name::#variant => #value,)*
-            #shape_name::Unknown(value) => #value_ident
+            #(#name::#variant => #value,)*
+            #name::Unknown(value) => #value_ident
         };
         serializer.#method(schema, value)
-    }
-}
-
-/// Determines enum method to use for serializing an enum.
-fn determine_enum_ser_method(data: &DataEnum) -> Ident {
-    let first_var = data
-        .variants
-        .first()
-        .expect("At least one enum variant expected");
-    match parse_enum_value(&first_var.attrs) {
-        Some(Lit::Str(_)) => Ident::new("write_string", Span::call_site()),
-        Some(Lit::Int(_)) => Ident::new("write_integer", Span::call_site()),
-        _ => panic!("Unsupported enum value. Expected string or int literal."),
-    }
-}
-
-// ============================================================================
-// Wrapper (tuple) Serialization
-// ============================================================================
-
-fn serialize_tuple(data: &FieldsUnnamed) -> TokenStream {
-    assert_eq!(
-        data.unnamed.len(),
-        1,
-        "Trait wrappers must have only one field"
-    );
-    quote! {
-        self.0.serialize_with_schema(schema, serializer)
     }
 }
 
@@ -190,6 +147,8 @@ fn serialize_tuple(data: &FieldsUnnamed) -> TokenStream {
 // Unit Serialization
 // ============================================================================
 
+// TODO: keep this or remove?
+#[allow(unused)]
 fn serialize_unit() -> TokenStream {
     quote! {
         serializer.write_struct(schema, 0usize)?.end(schema)
@@ -201,72 +160,52 @@ fn serialize_unit() -> TokenStream {
 // ============================================================================
 
 /// Generates body of serialization impl for Enums
-fn serialize_union(shape_name: &Ident, schema_ident: &Ident, data: &DataEnum) -> TokenStream {
-    let unknown = syn::parse_str::<Ident>("Unknown").unwrap();
-    let variants = data
-        .variants
+fn serialize_union(shape: &UnionShape) -> TokenStream {
+    let name = &shape.ident;
+
+    let variants = shape
+        .data
+        .as_enum()
+        .expect("Union variants")
         .iter()
-        .filter(|v| v.ident != unknown)
-        .map(UnionVariant::from)
-        .collect::<Vec<_>>();
-    let match_arm = variants
-        .iter()
-        .map(|v| v.match_arm(shape_name, schema_ident));
+        // Unknown variants have no member schema, so skip
+        .filter(|v| v.schema.is_some())
+        .map(|v| match_arm(shape, v));
+
     quote! {
         let mut ser = serializer.write_struct(schema, 1)?;
         match self {
-            #(#match_arm,)*
-            #shape_name::Unknown(unknown) => ser.write_unknown(schema, unknown)?,
+            #(#variants,)*
+            #name::Unknown(unknown) => ser.write_unknown(schema, unknown)?,
         }
         ser.end(schema)
     }
 }
 
-struct UnionVariant {
-    schema: Ident,
-    field_ident: Ident,
-    unit: bool,
-}
+fn match_arm(shape: &UnionShape, variant: &UnionVariant) -> TokenStream {
+    let name = &variant.ident;
+    let shape_name = &shape.ident;
+    let root_schema = &shape.schema;
+    let member_name = &variant.ident.to_string().to_lowercase();
+    let schema = variant.schema.as_ref().expect("Member");
+    let schema = member_schema(schema, root_schema);
 
-impl UnionVariant {
-    fn variant_schema(&self, root_schema_ident: &Ident) -> Ident {
-        Ident::new(
-            &format!("_{}_MEMBER_{}", root_schema_ident, self.schema),
-            Span::call_site(),
-        )
-    }
-
-    fn from(variant: &Variant) -> Self {
-        let schema = parse_schema(&variant.attrs);
-        let field_ident = variant.ident.clone();
-        let unit = variant.fields.is_empty();
-        UnionVariant {
-            schema,
-            field_ident,
-            unit,
+    // If unit, use custom route.
+    if variant.fields.is_empty() {
+        quote! {
+            #shape_name::#name => ser.write_member_named(
+                #member_name,
+                &#schema,
+                &_Unit
+            )?
         }
-    }
-
-    fn match_arm(&self, shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
-        let variant = &self.field_ident;
-        let member_name = &self.field_ident.to_string().to_lowercase();
-        let schema = &self.variant_schema(schema_ident);
-        if self.unit {
-            quote! {
-                #shape_name::#variant => ser.write_member_named(
-                    #member_name,
-                    &#schema,
-                    &_Unit
-                )?
-            }
-        } else {
-            quote! {
-                #shape_name::#variant(val) => ser.write_member_named(
-                    #member_name,
-                    &#schema,
-                    val
-                )?
-            }
+    } else {
+        quote! {
+            #shape_name::#name(value) => ser.write_member_named(
+                #member_name,
+                &#schema,
+                value
+            )?
         }
     }
 }

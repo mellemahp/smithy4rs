@@ -37,7 +37,7 @@ smithy!("smithy.java.codegen.test.structures#NestedEnum": {
 
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(NESTED_ENUM_SCHEMA)]
+#[schema(schema = NESTED_ENUM_SCHEMA)]
 pub enum NestedEnum {
     A = "A",
     B = "B",
@@ -53,7 +53,7 @@ smithy!("smithy.java.codegen.test.structures#NestedIntEnum": {
 
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(NESTED_INT_ENUM_SCHEMA)]
+#[schema(schema = NESTED_INT_ENUM_SCHEMA)]
 pub enum NestedIntEnum {
     A = 1,
     B = 2,
@@ -104,89 +104,56 @@ smithy!("smithy.java.codegen.test.structures#DefaultStructure": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(DEFAULT_STRUCTURE_SCHEMA)]
+#[schema(schema = DEFAULT_STRUCTURE_SCHEMA)]
 pub struct DefaultStructure {
-    #[default(true)]
-    #[smithy_schema(BOOLEAN)]
+    #[schema(schema = BOOLEAN, default = true)]
     pub boolean: bool,
-    #[default(BigDecimal::from_str("1E+309").unwrap())]
-    #[smithy_schema(BIG_DECIMAL)]
+    #[schema(schema = BIG_DECIMAL, default = BigDecimal::from_str("1E+309").unwrap())]
     pub big_decimal: BigDecimal,
-    #[default(BigDecimal::from_str("1.3").unwrap())]
-    #[smithy_schema(BIG_DECIMAL_WITH_DOUBLE_DEFAULT)]
+    #[schema(schema = BIG_DECIMAL_WITH_DOUBLE_DEFAULT, default = BigDecimal::from_str("1.3").unwrap())]
     pub big_decimal_with_double_default: BigDecimal,
-    #[default(BigDecimal::from_str("5").unwrap())]
-    #[smithy_schema(BIG_DECIMAL_WITH_LONG_DEFAULT)]
+    #[schema(schema = BIG_DECIMAL_WITH_LONG_DEFAULT, default = BigDecimal::from_str("5").unwrap())]
     pub big_decimal_with_long_default: BigDecimal,
-    #[default(BigInt::from_str("123456789123456789123456789123456789123456789123456789").unwrap())]
-    #[smithy_schema(BIG_INTEGER)]
+    #[schema(schema = BIG_INTEGER, default = BigInt::from_str("123456789123456789123456789123456789123456789123456789").unwrap())]
     pub big_integer: BigInt,
-    #[default(BigInt::from_str("1").unwrap())]
-    #[smithy_schema(BIG_INTEGER_WITH_LONG_DEFAULT)]
+    #[schema(schema = BIG_INTEGER_WITH_LONG_DEFAULT, default = BigInt::from_str("1").unwrap())]
     pub big_integer_with_long_default: BigInt,
-    #[default(1i8)]
-    #[smithy_schema(BYTE)]
+    #[schema(schema = BYTE, default = 1i8)]
     pub byte: i8,
-    #[default(1.0f64)]
-    #[smithy_schema(DOUBLE)]
+    #[schema(schema = DOUBLE, default = 1.0f64)]
     pub double: f64,
-    #[default(1.0f32)]
-    #[smithy_schema(FLOAT)]
+    #[schema(schema = FLOAT, default = 1.0f32)]
     pub float: f32,
-    #[default(1i32)]
-    #[smithy_schema(INTEGER)]
+    #[schema(schema = INTEGER, default = 1i32)]
     pub integer: i32,
-    #[default(1i64)]
-    #[smithy_schema(LONG)]
+    #[schema(schema = LONG, default = 1i64)]
     pub long: i64,
-    #[default(1i16)]
-    #[smithy_schema(SHORT)]
+    #[schema(schema = SHORT, default = 1i16)]
     pub short: i16,
-    #[default("default".to_string())]
-    #[smithy_schema(STRING)]
+    #[schema(schema = STRING, default = "default".to_string())]
     pub string: String,
-    #[default(ByteBuffer::from_bytes("YmxvYg==".as_bytes()))]
-    #[smithy_schema(BLOB)]
+    #[schema(schema = BLOB, default = ByteBuffer::from_bytes("YmxvYg==".as_bytes()))]
     pub blob: ByteBuffer,
-    #[no_builder]
-    #[default(true.into())]
-    #[smithy_schema(BOOL_DOC)]
+    #[schema(schema = BOOL_DOC, default = true.into(), no_builder)]
     pub bool_doc: Box<dyn Document>,
-    #[no_builder]
-    #[default("string".into())]
-    #[smithy_schema(STRING_DOC)]
+    #[schema(schema = STRING_DOC, default = "string".into(), no_builder)]
     pub string_doc: Box<dyn Document>,
-    #[no_builder]
-    #[default(1i64.into())]
-    #[smithy_schema(NUMBER_DOC)]
+    #[schema(schema = NUMBER_DOC, default = 1i64.into(), no_builder)]
     pub number_doc: Box<dyn Document>,
-    #[no_builder]
-    #[default(1.2f64.into())]
-    #[smithy_schema(FLOATING_POINTNUMBER_DOC)]
+    #[schema(schema = FLOATING_POINTNUMBER_DOC, default = 1.2f64.into(), no_builder)]
     pub floating_pointnumber_doc: Box<dyn Document>,
-    #[no_builder]
-    #[default(Vec::<Box<dyn Document>>::new().into())]
-    #[smithy_schema(LIST_DOC)]
+    #[schema(schema = LIST_DOC, default = Vec::<Box<dyn Document>>::new().into(), no_builder)]
     pub list_doc: Box<dyn Document>,
-    #[no_builder]
-    #[default(IndexMap::<String, Box<dyn Document>>::default().into())]
-    #[smithy_schema(MAP_DOC)]
+    #[schema(schema = MAP_DOC, default = IndexMap::<String, Box<dyn Document>>::default().into(), no_builder)]
     pub map_doc: Box<dyn Document>,
-    #[default(Vec::<String>::new())]
-    #[smithy_schema(LIST)]
+    #[schema(schema = LIST, default)]
     pub list: Vec<String>,
-    #[default(IndexMap::<String, String>::default())]
-    #[smithy_schema(MAP)]
+    #[schema(schema = MAP, default)]
     pub map: IndexMap<String, String>,
-    #[default()]
-    #[smithy_schema(TIMESTAMP)]
+    #[schema(schema = TIMESTAMP, default = )]
     pub timestamp: Instant,
-    #[no_builder]
-    #[default(NestedEnum::A)]
-    #[smithy_schema(ENUM)]
+    #[schema(schema = ENUM, default = NestedEnum::A, no_builder)]
     pub enum: NestedEnum,
-    #[no_builder]
-    #[default(NestedIntEnum::A)]
-    #[smithy_schema(INT_ENUM)]
+    #[schema(schema = INT_ENUM, default = NestedIntEnum::A, no_builder)]
     pub int_enum: NestedIntEnum,
 }

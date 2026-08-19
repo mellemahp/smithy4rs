@@ -19,11 +19,11 @@ smithy!("test#SimpleStruct": {
 
 // TODO: Replace with validation fuzzer. This is just to verify functionality
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(SIMPLE_STRUCT_SCHEMA)]
+#[schema(schema = SIMPLE_STRUCT_SCHEMA)]
 pub struct SimpleStruct {
-    #[smithy_schema(A)]
+    #[schema(schema = A)]
     pub field_a: Option<String>,
-    #[smithy_schema(B)]
+    #[schema(schema = B)]
     pub field_b: i32,
 }
 

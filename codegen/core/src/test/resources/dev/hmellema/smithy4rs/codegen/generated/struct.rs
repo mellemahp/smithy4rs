@@ -40,26 +40,26 @@ smithy!("com.test#AllPrimitivesStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(ALL_PRIMITIVES_STRUCT_SCHEMA)]
+#[schema(schema = ALL_PRIMITIVES_STRUCT_SCHEMA)]
 pub struct AllPrimitivesStruct {
-    #[smithy_schema(STRING_FIELD)]
+    #[schema(schema = STRING_FIELD)]
     pub string_field: String,
-    #[smithy_schema(BYTE_FIELD)]
+    #[schema(schema = BYTE_FIELD)]
     pub byte_field: i8,
-    #[smithy_schema(SHORT_FIELD)]
+    #[schema(schema = SHORT_FIELD)]
     pub short_field: Option<i16>,
-    #[smithy_schema(INTEGER_FIELD)]
+    #[schema(schema = INTEGER_FIELD)]
     pub integer_field: i32,
-    #[smithy_schema(LONG_FIELD)]
+    #[schema(schema = LONG_FIELD)]
     pub long_field: Option<i64>,
-    #[smithy_schema(FLOAT_FIELD)]
+    #[schema(schema = FLOAT_FIELD)]
     pub float_field: Option<f32>,
-    #[smithy_schema(DOUBLE_FIELD)]
+    #[schema(schema = DOUBLE_FIELD)]
     pub double_field: f64,
-    #[smithy_schema(BOOLEAN_FIELD)]
+    #[schema(schema = BOOLEAN_FIELD)]
     pub boolean_field: Option<bool>,
-    #[smithy_schema(BLOB_FIELD)]
+    #[schema(schema = BLOB_FIELD)]
     pub blob_field: Option<ByteBuffer>,
-    #[smithy_schema(TIMESTAMP_FIELD)]
+    #[schema(schema = TIMESTAMP_FIELD)]
     pub timestamp_field: Instant,
 }

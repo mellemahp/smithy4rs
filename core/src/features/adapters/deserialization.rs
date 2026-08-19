@@ -742,11 +742,11 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
+    #[schema(schema = OPTIONAL_FIELDS_STRUCT_SCHEMA)]
     pub struct OptionalFieldsStruct {
-        #[smithy_schema(REQUIRED)]
+        #[schema(schema = REQUIRED)]
         required_field: String,
-        #[smithy_schema(OPTIONAL)]
+        #[schema(schema = OPTIONAL)]
         optional_field: Option<String>,
     }
 
@@ -784,11 +784,11 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(NESTED_STRUCT_SCHEMA)]
+    #[schema(schema = NESTED_STRUCT_SCHEMA)]
     pub struct NestedStruct {
-        #[smithy_schema(FIELD_A)]
+        #[schema(schema = FIELD_A)]
         field_a: String,
-        #[smithy_schema(FIELD_B)]
+        #[schema(schema = FIELD_B)]
         field_b: String,
     }
 
@@ -809,15 +809,15 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(PARENT_STRUCT_SCHEMA)]
+    #[schema(schema = PARENT_STRUCT_SCHEMA)]
     pub struct ParentStruct {
-        #[smithy_schema(NAME)]
+        #[schema(schema = NAME)]
         name: String,
-        #[smithy_schema(NESTED)]
+        #[schema(schema = NESTED)]
         nested: NestedStruct,
-        #[smithy_schema(OPTIONAL_NESTED)]
+        #[schema(schema = OPTIONAL_NESTED)]
         optional_nested: Option<NestedStruct>,
-        #[smithy_schema(TAGS)]
+        #[schema(schema = TAGS)]
         tags: Vec<String>,
     }
 
@@ -831,15 +831,15 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(MULTI_PRIMITIVE_SCHEMA)]
+    #[schema(schema = MULTI_PRIMITIVE_SCHEMA)]
     pub struct MultiPrimitive {
-        #[smithy_schema(STRING_FIELD)]
+        #[schema(schema = STRING_FIELD)]
         string_field: String,
-        #[smithy_schema(INT_FIELD)]
+        #[schema(schema = INT_FIELD)]
         int_field: i32,
-        #[smithy_schema(BOOL_FIELD)]
+        #[schema(schema = BOOL_FIELD)]
         bool_field: bool,
-        #[smithy_schema(FLOAT_FIELD)]
+        #[schema(schema = FLOAT_FIELD)]
         float_field: f32,
     }
 
@@ -884,11 +884,11 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(STRUCT_WITH_LIST_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_LIST_SCHEMA)]
     pub struct StructWithList {
-        #[smithy_schema(NAME)]
+        #[schema(schema = NAME)]
         name: String,
-        #[smithy_schema(TAGS)]
+        #[schema(schema = TAGS)]
         tags: Vec<String>,
     }
 
@@ -915,13 +915,13 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(ADDRESS_SCHEMA)]
+    #[schema(schema = ADDRESS_SCHEMA)]
     pub struct Address {
-        #[smithy_schema(STREET)]
+        #[schema(schema = STREET)]
         street: String,
-        #[smithy_schema(CITY)]
+        #[schema(schema = CITY)]
         city: String,
-        #[smithy_schema(ZIP)]
+        #[schema(schema = ZIP)]
         zip_code: i32,
     }
 
@@ -941,15 +941,15 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(CONTACT_SCHEMA)]
+    #[schema(schema = CONTACT_SCHEMA)]
     pub struct Contact {
-        #[smithy_schema(EMAIL)]
+        #[schema(schema = EMAIL)]
         email: String,
-        #[smithy_schema(PHONES)]
+        #[schema(schema = PHONES)]
         phones: Vec<String>,
-        #[smithy_schema(ADDRESS)]
+        #[schema(schema = ADDRESS)]
         address: Address,
-        #[smithy_schema(BACKUP)]
+        #[schema(schema = BACKUP)]
         backup_address: Option<Address>,
     }
 
@@ -961,11 +961,11 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(HOBBY_SCHEMA)]
+    #[schema(schema = HOBBY_SCHEMA)]
     pub struct Hobby {
-        #[smithy_schema(NAME)]
+        #[schema(schema = NAME)]
         name: String,
-        #[smithy_schema(YEARS)]
+        #[schema(schema = YEARS)]
         years_of_experience: i32,
     }
 
@@ -996,23 +996,23 @@ mod tests {
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(PERSON_SCHEMA)]
+    #[schema(schema = PERSON_SCHEMA)]
     pub struct Person {
-        #[smithy_schema(NAME)]
+        #[schema(schema = NAME)]
         name: String,
-        #[smithy_schema(AGE)]
+        #[schema(schema = AGE)]
         age: i32,
-        #[smithy_schema(ACTIVE)]
+        #[schema(schema = ACTIVE)]
         is_active: bool,
-        #[smithy_schema(SCORE)]
+        #[schema(schema = SCORE)]
         score: f32,
-        #[smithy_schema(CONTACT)]
+        #[schema(schema = CONTACT)]
         contact: Contact,
-        #[smithy_schema(HOBBIES)]
+        #[schema(schema = HOBBIES)]
         hobbies: Vec<Hobby>,
-        #[smithy_schema(METADATA)]
+        #[schema(schema = METADATA)]
         metadata: IndexMap<String, String>,
-        #[smithy_schema(NOTES)]
+        #[schema(schema = NOTES)]
         notes: Option<String>,
     }
 
@@ -1143,11 +1143,11 @@ mod tests {
 
     #[smithy_union]
     #[derive(SmithyShape, PartialEq)]
-    #[smithy_schema(IP_ADDR)]
+    #[schema(schema = IP_ADDR)]
     pub enum IpAddr {
-        #[smithy_schema(V4)]
+        #[schema(schema = V4)]
         V4(String),
-        #[smithy_schema(V6)]
+        #[schema(schema = V6)]
         V6(String),
     }
 
@@ -1172,7 +1172,7 @@ mod tests {
 
     #[smithy_enum]
     #[derive(SmithyShape)]
-    #[smithy_schema(A_OR_B)]
+    #[schema(schema = A_OR_B)]
     pub enum AorB {
         A = "a",
         B = "b",
@@ -1196,7 +1196,7 @@ mod tests {
 
     #[smithy_enum]
     #[derive(SmithyShape)]
-    #[smithy_schema(C_OR_D)]
+    #[schema(schema = C_OR_D)]
     pub enum CorD {
         C = 1,
         D = 2,

@@ -1,7 +1,7 @@
 use smithy4rs_core::{
     derive::{
         SmithyShape,
-        SmithyTraitImpl,
+        SmithyTrait,
     },
     doc_map,
     schema::DynamicTrait,
@@ -14,8 +14,8 @@ smithy!("com.test#myAnnotationTrait": {
     }
 });
 
-#[derive(SmithyShape, SmithyTraitImpl, PartialEq, Clone)]
-#[smithy_schema(MY_ANNOTATION_TRAIT_SCHEMA)]
+#[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[schema(schema = MY_ANNOTATION_TRAIT_SCHEMA)]
 pub struct MyAnnotationTraitTrait {
 }
 

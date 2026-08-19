@@ -34,7 +34,7 @@ public final class StructureGenerator implements
             """;
     private static final String STRUCT_TEMPLATE = """
             ${derive:C|}
-            #[smithy_schema(${shape:I})]
+            #[schema(schema = ${shape:I})]
             pub struct ${shape:T} {${#memberFields}
                 ${value:C|}${/memberFields}
             }
@@ -124,9 +124,7 @@ public final class StructureGenerator implements
             MemberShape shape) implements Runnable {
         private static final String TEMPLATE =
                 """
-                        ${?noBuilder}#[no_builder]
-                        ${/noBuilder}${?default}#[default(${default:C})]
-                        ${/default}#[smithy_schema(${memberIdent:L})]
+                        #[schema(schema = ${memberIdent:L}${?default}, default${default:C}${/default}${?noBuilder}, no_builder${/noBuilder})]
                         pub ${memberName:L}: ${member:N},""";
 
         @Override

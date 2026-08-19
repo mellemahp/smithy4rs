@@ -21,7 +21,7 @@ smithy!("smithy.api#Unit": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(UNIT_SCHEMA)]
+#[schema(schema = UNIT_SCHEMA)]
 pub struct Unit {
 }
 
@@ -36,12 +36,12 @@ smithy!("com.test#MyUnion": {
 
 #[smithy_union]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(MY_UNION_SCHEMA)]
+#[schema(schema = MY_UNION_SCHEMA)]
 pub enum MyUnion {
-    #[smithy_schema(STRING_VARIANT)]
+    #[schema(schema = STRING_VARIANT)]
     StringVariant(String),
-    #[smithy_schema(INTEGER_VARIANT)]
+    #[schema(schema = INTEGER_VARIANT)]
     IntegerVariant(i32),
-    #[smithy_schema(UNIT_VARIANT)]
+    #[schema(schema = UNIT_VARIANT)]
     UnitVariant(Unit),
 }

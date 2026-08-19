@@ -34,7 +34,7 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
     private static final String SHAPE_TEMPLATE = """
             #[${smithyEnum:T}]
             ${derive:C|}
-            #[smithy_schema(${shape:I})]
+            #[schema(schema = ${shape:I})]
             pub enum ${shape:T} {${#variants}
                 ${value:C|},${/variants}
             }
