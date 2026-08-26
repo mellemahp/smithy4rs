@@ -1157,23 +1157,23 @@ mod tests {
     smithy!("com.test#ValidationStruct": {
         structure BASIC_VALIDATION_SCHEMA {
             @PatternTrait::new("^[a-zA-Z]*$");
-            A: STRING = "a"
-            B: INTEGER = "b"
-            LIST: LIST_SCHEMA = "list"
-            MAP: MAP_SCHEMA = "map"
+            A: STRING = "field_a"
+            B: INTEGER = "field_b"
+            LIST: LIST_SCHEMA = "field_list"
+            MAP: MAP_SCHEMA = "field_map"
         }
     });
     #[derive(SmithyShape)]
     #[schema(schema = BASIC_VALIDATION_SCHEMA)]
     pub struct SimpleStruct {
         #[schema(schema = A)]
-        field_a: String,
+        pub field_a: String,
         #[schema(schema = B)]
-        field_b: Option<i32>,
+        pub field_b: Option<i32>,
         #[schema(schema = LIST)]
-        field_list: Option<Vec<String>>,
+        pub field_list: Option<Vec<String>>,
         #[schema(schema = MAP)]
-        field_map: Option<IndexMap<String, String>>,
+        pub field_map: Option<IndexMap<String, String>>,
     }
 
     #[test]
@@ -1398,7 +1398,7 @@ mod tests {
     #[schema(schema = NESTED_SCHEMA)]
     pub struct NestedStruct {
         #[schema(schema = C)]
-        c: String,
+        pub c: String,
     }
 
     smithy!("test#StructWithNested": {
@@ -1412,9 +1412,9 @@ mod tests {
     #[schema(schema = STRUCT_WITH_NESTED_SCHEMA)]
     pub struct StructWithNested {
         #[schema(schema = NESTED)]
-        field_nested: Option<NestedStruct>,
+        pub nested: Option<NestedStruct>,
         #[schema(schema = NESTED_REQUIRED)]
-        field_required_nested: NestedStruct,
+        pub required: NestedStruct,
     }
 
     #[test]
@@ -1422,7 +1422,7 @@ mod tests {
         let builder_nested = NestedStructBuilder::new().c("field".to_string());
         let builder = StructWithNestedBuilder::new();
         let _value = builder
-            .field_required_nested_builder(builder_nested)
+            .nested_builder(builder_nested)
             .build()
             .expect("Failed to build SimpleStruct");
     }
@@ -1435,7 +1435,7 @@ mod tests {
             .expect("Failed to build NestedStruct");
         let builder = StructWithNestedBuilder::new();
         let _value = builder
-            .field_required_nested(built_nested)
+            .required(built_nested)
             .build()
             .expect("Failed to build SimpleStruct");
     }
@@ -1445,7 +1445,7 @@ mod tests {
         let builder_nested = NestedStructBuilder::new().c("dataWithCaps".to_string());
         let builder = StructWithNestedBuilder::new();
         let Some(err) = builder
-            .field_required_nested_builder(builder_nested)
+            .nested_builder(builder_nested)
             .build()
             .err()
         else {
@@ -1497,11 +1497,11 @@ mod tests {
     #[schema(schema = STRUCT_WITH_NESTED_LIST_SCHEMA)]
     pub struct StructWithNestedLists {
         #[schema(schema = LIST)]
-        field_nested_list: Option<Vec<NestedStruct>>,
+        pub list: Option<Vec<NestedStruct>>,
         #[schema(schema = LIST_REQUIRED)]
-        field_required_nested_list: Vec<NestedStruct>,
+        pub list_required: Vec<NestedStruct>,
         #[schema(schema = DEEPLY_NESTED)]
-        field_deeply_nested_list: Option<Vec<Vec<Vec<NestedStruct>>>>,
+        pub deeply_nested: Option<Vec<Vec<Vec<NestedStruct>>>>,
     }
 
     #[test]
@@ -1509,7 +1509,7 @@ mod tests {
         let nested_list = vec![NestedStructBuilder::new().c("data".to_string())];
         let builder = StructWithNestedListsBuilder::new();
         builder
-            .field_required_nested_list_builder(nested_list)
+            .list_required_builder(nested_list)
             .build()
             .expect("Failed to build SimpleStruct");
     }
@@ -1528,7 +1528,7 @@ mod tests {
         ];
         let builder = StructWithNestedListsBuilder::new();
         let _value = builder
-            .field_required_nested_list(nested_list)
+            .list_required(nested_list)
             .build()
             .expect("Failed to build SimpleStruct");
     }
@@ -1543,7 +1543,7 @@ mod tests {
         ];
         let builder = StructWithNestedListsBuilder::new();
         let Some(err) = builder
-            .field_required_nested_list_builder(nested_list)
+            .list_required_builder(nested_list)
             .build()
             .err()
         else {
@@ -1586,8 +1586,8 @@ mod tests {
         ]]];
         let builder = StructWithNestedListsBuilder::new();
         let Some(err) = builder
-            .field_required_nested_list_builder(nested_list)
-            .field_deeply_nested_list_builder(deeply_nested_list)
+            .list_required_builder(nested_list)
+            .deeply_nested_builder(deeply_nested_list)
             .build()
             .err()
         else {
@@ -1661,13 +1661,13 @@ mod tests {
     #[schema(schema = STRUCT_WITH_SETS)]
     pub struct StructWithSets {
         #[schema(schema = STRUCT)]
-        set_of_struct: Option<Vec<NestedStruct>>,
+        pub set_of_struct: Option<Vec<NestedStruct>>,
         #[schema(schema = STRING)]
-        set_of_simple: Option<Vec<String>>,
+        pub set_of_simple: Option<Vec<String>>,
         #[schema(schema = LIST)]
-        set_of_list: Option<Vec<Vec<i32>>>,
+        pub set_of_list: Option<Vec<Vec<i32>>>,
         #[schema(schema = MAP)]
-        set_of_map: Option<Vec<IndexMap<String, i32>>>,
+        pub set_of_map: Option<Vec<IndexMap<String, i32>>>,
     }
 
     #[test]
@@ -1782,11 +1782,11 @@ mod tests {
     #[schema(schema = STRUCT_WITH_NESTED_MAP_SCHEMA)]
     pub struct StructWithNestedMaps {
         #[schema(schema = OPTIONAL)]
-        optional: Option<IndexMap<String, NestedStruct>>,
+        pub optional: Option<IndexMap<String, NestedStruct>>,
         #[schema(schema = REQUIRED)]
-        required: IndexMap<String, NestedStruct>,
+        pub required: IndexMap<String, NestedStruct>,
         #[schema(schema = DEEPLY_NESTED)]
-        deeply_nested: Option<IndexMap<String, IndexMap<String, IndexMap<String, NestedStruct>>>>,
+        pub deeply_nested: Option<IndexMap<String, IndexMap<String, IndexMap<String, NestedStruct>>>>,
     }
 
     #[test]

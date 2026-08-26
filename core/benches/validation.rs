@@ -26,11 +26,11 @@ smithy!("test#ValidationStruct": {
 #[schema(schema = VALIDATE_SHAPE_SCHEMA)]
 pub struct ValidatedStruct {
     #[schema(schema = STRING)]
-    string: String,
+    pub string: String,
     #[schema(schema = REQUIRED_INT)]
-    required_int: i32,
+    pub required_int: i32,
     #[schema(schema = INTEGER)]
-    integer: Option<i32>,
+    pub integer: Option<i32>,
 }
 
 smithy!("test#UnvalidatedShape": {
@@ -44,11 +44,11 @@ smithy!("test#UnvalidatedShape": {
 #[schema(schema = UNVALIDATED_SHAPE_SCHEMA)]
 pub struct UnvalidatedStruct {
     #[schema(schema = STRING)]
-    string: String,
+    pub string: String,
     #[schema(schema = REQUIRED_INT)]
-    required_int: i32,
+    pub required_int: i32,
     #[schema(schema = INT)]
-    integer: Option<i32>,
+    pub integer: Option<i32>,
 }
 
 smithy!("com.example#ListOfNested": {
@@ -74,9 +74,9 @@ smithy!("test#StructWithNestedList": {
 #[schema(schema = STRUCT_WITH_COLLECTIONS)]
 pub struct StructWithCollections {
     #[schema(schema = LIST)]
-    field_nested_list: Option<Vec<ValidatedStruct>>,
+    pub field_nested_list: Option<Vec<ValidatedStruct>>,
     #[schema(schema = MAP)]
-    field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
+    pub field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
 }
 
 smithy!("test#StructWithNestedSet": {
@@ -90,7 +90,7 @@ smithy!("test#StructWithNestedSet": {
 #[schema(schema = STRUCT_WITH_SET)]
 pub struct StructWithSet {
     #[schema(schema = NESTED_SET)]
-    field_nested_set: Option<Vec<ValidatedStruct>>,
+    pub field_nested_set: Option<Vec<ValidatedStruct>>,
 }
 
 smithy!("test#StructWithNestedList": {
@@ -104,7 +104,7 @@ smithy!("test#StructWithNestedList": {
 #[schema(schema = STRUCT_WITH_LIST)]
 pub struct StructWithList {
     #[schema(schema = NESTED_LIST)]
-    field_nested_list: Option<Vec<ValidatedStruct>>,
+    pub field_nested_list: Option<Vec<ValidatedStruct>>,
 }
 
 // ==== Benchmarks ====

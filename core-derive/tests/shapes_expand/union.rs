@@ -7,9 +7,9 @@ use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
 smithy!("test#SimpleUnion": {
     union UNION {
-        A: STRING = "field_a"
-        B: INTEGER = "field_b"
-        C: UNIT = "field_c"
+        A: STRING = "A"
+        B: INTEGER = "B"
+        C: UNIT = "C"
     }
 });
 

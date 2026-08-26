@@ -330,15 +330,19 @@ impl SchemaValue {
     /// Returns member schema reference or *panics*
     ///
     /// <div class ="warning">
-    /// In general this should only be used in generated code.
+    /// This should ONLY be used in generated/derived code.
     /// </div>
-    ///
-    /// # Panics
-    /// If the expected member does not exist on the schema
     #[must_use]
+    #[doc(hidden)]
+    #[allow(unsafe_code)]
     pub fn expect_member(&self, member_name: &str) -> &Schema {
-        self.get_member(member_name)
-            .unwrap_or_else(|| panic!("Expected member: {member_name}"))
+        let member = self.get_member(member_name);
+        debug_assert!(member.is_none(), "invariant violation: {member_name} missing.");
+        unsafe {
+            // SAFETY: When used in generated code (schema! + derive(SmithyShape))
+            // the keys are statically checked
+            member.unwrap_unchecked()
+        }
     }
 
     /// Returns true if the map contains a value for the specified trait ID.

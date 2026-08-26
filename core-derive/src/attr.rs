@@ -5,7 +5,7 @@
 //! `darling` is used to auto-derive and parse the attribute.
 
 use std::cell::OnceCell;
-
+use convert_case::{Case, Casing};
 use darling::{
     Error, FromDeriveInput, FromField, FromMeta, FromVariant,
     ast::{Data, Fields},
@@ -109,6 +109,8 @@ pub struct StructMember {
     pub(crate) ident: Option<Ident>,
     pub(crate) ty: syn::Type,
 
+    pub(crate) name: Option<LitStr>,
+
     /// Member schema to use
     pub(crate) schema: Ident,
 
@@ -139,6 +141,18 @@ impl StructMember {
                 .unwrap_or_else(|| self.ty.span());
             Err(Error::custom("Members must be explicitly public (`pub`)").with_span(location))
         }
+    }
+
+    pub(crate) fn member_name(&self) -> TokenStream {
+        let value = match &self.name {
+            Some(name) => name.value(),
+            // By default, smithy expects camelCase member names while in
+            // generated rust we use snake case. Reverse the conversion here.
+            None => self.ident.as_ref().expect("Expect a named member")
+                .to_string()
+                .to_case(Case::Camel)
+        };
+        value.to_token_stream()
     }
 }
 
@@ -194,7 +208,20 @@ pub struct UnionVariant {
     pub ident: Ident,
     #[darling(default)]
     pub schema: Option<Ident>,
+    #[darling(default)]
+    pub name: Option<LitStr>,
     pub fields: Fields<WrappedField>,
+}
+impl UnionVariant {
+    pub(crate) fn member_name(&self) -> TokenStream {
+        let name = match &self.name {
+            Some(name) => name.value(),
+            // Union names are capitalized camel case by default to conform with rust standards,
+            // but smithy uses camelCase as the default for member names.
+            None => self.ident.to_string().to_case(Case::Camel)
+        };
+        name.to_token_stream()
+    }
 }
 
 /// A smithy Enum or `IntEnum` definition

@@ -615,11 +615,11 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            A: STRING = "a"
-            B: STRING = "b"
-            C: STRING = "c"
-            LIST: LIST_SCHEMA = "list"
-            MAP: MAP_SCHEMA = "map"
+            A: STRING = "member_a"
+            B: STRING = "member_b"
+            C: STRING = "member_optional"
+            LIST: LIST_SCHEMA = "member_list"
+            MAP: MAP_SCHEMA = "member_map"
         }
     });
 

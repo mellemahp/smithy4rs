@@ -48,5 +48,5 @@ smithy!("com.example#Rename": {
 #[schema(schema = RENAME)]
 pub struct TestRename {
     #[schema(schema = A)]
-    a: String,
+    pub a: String,
 }

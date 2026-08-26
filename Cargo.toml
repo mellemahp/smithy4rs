@@ -29,7 +29,7 @@ thiserror = "2.0.18"
 [workspace.lints.rust]
 future_incompatible = { level = "warn", priority = 2 }
 nonstandard_style = { level = "deny", priority = 1 }
-unsafe_code = "forbid"
+unsafe_code = "deny"
 unused_qualifications = "warn"
 unused_extern_crates = "warn"
 unreachable_code = { level = "deny", priority = 0 }

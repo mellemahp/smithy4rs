@@ -27,6 +27,8 @@ pub mod features;
 // Don't list macros as a module in generated docs
 #[doc(hidden)]
 pub mod macros;
+mod assert;
+pub use assert::assert_contains_all;
 
 /// Common cheaply-copyable reference type.
 /// Defined as a common type so Arc type could be swapped out.
