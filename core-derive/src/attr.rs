@@ -5,6 +5,7 @@
 //! `darling` is used to auto-derive and parse the attribute.
 
 use std::cell::OnceCell;
+
 use convert_case::{Case, Casing};
 use darling::{
     Error, FromDeriveInput, FromField, FromMeta, FromVariant,
@@ -13,8 +14,8 @@ use darling::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
-use syn::{DeriveInput, Expr, Lit, LitInt, LitStr, Visibility};
-use syn::spanned::Spanned;
+use syn::{DeriveInput, Expr, Lit, LitInt, LitStr, Visibility, spanned::Spanned};
+
 use crate::utils::is_optional;
 
 /// Entry point for the `SmithyShape` derive macro
@@ -135,7 +136,8 @@ impl StructMember {
         if matches!(self.vis, Visibility::Public(_)) {
             Ok(self)
         } else {
-            let location = &self.ident
+            let location = &self
+                .ident
                 .as_ref()
                 .map(|i| i.span())
                 .unwrap_or_else(|| self.ty.span());
@@ -148,9 +150,12 @@ impl StructMember {
             Some(name) => name.value(),
             // By default, smithy expects camelCase member names while in
             // generated rust we use snake case. Reverse the conversion here.
-            None => self.ident.as_ref().expect("Expect a named member")
+            None => self
+                .ident
+                .as_ref()
+                .expect("Expect a named member")
                 .to_string()
-                .to_case(Case::Camel)
+                .to_case(Case::Camel),
         };
         value.to_token_stream()
     }
@@ -218,7 +223,7 @@ impl UnionVariant {
             Some(name) => name.value(),
             // Union names are capitalized camel case by default to conform with rust standards,
             // but smithy uses camelCase as the default for member names.
-            None => self.ident.to_string().to_case(Case::Camel)
+            None => self.ident.to_string().to_case(Case::Camel),
         };
         name.to_token_stream()
     }

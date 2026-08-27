@@ -12,20 +12,12 @@ pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
 pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 {
     (&*SIMPLE_SCHEMA_BUILDER)
-        .put_member("field_a", &STRING, Vec::new())
-        .put_member("field_b", &INTEGER, Vec::new())
-        .put_member("field_c", &STRING, Vec::new())
+        .put_member("fieldA", &STRING, Vec::new())
+        .put_member("fieldB", &INTEGER, Vec::new())
+        .put_member("fieldC", &STRING, Vec::new())
         .build()
 });
-static _SIMPLE_SCHEMA_MEMBER_A: ::smithy4rs_core::LazyLock<
-    &::smithy4rs_core::schema::Schema,
-> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_a"));
-static _SIMPLE_SCHEMA_MEMBER_B: ::smithy4rs_core::LazyLock<
-    &::smithy4rs_core::schema::Schema,
-> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_b"));
-static _SIMPLE_SCHEMA_MEMBER_C: ::smithy4rs_core::LazyLock<
-    &::smithy4rs_core::schema::Schema,
-> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("field_c"));
+const SIMPLE_SCHEMA_KEYS: &[&str] = &["fieldA", "fieldB", "fieldC"];
 #[schema(schema = SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
     #[schema(schema = A)]
@@ -46,6 +38,19 @@ const _: () = {
         }
     }
 };
+const _: () = ::smithy4rs_core::assert_contains_all(
+    SIMPLE_SCHEMA_KEYS,
+    &["fieldA", "fieldB", "fieldC"],
+);
+static _SIMPLE_SCHEMA_MEMBER_A: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("fieldA"));
+static _SIMPLE_SCHEMA_MEMBER_B: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("fieldB"));
+static _SIMPLE_SCHEMA_MEMBER_C: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("fieldC"));
 const _: () = {
     use ::smithy4rs_core::serde::debug::DebugWrapper as _DebugWrapper;
     #[automatically_derived]
@@ -68,10 +73,10 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.write_member_named("field_a", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
-            ser.write_member_named("field_b", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
+            ser.write_member_named("fieldA", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
+            ser.write_member_named("fieldB", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
             ser.write_optional_member_named(
-                "field_c",
+                "fieldC",
                 &_SIMPLE_SCHEMA_MEMBER_C,
                 &self.field_c,
             )?;
@@ -244,10 +249,10 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.write_member_named("field_a", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
-            ser.write_member_named("field_b", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
+            ser.write_member_named("fieldA", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
+            ser.write_member_named("fieldB", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
             ser.write_optional_member_named(
-                "field_c",
+                "fieldC",
                 &_SIMPLE_SCHEMA_MEMBER_C,
                 &self.field_c,
             )?;
@@ -298,14 +303,12 @@ pub static NESTED_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
     ::smithy4rs_core::schema::Schema::structure_builder("test#NESTED_STRUCT", Vec::new()),
 ));
 pub static NESTED_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
-{ (&*NESTED_SCHEMA_BUILDER).put_member("field_d", &STRING, Vec::new()).build() });
-static _NESTED_SCHEMA_MEMBER_D: ::smithy4rs_core::LazyLock<
-    &::smithy4rs_core::schema::Schema,
-> = ::smithy4rs_core::LazyLock::new(|| NESTED_SCHEMA.expect_member("field_d"));
+{ (&*NESTED_SCHEMA_BUILDER).put_member("fieldD", &STRING, Vec::new()).build() });
+const NESTED_SCHEMA_KEYS: &[&str] = &["fieldD"];
 #[schema(schema = NESTED_SCHEMA)]
 pub struct Nested {
     #[schema(schema = D)]
-    pub field_a: String,
+    pub field_d: String,
 }
 const _: () = {
     use ::smithy4rs_core::schema::Schema as _Schema;
@@ -318,6 +321,10 @@ const _: () = {
         }
     }
 };
+const _: () = ::smithy4rs_core::assert_contains_all(NESTED_SCHEMA_KEYS, &["fieldD"]);
+static _NESTED_SCHEMA_MEMBER_D: ::smithy4rs_core::LazyLock<
+    &::smithy4rs_core::schema::Schema,
+> = ::smithy4rs_core::LazyLock::new(|| NESTED_SCHEMA.expect_member("fieldD"));
 const _: () = {
     use ::smithy4rs_core::serde::debug::DebugWrapper as _DebugWrapper;
     #[automatically_derived]
@@ -340,7 +347,7 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.write_member_named("field_a", &_NESTED_SCHEMA_MEMBER_D, &self.field_a)?;
+            ser.write_member_named("fieldD", &_NESTED_SCHEMA_MEMBER_D, &self.field_d)?;
             ser.end(schema)
         }
     }
@@ -367,7 +374,7 @@ const _: () = {
             while let Some(member_schema) = reader.read_member(schema)? {
                 if member_schema == *_NESTED_SCHEMA_MEMBER_D {
                     let value: String = reader.read_value(member_schema)?;
-                    builder = builder.field_a(value);
+                    builder = builder.field_d(value);
                     continue;
                 }
                 reader.skip_value()?;
@@ -399,14 +406,14 @@ impl Nested {
 /// Builder for [`Nested`]
 #[automatically_derived]
 pub struct NestedBuilder {
-    field_a: ::smithy4rs_core::serde::Required<String>,
+    field_d: ::smithy4rs_core::serde::Required<String>,
 }
 #[automatically_derived]
 impl ::core::clone::Clone for NestedBuilder {
     #[inline]
     fn clone(&self) -> NestedBuilder {
         NestedBuilder {
-            field_a: ::core::clone::Clone::clone(&self.field_a),
+            field_d: ::core::clone::Clone::clone(&self.field_d),
         }
     }
 }
@@ -415,12 +422,12 @@ impl NestedBuilder {
     ///Create a new `NestedBuilder` instance
     pub fn new() -> Self {
         NestedBuilder {
-            field_a: ::smithy4rs_core::serde::Required::Unset,
+            field_d: ::smithy4rs_core::serde::Required::Unset,
         }
     }
-    ///Set `field_a`.
-    pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
-        self.field_a = ::smithy4rs_core::serde::Required::Set(value.into());
+    ///Set `field_d`.
+    pub fn field_d<T: Into<String>>(mut self, value: T) -> Self {
+        self.field_d = ::smithy4rs_core::serde::Required::Set(value.into());
         self
     }
     /// Build the shape, validating with the default validator.
@@ -448,7 +455,7 @@ const _: () = {
         type Value = Nested;
         fn correct(self) -> Self::Value {
             Self::Value {
-                field_a: self.field_a.get(),
+                field_d: self.field_d.get(),
             }
         }
     }
@@ -475,7 +482,7 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.write_member_named("field_a", &_NESTED_SCHEMA_MEMBER_D, &self.field_a)?;
+            ser.write_member_named("fieldD", &_NESTED_SCHEMA_MEMBER_D, &self.field_d)?;
             ser.end(schema)
         }
     }
@@ -501,7 +508,7 @@ impl ::core::marker::StructuralPartialEq for Nested {}
 impl ::core::cmp::PartialEq for Nested {
     #[inline]
     fn eq(&self, other: &Nested) -> bool {
-        self.field_a == other.field_a
+        self.field_d == other.field_d
     }
 }
 #[automatically_derived]
@@ -509,7 +516,7 @@ impl ::core::clone::Clone for Nested {
     #[inline]
     fn clone(&self) -> Nested {
         Nested {
-            field_a: ::core::clone::Clone::clone(&self.field_a),
+            field_d: ::core::clone::Clone::clone(&self.field_d),
         }
     }
 }

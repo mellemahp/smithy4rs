@@ -7,9 +7,9 @@ use smithy4rs_core::{
 
 smithy!("test#InnerStruct": {
     structure INNER_STRUCT_SCHEMA {
-        A: STRING = "field_a"
-        B: STRING = "field_b"
-        C: STRING = "field_c"
+        A: STRING = "fieldA"
+        B: STRING = "fieldB"
+        C: STRING = "fieldC"
     }
 });
 
@@ -39,10 +39,10 @@ smithy!("test#NestedCollectionsStruct": {
     structure NESTED_COLLECTIONS_STRUCT_SCHEMA {
         NAME: STRING = "name"
         COUNT: INTEGER = "count"
-        SINGLE: INNER_STRUCT_SCHEMA = "single_nested"
-        OPTIONAL: INNER_STRUCT_SCHEMA = "optional_nested"
-        LIST: INNER_STRUCT_LIST_SCHEMA = "list_nested"
-        MAP: INNER_STRUCT_MAP_SCHEMA = "map_nested"
+        SINGLE: INNER_STRUCT_SCHEMA = "singleNested"
+        OPTIONAL: INNER_STRUCT_SCHEMA = "optionalNested"
+        LIST: INNER_STRUCT_LIST_SCHEMA = "listNested"
+        MAP: INNER_STRUCT_MAP_SCHEMA = "mapNested"
     }
 });
 

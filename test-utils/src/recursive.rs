@@ -20,11 +20,11 @@ smithy!("test#StringList": {
 
 smithy!("test#RecursiveShapesStruct": {
     structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
-        STRING: STRING = "string_field"
-        INTEGER: INTEGER = "integer_field"
-        LIST: STRING_LIST_SCHEMA = "list_field"
-        MAP: STRING_MAP_SCHEMA = "map_field"
-        OPTIONAL: STRING = "optional_field"
+        STRING: STRING = "stringField"
+        INTEGER: INTEGER = "integerField"
+        LIST: STRING_LIST_SCHEMA = "listField"
+        MAP: STRING_MAP_SCHEMA = "mapField"
+        OPTIONAL: STRING = "optionalField"
         NEXT: (@self) = "next"
     }
 });

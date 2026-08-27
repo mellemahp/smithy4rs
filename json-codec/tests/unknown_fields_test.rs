@@ -5,7 +5,7 @@ use smithy4rs_test_utils::*;
 #[test]
 fn test_unknown_field_skipped() {
     // SimpleStruct only has field_a and field_b, but JSON has extra fields
-    let json = br#"{"field_a": "test", "unknown_field": "should_be_skipped", "field_b": 42}"#;
+    let json = br#"{"fieldA": "test", "unknown_field": "should_be_skipped", "fieldB": 42}"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
         .unwrap()
@@ -20,10 +20,10 @@ fn test_unknown_field_skipped() {
 fn test_multiple_unknown_fields_skipped() {
     let json = br#"{
         "extra1": "ignored",
-        "field_a": "hello",
+        "fieldA": "hello",
         "extra2": 999,
         "extra3": true,
-        "field_b": 123,
+        "fieldB": 123,
         "extra4": null
     }"#;
     let mut de = JsonDeserializer::new(json);
@@ -39,9 +39,9 @@ fn test_multiple_unknown_fields_skipped() {
 #[test]
 fn test_unknown_nested_object_skipped() {
     let json = br#"{
-        "field_a": "test",
+        "fieldA": "test",
         "nested_unknown": {"deep": {"deeper": [1, 2, 3]}},
-        "field_b": 42
+        "fieldB": 42
     }"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
@@ -56,9 +56,9 @@ fn test_unknown_nested_object_skipped() {
 #[test]
 fn test_unknown_array_skipped() {
     let json = br#"{
-        "field_a": "test",
+        "fieldA": "test",
         "unknown_array": [1, 2, {"nested": true}, [3, 4, 5]],
-        "field_b": 42
+        "fieldB": 42
     }"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de)
@@ -75,16 +75,16 @@ fn test_unknown_fields_in_nested_struct() {
     let json = r#"{
         "name": "outer",
         "count": 1,
-        "single_nested": {
-            "field_a": "a",
+        "singleNested": {
+            "fieldA": "a",
             "unknown_inner": "skipped",
-            "field_b": "b",
+            "fieldB": "b",
             "another_unknown": 123,
-            "field_c": "c"
+            "fieldC": "c"
         },
-        "optional_nested": null,
-        "list_nested": [],
-        "map_nested": {}
+        "optionalNested": null,
+        "listNested": [],
+        "mapNested": {}
     }"#;
 
     let mut de = JsonDeserializer::new(json.as_bytes());
@@ -107,28 +107,28 @@ fn test_unknown_fields_at_multiple_nesting_levels() {
         "name": "test",
         "extra_top": "ignored",
         "count": 5,
-        "single_nested": {
-            "field_a": "alpha",
+        "singleNested": {
+            "fieldA": "alpha",
             "extra_inner": {"deep": true},
-            "field_b": "beta",
-            "field_c": "gamma"
+            "fieldB": "beta",
+            "fieldC": "gamma"
         },
-        "optional_nested": null,
-        "list_nested": [
+        "optionalNested": null,
+        "listNested": [
             {
-                "field_a": "list_a",
+                "fieldA": "list_a",
                 "extra_in_list": [1, 2, 3],
-                "field_b": "list_b",
-                "field_c": "list_c"
+                "fieldB": "list_b",
+                "fieldC": "list_c"
             }
         ],
         "extra_before_map": false,
-        "map_nested": {
+        "mapNested": {
             "key1": {
-                "field_a": "map_a",
+                "fieldA": "map_a",
                 "extra_in_map": null,
-                "field_b": "map_b",
-                "field_c": "map_c"
+                "fieldB": "map_b",
+                "fieldC": "map_c"
             }
         },
         "extra_end": 42

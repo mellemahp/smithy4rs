@@ -31,7 +31,12 @@ pub const fn assert_contains_all(this: &[&str], other: &[&str]) {
     let mut idx = 0;
     while idx < this.len() {
         if !contains(this, other[idx]) {
-            concat_panic!("unexpected member: `", other[idx], "`. Expected one of: ", this);
+            concat_panic!(
+                "unexpected member: `",
+                other[idx],
+                "`. Expected one of: ",
+                this
+            );
         }
         idx += 1;
     }
@@ -39,7 +44,7 @@ pub const fn assert_contains_all(this: &[&str], other: &[&str]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{contains, assert_contains_all};
+    use super::{assert_contains_all, contains};
 
     const KEYS: &[&str] = &["foo", "bar", "baz"];
 

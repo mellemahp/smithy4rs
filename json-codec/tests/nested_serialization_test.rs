@@ -75,14 +75,14 @@ fn test_nested_struct_serialization() {
 
     assert!(json.contains("\"name\":\"test_object\""));
     assert!(json.contains("\"count\":42"));
-    assert!(json.contains("\"single_nested\""));
+    assert!(json.contains("\"singleNested\""));
     assert!(json.contains("\"alpha\""));
     assert!(json.contains("\"beta\""));
-    assert!(json.contains("\"optional_nested\""));
+    assert!(json.contains("\"optionalNested\""));
     assert!(json.contains("\"delta\""));
-    assert!(json.contains("\"list_nested\""));
+    assert!(json.contains("\"listNested\""));
     assert!(json.contains("\"item1-a\""));
-    assert!(json.contains("\"map_nested\""));
+    assert!(json.contains("\"mapNested\""));
     assert!(json.contains("\"key1\""));
     assert!(json.contains("\"value1-a\""));
 }

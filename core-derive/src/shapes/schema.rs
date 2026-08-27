@@ -1,7 +1,10 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use crate::attr::{Shape, StructMember, StructShape, UnionShape, UnionVariant};
-use crate::utils::member_schema;
+
+use crate::{
+    attr::{Shape, StructMember, StructShape, UnionShape, UnionVariant},
+    utils::member_schema,
+};
 
 /// Generates `StaticSchemaShape` impl for Smithy Shapes.
 pub(crate) fn expand_schema(shape: &Shape, crate_ident: &TokenStream) -> TokenStream {
@@ -31,11 +34,11 @@ fn expand_member_schemas(shape: &Shape, crate_ident: &TokenStream) -> TokenStrea
     let (member_schemas, member_names) = match shape {
         Shape::Struct(struct_shape) => resolve_struct_member_schemas(struct_shape),
         Shape::Union(union_shape) => resolve_union_member_schemas(union_shape),
-        _ => return quote!{ }, // all others dont need named members
+        _ => return quote! {}, // all others dont need named members
     };
     // Ignore annotation-ish structs
     if member_names.is_empty() {
-        return quote!{};
+        return quote! {};
     }
     let schema_keys = Ident::new(&format!("{schema}_KEYS"), Span::call_site());
 
@@ -50,14 +53,16 @@ fn expand_member_schemas(shape: &Shape, crate_ident: &TokenStream) -> TokenStrea
 
 fn resolve_struct_member_schemas(shape: &StructShape) -> (Vec<Ident>, Vec<TokenStream>) {
     let root_schema = &shape.schema;
-    let members = shape.data
-        .as_struct()
-        .expect("Expected Shape");
-    let member_schema_idents = members.fields.iter()
+    let members = shape.data.as_struct().expect("Expected Shape");
+    let member_schema_idents = members
+        .fields
+        .iter()
         .map(|f| &f.schema)
         .map(|m| member_schema(m, root_schema))
         .collect::<Vec<_>>();
-    let member_names = members.fields.iter()
+    let member_names = members
+        .fields
+        .iter()
         .map(StructMember::member_name)
         .collect::<Vec<_>>();
     (member_schema_idents, member_names)
@@ -65,14 +70,17 @@ fn resolve_struct_member_schemas(shape: &StructShape) -> (Vec<Ident>, Vec<TokenS
 
 fn resolve_union_member_schemas(shape: &UnionShape) -> (Vec<Ident>, Vec<TokenStream>) {
     let root_schema = &shape.schema;
-    let variants = shape.data
-        .as_enum()
-        .expect("Expected Shape");
-    let member_idents = variants.iter()
+    let unknown = syn::parse_str::<Ident>("Unknown").unwrap();
+    let variants = shape.data.as_enum().expect("Expected Shape");
+    let member_idents = variants
+        .iter()
+        .filter(|v| v.ident != unknown)
         .map(|f| &f.schema)
         .map(|m| member_schema(m.as_ref().expect("expect_schema"), root_schema))
         .collect::<Vec<_>>();
-    let member_names = variants.iter()
+    let member_names = variants
+        .iter()
+        .filter(|v| v.ident != unknown)
         .map(UnionVariant::member_name)
         .collect::<Vec<_>>();
     (member_idents, member_names)

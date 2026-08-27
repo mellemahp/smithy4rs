@@ -81,11 +81,7 @@ pub(crate) fn serialize_struct(shape: &StructShape) -> TokenStream {
         .iter()
         .map(|v| member_schema(&v.schema, &shape.schema));
     let member_name = fields.iter().map(|d| &d.ident);
-    // TODO: This needs to be the exact member name used in the schema. I think it might differ from the field name
-    // in some cases
-    let member_name_str = fields
-        .iter()
-        .map(|d| d.ident.as_ref().expect("Member name").to_string());
+    let member_name_str = fields.iter().map(StructMember::member_name);
     quote! {
         let mut ser = serializer.write_struct(schema, #length)?;
         #(ser.#method(#member_name_str, &#member_schema, &self.#member_name)?;)*
@@ -186,7 +182,7 @@ fn match_arm(shape: &UnionShape, variant: &UnionVariant) -> TokenStream {
     let name = &variant.ident;
     let shape_name = &shape.ident;
     let root_schema = &shape.schema;
-    let member_name = &variant.ident.to_string().to_lowercase();
+    let member_name = &variant.member_name();
     let schema = variant.schema.as_ref().expect("Member");
     let schema = member_schema(schema, root_schema);
 

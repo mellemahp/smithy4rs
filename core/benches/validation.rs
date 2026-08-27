@@ -18,7 +18,7 @@ smithy!("test#ValidationStruct": {
         @LengthTrait::builder().min(1).max(100).build();
         STRING: STRING = "string"
         @RangeTrait::builder().max(BigDecimal::from(100u64)).build();
-        REQUIRED_INT: INTEGER = "required_int"
+        REQUIRED_INT: INTEGER = "requiredInt"
         INTEGER: INTEGER = "integer"
     }
 });
@@ -36,7 +36,7 @@ pub struct ValidatedStruct {
 smithy!("test#UnvalidatedShape": {
     structure UNVALIDATED_SHAPE_SCHEMA {
         STRING: STRING = "string"
-        REQUIRED_INT: INTEGER = "required_int"
+        REQUIRED_INT: INTEGER = "requiredInt"
         INT: INTEGER = "integer"
     }
 });
@@ -65,8 +65,8 @@ smithy!("com.example#MapOfNested": {
 
 smithy!("test#StructWithNestedList": {
     structure STRUCT_WITH_COLLECTIONS {
-        LIST: LIST_OF_NESTED_SCHEMA = "field_nested_list"
-        MAP: MAP_OF_NESTED_SCHEMA = "field_nested_map"
+        LIST: LIST_OF_NESTED_SCHEMA = "fieldNestedList"
+        MAP: MAP_OF_NESTED_SCHEMA = "fieldNestedMap"
     }
 });
 
@@ -82,7 +82,7 @@ pub struct StructWithCollections {
 smithy!("test#StructWithNestedSet": {
     structure STRUCT_WITH_SET {
         @UniqueItemsTrait::builder().build();
-        NESTED_SET: LIST_OF_NESTED_SCHEMA = "field_nested_set"
+        NESTED_SET: LIST_OF_NESTED_SCHEMA = "fieldNestedSet"
     }
 });
 
@@ -95,7 +95,7 @@ pub struct StructWithSet {
 
 smithy!("test#StructWithNestedList": {
     structure STRUCT_WITH_LIST {
-        NESTED_LIST: LIST_OF_NESTED_SCHEMA = "field_nested_list"
+        NESTED_LIST: LIST_OF_NESTED_SCHEMA = "fieldNestedList"
     }
 });
 

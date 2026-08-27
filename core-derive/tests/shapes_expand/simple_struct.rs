@@ -1,11 +1,14 @@
-use smithy4rs_core::{prelude::{INTEGER, STRING}, smithy, IndexMap};
+use smithy4rs_core::{
+    prelude::{INTEGER, STRING},
+    smithy,
+};
 use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_SCHEMA {
-        A: STRING = "field_a"
-        B: INTEGER = "field_b"
-        C: STRING = "field_c"
+        A: STRING = "fieldA"
+        B: INTEGER = "fieldB"
+        C: STRING = "fieldC"
     }
 });
 
@@ -22,7 +25,7 @@ pub struct SimpleStruct {
 
 smithy!("test#NESTED_STRUCT": {
     structure NESTED_SCHEMA {
-        D: STRING = "field_d"
+        D: STRING = "fieldD"
     }
 });
 

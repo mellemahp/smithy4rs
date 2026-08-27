@@ -1157,10 +1157,10 @@ mod tests {
     smithy!("com.test#ValidationStruct": {
         structure BASIC_VALIDATION_SCHEMA {
             @PatternTrait::new("^[a-zA-Z]*$");
-            A: STRING = "field_a"
-            B: INTEGER = "field_b"
-            LIST: LIST_SCHEMA = "field_list"
-            MAP: MAP_SCHEMA = "field_map"
+            A: STRING = "fieldA"
+            B: INTEGER = "fieldB"
+            LIST: LIST_SCHEMA = "fieldList"
+            MAP: MAP_SCHEMA = "fieldMap"
         }
     });
     #[derive(SmithyShape)]
@@ -1422,7 +1422,7 @@ mod tests {
         let builder_nested = NestedStructBuilder::new().c("field".to_string());
         let builder = StructWithNestedBuilder::new();
         let _value = builder
-            .nested_builder(builder_nested)
+            .required_builder(builder_nested)
             .build()
             .expect("Failed to build SimpleStruct");
     }
@@ -1444,11 +1444,7 @@ mod tests {
     fn nested_struct_fields_checked() {
         let builder_nested = NestedStructBuilder::new().c("dataWithCaps".to_string());
         let builder = StructWithNestedBuilder::new();
-        let Some(err) = builder
-            .nested_builder(builder_nested)
-            .build()
-            .err()
-        else {
+        let Some(err) = builder.required_builder(builder_nested).build().err() else {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 1);
@@ -1488,8 +1484,8 @@ mod tests {
     smithy!("test#StructWithNestedList": {
         structure STRUCT_WITH_NESTED_LIST_SCHEMA {
             LIST: LIST_OF_NESTED_SCHEMA = "list"
-            LIST_REQUIRED: LIST_OF_NESTED_SCHEMA = "list_required"
-            DEEPLY_NESTED: LIST_OF_LIST_OF_LIST_OF_NESTED = "deeply_nested"
+            LIST_REQUIRED: LIST_OF_NESTED_SCHEMA = "listRequired"
+            DEEPLY_NESTED: LIST_OF_LIST_OF_LIST_OF_NESTED = "deeplyNested"
         }
     });
 
@@ -1542,11 +1538,7 @@ mod tests {
             NestedStructBuilder::new().c("b".to_string()),
         ];
         let builder = StructWithNestedListsBuilder::new();
-        let Some(err) = builder
-            .list_required_builder(nested_list)
-            .build()
-            .err()
-        else {
+        let Some(err) = builder.list_required_builder(nested_list).build().err() else {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 2);
@@ -1650,10 +1642,10 @@ mod tests {
     });
     smithy!("test#StructWithSets": {
         structure STRUCT_WITH_SETS {
-            STRUCT: SET_OF_STRUCT = "set_of_struct"
-            STRING: SET_OF_STRING = "set_of_simple"
-            LIST: SET_OF_LIST = "set_of_list"
-            MAP: SET_OF_MAP = "set_of_map"
+            STRUCT: SET_OF_STRUCT = "setOfStruct"
+            STRING: SET_OF_STRING = "setOfSimple"
+            LIST: SET_OF_LIST = "setOfList"
+            MAP: SET_OF_MAP = "setOfMap"
         }
     });
 
@@ -1774,7 +1766,7 @@ mod tests {
         structure STRUCT_WITH_NESTED_MAP_SCHEMA {
             OPTIONAL: MAP_OF_NESTED_SCHEMA = "optional"
             REQUIRED: MAP_OF_NESTED_SCHEMA = "required"
-            DEEPLY_NESTED: MAP_OF_MAP_OF_MAP_OF_NESTED = "deeply_nested"
+            DEEPLY_NESTED: MAP_OF_MAP_OF_MAP_OF_NESTED = "deeplyNested"
         }
     });
 
@@ -1786,7 +1778,8 @@ mod tests {
         #[schema(schema = REQUIRED)]
         pub required: IndexMap<String, NestedStruct>,
         #[schema(schema = DEEPLY_NESTED)]
-        pub deeply_nested: Option<IndexMap<String, IndexMap<String, IndexMap<String, NestedStruct>>>>,
+        pub deeply_nested:
+            Option<IndexMap<String, IndexMap<String, IndexMap<String, NestedStruct>>>>,
     }
 
     #[test]

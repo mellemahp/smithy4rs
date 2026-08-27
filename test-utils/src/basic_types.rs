@@ -15,16 +15,16 @@ smithy!("test#IntegerList": {
 
 smithy!("test#AllPrimitivesStruct": {
     structure ALL_PRIMITIVES_STRUCT_SCHEMA {
-        STRING: STRING = "string_field"
-        BYTE: BYTE = "byte_field"
-        SHORT: SHORT = "short_field"
-        INTEGER: INTEGER = "integer_field"
-        LONG: LONG = "long_field"
-        FLOAT: FLOAT = "float_field"
-        DOUBLE: DOUBLE = "double_field"
-        BOOLEAN: BOOLEAN = "boolean_field"
-        BLOB: BLOB = "blob_field"
-        TIMESTAMP: TIMESTAMP = "timestamp_field"
+        STRING: STRING = "stringField"
+        BYTE: BYTE = "byteField"
+        SHORT: SHORT = "shortField"
+        INTEGER: INTEGER = "integerField"
+        LONG: LONG = "longField"
+        FLOAT: FLOAT = "floatField"
+        DOUBLE: DOUBLE = "doubleField"
+        BOOLEAN: BOOLEAN = "booleanField"
+        BLOB: BLOB = "blobField"
+        TIMESTAMP: TIMESTAMP = "timestampField"
     }
 });
 
@@ -55,8 +55,8 @@ pub struct AllPrimitivesStruct {
 
 smithy!("test#OptionalFieldsStruct": {
     structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
-        REQUIRED: STRING = "required_field"
-        OPTIONAL: STRING = "optional_field"
+        REQUIRED: STRING = "requiredField"
+        OPTIONAL: STRING = "optionalField"
     }
 });
 
@@ -71,12 +71,12 @@ pub struct OptionalFieldsStruct {
 
 smithy!("test#NumericTypesStruct": {
     structure NUMERIC_TYPES_STRUCT_SCHEMA {
-        BYTE: BYTE = "byte_val"
-        SHORT: SHORT = "short_val"
-        INT: INTEGER = "int_val"
-        LONG: LONG = "long_val"
-        FLOAT: FLOAT = "float_val"
-        DOUBLE: DOUBLE = "double_val"
+        BYTE: BYTE = "byteVal"
+        SHORT: SHORT = "shortVal"
+        INT: INTEGER = "intVal"
+        LONG: LONG = "longVal"
+        FLOAT: FLOAT = "floatVal"
+        DOUBLE: DOUBLE = "doubleVal"
     }
 });
 
@@ -99,8 +99,8 @@ pub struct NumericTypesStruct {
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_STRUCT_SCHEMA {
-        A: STRING = "field_a"
-        B: INTEGER = "field_b"
+        A: STRING = "fieldA"
+        B: INTEGER = "fieldB"
     }
 });
 

@@ -337,7 +337,10 @@ impl SchemaValue {
     #[allow(unsafe_code)]
     pub fn expect_member(&self, member_name: &str) -> &Schema {
         let member = self.get_member(member_name);
-        debug_assert!(member.is_none(), "invariant violation: {member_name} missing.");
+        debug_assert!(
+            member.is_some(),
+            "invariant violation: {member_name} missing."
+        );
         unsafe {
             // SAFETY: When used in generated code (schema! + derive(SmithyShape))
             // the keys are statically checked

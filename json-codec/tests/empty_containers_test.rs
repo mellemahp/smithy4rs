@@ -16,14 +16,14 @@ fn test_empty_struct_fields() {
     let json = r#"{
         "name": "empty_test",
         "count": 0,
-        "single_nested": {
-            "field_a": "a",
-            "field_b": "b",
-            "field_c": "c"
+        "singleNested": {
+            "fieldA": "a",
+            "fieldB": "b",
+            "fieldC": "c"
         },
-        "optional_nested": null,
-        "list_nested": [],
-        "map_nested": {}
+        "optionalNested": null,
+        "listNested": [],
+        "mapNested": {}
     }"#;
 
     let mut de = JsonDeserializer::new(json.as_bytes());
@@ -46,10 +46,10 @@ fn test_empty_nested_struct_in_list() {
     let json = r#"{
         "name": "test",
         "count": 1,
-        "single_nested": {"field_a": "a", "field_b": "b", "field_c": "c"},
-        "optional_nested": null,
-        "list_nested": [],
-        "map_nested": {}
+        "singleNested": {"fieldA": "a", "fieldB": "b", "fieldC": "c"},
+        "optionalNested": null,
+        "listNested": [],
+        "mapNested": {}
     }"#;
 
     let mut de = JsonDeserializer::new(json.as_bytes());

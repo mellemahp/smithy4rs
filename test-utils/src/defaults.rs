@@ -4,16 +4,16 @@ use smithy4rs_core::{ByteBuffer, Instant, derive::SmithyShape, prelude::*, smith
 
 smithy!("test#AllPrimitivesDefaults": {
     structure ALL_PRIMITIVES_DEFAULTS_SCHEMA {
-        STRING: STRING = "string_field"
-        BYTE: BYTE = "byte_field"
-        SHORT: SHORT = "short_field"
-        INTEGER: INTEGER = "integer_field"
-        LONG: LONG = "long_field"
-        FLOAT: FLOAT = "float_field"
-        DOUBLE: DOUBLE = "double_field"
-        BOOLEAN: BOOLEAN = "boolean_field"
-        BLOB: BLOB = "blob_field"
-        TIMESTAMP: TIMESTAMP = "timestamp_field"
+        STRING: STRING = "stringField"
+        BYTE: BYTE = "byteField"
+        SHORT: SHORT = "shortField"
+        INTEGER: INTEGER = "integerField"
+        LONG: LONG = "longField"
+        FLOAT: FLOAT = "floatField"
+        DOUBLE: DOUBLE = "doubleField"
+        BOOLEAN: BOOLEAN = "booleanField"
+        BLOB: BLOB = "blobField"
+        TIMESTAMP: TIMESTAMP = "timestampField"
     }
 });
 

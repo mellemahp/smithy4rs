@@ -389,13 +389,13 @@ mod tests {
     #[schema(schema = SCHEMA)]
     pub struct Test {
         #[schema(schema = A)]
-        a: String,
+        pub a: String,
         #[schema(schema = B)]
-        b: String,
+        pub b: String,
         #[schema(schema = LIST)]
-        member_list: Vec<String>,
+        pub list: Vec<String>,
         #[schema(schema = MAP)]
-        member_map: IndexMap<String, String>,
+        pub map: IndexMap<String, String>,
     }
 
     fn get_test_shape() -> Test {
@@ -405,8 +405,8 @@ mod tests {
         Test {
             a: "a".to_string(),
             b: "b".to_string(),
-            member_list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
-            member_map: map,
+            list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            map,
         }
     }
 
@@ -450,7 +450,7 @@ mod tests {
     #[schema(schema = RENAME)]
     pub struct TestRename {
         #[schema(schema = A)]
-        a: String,
+        pub a: String,
     }
 
     #[test]
@@ -479,9 +479,9 @@ mod tests {
     #[schema(schema = XML_TRAITS)]
     pub struct TestXml {
         #[schema(schema = A)]
-        a: String,
+        pub a: String,
         #[schema(schema = B)]
-        b: i32,
+        pub b: i32,
     }
 
     #[test]

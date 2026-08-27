@@ -7,38 +7,38 @@ fn test_nested_struct_deserialization() {
     let json = r#"{
         "name": "test_object",
         "count": 42,
-        "single_nested": {
-            "field_a": "alpha",
-            "field_b": "beta",
-            "field_c": "gamma"
+        "singleNested": {
+            "fieldA": "alpha",
+            "fieldB": "beta",
+            "fieldC": "gamma"
         },
-        "optional_nested": {
-            "field_a": "delta",
-            "field_b": "epsilon",
-            "field_c": "zeta"
+        "optionalNested": {
+            "fieldA": "delta",
+            "fieldB": "epsilon",
+            "fieldC": "zeta"
         },
-        "list_nested": [
+        "listNested": [
             {
-                "field_a": "item1-a",
-                "field_b": "item1-b",
-                "field_c": "item1-c"
+                "fieldA": "item1-a",
+                "fieldB": "item1-b",
+                "fieldC": "item1-c"
             },
             {
-                "field_a": "item2-a",
-                "field_b": "item2-b",
-                "field_c": "item2-c"
+                "fieldA": "item2-a",
+                "fieldB": "item2-b",
+                "fieldC": "item2-c"
             }
         ],
-        "map_nested": {
+        "mapNested": {
             "key1": {
-                "field_a": "value1-a",
-                "field_b": "value1-b",
-                "field_c": "value1-c"
+                "fieldA": "value1-a",
+                "fieldB": "value1-b",
+                "fieldC": "value1-c"
             },
             "key2": {
-                "field_a": "value2-a",
-                "field_b": "value2-b",
-                "field_c": "value2-c"
+                "fieldA": "value2-a",
+                "fieldB": "value2-b",
+                "fieldC": "value2-c"
             }
         }
     }"#;
@@ -93,23 +93,23 @@ fn test_nested_struct_deserialization() {
 #[test]
 fn test_recursive_struct_deserialization() {
     let json = r#"{
-        "string_field": "level_1",
-        "integer_field": 1,
-        "list_field": [],
-        "map_field": {},
-        "optional_field": "top",
+        "stringField": "level_1",
+        "integerField": 1,
+        "listField": [],
+        "mapField": {},
+        "optionalField": "top",
         "next": {
-            "string_field": "level_2",
-            "integer_field": 2,
-            "list_field": [],
-            "map_field": {},
-            "optional_field": "middle",
+            "stringField": "level_2",
+            "integerField": 2,
+            "listField": [],
+            "mapField": {},
+            "optionalField": "middle",
             "next": {
-                "string_field": "level_3",
-                "integer_field": 3,
-                "list_field": [],
-                "map_field": {},
-                "optional_field": "deepest",
+                "stringField": "level_3",
+                "integerField": 3,
+                "listField": [],
+                "mapField": {},
+                "optionalField": "deepest",
                 "next": null
             }
         }
@@ -153,29 +153,29 @@ fn test_deeply_nested_without_recursion() {
     let json = r#"{
         "name": "complex_object",
         "count": 100,
-        "single_nested": {
-            "field_a": "single_a",
-            "field_b": "single_b",
-            "field_c": "single_c"
+        "singleNested": {
+            "fieldA": "single_a",
+            "fieldB": "single_b",
+            "fieldC": "single_c"
         },
-        "optional_nested": null,
-        "list_nested": [
+        "optionalNested": null,
+        "listNested": [
             {
-                "field_a": "list_item_0_a",
-                "field_b": "list_item_0_b",
-                "field_c": "list_item_0_c"
+                "fieldA": "list_item_0_a",
+                "fieldB": "list_item_0_b",
+                "fieldC": "list_item_0_c"
             },
             {
-                "field_a": "list_item_1_a",
-                "field_b": "list_item_1_b",
-                "field_c": "list_item_1_c"
+                "fieldA": "list_item_1_a",
+                "fieldB": "list_item_1_b",
+                "fieldC": "list_item_1_c"
             }
         ],
-        "map_nested": {
+        "mapNested": {
             "map_key": {
-                "field_a": "map_val_a",
-                "field_b": "map_val_b",
-                "field_c": "map_val_c"
+                "fieldA": "map_val_a",
+                "fieldB": "map_val_b",
+                "fieldC": "map_val_c"
             }
         }
     }"#;

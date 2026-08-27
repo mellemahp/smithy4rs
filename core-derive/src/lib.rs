@@ -113,13 +113,13 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
         Shape::Simple(simple_shape) => {
             tokens.push(expand_deref(simple_shape));
             tokens.push(expand_tuple_constructor(simple_shape, &crate_ident));
-        },
+        }
         Shape::Struct(struct_shape) => {
             tokens.push(expand_builder(struct_shape, &crate_ident));
-        },
+        }
         Shape::Union(_) => {
             // TODO: Any enum specific?
-        },
+        }
         Shape::Enum(_) => {
             // TODO: Any enum specific?
         }

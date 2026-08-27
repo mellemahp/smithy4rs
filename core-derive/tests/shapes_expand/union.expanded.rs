@@ -12,17 +12,12 @@ pub static UNION_BUILDER: ::smithy4rs_core::LazyLock<
 pub static UNION: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 {
     (&*UNION_BUILDER)
-        .put_member("field_a", &STRING, Vec::new())
-        .put_member("field_b", &INTEGER, Vec::new())
-        .put_member("field_c", &UNIT, Vec::new())
+        .put_member("a", &STRING, Vec::new())
+        .put_member("b", &INTEGER, Vec::new())
+        .put_member("c", &UNIT, Vec::new())
         .build()
 });
-static _UNION_MEMBER_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
-UNION.expect_member("field_a"));
-static _UNION_MEMBER_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
-UNION.expect_member("field_b"));
-static _UNION_MEMBER_C: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
-UNION.expect_member("field_c"));
+const UNION_KEYS: &[&str] = &["a", "b", "c"];
 #[schema(schema = UNION)]
 #[smithy_union_enum]
 pub enum TestEnum {
@@ -47,6 +42,13 @@ const _: () = {
         }
     }
 };
+const _: () = ::smithy4rs_core::assert_contains_all(UNION_KEYS, &["a", "b", "c"]);
+static _UNION_MEMBER_A: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+UNION.expect_member("a"));
+static _UNION_MEMBER_B: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+UNION.expect_member("b"));
+static _UNION_MEMBER_C: ::smithy4rs_core::LazyLock<&::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
+UNION.expect_member("c"));
 const _: () = {
     use ::smithy4rs_core::serde::debug::DebugWrapper as _DebugWrapper;
     #[automatically_derived]

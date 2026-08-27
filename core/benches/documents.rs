@@ -22,10 +22,10 @@ smithy!("com.example#List": {
 });
 smithy!("com.example#Shape": {
     structure SCHEMA {
-        A: STRING = "a"
-        B: INTEGER = "b"
-        LIST: LIST_SCHEMA = "list"
-        MAP: MAP_SCHEMA = "map"
+        A: STRING = "memberA"
+        B: INTEGER = "memberB"
+        LIST: LIST_SCHEMA = "memberList"
+        MAP: MAP_SCHEMA = "memberMap"
     }
 });
 

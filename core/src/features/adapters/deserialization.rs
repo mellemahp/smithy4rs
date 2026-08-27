@@ -736,8 +736,8 @@ mod tests {
 
     smithy!("test#OptionalFieldsStruct": {
         structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
-            REQUIRED: STRING = "required_field"
-            OPTIONAL: STRING = "optional_field"
+            REQUIRED: STRING = "requiredField"
+            OPTIONAL: STRING = "optionalField"
         }
     });
 
@@ -745,16 +745,16 @@ mod tests {
     #[schema(schema = OPTIONAL_FIELDS_STRUCT_SCHEMA)]
     pub struct OptionalFieldsStruct {
         #[schema(schema = REQUIRED)]
-        required_field: String,
+        pub required_field: String,
         #[schema(schema = OPTIONAL)]
-        optional_field: Option<String>,
+        pub optional_field: Option<String>,
     }
 
     #[test]
     fn test_simple_struct_with_serde_json() {
         let json = r#"{
-            "required_field": "hello",
-            "optional_field": "world"
+            "requiredField": "hello",
+            "optionalField": "world"
         }"#;
 
         let result: OptionalFieldsStruct = serde_json::from_str(json).unwrap();
@@ -766,7 +766,7 @@ mod tests {
     #[test]
     fn test_simple_struct_with_optional_none() {
         let json = r#"{
-            "required_field": "hello"
+            "requiredField": "hello"
         }"#;
 
         let result: OptionalFieldsStruct = serde_json::from_str(json).unwrap();
@@ -778,8 +778,8 @@ mod tests {
     // Nested struct tests
     smithy!("test#NestedStruct": {
         structure NESTED_STRUCT_SCHEMA {
-            FIELD_A: STRING = "field_a"
-            FIELD_B: STRING = "field_b"
+            FIELD_A: STRING = "fieldA"
+            FIELD_B: STRING = "fieldB"
         }
     });
 
@@ -787,9 +787,9 @@ mod tests {
     #[schema(schema = NESTED_STRUCT_SCHEMA)]
     pub struct NestedStruct {
         #[schema(schema = FIELD_A)]
-        field_a: String,
+        pub field_a: String,
         #[schema(schema = FIELD_B)]
-        field_b: String,
+        pub field_b: String,
     }
 
     // List schema for tags
@@ -803,7 +803,7 @@ mod tests {
         structure PARENT_STRUCT_SCHEMA {
             NAME: STRING = "name"
             NESTED: NESTED_STRUCT_SCHEMA = "nested"
-            OPTIONAL_NESTED: NESTED_STRUCT_SCHEMA = "optional_nested"
+            OPTIONAL_NESTED: NESTED_STRUCT_SCHEMA = "optionalNested"
             TAGS: TAGS_LIST_SCHEMA = "tags"
         }
     });
@@ -812,21 +812,21 @@ mod tests {
     #[schema(schema = PARENT_STRUCT_SCHEMA)]
     pub struct ParentStruct {
         #[schema(schema = NAME)]
-        name: String,
+        pub name: String,
         #[schema(schema = NESTED)]
-        nested: NestedStruct,
+        pub nested: NestedStruct,
         #[schema(schema = OPTIONAL_NESTED)]
-        optional_nested: Option<NestedStruct>,
+        pub optional_nested: Option<NestedStruct>,
         #[schema(schema = TAGS)]
-        tags: Vec<String>,
+        pub tags: Vec<String>,
     }
 
     smithy!("test#MultiPrimitive": {
         structure MULTI_PRIMITIVE_SCHEMA {
-            STRING_FIELD: STRING = "string_field"
-            INT_FIELD: INTEGER = "int_field"
-            BOOL_FIELD: BOOLEAN = "bool_field"
-            FLOAT_FIELD: FLOAT = "float_field"
+            STRING_FIELD: STRING = "stringField"
+            INT_FIELD: INTEGER = "intField"
+            BOOL_FIELD: BOOLEAN = "boolField"
+            FLOAT_FIELD: FLOAT = "floatField"
         }
     });
 
@@ -834,22 +834,22 @@ mod tests {
     #[schema(schema = MULTI_PRIMITIVE_SCHEMA)]
     pub struct MultiPrimitive {
         #[schema(schema = STRING_FIELD)]
-        string_field: String,
+        pub string_field: String,
         #[schema(schema = INT_FIELD)]
-        int_field: i32,
+        pub int_field: i32,
         #[schema(schema = BOOL_FIELD)]
-        bool_field: bool,
+        pub bool_field: bool,
         #[schema(schema = FLOAT_FIELD)]
-        float_field: f32,
+        pub float_field: f32,
     }
 
     #[test]
     fn test_multiple_primitives() {
         let json = r#"{
-            "string_field": "test",
-            "int_field": 42,
-            "bool_field": true,
-            "float_field": 3.1111
+            "stringField": "test",
+            "intField": 42,
+            "boolField": true,
+            "floatField": 3.1111
         }"#;
 
         let result: MultiPrimitive = serde_json::from_str(json).unwrap();
@@ -863,10 +863,10 @@ mod tests {
     #[test]
     fn test_unknown_fields_ignored() {
         let json = r#"{
-            "required_field": "hello",
-            "optional_field": "world",
-            "unknown_field": "should be ignored",
-            "another_unknown": 123
+            "requiredField": "hello",
+            "optionalField": "world",
+            "unknownField": "should be ignored",
+            "anotherUnknown": 123
         }"#;
 
         let result: OptionalFieldsStruct = serde_json::from_str(json).unwrap();
@@ -887,9 +887,9 @@ mod tests {
     #[schema(schema = STRUCT_WITH_LIST_SCHEMA)]
     pub struct StructWithList {
         #[schema(schema = NAME)]
-        name: String,
+        pub name: String,
         #[schema(schema = TAGS)]
-        tags: Vec<String>,
+        pub tags: Vec<String>,
     }
 
     #[test]
@@ -918,11 +918,11 @@ mod tests {
     #[schema(schema = ADDRESS_SCHEMA)]
     pub struct Address {
         #[schema(schema = STREET)]
-        street: String,
+        pub street: String,
         #[schema(schema = CITY)]
-        city: String,
+        pub city: String,
         #[schema(schema = ZIP)]
-        zip_code: i32,
+        pub zip_code: i32,
     }
 
     smithy!("test#PhoneList": {
@@ -944,13 +944,13 @@ mod tests {
     #[schema(schema = CONTACT_SCHEMA)]
     pub struct Contact {
         #[schema(schema = EMAIL)]
-        email: String,
+        pub email: String,
         #[schema(schema = PHONES)]
-        phones: Vec<String>,
+        pub phones: Vec<String>,
         #[schema(schema = ADDRESS)]
-        address: Address,
+        pub address: Address,
         #[schema(schema = BACKUP)]
-        backup_address: Option<Address>,
+        pub backup_address: Option<Address>,
     }
 
     smithy!("test#Hobby": {
@@ -964,9 +964,9 @@ mod tests {
     #[schema(schema = HOBBY_SCHEMA)]
     pub struct Hobby {
         #[schema(schema = NAME)]
-        name: String,
+        pub name: String,
         #[schema(schema = YEARS)]
-        years_of_experience: i32,
+        pub years_of_experience: i32,
     }
 
     smithy!("test#HobbyList": {
@@ -999,21 +999,21 @@ mod tests {
     #[schema(schema = PERSON_SCHEMA)]
     pub struct Person {
         #[schema(schema = NAME)]
-        name: String,
+        pub name: String,
         #[schema(schema = AGE)]
-        age: i32,
+        pub age: i32,
         #[schema(schema = ACTIVE)]
-        is_active: bool,
+        pub is_active: bool,
         #[schema(schema = SCORE)]
-        score: f32,
+        pub score: f32,
         #[schema(schema = CONTACT)]
-        contact: Contact,
+        pub contact: Contact,
         #[schema(schema = HOBBIES)]
-        hobbies: Vec<Hobby>,
+        pub hobbies: Vec<Hobby>,
         #[schema(schema = METADATA)]
-        metadata: IndexMap<String, String>,
+        pub metadata: IndexMap<String, String>,
         #[schema(schema = NOTES)]
-        notes: Option<String>,
+        pub notes: Option<String>,
     }
 
     #[test]
