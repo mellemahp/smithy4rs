@@ -109,7 +109,7 @@ pub(crate) fn deserialize_match_arm(
     root_schema: &Ident,
 ) -> TokenStream {
     let field_name = member.ident.as_ref().expect("Should have named member");
-    let schema = member_schema(&member.schema, root_schema);
+    let schema = member_schema(field_name, root_schema);
 
     // Buildable fields use the `_builder` setter for deserialization
     // to take an unbuilt shape as input.

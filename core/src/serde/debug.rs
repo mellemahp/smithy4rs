@@ -384,7 +384,7 @@ mod tests {
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
-            key: STRING
+            key: STRING,
             value: STRING
         }
     });
@@ -393,47 +393,42 @@ mod tests {
             member: STRING
         }
     });
+
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            A: STRING = "memberA"
-            @SensitiveTrait::builder().build();
-            B: STRING = "memberB"
-            C: STRING = "memberOptional"
-            MAP: MAP_SCHEMA = "memberMap"
-            LIST: LIST_SCHEMA = "memberList"
+            memberA: STRING,
+            @[SensitiveTrait::builder().build()]
+            memberB: STRING,
+            memberOptional: STRING,
+            memberMap: MAP_SCHEMA,
+            memberList: LIST_SCHEMA
         }
     });
+
     smithy!("com.example#Shape": {
         structure REDACTED_AGGREGATES {
-            @SensitiveTrait::builder().build();
-            MAP_REDACT: MAP_SCHEMA = "map"
-            @SensitiveTrait::builder().build();
-            @MediaTypeTrait::new("application/json");
-            LIST_REDACT: LIST_SCHEMA = "list"
+            @[SensitiveTrait::builder().build()]
+            map: MAP_SCHEMA,
+            @[SensitiveTrait::builder().build()]
+            @[MediaTypeTrait::new("application/json")]
+            list: LIST_SCHEMA
         }
     });
 
     #[derive(SmithyShape)]
     #[schema(schema = SCHEMA)]
     pub struct SerializeMe {
-        #[schema(schema = A)]
         pub member_a: String,
-        #[schema(schema = B)]
         pub member_b: String,
-        #[schema(schema = C)]
         pub member_optional: Option<String>,
-        #[schema(schema = LIST)]
         pub member_list: Vec<String>,
-        #[schema(schema = MAP)]
         pub member_map: IndexMap<String, String>,
     }
 
     #[derive(SmithyShape)]
     #[schema(schema = REDACTED_AGGREGATES)]
     pub struct RedactMe {
-        #[schema(schema = LIST_REDACT)]
         pub list: Vec<String>,
-        #[schema(schema = MAP_REDACT)]
         pub map: IndexMap<String, String>,
     }
 

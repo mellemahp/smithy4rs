@@ -79,7 +79,7 @@ pub(crate) fn serialize_struct(shape: &StructShape) -> TokenStream {
     let method = fields.iter().map(member_method);
     let member_schema = fields
         .iter()
-        .map(|v| member_schema(&v.schema, &shape.schema));
+        .map(|v| member_schema(v.ident.as_ref().expect("named member"), &shape.schema));
     let member_name = fields.iter().map(|d| &d.ident);
     let member_name_str = fields.iter().map(StructMember::member_name);
     quote! {

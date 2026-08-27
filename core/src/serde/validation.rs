@@ -1138,41 +1138,37 @@ mod tests {
 
     // ==== Basic Shape Validations ====
     smithy!("com.test#ValidatedList": {
-        @LengthTrait::builder().max(3).build();
-        @UniqueItemsTrait::builder().build();
+        @[LengthTrait::builder().max(3).build()]
+        @[UniqueItemsTrait::builder().build()]
         list LIST_SCHEMA {
-            @LengthTrait::builder().max(4).build();
+            @[LengthTrait::builder().max(4).build()]
             member: STRING
         }
     });
     smithy!("com.test#ValidatedMap": {
-        @LengthTrait::builder().max(2).build();
+        @[LengthTrait::builder().max(2).build()]
         map MAP_SCHEMA {
-            @PatternTrait::new("^[a-zA-Z]*$");
-            key: STRING
-            @LengthTrait::builder().max(4).build();
+            @[PatternTrait::new("^[a-zA-Z]*$")]
+            key: STRING,
+            @[LengthTrait::builder().max(4).build()]
             value: STRING
         }
     });
     smithy!("com.test#ValidationStruct": {
         structure BASIC_VALIDATION_SCHEMA {
-            @PatternTrait::new("^[a-zA-Z]*$");
-            A: STRING = "fieldA"
-            B: INTEGER = "fieldB"
-            LIST: LIST_SCHEMA = "fieldList"
-            MAP: MAP_SCHEMA = "fieldMap"
+            @[PatternTrait::new("^[a-zA-Z]*$")]
+            fieldA: STRING,
+            fieldB: INTEGER,
+            fieldList: LIST_SCHEMA,
+            fieldMap: MAP_SCHEMA
         }
     });
     #[derive(SmithyShape)]
     #[schema(schema = BASIC_VALIDATION_SCHEMA)]
     pub struct SimpleStruct {
-        #[schema(schema = A)]
         pub field_a: String,
-        #[schema(schema = B)]
         pub field_b: Option<i32>,
-        #[schema(schema = LIST)]
         pub field_list: Option<Vec<String>>,
-        #[schema(schema = MAP)]
         pub field_map: Option<IndexMap<String, String>>,
     }
 

@@ -57,8 +57,7 @@ fn resolve_struct_member_schemas(shape: &StructShape) -> (Vec<Ident>, Vec<TokenS
     let member_schema_idents = members
         .fields
         .iter()
-        .map(|f| &f.schema)
-        .map(|m| member_schema(m, root_schema))
+        .map(|m| member_schema(m.ident.as_ref().expect("Expected member name"), root_schema))
         .collect::<Vec<_>>();
     let member_names = members
         .fields
@@ -75,8 +74,7 @@ fn resolve_union_member_schemas(shape: &UnionShape) -> (Vec<Ident>, Vec<TokenStr
     let member_idents = variants
         .iter()
         .filter(|v| v.ident != unknown)
-        .map(|f| &f.schema)
-        .map(|m| member_schema(m.as_ref().expect("expect_schema"), root_schema))
+        .map(|m| member_schema(&m.ident, root_schema))
         .collect::<Vec<_>>();
     let member_names = variants
         .iter()

@@ -604,7 +604,7 @@ mod tests {
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
-            key: STRING
+            key: STRING,
             value: STRING
         }
     });
@@ -615,26 +615,21 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            A: STRING = "memberA"
-            B: STRING = "memberB"
-            C: STRING = "memberOptional"
-            LIST: LIST_SCHEMA = "memberList"
-            MAP: MAP_SCHEMA = "memberMap"
+            memberA: STRING,
+            memberB: STRING,
+            memberOptional: STRING,
+            memberList: LIST_SCHEMA,
+            memberMap: MAP_SCHEMA
         }
     });
 
     #[derive(SmithyShape, Clone, PartialEq)]
     #[schema(schema = SCHEMA)]
     pub struct SerializeMe {
-        #[schema(schema = A)]
         pub member_a: String,
-        #[schema(schema = B)]
         pub member_b: String,
-        #[schema(schema = C)]
         pub member_optional: Option<String>,
-        #[schema(schema = LIST)]
         pub member_list: Vec<String>,
-        #[schema(schema = MAP)]
         pub member_map: IndexMap<String, String>,
     }
 

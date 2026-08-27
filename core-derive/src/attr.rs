@@ -112,9 +112,6 @@ pub struct StructMember {
 
     pub(crate) name: Option<LitStr>,
 
-    /// Member schema to use
-    pub(crate) schema: Ident,
-
     /// Optional expression that sets the default for the field
     #[darling(default)]
     pub(crate) default: Option<Override<Expr>>,

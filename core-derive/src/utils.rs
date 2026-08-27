@@ -17,12 +17,12 @@ pub(crate) fn get_crate_ident() -> TokenStream {
 }
 
 /// Get the member schema scoped to its parent schema
-pub(crate) fn member_schema(schema: &Ident, root_schema_ident: &Ident) -> Ident {
+pub(crate) fn member_schema(member: &Ident, root_schema_ident: &Ident) -> Ident {
     Ident::new(
         &format!(
             "_{}_MEMBER_{}",
             root_schema_ident,
-            schema.to_string().to_uppercase()
+            member.to_string().to_uppercase()
         ),
         Span::call_site(),
     )
