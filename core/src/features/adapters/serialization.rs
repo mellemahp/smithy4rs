@@ -378,23 +378,19 @@ mod tests {
     });
     smithy!("com.example#Test": {
         structure SCHEMA {
-            A: STRING = "a"
-            B: STRING = "b"
-            MAP: MAP_SCHEMA = "map"
-            LIST: LIST_SCHEMA = "list"
+            a: STRING
+            b: STRING
+            map: MAP_SCHEMA
+            list: LIST_SCHEMA
         }
     });
 
     #[derive(SmithyShape)]
     #[schema(schema = SCHEMA)]
     pub struct Test {
-        #[schema(schema = A)]
         pub a: String,
-        #[schema(schema = B)]
         pub b: String,
-        #[schema(schema = LIST)]
         pub list: Vec<String>,
-        #[schema(schema = MAP)]
         pub map: IndexMap<String, String>,
     }
 
@@ -443,13 +439,12 @@ mod tests {
     smithy!("com.example#Rename": {
         structure RENAME {
             @JsonNameTrait::new("renamed");
-            A: STRING = "a"
+            a: STRING
         }
     });
     #[derive(SmithyShape)]
     #[schema(schema = RENAME)]
     pub struct TestRename {
-        #[schema(schema = A)]
         pub a: String,
     }
 
@@ -470,17 +465,15 @@ mod tests {
         structure XML_TRAITS {
             @XmlNameTrait::new("renamed");
             @XmlAttributeTrait::builder().build();
-            A: STRING = "a"
+            a: STRING
             @XmlNameTrait::new("int");
-            B: STRING = "b"
+            b: STRING
         }
     });
     #[derive(SmithyShape)]
     #[schema(schema = XML_TRAITS)]
     pub struct TestXml {
-        #[schema(schema = A)]
         pub a: String,
-        #[schema(schema = B)]
         pub b: i32,
     }
 

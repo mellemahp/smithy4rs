@@ -6,32 +6,29 @@ use smithy4rs_core_derive::SmithyShape;
 
 smithy!("test#SimpleStruct": {
     structure SIMPLE_SCHEMA {
-        A: STRING = "fieldA"
-        B: INTEGER = "fieldB"
-        C: STRING = "fieldC"
+        fieldA: STRING
+        fieldB: INTEGER
+        fieldC: STRING
     }
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
-    #[schema(schema = A)]
     pub field_a: String,
-    #[schema(schema = B, default = 0)]
+    #[schema(default = 0)]
     pub field_b: i32,
-    #[schema(schema = C)]
     pub field_c: Option<Nested>,
 }
 
 smithy!("test#NESTED_STRUCT": {
     structure NESTED_SCHEMA {
-        D: STRING = "fieldD"
+        fieldD: STRING
     }
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = NESTED_SCHEMA)]
 pub struct Nested {
-    #[schema(schema = D)]
     pub field_d: String,
 }

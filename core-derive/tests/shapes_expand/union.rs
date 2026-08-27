@@ -7,9 +7,9 @@ use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
 smithy!("test#SimpleUnion": {
     union UNION {
-        A: STRING = "a"
-        B: INTEGER = "b"
-        C: UNIT = "c"
+        a: STRING
+        b: INTEGER
+        c: UNIT
     }
 });
 
@@ -17,11 +17,8 @@ smithy!("test#SimpleUnion": {
 #[derive(SmithyShape)]
 #[schema(schema = UNION)]
 pub enum TestEnum {
-    #[schema(schema = A)]
     A(String),
-    #[schema(schema = B)]
     B(i32),
     // Unit variant
-    #[schema(schema = C)]
     C,
 }

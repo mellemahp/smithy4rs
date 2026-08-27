@@ -7,7 +7,7 @@ use smithy4rs_core::{
 smithy!("com.test#DeprecatedStruct": {
     /// Schema for [`DeprecatedStruct`]
     structure DEPRECATED_STRUCT_SCHEMA {
-        DEPRECATED_MEMBER: STRING = "deprecatedMember"
+        deprecatedMember: STRING
     }
 });
 
@@ -16,14 +16,13 @@ smithy!("com.test#DeprecatedStruct": {
 #[schema(schema = DEPRECATED_STRUCT_SCHEMA)]
 pub struct DeprecatedStruct {
     #[deprecated(since = "5ever", note = "Dont use this")]
-    #[schema(schema = DEPRECATED_MEMBER)]
     pub deprecated_member: Option<String>,
 }
 
 smithy!("com.test#ExternalDocumentationStruct": {
     /// Schema for [`ExternalDocumentationStruct`]
     structure EXTERNAL_DOCUMENTATION_STRUCT_SCHEMA {
-        STRING: STRING = "string"
+        string: STRING
     }
 });
 
@@ -34,14 +33,13 @@ smithy!("com.test#ExternalDocumentationStruct": {
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = EXTERNAL_DOCUMENTATION_STRUCT_SCHEMA)]
 pub struct ExternalDocumentationStruct {
-    #[schema(schema = STRING)]
     pub string: Option<String>,
 }
 
 smithy!("com.test#SinceStruct": {
     /// Schema for [`SinceStruct`]
     structure SINCE_STRUCT_SCHEMA {
-        SINCE_MEMBER: STRING = "sinceMember"
+        sinceMember: STRING
     }
 });
 
@@ -60,14 +58,13 @@ pub struct SinceStruct {
     ///
     /// </div>
     ///
-    #[schema(schema = SINCE_MEMBER)]
     pub since_member: Option<String>,
 }
 
 smithy!("com.test#UnstableStructure": {
     /// Schema for [`UnstableStructure`]
     structure UNSTABLE_STRUCTURE_SCHEMA {
-        UNSTABLE_MEMBER: STRING = "unstableMember"
+        unstableMember: STRING
     }
 });
 
@@ -86,6 +83,5 @@ pub struct UnstableStructure {
     ///
     /// </div>
     ///
-    #[schema(schema = UNSTABLE_MEMBER)]
     pub unstable_member: Option<String>,
 }

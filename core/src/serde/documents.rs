@@ -604,7 +604,7 @@ mod tests {
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
-            key: STRING,
+            key: STRING
             value: STRING
         }
     });
@@ -615,10 +615,10 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            memberA: STRING,
-            memberB: STRING,
-            memberOptional: STRING,
-            memberList: LIST_SCHEMA,
+            memberA: STRING
+            memberB: STRING
+            memberOptional: STRING
+            memberList: LIST_SCHEMA
             memberMap: MAP_SCHEMA
         }
     });

@@ -41,7 +41,7 @@ macro_rules! smithy_internal {
     // === Simple types ===
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         boolean $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -53,7 +53,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         byte $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -65,7 +65,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         short $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -77,7 +77,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         integer $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -89,7 +89,7 @@ macro_rules! smithy_internal {
 
      ($id:literal: {
          $(#[$outer:meta])*
-         $(#[trait($t:expr)])*
+         $(@$t:expr;)*
          long $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -101,7 +101,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         float $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -113,7 +113,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         double $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -126,7 +126,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         bigInteger $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -138,7 +138,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(#[trait($t:expr)])*
+        $(@$t:expr;)*
         bigDecimal $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -150,7 +150,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         timestamp $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -162,7 +162,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         string $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -174,7 +174,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         blob $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -186,7 +186,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         document $name:ident
     }) => (
         $crate::smithy!(@inner
@@ -199,7 +199,7 @@ macro_rules! smithy_internal {
     // === Enums ===
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         enum $name:ident {$(
             $_variant:ident = $value:literal
         )*}
@@ -213,7 +213,7 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         intEnum $name:ident {$(
             $_variant:ident = $value:literal
         )*}
@@ -230,9 +230,9 @@ macro_rules! smithy_internal {
     // Lists must have member named "member" that may also have traits applied.
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         list $name:ident {
-            $(@[$m:expr])* 
+            $(@$m:expr;)*
             member: $member:ident
         }
     }) => (
@@ -247,11 +247,11 @@ macro_rules! smithy_internal {
     // Maps must have members named "key" and "value that may also have traits applied.
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         map $name:ident {
-            $(@[$k:expr])*
-            key: $key:ident,
-            $(@[$v:expr])*
+            $(@$k:expr;)*
+            key: $key:ident
+            $(@$v:expr;)*
             value: $value:ident
         }
     }) => (
@@ -268,7 +268,7 @@ macro_rules! smithy_internal {
     // Empty structure
      ($id:literal: {
          $(#[$outer:meta])*
-         $(@[$t:expr])*
+         $(@$t:expr;)*
          structure $name:ident {}
     }) => (
        $crate::smithy!(@inner
@@ -280,11 +280,11 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         structure $name:ident {$(
-            $(@[$m:expr])*
+            $(@$m:expr;)*
             $member_name:ident : $member_schema:tt
-        ),*}
+        )*}
     }) => (
        $crate::smithy!(@inner
             $name,
@@ -296,9 +296,9 @@ macro_rules! smithy_internal {
 
     ($id:literal: {
         $(#[$outer:meta])*
-        $(@[$t:expr])*
+        $(@$t:expr;)*
         union $name:ident {$(
-            $(@[$m:expr])*
+            $(@$m:expr;)*
             $member_name:ident : $member_schema:tt
         )*}
     }) => (
@@ -337,6 +337,7 @@ macro_rules! smithy_internal {
                 $crate::smithy!(@build_chain (&*[<$schema_name _BUILDER>]), &*[<$schema_name _BUILDER>] $(, ($member_name, $member_schema, $member_traits))*)
             });
 
+            #[allow(dead_code)]
             const [<$schema_name _KEYS>]: &[&str] = &[$(stringify!($member_name)),+];
         }
     };

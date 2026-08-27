@@ -41,12 +41,11 @@ pub enum TestIntEnum {
 smithy!("com.example#Rename": {
     structure RENAME {
         @JsonNameTrait::new("renamed");
-        A: STRING = "a"
+        a: STRING
     }
 });
 #[derive(SmithyShape)]
 #[schema(schema = RENAME)]
 pub struct TestRename {
-    #[schema(schema = A)]
     pub a: String,
 }

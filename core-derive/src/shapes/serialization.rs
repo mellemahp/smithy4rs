@@ -158,14 +158,14 @@ fn serialize_unit() -> TokenStream {
 /// Generates body of serialization impl for Enums
 fn serialize_union(shape: &UnionShape) -> TokenStream {
     let name = &shape.ident;
-
+    let unknown = Ident::new("Unknown", Span::call_site());
     let variants = shape
         .data
         .as_enum()
         .expect("Union variants")
         .iter()
         // Unknown variants have no member schema, so skip
-        .filter(|v| v.schema.is_some())
+        .filter(|v| v.ident != unknown)
         .map(|v| match_arm(shape, v));
 
     quote! {
@@ -183,8 +183,7 @@ fn match_arm(shape: &UnionShape, variant: &UnionVariant) -> TokenStream {
     let shape_name = &shape.ident;
     let root_schema = &shape.schema;
     let member_name = &variant.member_name();
-    let schema = variant.schema.as_ref().expect("Member");
-    let schema = member_schema(schema, root_schema);
+    let schema = member_schema(&variant.ident, root_schema);
 
     // If unit, use custom route.
     if variant.fields.is_empty() {

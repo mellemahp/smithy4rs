@@ -17,15 +17,13 @@ pub static UNION: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> =
         .put_member("c", &UNIT, Vec::new())
         .build()
 });
+#[allow(dead_code)]
 const UNION_KEYS: &[&str] = &["a", "b", "c"];
 #[schema(schema = UNION)]
 #[smithy_union_enum]
 pub enum TestEnum {
-    #[schema(schema = A)]
     A(String),
-    #[schema(schema = B)]
     B(i32),
-    #[schema(schema = C)]
     C,
     #[automatically_derived]
     #[doc(hidden)]

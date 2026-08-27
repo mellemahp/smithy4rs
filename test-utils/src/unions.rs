@@ -11,9 +11,9 @@ use smithy4rs_core::{
 
 smithy!("test#SimpleUnion": {
     union UNION {
-        A: STRING = "a"
-        B: INTEGER = "b"
-        C: UNIT = "c"
+        a: STRING
+        b: INTEGER
+        c: UNIT
     }
 });
 
@@ -21,11 +21,8 @@ smithy!("test#SimpleUnion": {
 #[derive(SmithyShape, PartialEq)]
 #[schema(schema = UNION)]
 pub enum TestUnion {
-    #[schema(schema = A)]
     A(String),
-    #[schema(schema = B)]
     B(i32),
     // Unit variant
-    #[schema(schema = C)]
     C,
 }

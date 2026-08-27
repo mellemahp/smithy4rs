@@ -251,7 +251,7 @@ fn deserialize_union(
 
 fn matcher(variant: &UnionVariant, root: &UnionShape) -> TokenStream {
     let variant_name = &variant.ident;
-    let member_schema_name = member_schema(variant.schema.as_ref().expect("member"), &root.schema);
+    let member_schema_name = member_schema(&variant.ident, &root.schema);
     let shape_name = &root.ident;
 
     if variant.fields.is_empty() {

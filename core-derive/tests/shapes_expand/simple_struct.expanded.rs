@@ -17,14 +17,13 @@ pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::S
         .put_member("fieldC", &STRING, Vec::new())
         .build()
 });
+#[allow(dead_code)]
 const SIMPLE_SCHEMA_KEYS: &[&str] = &["fieldA", "fieldB", "fieldC"];
 #[schema(schema = SIMPLE_SCHEMA)]
 pub struct SimpleStruct {
-    #[schema(schema = A)]
     pub field_a: String,
-    #[schema(schema = B, default = 0)]
+    #[schema(default = 0)]
     pub field_b: i32,
-    #[schema(schema = C)]
     pub field_c: Option<Nested>,
 }
 const _: () = {
@@ -42,13 +41,13 @@ const _: () = ::smithy4rs_core::assert_contains_all(
     SIMPLE_SCHEMA_KEYS,
     &["fieldA", "fieldB", "fieldC"],
 );
-static _SIMPLE_SCHEMA_MEMBER_A: ::smithy4rs_core::LazyLock<
+static _SIMPLE_SCHEMA_MEMBER_FIELD_A: ::smithy4rs_core::LazyLock<
     &::smithy4rs_core::schema::Schema,
 > = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("fieldA"));
-static _SIMPLE_SCHEMA_MEMBER_B: ::smithy4rs_core::LazyLock<
+static _SIMPLE_SCHEMA_MEMBER_FIELD_B: ::smithy4rs_core::LazyLock<
     &::smithy4rs_core::schema::Schema,
 > = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("fieldB"));
-static _SIMPLE_SCHEMA_MEMBER_C: ::smithy4rs_core::LazyLock<
+static _SIMPLE_SCHEMA_MEMBER_FIELD_C: ::smithy4rs_core::LazyLock<
     &::smithy4rs_core::schema::Schema,
 > = ::smithy4rs_core::LazyLock::new(|| SIMPLE_SCHEMA.expect_member("fieldC"));
 const _: () = {
@@ -73,11 +72,19 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.write_member_named("fieldA", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
-            ser.write_member_named("fieldB", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
+            ser.write_member_named(
+                "fieldA",
+                &_SIMPLE_SCHEMA_MEMBER_FIELD_A,
+                &self.field_a,
+            )?;
+            ser.write_member_named(
+                "fieldB",
+                &_SIMPLE_SCHEMA_MEMBER_FIELD_B,
+                &self.field_b,
+            )?;
             ser.write_optional_member_named(
                 "fieldC",
-                &_SIMPLE_SCHEMA_MEMBER_C,
+                &_SIMPLE_SCHEMA_MEMBER_FIELD_C,
                 &self.field_c,
             )?;
             ser.end(schema)
@@ -104,17 +111,17 @@ const _: () = {
             let mut builder = SimpleStructBuilder::new();
             let mut reader = deserializer.read_struct(schema)?;
             while let Some(member_schema) = reader.read_member(schema)? {
-                if member_schema == *_SIMPLE_SCHEMA_MEMBER_A {
+                if member_schema == *_SIMPLE_SCHEMA_MEMBER_FIELD_A {
                     let value: String = reader.read_value(member_schema)?;
                     builder = builder.field_a(value);
                     continue;
                 }
-                if member_schema == *_SIMPLE_SCHEMA_MEMBER_B {
+                if member_schema == *_SIMPLE_SCHEMA_MEMBER_FIELD_B {
                     let value: i32 = reader.read_value(member_schema)?;
                     builder = builder.field_b(value);
                     continue;
                 }
-                if member_schema == *_SIMPLE_SCHEMA_MEMBER_C {
+                if member_schema == *_SIMPLE_SCHEMA_MEMBER_FIELD_C {
                     let value: Option<NestedBuilder> = reader.read_value(member_schema)?;
                     if let Some(v) = value {
                         builder = builder.field_c_builder(v);
@@ -249,11 +256,19 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 3usize)?;
-            ser.write_member_named("fieldA", &_SIMPLE_SCHEMA_MEMBER_A, &self.field_a)?;
-            ser.write_member_named("fieldB", &_SIMPLE_SCHEMA_MEMBER_B, &self.field_b)?;
+            ser.write_member_named(
+                "fieldA",
+                &_SIMPLE_SCHEMA_MEMBER_FIELD_A,
+                &self.field_a,
+            )?;
+            ser.write_member_named(
+                "fieldB",
+                &_SIMPLE_SCHEMA_MEMBER_FIELD_B,
+                &self.field_b,
+            )?;
             ser.write_optional_member_named(
                 "fieldC",
-                &_SIMPLE_SCHEMA_MEMBER_C,
+                &_SIMPLE_SCHEMA_MEMBER_FIELD_C,
                 &self.field_c,
             )?;
             ser.end(schema)
@@ -304,10 +319,10 @@ pub static NESTED_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
 ));
 pub static NESTED_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 { (&*NESTED_SCHEMA_BUILDER).put_member("fieldD", &STRING, Vec::new()).build() });
+#[allow(dead_code)]
 const NESTED_SCHEMA_KEYS: &[&str] = &["fieldD"];
 #[schema(schema = NESTED_SCHEMA)]
 pub struct Nested {
-    #[schema(schema = D)]
     pub field_d: String,
 }
 const _: () = {
@@ -322,7 +337,7 @@ const _: () = {
     }
 };
 const _: () = ::smithy4rs_core::assert_contains_all(NESTED_SCHEMA_KEYS, &["fieldD"]);
-static _NESTED_SCHEMA_MEMBER_D: ::smithy4rs_core::LazyLock<
+static _NESTED_SCHEMA_MEMBER_FIELD_D: ::smithy4rs_core::LazyLock<
     &::smithy4rs_core::schema::Schema,
 > = ::smithy4rs_core::LazyLock::new(|| NESTED_SCHEMA.expect_member("fieldD"));
 const _: () = {
@@ -347,7 +362,11 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.write_member_named("fieldD", &_NESTED_SCHEMA_MEMBER_D, &self.field_d)?;
+            ser.write_member_named(
+                "fieldD",
+                &_NESTED_SCHEMA_MEMBER_FIELD_D,
+                &self.field_d,
+            )?;
             ser.end(schema)
         }
     }
@@ -372,7 +391,7 @@ const _: () = {
             let mut builder = NestedBuilder::new();
             let mut reader = deserializer.read_struct(schema)?;
             while let Some(member_schema) = reader.read_member(schema)? {
-                if member_schema == *_NESTED_SCHEMA_MEMBER_D {
+                if member_schema == *_NESTED_SCHEMA_MEMBER_FIELD_D {
                     let value: String = reader.read_value(member_schema)?;
                     builder = builder.field_d(value);
                     continue;
@@ -482,7 +501,11 @@ const _: () = {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             let mut ser = serializer.write_struct(schema, 1usize)?;
-            ser.write_member_named("fieldD", &_NESTED_SCHEMA_MEMBER_D, &self.field_d)?;
+            ser.write_member_named(
+                "fieldD",
+                &_NESTED_SCHEMA_MEMBER_FIELD_D,
+                &self.field_d,
+            )?;
             ser.end(schema)
         }
     }

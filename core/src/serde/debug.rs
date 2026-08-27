@@ -384,7 +384,7 @@ mod tests {
 
     smithy!("com.example#Map": {
         map MAP_SCHEMA {
-            key: STRING,
+            key: STRING
             value: STRING
         }
     });
@@ -396,21 +396,21 @@ mod tests {
 
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            memberA: STRING,
-            @[SensitiveTrait::builder().build()]
-            memberB: STRING,
-            memberOptional: STRING,
-            memberMap: MAP_SCHEMA,
+            memberA: STRING
+            @SensitiveTrait::builder().build();
+            memberB: STRING
+            memberOptional: STRING
+            memberMap: MAP_SCHEMA
             memberList: LIST_SCHEMA
         }
     });
 
     smithy!("com.example#Shape": {
         structure REDACTED_AGGREGATES {
-            @[SensitiveTrait::builder().build()]
-            map: MAP_SCHEMA,
-            @[SensitiveTrait::builder().build()]
-            @[MediaTypeTrait::new("application/json")]
+            @SensitiveTrait::builder().build();
+            map: MAP_SCHEMA
+            @SensitiveTrait::builder().build();
+            @MediaTypeTrait::new("application/json");
             list: LIST_SCHEMA
         }
     });

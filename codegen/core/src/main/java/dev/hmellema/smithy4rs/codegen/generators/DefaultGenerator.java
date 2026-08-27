@@ -49,6 +49,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
     @Override
     public void run() {
         writer.pushState();
+        writer.writeInline("default");
         shape.accept(this);
         writer.popState();
     }

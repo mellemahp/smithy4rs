@@ -32,17 +32,15 @@ pub struct AppliedTo {
 smithy!("com.test#myCustomStruct": {
     /// Schema for [`MyCustomStructTrait`]
     structure MY_CUSTOM_STRUCT_SCHEMA {
-        A: STRING = "a"
-        B: INTEGER = "b"
+        a: STRING
+        b: INTEGER
     }
 });
 
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
 #[schema(schema = MY_CUSTOM_STRUCT_SCHEMA)]
 pub struct MyCustomStructTrait {
-    #[schema(schema = A)]
     pub a: Option<String>,
-    #[schema(schema = B)]
     pub b: Option<i32>,
 }
 

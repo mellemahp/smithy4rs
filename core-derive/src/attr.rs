@@ -209,8 +209,6 @@ pub struct UnionShape {
 pub struct UnionVariant {
     pub ident: Ident,
     #[darling(default)]
-    pub schema: Option<Ident>,
-    #[darling(default)]
     pub name: Option<LitStr>,
     pub fields: Fields<WrappedField>,
 }

@@ -28,9 +28,9 @@ pub struct Unit {
 smithy!("com.test#MyUnion": {
     /// Schema for [`MyUnion`]
     union MY_UNION_SCHEMA {
-        STRING_VARIANT: STRING = "string_variant"
-        INTEGER_VARIANT: INTEGER = "integer_variant"
-        UNIT_VARIANT: UNIT_SCHEMA = "unit_variant"
+        string_variant: STRING
+        integer_variant: INTEGER
+        unit_variant: UNIT_SCHEMA
     }
 });
 
@@ -38,10 +38,7 @@ smithy!("com.test#MyUnion": {
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = MY_UNION_SCHEMA)]
 pub enum MyUnion {
-    #[schema(schema = STRING_VARIANT)]
     StringVariant(String),
-    #[schema(schema = INTEGER_VARIANT)]
     IntegerVariant(i32),
-    #[schema(schema = UNIT_VARIANT)]
     UnitVariant(Unit),
 }

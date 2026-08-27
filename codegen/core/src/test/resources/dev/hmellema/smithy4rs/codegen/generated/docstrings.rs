@@ -63,7 +63,7 @@ smithy!("com.test#DocumentedMap": {
 smithy!("com.test#DocumentedStruct": {
     /// Schema for [`DocumentedStruct`]
     structure DOCUMENTED_STRUCT_SCHEMA {
-        DOCUMENTED_MEMBER: STRING = "documentedMember"
+        documentedMember: STRING
     }
 });
 
@@ -72,15 +72,14 @@ smithy!("com.test#DocumentedStruct": {
 #[schema(schema = DOCUMENTED_STRUCT_SCHEMA)]
 pub struct DocumentedStruct {
     /// Documented! Yay!
-    #[schema(schema = DOCUMENTED_MEMBER)]
     pub documented_member: Option<String>,
 }
 
 smithy!("com.test#DocumentedUnion": {
     /// Schema for [`DocumentedUnion`]
     union DOCUMENTED_UNION_SCHEMA {
-        VARIANT_A: STRING = "variantA"
-        VARIANT_B: INTEGER = "variantB"
+        variantA: STRING
+        variantB: INTEGER
     }
 });
 
@@ -90,11 +89,9 @@ smithy!("com.test#DocumentedUnion": {
 #[schema(schema = DOCUMENTED_UNION_SCHEMA)]
 pub enum DocumentedUnion {
     /// A String variant
-    #[schema(schema = VARIANT_A)]
-    Varianta(String),
+    VariantA(String),
     /// An integer variant
-    #[schema(schema = VARIANT_B)]
-    Variantb(i32),
+    VariantB(i32),
 }
 
 smithy!("com.test#DocumentedScalar": {

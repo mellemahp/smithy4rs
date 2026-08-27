@@ -20,28 +20,22 @@ smithy!("test#StringList": {
 
 smithy!("test#RecursiveShapesStruct": {
     structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
-        STRING: STRING = "stringField"
-        INTEGER: INTEGER = "integerField"
-        LIST: STRING_LIST_SCHEMA = "listField"
-        MAP: STRING_MAP_SCHEMA = "mapField"
-        OPTIONAL: STRING = "optionalField"
-        NEXT: (@self) = "next"
+        stringField: STRING
+        integerField: INTEGER
+        listField: STRING_LIST_SCHEMA
+        mapField: STRING_MAP_SCHEMA
+        optionalField: STRING
+        next: (@self)
     }
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = RECURSIVE_SHAPES_STRUCT_SCHEMA)]
 pub struct RecursiveShapesStruct {
-    #[schema(schema = STRING)]
     pub string_field: String,
-    #[schema(schema = INTEGER)]
     pub integer_field: i32,
-    #[schema(schema = LIST)]
     pub list_field: Vec<String>,
-    #[schema(schema = MAP)]
     pub map_field: IndexMap<String, String>,
-    #[schema(schema = OPTIONAL)]
     pub optional_field: Option<String>,
-    #[schema(schema = NEXT)]
     pub next: Option<Box<RecursiveShapesStruct>>,
 }

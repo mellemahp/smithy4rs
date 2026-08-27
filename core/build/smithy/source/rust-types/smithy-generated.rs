@@ -37,7 +37,7 @@ smithy!("smithy.api#TraitShapeIdList": {
 smithy!("smithy.api#authDefinition": {
     /// Schema for [`AuthDefinitionTrait`]
     structure AUTH_DEFINITION_SCHEMA {
-        TRAITS: TRAIT_SHAPE_ID_LIST = "traits"
+        traits: TRAIT_SHAPE_ID_LIST
     }
 });
 
@@ -50,7 +50,6 @@ smithy!("smithy.api#authDefinition": {
 pub struct AuthDefinitionTrait {
     /// The list of traits that auth implementations must understand in order
     /// to successfully use the scheme.
-    #[schema(schema = TRAITS)]
     pub traits: Option<Vec<String>>,
 }
 
@@ -107,10 +106,10 @@ smithy!("smithy.api#NonEmptyStringList": {
 smithy!("smithy.api#cors": {
     /// Schema for [`CorsTrait`]
     structure CORS_SCHEMA {
-        ORIGIN: NON_EMPTY_STRING = "origin"
-        MAX_AGE: INTEGER = "maxAge"
-        ADDITIONAL_ALLOWED_HEADERS: NON_EMPTY_STRING_LIST = "additionalAllowedHeaders"
-        ADDITIONAL_EXPOSED_HEADERS: NON_EMPTY_STRING_LIST = "additionalExposedHeaders"
+        origin: NON_EMPTY_STRING
+        maxAge: INTEGER
+        additionalAllowedHeaders: NON_EMPTY_STRING_LIST
+        additionalExposedHeaders: NON_EMPTY_STRING_LIST
     }
 });
 
@@ -120,21 +119,20 @@ smithy!("smithy.api#cors": {
 pub struct CorsTrait {
     /// The origin from which browser script-originating requests will be
     /// allowed.
-    #[schema(schema = ORIGIN, default = "*".to_string())]
+    #[schema(default = "*".to_string())]
     pub origin: String,
     /// The maximum number of seconds for which browsers are allowed to cache
     /// the results of a preflight OPTIONS request.
     ///
     /// Defaults to 600, the maximum age permitted by several browsers.
     /// Set to -1 to disable caching entirely.
-    #[schema(schema = MAX_AGE, default = 600i32)]
+    #[schema(default = 600i32)]
     pub max_age: i32,
     /// The names of headers that should be included in the
     /// Access-Control-Allow-Headers header in responses to preflight OPTIONS
     /// requests. This list will be used in addition to the names of all
     /// request headers bound to an input data member via the httpHeader, as
     /// well as any headers required by the protocol or authentication scheme.
-    #[schema(schema = ADDITIONAL_ALLOWED_HEADERS)]
     pub additional_allowed_headers: Option<Vec<String>>,
     /// The names of headers that should be included in the
     /// Access-Control-Expose-Headers header in all responses sent by the
@@ -142,15 +140,14 @@ pub struct CorsTrait {
     /// request headers bound to an output data member via the httpHeader,
     /// as well as any headers required by the protocol or authentication
     /// scheme.
-    #[schema(schema = ADDITIONAL_EXPOSED_HEADERS)]
     pub additional_exposed_headers: Option<Vec<String>>,
 }
 
 smithy!("smithy.api#deprecated": {
     /// Schema for [`DeprecatedTrait`]
     structure DEPRECATED_SCHEMA {
-        MESSAGE: STRING = "message"
-        SINCE: STRING = "since"
+        message: STRING
+        since: STRING
     }
 });
 
@@ -159,11 +156,9 @@ smithy!("smithy.api#deprecated": {
 #[schema(schema = DEPRECATED_SCHEMA)]
 pub struct DeprecatedTrait {
     /// The reason for deprecation.
-    #[schema(schema = MESSAGE)]
     pub message: Option<String>,
     /// A description of when the shape was deprecated (e.g., a date or
     /// version).
-    #[schema(schema = SINCE)]
     pub since: Option<String>,
 }
 
@@ -171,7 +166,7 @@ smithy!("smithy.api#endpoint": {
     /// Schema for [`EndpointTrait`]
     structure ENDPOINT_SCHEMA {
         @RequiredTrait::builder().build();
-        HOST_PREFIX: NON_EMPTY_STRING = "hostPrefix"
+        hostPrefix: NON_EMPTY_STRING
     }
 });
 
@@ -183,7 +178,6 @@ pub struct EndpointTrait {
     ///
     /// Labels defined in the host pattern are used to bind top-level
     /// operation input members to the host.
-    #[schema(schema = HOST_PREFIX)]
     pub host_prefix: String,
 }
 
@@ -191,11 +185,11 @@ smithy!("smithy.api#EnumDefinition": {
     /// Schema for [`EnumDefinition`]
     structure ENUM_DEFINITION_SCHEMA {
         @RequiredTrait::builder().build();
-        VALUE: NON_EMPTY_STRING = "value"
-        NAME: ENUM_CONSTANT_BODY_NAME = "name"
-        DOCUMENTATION: STRING = "documentation"
-        TAGS: NON_EMPTY_STRING_LIST = "tags"
-        DEPRECATED: BOOLEAN = "deprecated"
+        value: NON_EMPTY_STRING
+        name: ENUM_CONSTANT_BODY_NAME
+        documentation: STRING
+        tags: NON_EMPTY_STRING_LIST
+        deprecated: BOOLEAN
     }
 });
 
@@ -205,19 +199,14 @@ smithy!("smithy.api#EnumDefinition": {
 #[schema(schema = ENUM_DEFINITION_SCHEMA)]
 pub struct EnumDefinition {
     /// Defines the enum value that is sent over the wire.
-    #[schema(schema = VALUE)]
     pub value: String,
     /// Defines the name that is used in code to represent this variant.
-    #[schema(schema = NAME)]
     pub name: Option<String>,
     /// Provides optional documentation about the enum constant value.
-    #[schema(schema = DOCUMENTATION)]
     pub documentation: Option<String>,
     /// Applies a list of tags to the enum constant.
-    #[schema(schema = TAGS)]
     pub tags: Option<Vec<String>>,
     /// Whether the enum value should be considered deprecated.
-    #[schema(schema = DEPRECATED)]
     pub deprecated: Option<bool>,
 }
 
@@ -384,11 +373,11 @@ smithy!("smithy.api#http": {
     /// Schema for [`HttpTrait`]
     structure HTTP_SCHEMA {
         @RequiredTrait::builder().build();
-        METHOD: NON_EMPTY_STRING = "method"
+        method: NON_EMPTY_STRING
         @RequiredTrait::builder().build();
-        URI: NON_EMPTY_STRING = "uri"
+        uri: NON_EMPTY_STRING
         @RangeTrait::builder().min(100).max(999).build();
-        CODE: INTEGER = "code"
+        code: INTEGER
     }
 });
 
@@ -397,15 +386,13 @@ smithy!("smithy.api#http": {
 #[schema(schema = HTTP_SCHEMA)]
 pub struct HttpTrait {
     /// The HTTP method of the operation.
-    #[schema(schema = METHOD)]
     pub method: String,
     /// The URI pattern of the operation.
     ///
     /// Labels defined in the URI pattern are used to bind operation input
     /// members to the URI.
-    #[schema(schema = URI)]
     pub uri: String,
-    #[schema(schema = CODE, default = 200i32)]
+    #[schema(default = 200i32)]
     pub code: i32,
 }
 
@@ -490,9 +477,9 @@ pub struct IdempotentTrait {
 smithy!("smithy.api#idRef": {
     /// Schema for [`IdRefTrait`]
     structure ID_REF_SCHEMA {
-        SELECTOR: STRING = "selector"
-        FAIL_WHEN_MISSING: BOOLEAN = "failWhenMissing"
-        ERROR_MESSAGE: STRING = "errorMessage"
+        selector: STRING
+        failWhenMissing: BOOLEAN
+        errorMessage: STRING
     }
 });
 
@@ -506,17 +493,15 @@ smithy!("smithy.api#idRef": {
 #[schema(schema = ID_REF_SCHEMA)]
 pub struct IdRefTrait {
     /// Defines the selector that the resolved shape, if found, MUST match.
-    #[schema(schema = SELECTOR, default = "*".to_string())]
+    #[schema(default = "*".to_string())]
     pub selector: String,
     /// When set to `true`, the shape ID MUST target a shape that can be
     /// found in the model.
-    #[schema(schema = FAIL_WHEN_MISSING)]
     pub fail_when_missing: Option<bool>,
     /// Defines a custom error message to use when the shape ID cannot be
     /// found or does not match the selector.
     ///
     /// A default message is generated when errorMessage is not defined.
-    #[schema(schema = ERROR_MESSAGE)]
     pub error_message: Option<String>,
 }
 
@@ -548,8 +533,8 @@ pub struct InternalTrait {
 smithy!("smithy.api#length": {
     /// Schema for [`LengthTrait`]
     structure LENGTH_SCHEMA {
-        MIN: LONG = "min"
-        MAX: LONG = "max"
+        min: LONG
+        max: LONG
     }
 });
 
@@ -558,10 +543,8 @@ smithy!("smithy.api#length": {
 #[schema(schema = LENGTH_SCHEMA)]
 pub struct LengthTrait {
     /// Integer value that represents the minimum inclusive length of a shape.
-    #[schema(schema = MIN)]
     pub min: Option<i64>,
     /// Integer value that represents the maximum inclusive length of a shape.
-    #[schema(schema = MAX)]
     pub max: Option<i64>,
 }
 
@@ -575,7 +558,7 @@ smithy!("smithy.api#LocalMixinTraitList": {
 smithy!("smithy.api#mixin": {
     /// Schema for [`MixinTrait`]
     structure MIXIN_SCHEMA {
-        LOCAL_TRAITS: LOCAL_MIXIN_TRAIT_LIST = "localTraits"
+        localTraits: LOCAL_MIXIN_TRAIT_LIST
     }
 });
 
@@ -583,7 +566,6 @@ smithy!("smithy.api#mixin": {
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
 #[schema(schema = MIXIN_SCHEMA)]
 pub struct MixinTrait {
-    #[schema(schema = LOCAL_TRAITS)]
     pub local_traits: Option<Vec<String>>,
 }
 
@@ -663,10 +645,10 @@ pub struct OutputTrait {
 smithy!("smithy.api#paginated": {
     /// Schema for [`PaginatedTrait`]
     structure PAGINATED_SCHEMA {
-        INPUT_TOKEN: NON_EMPTY_STRING = "inputToken"
-        OUTPUT_TOKEN: NON_EMPTY_STRING = "outputToken"
-        ITEMS: NON_EMPTY_STRING = "items"
-        PAGE_SIZE: NON_EMPTY_STRING = "pageSize"
+        inputToken: NON_EMPTY_STRING
+        outputToken: NON_EMPTY_STRING
+        items: NON_EMPTY_STRING
+        pageSize: NON_EMPTY_STRING
     }
 });
 
@@ -682,7 +664,6 @@ pub struct PaginatedTrait {
     /// When this value is provided as operation input, the service returns
     /// results from where the previous response left off. This input member
     /// MUST NOT be required and MUST target a string shape.
-    #[schema(schema = INPUT_TOKEN)]
     pub input_token: Option<String>,
     /// The name of the operation output member that represents the
     /// continuation token.
@@ -691,18 +672,15 @@ pub struct PaginatedTrait {
     /// are more results to retrieve. To get the next page of results, the
     /// client uses the output token as the input token of the next request.
     /// This output member MUST NOT be required and MUST target a string shape.
-    #[schema(schema = OUTPUT_TOKEN)]
     pub output_token: Option<String>,
     /// The name of a top-level output member of the operation that is the data
     /// that is being paginated across many responses.
     ///
     /// The named output member, if specified, MUST target a list or map.
-    #[schema(schema = ITEMS)]
     pub items: Option<String>,
     /// The name of an operation input member that limits the maximum number of
     /// results to include in the operation output. This input member MUST NOT
     /// be required and MUST target an integer shape.
-    #[schema(schema = PAGE_SIZE)]
     pub page_size: Option<String>,
 }
 
@@ -722,7 +700,7 @@ pub struct PrivateTrait {
 smithy!("smithy.api#property": {
     /// Schema for [`PropertyTrait`]
     structure PROPERTY_SCHEMA {
-        NAME: STRING = "name"
+        name: STRING
     }
 });
 
@@ -730,15 +708,14 @@ smithy!("smithy.api#property": {
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
 #[schema(schema = PROPERTY_SCHEMA)]
 pub struct PropertyTrait {
-    #[schema(schema = NAME)]
     pub name: Option<String>,
 }
 
 smithy!("smithy.api#protocolDefinition": {
     /// Schema for [`ProtocolDefinitionTrait`]
     structure PROTOCOL_DEFINITION_SCHEMA {
-        TRAITS: TRAIT_SHAPE_ID_LIST = "traits"
-        NO_INLINE_DOCUMENT_SUPPORT: BOOLEAN = "noInlineDocumentSupport"
+        traits: TRAIT_SHAPE_ID_LIST
+        noInlineDocumentSupport: BOOLEAN
     }
 });
 
@@ -751,19 +728,17 @@ smithy!("smithy.api#protocolDefinition": {
 pub struct ProtocolDefinitionTrait {
     /// The list of traits that protocol implementations must understand in
     /// order to successfully use the protocol.
-    #[schema(schema = TRAITS)]
     pub traits: Option<Vec<String>>,
     /// Set to true if inline documents are not supported by this protocol.
     #[deprecated]
-    #[schema(schema = NO_INLINE_DOCUMENT_SUPPORT)]
     pub no_inline_document_support: Option<bool>,
 }
 
 smithy!("smithy.api#range": {
     /// Schema for [`RangeTrait`]
     structure RANGE_SCHEMA {
-        MIN: BIG_DECIMAL = "min"
-        MAX: BIG_DECIMAL = "max"
+        min: BIG_DECIMAL
+        max: BIG_DECIMAL
     }
 });
 
@@ -774,10 +749,8 @@ smithy!("smithy.api#range": {
 #[schema(schema = RANGE_SCHEMA)]
 pub struct RangeTrait {
     /// Specifies the allowed inclusive minimum value.
-    #[schema(schema = MIN)]
     pub min: Option<BigDecimal>,
     /// Specifies the allowed inclusive maximum value.
-    #[schema(schema = MAX)]
     pub max: Option<BigDecimal>,
 }
 
@@ -796,7 +769,7 @@ pub struct ReadonlyTrait {
 smithy!("smithy.api#recommended": {
     /// Schema for [`RecommendedTrait`]
     structure RECOMMENDED_SCHEMA {
-        REASON: STRING = "reason"
+        reason: STRING
     }
 });
 
@@ -805,7 +778,6 @@ smithy!("smithy.api#recommended": {
 #[schema(schema = RECOMMENDED_SCHEMA)]
 pub struct RecommendedTrait {
     /// Provides a reason why the member is recommended.
-    #[schema(schema = REASON)]
     pub reason: Option<String>,
 }
 
@@ -813,10 +785,10 @@ smithy!("smithy.api#Reference": {
     /// Schema for [`Reference`]
     structure REFERENCE_SCHEMA {
         @RequiredTrait::builder().build();
-        RESOURCE: NON_EMPTY_STRING = "resource"
-        IDS: NON_EMPTY_STRING_MAP = "ids"
-        SERVICE: NON_EMPTY_STRING = "service"
-        REL: NON_EMPTY_STRING = "rel"
+        resource: NON_EMPTY_STRING
+        ids: NON_EMPTY_STRING_MAP
+        service: NON_EMPTY_STRING
+        rel: NON_EMPTY_STRING
     }
 });
 
@@ -825,24 +797,20 @@ smithy!("smithy.api#Reference": {
 #[schema(schema = REFERENCE_SCHEMA)]
 pub struct Reference {
     /// The shape ID of the referenced resource.
-    #[schema(schema = RESOURCE)]
     pub resource: String,
     /// Defines a mapping of each resource identifier name to a structure member
     /// name that provides its value. Each key in the map MUST refer to one of the
     /// identifier names in the identifiers property of the resource, and each
     /// value in the map MUST refer to a valid structure member name that targets
     /// a string shape.
-    #[schema(schema = IDS)]
     pub ids: Option<IndexMap<String, String>>,
     /// Providing a service makes the reference specific to a particular binding
     /// of the resource to a service. When omitted, the reference is late-bound to
     /// a service, meaning the reference is assumed to be a reference to the
     /// resource bound to the service currently in use by the client or server.
-    #[schema(schema = SERVICE)]
     pub service: Option<String>,
     /// Defines the semantics of the relationship. The rel property SHOULD
     /// contain a link relation as defined in RFC 5988#section-4.
-    #[schema(schema = REL)]
     pub rel: Option<String>,
 }
 
@@ -859,7 +827,7 @@ smithy!("smithy.api#requestCompression": {
     /// Schema for [`RequestCompressionTrait`]
     structure REQUEST_COMPRESSION_SCHEMA {
         @RequiredTrait::builder().build();
-        ENCODINGS: REQUEST_COMPRESSION_ENCODINGS_LIST = "encodings"
+        encodings: REQUEST_COMPRESSION_ENCODINGS_LIST
     }
 });
 
@@ -868,7 +836,6 @@ smithy!("smithy.api#requestCompression": {
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
 #[schema(schema = REQUEST_COMPRESSION_SCHEMA)]
 pub struct RequestCompressionTrait {
-    #[schema(schema = ENCODINGS)]
     pub encodings: Vec<String>,
 }
 
@@ -900,7 +867,7 @@ pub struct RequiresLengthTrait {
 smithy!("smithy.api#retryable": {
     /// Schema for [`RetryableTrait`]
     structure RETRYABLE_SCHEMA {
-        THROTTLING: BOOLEAN = "throttling"
+        throttling: BOOLEAN
     }
 });
 
@@ -909,7 +876,6 @@ smithy!("smithy.api#retryable": {
 #[schema(schema = RETRYABLE_SCHEMA)]
 pub struct RetryableTrait {
     /// Classifies the retry as throttling.
-    #[schema(schema = THROTTLING)]
     pub throttling: Option<bool>,
 }
 
@@ -1062,11 +1028,11 @@ pub enum TraitChangeType {
 smithy!("smithy.api#TraitDiffRule": {
     /// Schema for [`TraitDiffRule`]
     structure TRAIT_DIFF_RULE_SCHEMA {
-        PATH: STRING = "path"
+        path: STRING
         @RequiredTrait::builder().build();
-        CHANGE: TRAIT_CHANGE_TYPE_SCHEMA = "change"
-        SEVERITY: SEVERITY_SCHEMA = "severity"
-        MESSAGE: STRING = "message"
+        change: TRAIT_CHANGE_TYPE_SCHEMA
+        severity: SEVERITY_SCHEMA
+        message: STRING
     }
 });
 
@@ -1075,16 +1041,14 @@ smithy!("smithy.api#TraitDiffRule": {
 #[schema(schema = TRAIT_DIFF_RULE_SCHEMA)]
 pub struct TraitDiffRule {
     /// Defines a JSON Pointer to the value to evaluate.
-    #[schema(schema = PATH)]
     pub path: Option<String>,
     /// Defines the type of change that is not allowed.
-    #[schema(schema = CHANGE, no_builder)]
+    #[schema(no_builder)]
     pub change: TraitChangeType,
     /// Defines the severity of the change. Defaults to ERROR if not defined.
-    #[schema(schema = SEVERITY, default = Severity::Error, no_builder)]
+    #[schema(default = Severity::Error, no_builder)]
     pub severity: Severity,
     /// Provides a reason why the change is potentially backward incompatible.
-    #[schema(schema = MESSAGE)]
     pub message: Option<String>,
 }
 
@@ -1099,10 +1063,10 @@ smithy!("smithy.api#TraitDiffRules": {
 smithy!("smithy.api#trait": {
     /// Schema for [`TraitTrait`]
     structure TRAIT_SCHEMA {
-        SELECTOR: STRING = "selector"
-        STRUCTURALLY_EXCLUSIVE: STRUCTURALLY_EXCLUSIVE_SCHEMA = "structurallyExclusive"
-        CONFLICTS: NON_EMPTY_STRING_LIST = "conflicts"
-        BREAKING_CHANGES: TRAIT_DIFF_RULES = "breakingChanges"
+        selector: STRING
+        structurallyExclusive: STRUCTURALLY_EXCLUSIVE_SCHEMA
+        conflicts: NON_EMPTY_STRING_LIST
+        breakingChanges: TRAIT_DIFF_RULES
     }
 });
 
@@ -1111,17 +1075,14 @@ smithy!("smithy.api#trait": {
 #[schema(schema = TRAIT_SCHEMA)]
 pub struct TraitTrait {
     /// The valid places in a model that the trait can be applied.
-    #[schema(schema = SELECTOR)]
     pub selector: Option<String>,
     /// Whether or not only a single member in a shape can have this trait.
     /// This only has an effect on members of structure shapes.
-    #[schema(schema = STRUCTURALLY_EXCLUSIVE, no_builder)]
+    #[schema(no_builder)]
     pub structurally_exclusive: Option<StructurallyExclusive>,
     /// The traits that this trait conflicts with.
-    #[schema(schema = CONFLICTS)]
     pub conflicts: Option<Vec<String>>,
     /// Defines the backward compatibility rules of the trait.
-    #[schema(schema = BREAKING_CHANGES)]
     pub breaking_changes: Option<Vec<TraitDiffRule>>,
 }
 
@@ -1129,9 +1090,9 @@ smithy!("smithy.api#TraitValidator": {
     /// Schema for [`TraitValidator`]
     structure TRAIT_VALIDATOR_SCHEMA {
         @RequiredTrait::builder().build();
-        SELECTOR: STRING = "selector"
-        MESSAGE: STRING = "message"
-        SEVERITY: SEVERITY_SCHEMA = "severity"
+        selector: STRING
+        message: STRING
+        severity: SEVERITY_SCHEMA
     }
 });
 
@@ -1142,13 +1103,11 @@ pub struct TraitValidator {
     /// A Smithy selector that receives only the shape to which the `traitValidators` trait is
     /// applied.
     /// Any shape yielded by the selector is considered incompatible with the trait.
-    #[schema(schema = SELECTOR)]
     pub selector: String,
     /// A message to use when a matching shape is found.
-    #[schema(schema = MESSAGE)]
     pub message: Option<String>,
     /// The severity to use when a matching shape is found.
-    #[schema(schema = SEVERITY, default = Severity::Error, no_builder)]
+    #[schema(default = Severity::Error, no_builder)]
     pub severity: Severity,
 }
 
@@ -1232,9 +1191,9 @@ smithy!("smithy.api#xmlNamespace": {
     /// Schema for [`XmlNamespaceTrait`]
     structure XML_NAMESPACE_SCHEMA {
         @RequiredTrait::builder().build();
-        URI: NON_EMPTY_STRING = "uri"
+        uri: NON_EMPTY_STRING
         @PatternTrait::new("^[a-zA-Z_][a-zA-Z_0-9-]*$");
-        PREFIX: NON_EMPTY_STRING = "prefix"
+        prefix: NON_EMPTY_STRING
     }
 });
 
@@ -1243,10 +1202,8 @@ smithy!("smithy.api#xmlNamespace": {
 #[schema(schema = XML_NAMESPACE_SCHEMA)]
 pub struct XmlNamespaceTrait {
     /// The namespace URI for scoping this XML element.
-    #[schema(schema = URI)]
     pub uri: String,
     /// The prefix for the given namespace.
-    #[schema(schema = PREFIX)]
     pub prefix: Option<String>,
 }
 

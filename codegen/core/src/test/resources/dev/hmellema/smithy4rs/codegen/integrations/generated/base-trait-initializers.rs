@@ -12,14 +12,13 @@ smithy!("com.test#MyStruct": {
     /// Schema for [`MyStruct`]
     structure MY_STRUCT_SCHEMA {
         @JsonNameTrait::new("stuff");
-        WITH_STRING_TRAIT: STRING = "withStringTrait"
+        withStringTrait: STRING
     }
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = MY_STRUCT_SCHEMA)]
 pub struct MyStruct {
-    #[schema(schema = WITH_STRING_TRAIT)]
     pub with_string_trait: Option<String>,
 }
 
