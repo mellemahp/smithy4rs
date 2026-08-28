@@ -103,7 +103,7 @@ impl StructShape {
     }
 }
 
-/// Handle a Smithy Struct memeber field
+/// Handle a Smithy Struct member field
 #[derive(FromField, Debug)]
 #[darling(attributes(schema), and_then = "StructMember::validate")]
 pub struct StructMember {

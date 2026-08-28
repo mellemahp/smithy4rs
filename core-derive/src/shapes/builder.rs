@@ -180,7 +180,7 @@ fn field_type(member: &StructMember, crate_ident: &TokenStream) -> TokenStream {
     let field_name = member
         .ident
         .as_ref()
-        .expect("struct memebers should be named");
+        .expect("struct members should be named");
     if member.optional() {
         quote! {
             #field_name: Option<#ty>
