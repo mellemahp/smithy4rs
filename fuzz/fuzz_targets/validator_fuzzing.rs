@@ -10,7 +10,7 @@ use smithy4rs_core::{
 };
 
 smithy!("test#SimpleStruct": {
-    structure SIMPLE_STRUCT_SCHEMA {
+    structure SIMPLE_STRUCT {
         A: STRING = "field_a"
         @RequiredTrait;
         B: INTEGER = "field_b"
@@ -19,7 +19,7 @@ smithy!("test#SimpleStruct": {
 
 // TODO: Replace with validation fuzzer. This is just to verify functionality
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = SIMPLE_STRUCT_SCHEMA)]
+#[schema(schema = SIMPLE_STRUCT)]
 pub struct SimpleStruct {
     #[schema(schema = A)]
     pub field_a: Option<String>,

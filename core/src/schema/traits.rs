@@ -23,22 +23,22 @@
 //! # use smithy4rs_core::schema::{SchemaValue, StaticTraitId, Schema, NULL};
 //! # use smithy4rs_core::serde::{ShapeBuilder, Buildable};
 //!
-//! smithy!("com.example#SensitiveString": {
+//! smithy!(
 //!     @SensitiveTrait::builder().build();
 //!     @LengthTrait::builder().max(4).min(1).build();
-//!     string EXAMPLE_SCHEMA
-//! });
+//!     string com::example::Example
+//! );
 //!
 //! /// Checking if a trait is present on a schema
 //!  // Check by ID
-//!  assert!(&EXAMPLE_SCHEMA.contains_trait(&"smithy.api#sensitive".into()));
+//!  assert!(&EXAMPLE.contains_trait(&"smithy.api#sensitive".into()));
 //!  // Check by type
-//!  assert!(&EXAMPLE_SCHEMA.contains_type::<SensitiveTrait>());
+//!  assert!(&EXAMPLE.contains_type::<SensitiveTrait>());
 //!
 //! /// Accessing trait data from a schema
 //!
 //!  // Downcast trait to specific impl
-//!  let trait_impl = EXAMPLE_SCHEMA.get_trait_as::<LengthTrait>().unwrap();
+//!  let trait_impl = EXAMPLE.get_trait_as::<LengthTrait>().unwrap();
 //!  assert_eq!(trait_impl.min, Some(1i64));
 //!  assert_eq!(trait_impl.max, Some(4i64));
 //! ```
@@ -188,10 +188,10 @@ impl Debug for TraitRef {
 /// use smithy4rs_core::prelude::LengthTrait;
 /// use smithy4rs_core::serde::{ShapeBuilder, Buildable};
 ///
-/// smithy!("com.example#Shape": {
+/// smithy!(
 ///     @LengthTrait::builder().min(1).build();
-///      string SHAPE
-/// });
+///     string com::example::Shape
+/// );
 /// ```
 ///
 /// The initializer for the `LengthTrait` is `LengthTrait::builder().min(1).build()`.

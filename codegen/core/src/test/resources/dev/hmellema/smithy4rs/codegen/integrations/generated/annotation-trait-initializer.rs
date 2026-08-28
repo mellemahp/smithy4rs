@@ -8,18 +8,18 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#myAnnotationTrait": {
+smithy!(
     /// Schema for [`MyAnnotationTraitTrait`]
-    structure MY_ANNOTATION_TRAIT_SCHEMA {
+    structure com::test::myAnnotationTrait {
     }
-});
+);
 
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
-#[schema(schema = MY_ANNOTATION_TRAIT_SCHEMA)]
+#[schema(schema = MY_ANNOTATION_TRAIT)]
 pub struct MyAnnotationTraitTrait {
 }
 
-smithy!("com.test#MyString": {
+smithy!(
     @DynamicTrait::from("com.test#myAnnotationTrait", doc_map![]);
-    string MY_STRING
-});
+    string com::test::MyString
+);

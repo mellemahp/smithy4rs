@@ -602,29 +602,29 @@ mod tests {
     use super::*;
     use crate::{derive::SmithyShape, schema::prelude::*, smithy};
 
-    smithy!("com.example#Map": {
-        map MAP_SCHEMA {
+    smithy!(
+        map com::example::Map {
             key: STRING
             value: STRING
         }
-    });
-    smithy!("com.example#List": {
-        list LIST_SCHEMA {
+    );
+    smithy!(
+        list com::example::List {
             member: STRING
         }
-    });
-    smithy!("com.example#Shape": {
-        structure SCHEMA {
+    );
+    smithy!(
+        structure com::example::Shape {
             memberA: STRING
             memberB: STRING
             memberOptional: STRING
-            memberList: LIST_SCHEMA
-            memberMap: MAP_SCHEMA
+            memberList: LIST
+            memberMap: MAP
         }
-    });
+    );
 
     #[derive(SmithyShape, Clone, PartialEq)]
-    #[schema(schema = SCHEMA)]
+    #[schema(schema = SHAPE)]
     pub struct SerializeMe {
         pub member_a: String,
         pub member_b: String,
@@ -646,7 +646,7 @@ mod tests {
             member_list: list,
         };
         let document: Box<dyn Document> = struct_to_convert.into();
-        assert_eq!(document.discriminator().unwrap(), SCHEMA.id());
+        assert_eq!(document.discriminator().unwrap(), SHAPE.id());
         if let Some(members) = document.as_map() {
             let doc_a = &members.get("memberA").unwrap();
             assert_eq!(doc_a.as_string().unwrap(), "a");

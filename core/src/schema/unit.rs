@@ -23,11 +23,11 @@ pub struct Unit;
 // Unit types is used by unions and operations to indicate input/output
 // or variants that have no meaningful value
 // ============================================================================
-smithy!("smithy.api#Unit": {
+smithy!(
     /// Empty type representation used in Unions and Operations
     @UnitTypeTrait::builder().build();
-    structure UNIT {}
-});
+    structure smithy::api::Unit {}
+);
 
 impl StaticSchemaShape for Unit {
     #[inline]

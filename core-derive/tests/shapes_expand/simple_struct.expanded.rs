@@ -7,7 +7,7 @@ use smithy4rs_core_derive::SmithyShape;
 pub static SIMPLE_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
     ::smithy4rs_core::Ref<::smithy4rs_core::schema::SchemaBuilder>,
 > = ::smithy4rs_core::LazyLock::new(|| ::smithy4rs_core::Ref::new(
-    ::smithy4rs_core::schema::Schema::structure_builder("test#SimpleStruct", Vec::new()),
+    ::smithy4rs_core::schema::Schema::structure_builder("test#SimpleSchema", Vec::new()),
 ));
 pub static SIMPLE_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 {
@@ -315,7 +315,7 @@ impl ::core::clone::Clone for SimpleStruct {
 pub static NESTED_SCHEMA_BUILDER: ::smithy4rs_core::LazyLock<
     ::smithy4rs_core::Ref<::smithy4rs_core::schema::SchemaBuilder>,
 > = ::smithy4rs_core::LazyLock::new(|| ::smithy4rs_core::Ref::new(
-    ::smithy4rs_core::schema::Schema::structure_builder("test#NESTED_STRUCT", Vec::new()),
+    ::smithy4rs_core::schema::Schema::structure_builder("test#NestedSchema", Vec::new()),
 ));
 pub static NESTED_SCHEMA: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 { (&*NESTED_SCHEMA_BUILDER).put_member("fieldD", &STRING, Vec::new()).build() });

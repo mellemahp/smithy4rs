@@ -3,7 +3,7 @@ use smithy4rs_core_derive::{SmithyShape, smithy_enum};
 pub static SIMPLE_ENUM: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 {
     ::smithy4rs_core::schema::Schema::create_enum(
-        "test#SimpleStruct",
+        "test#SimpleEnum",
         Box::new(["a", "b", "c"]),
         Vec::new(),
     )

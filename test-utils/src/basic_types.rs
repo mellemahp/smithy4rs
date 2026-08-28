@@ -7,14 +7,14 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("test#IntegerList": {
-    list INTEGER_LIST_SCHEMA {
+smithy!(
+    list test::IntegerList {
         member: INTEGER
     }
-});
+);
 
-smithy!("test#AllPrimitivesStruct": {
-    structure ALL_PRIMITIVES_STRUCT_SCHEMA {
+smithy!(
+    structure test::AllPrimitivesStruct {
         stringField: STRING
         byteField: BYTE
         shortField: SHORT
@@ -26,10 +26,10 @@ smithy!("test#AllPrimitivesStruct": {
         blobField: BLOB
         timestampField: TIMESTAMP
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = ALL_PRIMITIVES_STRUCT_SCHEMA)]
+#[schema(schema = ALL_PRIMITIVES_STRUCT)]
 pub struct AllPrimitivesStruct {
     pub string_field: String,
     pub byte_field: i8,
@@ -43,22 +43,22 @@ pub struct AllPrimitivesStruct {
     pub timestamp_field: Instant,
 }
 
-smithy!("test#OptionalFieldsStruct": {
-    structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
+smithy!(
+    structure test::OptionalFieldsStruct {
         requiredField: STRING
         optionalField: STRING
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = OPTIONAL_FIELDS_STRUCT_SCHEMA)]
+#[schema(schema = OPTIONAL_FIELDS_STRUCT)]
 pub struct OptionalFieldsStruct {
     pub required_field: String,
     pub optional_field: Option<String>,
 }
 
-smithy!("test#NumericTypesStruct": {
-    structure NUMERIC_TYPES_STRUCT_SCHEMA {
+smithy!(
+    structure test::NumericTypesStruct {
         byteVal: BYTE
         shortVal: SHORT
         intVal: INTEGER
@@ -66,10 +66,10 @@ smithy!("test#NumericTypesStruct": {
         floatVal: FLOAT
         doubleVal: DOUBLE
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = NUMERIC_TYPES_STRUCT_SCHEMA)]
+#[schema(schema = NUMERIC_TYPES_STRUCT)]
 pub struct NumericTypesStruct {
     pub byte_val: i8,
     pub short_val: i16,
@@ -79,15 +79,15 @@ pub struct NumericTypesStruct {
     pub double_val: f64,
 }
 
-smithy!("test#SimpleStruct": {
-    structure SIMPLE_STRUCT_SCHEMA {
+smithy!(
+    structure test::SimpleStruct {
         fieldA: STRING
         fieldB: INTEGER
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = SIMPLE_STRUCT_SCHEMA)]
+#[schema(schema = SIMPLE_STRUCT)]
 pub struct SimpleStruct {
     pub field_a: String,
     pub field_b: i32,

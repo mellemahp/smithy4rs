@@ -27,54 +27,54 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("smithy.java.codegen.test.structures#NestedEnum": {
+smithy!(
     /// Schema for [`NestedEnum`]
-    enum NESTED_ENUM_SCHEMA {
+    enum smithy::java::codegen::test::structures::NestedEnum {
         A = "A"
         B = "B"
     }
-});
+);
 
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = NESTED_ENUM_SCHEMA)]
+#[schema(schema = NESTED_ENUM)]
 pub enum NestedEnum {
     A = "A",
     B = "B",
 }
 
-smithy!("smithy.java.codegen.test.structures#NestedIntEnum": {
+smithy!(
     /// Schema for [`NestedIntEnum`]
-    intEnum NESTED_INT_ENUM_SCHEMA {
+    intEnum smithy::java::codegen::test::structures::NestedIntEnum {
         A = 1
         B = 2
     }
-});
+);
 
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = NESTED_INT_ENUM_SCHEMA)]
+#[schema(schema = NESTED_INT_ENUM)]
 pub enum NestedIntEnum {
     A = 1,
     B = 2,
 }
 
-smithy!("smithy.java.codegen.test.structures#ListOfString": {
-    list LIST_OF_STRING {
+smithy!(
+    list smithy::java::codegen::test::structures::ListOfString {
         member: STRING
     }
-});
+);
 
-smithy!("smithy.java.codegen.test.structures#StringStringMap": {
-    map STRING_STRING_MAP {
+smithy!(
+    map smithy::java::codegen::test::structures::StringStringMap {
         key: STRING
         value: STRING
     }
-});
+);
 
-smithy!("smithy.java.codegen.test.structures#DefaultStructure": {
+smithy!(
     /// Schema for [`DefaultStructure`]
-    structure DEFAULT_STRUCTURE_SCHEMA {
+    structure smithy::java::codegen::test::structures::DefaultStructure {
         boolean: BOOLEAN
         bigDecimal: BIG_DECIMAL
         bigDecimalWithDoubleDefault: BIG_DECIMAL
@@ -98,13 +98,13 @@ smithy!("smithy.java.codegen.test.structures#DefaultStructure": {
         list: LIST_OF_STRING
         map: STRING_STRING_MAP
         timestamp: TIMESTAMP
-        enum: NESTED_ENUM_SCHEMA
-        intEnum: NESTED_INT_ENUM_SCHEMA
+        enum: NESTED_ENUM
+        intEnum: NESTED_INT_ENUM
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = DEFAULT_STRUCTURE_SCHEMA)]
+#[schema(schema = DEFAULT_STRUCTURE)]
 pub struct DefaultStructure {
     #[schema(default = true)]
     pub boolean: bool,

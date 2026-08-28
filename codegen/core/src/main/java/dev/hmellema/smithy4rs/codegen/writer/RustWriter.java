@@ -4,12 +4,15 @@
  */
 package dev.hmellema.smithy4rs.codegen.writer;
 
+import static dev.hmellema.smithy4rs.codegen.Utils.SCHEMA_ESCAPER;
+
 import dev.hmellema.smithy4rs.codegen.RustCodegenSettings;
 import dev.hmellema.smithy4rs.codegen.SymbolProperties;
 import java.util.function.BiFunction;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.codegen.core.SymbolReference;
 import software.amazon.smithy.codegen.core.SymbolWriter;
+import software.amazon.smithy.model.shapes.ShapeId;
 
 public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
     private final RustCodegenSettings settings;
@@ -30,6 +33,7 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
         putFormatter('T', new RustTypeFormatter());
         putFormatter('I', new RustIdentifierFormatter());
         putFormatter('N', new RustNullableTypeFormatter());
+        putFormatter('P', new RustFullPathFormatter());
     }
 
     // Add a symbol with no alias
@@ -124,6 +128,18 @@ public class RustWriter extends SymbolWriter<RustWriter, RustImportContainer> {
             Symbol typeSymbol = getTypeSymbol(type, 'I');
             var schemaType = typeSymbol.expectProperty(SymbolProperties.SCHEMA_SYMBOL);
             return typeFormatter.apply(schemaType, indent);
+        }
+    }
+
+    // Formats smithy namespaces at rust namespace
+    private static final class RustFullPathFormatter implements BiFunction<Object, String, String> {
+        @Override
+        public String apply(Object type, String indent) {
+            if (type instanceof ShapeId s) {
+                var namespace = s.getNamespace().replace(".", "::");
+                return String.format("%s::%s", namespace, SCHEMA_ESCAPER.escape(s.getName()));
+            }
+            throw new IllegalArgumentException("Expected ShapeId in 'P' formatter");
         }
     }
 

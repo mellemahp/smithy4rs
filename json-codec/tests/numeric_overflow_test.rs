@@ -6,8 +6,7 @@ use smithy4rs_test_utils::*;
 fn test_overflow_for_byte() {
     let json = br#"{"byteVal": 200, "shortVal": 0, "intVal": 0, "longVal": 0, "floatVal": 0.0, "doubleVal": 0.0}"#;
     let mut de = JsonDeserializer::new(json);
-    let result =
-        NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, &mut de);
+    let result = NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT, &mut de);
 
     // 200 exceeds i8::MAX (127), should error with range message
     match result {
@@ -26,8 +25,7 @@ fn test_overflow_for_byte() {
 fn test_overflow_for_short() {
     let json = br#"{"byteVal": 0, "shortVal": 40000, "intVal": 0, "longVal": 0, "floatVal": 0.0, "doubleVal": 0.0}"#;
     let mut de = JsonDeserializer::new(json);
-    let result =
-        NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, &mut de);
+    let result = NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT, &mut de);
 
     // 40000 exceeds i16::MAX (32767), should error with range message
     match result {

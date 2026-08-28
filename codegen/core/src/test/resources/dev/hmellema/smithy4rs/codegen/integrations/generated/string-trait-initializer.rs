@@ -7,16 +7,16 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#genericTrait": {
-    string GENERIC_TRAIT
-});
+smithy!(
+    string com::test::genericTrait
+);
 
 #[derive(SmithyShape, SmithyTrait, Clone)]
 #[schema(schema = GENERIC_TRAIT)]
 #[repr(transparent)]
 pub struct GenericTraitTrait(String);
 
-smithy!("com.test#WithGeneric": {
+smithy!(
     @DynamicTrait::from("com.test#genericTrait", "stuff");
-    string WITH_GENERIC
-});
+    string com::test::WithGeneric
+);

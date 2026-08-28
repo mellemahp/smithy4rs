@@ -4,7 +4,7 @@ pub static SIMPLE_INT_ENUM: ::smithy4rs_core::LazyLock<
     ::smithy4rs_core::schema::Schema,
 > = ::smithy4rs_core::LazyLock::new(|| {
     ::smithy4rs_core::schema::Schema::create_int_enum(
-        "test#SimpleStruct",
+        "test#SimpleIntEnum",
         Box::new([1, 2, 3]),
         Vec::new(),
     )

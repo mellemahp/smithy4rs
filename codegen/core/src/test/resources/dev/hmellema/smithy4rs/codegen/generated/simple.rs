@@ -1,49 +1,49 @@
 use smithy4rs_core::smithy;
 
-smithy!("com.test#MyShort": {
-    short MY_SHORT
-});
+smithy!(
+    short com::test::MyShort
+);
 
-smithy!("com.test#MyBlob": {
-    blob MY_BLOB
-});
+smithy!(
+    blob com::test::MyBlob
+);
 
-smithy!("com.test#MyFloat": {
-    float MY_FLOAT
-});
+smithy!(
+    float com::test::MyFloat
+);
 
-smithy!("com.test#MyByte": {
-    byte MY_BYTE
-});
+smithy!(
+    byte com::test::MyByte
+);
 
-smithy!("com.test#MyBigDecimal": {
-    bigDecimal MY_BIG_DECIMAL
-});
+smithy!(
+    bigDecimal com::test::MyBigDecimal
+);
 
-smithy!("com.test#MyBigInteger": {
-    bigInteger MY_BIG_INTEGER
-});
+smithy!(
+    bigInteger com::test::MyBigInteger
+);
 
-smithy!("com.test#MyBoolean": {
-    boolean MY_BOOLEAN
-});
+smithy!(
+    boolean com::test::MyBoolean
+);
 
-smithy!("com.test#MyInteger": {
-    integer MY_INTEGER
-});
+smithy!(
+    integer com::test::MyInteger
+);
 
-smithy!("com.test#MyDouble": {
-    double MY_DOUBLE
-});
+smithy!(
+    double com::test::MyDouble
+);
 
-smithy!("com.test#MyLong": {
-    long MY_LONG
-});
+smithy!(
+    long com::test::MyLong
+);
 
-smithy!("com.test#MyTimestamp": {
-    timestamp MY_TIMESTAMP
-});
+smithy!(
+    timestamp com::test::MyTimestamp
+);
 
-smithy!("com.test#MyString": {
-    string MY_STRING
-});
+smithy!(
+    string com::test::MyString
+);

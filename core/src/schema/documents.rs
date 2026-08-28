@@ -10,7 +10,6 @@ use crate::{
         prelude::*,
     },
     serde::validation::ValidationErrors,
-    smithy,
 };
 // ============================================================================
 // Base Document Wrapper and trait
@@ -1024,12 +1023,16 @@ impl From<&Instant> for Box<dyn Document> {
     }
 }
 
-smithy!("smithy.api#Document": {
-    #[doc(hidden)]
-    list LIST_DOCUMENT_SCHEMA {
-        member: DOCUMENT
-    }
-});
+mod list {
+    use crate::{prelude::DOCUMENT as PRELUDE_DOCUMENT, smithy};
+
+    smithy!(
+        #[doc(hidden)]
+        list smithy::api::Document {
+            member: PRELUDE_DOCUMENT
+        }
+    );
+}
 
 impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
     fn from(value: Vec<T>) -> Self {
@@ -1038,7 +1041,7 @@ impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
             result.push(v.into());
         }
         default::Document {
-            schema: LIST_DOCUMENT_SCHEMA.clone(),
+            schema: list::DOCUMENT.clone(),
             value: Value::List(result),
             discriminator: None,
         }
@@ -1046,13 +1049,20 @@ impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
     }
 }
 
-smithy!("smithy.api#Document": {
-    #[doc(hidden)]
-    map MAP_DOCUMENT_SCHEMA {
-        key: STRING
-        value: DOCUMENT
-    }
-});
+mod map {
+    use crate::{
+        prelude::{DOCUMENT as PRELUDE_DOCUMENT, STRING},
+        smithy,
+    };
+
+    smithy!(
+        #[doc(hidden)]
+        map smithy::api::Document {
+            key: STRING
+            value: PRELUDE_DOCUMENT
+        }
+    );
+}
 
 impl<T: Into<Box<dyn Document>>> From<IndexMap<String, T>> for Box<dyn Document> {
     fn from(value: IndexMap<String, T>) -> Self {
@@ -1061,7 +1071,7 @@ impl<T: Into<Box<dyn Document>>> From<IndexMap<String, T>> for Box<dyn Document>
             result.insert(key, value.into());
         }
         default::Document {
-            schema: MAP_DOCUMENT_SCHEMA.clone(),
+            schema: map::DOCUMENT.clone(),
             value: Value::Map(result),
             discriminator: None,
         }
@@ -1288,7 +1298,7 @@ mod tests {
     fn list_document_value() {
         let vec = vec!["a", "b", "c"];
         let document_list: Box<dyn Document> = vec.into();
-        let val: &Schema = &LIST_DOCUMENT_SCHEMA;
+        let val: &Schema = &list::DOCUMENT;
         assert_eq!(document_list.schema(), val);
         assert_eq!(document_list.size(), 3);
         let vec_out: Vec<String> = document_list.try_into().unwrap();
@@ -1303,7 +1313,7 @@ mod tests {
         let mut map_in: IndexMap<String, String> = IndexMap::new();
         map_in.insert("a".to_string(), "b".to_string());
         let map_doc: Box<dyn Document> = map_in.into();
-        let val: &Schema = &MAP_DOCUMENT_SCHEMA;
+        let val: &Schema = &map::DOCUMENT;
         assert_eq!(map_doc.schema(), val);
         assert_eq!(map_doc.size(), 1);
 

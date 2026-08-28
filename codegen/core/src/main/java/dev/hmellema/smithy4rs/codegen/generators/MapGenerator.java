@@ -18,7 +18,7 @@ import software.amazon.smithy.model.traits.TraitDefinition;
 public final class MapGenerator
         implements Consumer<GenerateMapDirective<CodeGenerationContext, RustCodegenSettings>> {
     private static final String BODY_TEMPLATE = """
-            map ${shape:I} {${?hasKeyTraits}
+            map ${id:P} {${?hasKeyTraits}
                 ${keyTraits:C}${/hasKeyTraits}
                 key: ${key:I}${?hasValueTraits}
                 ${valueTraits:C}${/hasValueTraits}
@@ -33,7 +33,7 @@ public final class MapGenerator
                     writer.pushState();
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.putContext("id", directive.shape().getId());
-                    writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
+                    writer.openBlock("${smithy:T}!(", ");", () -> {
                         writer.pushState(new SchemaSection(directive.shape()));
                         writer.putContext("key", directive.symbolProvider().toSymbol(directive.shape().getKey()));
                         writer.putContext("value", directive.symbolProvider().toSymbol(directive.shape().getValue()));

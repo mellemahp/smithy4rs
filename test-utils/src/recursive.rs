@@ -5,32 +5,32 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("test#StringMap": {
-    map STRING_MAP_SCHEMA {
+smithy!(
+    map test::StringMap {
         key: STRING
         value: STRING
     }
-});
+);
 
-smithy!("test#StringList": {
-    list STRING_LIST_SCHEMA {
+smithy!(
+    list test::StringList {
         member: STRING
     }
-});
+);
 
-smithy!("test#RecursiveShapesStruct": {
-    structure RECURSIVE_SHAPES_STRUCT_SCHEMA {
+smithy!(
+    structure test::RecursiveShapesStruct {
         stringField: STRING
         integerField: INTEGER
-        listField: STRING_LIST_SCHEMA
-        mapField: STRING_MAP_SCHEMA
+        listField: STRING_LIST
+        mapField: STRING_MAP
         optionalField: STRING
         next: (@self)
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = RECURSIVE_SHAPES_STRUCT_SCHEMA)]
+#[schema(schema = RECURSIVE_SHAPES_STRUCT)]
 pub struct RecursiveShapesStruct {
     pub string_field: String,
     pub integer_field: i32,

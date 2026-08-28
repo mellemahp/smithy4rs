@@ -8,23 +8,23 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#MyStruct": {
+smithy!(
     /// Schema for [`MyStruct`]
-    structure MY_STRUCT_SCHEMA {
+    structure com::test::MyStruct {
         @JsonNameTrait::new("stuff");
         withStringTrait: STRING
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = MY_STRUCT_SCHEMA)]
+#[schema(schema = MY_STRUCT)]
 pub struct MyStruct {
     pub with_string_trait: Option<String>,
 }
 
-smithy!("com.test#WithAnnotationTrait": {
+smithy!(
     @SparseTrait::builder().build();
-    list WITH_ANNOTATION_TRAIT {
+    list com::test::WithAnnotationTrait {
         member: STRING
     }
-});
+);

@@ -25,13 +25,13 @@ public final class StructureGenerator implements
         Consumer<GenerateStructureDirective<CodeGenerationContext, RustCodegenSettings>> {
 
     private static final String SCHEMA_TEMPLATE = """
-            ${smithy:T}!(${id:S}: {
+            ${smithy:T}!(
                 /// Schema for [`${shape:T}`]${?hasTraits}
                 ${traits:C|}${/hasTraits}
-                structure ${shape:I} {${#memberSchemas}
+                structure ${id:P} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
-            });
+            );
             """;
     private static final String STRUCT_TEMPLATE = """
             ${derive:C|}

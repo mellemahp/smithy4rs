@@ -3,17 +3,17 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#StringWithMinAndMax": {
+smithy!(
     @LengthTrait::builder().min(2i64).max(4i64).build();
-    string STRING_WITH_MIN_AND_MAX
-});
+    string com::test::StringWithMinAndMax
+);
 
-smithy!("com.test#StringWithMax": {
+smithy!(
     @LengthTrait::builder().max(2i64).build();
-    string STRING_WITH_MAX
-});
+    string com::test::StringWithMax
+);
 
-smithy!("com.test#StringWithMin": {
+smithy!(
     @LengthTrait::builder().min(1i64).build();
-    string STRING_WITH_MIN
-});
+    string com::test::StringWithMin
+);

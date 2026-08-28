@@ -3,8 +3,8 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#MyList": {
-    list MY_LIST {
+smithy!(
+    list com::test::MyList {
         member: STRING
     }
-});
+);

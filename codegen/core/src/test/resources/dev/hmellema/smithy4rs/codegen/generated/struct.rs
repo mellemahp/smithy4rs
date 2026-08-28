@@ -18,9 +18,9 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#AllPrimitivesStruct": {
+smithy!(
     /// Schema for [`AllPrimitivesStruct`]
-    structure ALL_PRIMITIVES_STRUCT_SCHEMA {
+    structure com::test::AllPrimitivesStruct {
         @RequiredTrait::builder().build();
         stringField: STRING
         @RequiredTrait::builder().build();
@@ -37,10 +37,10 @@ smithy!("com.test#AllPrimitivesStruct": {
         @RequiredTrait::builder().build();
         timestampField: TIMESTAMP
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = ALL_PRIMITIVES_STRUCT_SCHEMA)]
+#[schema(schema = ALL_PRIMITIVES_STRUCT)]
 pub struct AllPrimitivesStruct {
     pub string_field: String,
     pub byte_field: i8,

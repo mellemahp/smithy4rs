@@ -365,28 +365,28 @@ impl<T: SerializeWithSchema> Serialize for ValueWrapper<'_, T> {
 mod tests {
     use crate::{IndexMap, derive::SmithyShape, schema::prelude::*, smithy};
 
-    smithy!("com.example#Map": {
-        map MAP_SCHEMA {
+    smithy!(
+        map com::example::Map {
             key: STRING
             value: STRING
         }
-    });
-    smithy!("com.example#List": {
-        list LIST_SCHEMA {
+    );
+    smithy!(
+        list com::example::List {
             member: STRING
         }
-    });
-    smithy!("com.example#Test": {
-        structure SCHEMA {
+    );
+    smithy!(
+        structure com::example::Test {
             a: STRING
             b: STRING
-            map: MAP_SCHEMA
-            list: LIST_SCHEMA
+            map: MAP
+            list: LIST
         }
-    });
+    );
 
     #[derive(SmithyShape)]
-    #[schema(schema = SCHEMA)]
+    #[schema(schema = TEST)]
     pub struct Test {
         pub a: String,
         pub b: String,
@@ -436,12 +436,12 @@ mod tests {
     // JSON Trait support tests
     // --------------------------------------------------------------------
 
-    smithy!("com.example#Rename": {
-        structure RENAME {
+    smithy!(
+        structure com::example::Rename {
             @JsonNameTrait::new("renamed");
             a: STRING
         }
-    });
+    );
     #[derive(SmithyShape)]
     #[schema(schema = RENAME)]
     pub struct TestRename {
@@ -461,15 +461,15 @@ mod tests {
     // XML Trait support tests
     // --------------------------------------------------------------------
 
-    smithy!("com.example#Rename": {
-        structure XML_TRAITS {
+    smithy!(
+        structure com::example::XmlTraits {
             @XmlNameTrait::new("renamed");
             @XmlAttributeTrait::builder().build();
             a: STRING
             @XmlNameTrait::new("int");
             b: STRING
         }
-    });
+    );
     #[derive(SmithyShape)]
     #[schema(schema = XML_TRAITS)]
     pub struct TestXml {
@@ -483,8 +483,7 @@ mod tests {
             a: "a".to_string(),
             b: 2,
         };
-        let expected =
-            r#"<?xml version="1.0" encoding="UTF-8"?><Rename renamed="a"><int>2</int></Rename>"#;
+        let expected = r#"<?xml version="1.0" encoding="UTF-8"?><XmlTraits renamed="a"><int>2</int></XmlTraits>"#;
         assert_eq!(serde_xml_rs::to_string(&rename).unwrap(), expected);
     }
 }

@@ -13,56 +13,56 @@ use smithy4rs_core::{
 };
 
 // ==== Test shapes ====
-smithy!("test#ValidationStruct": {
-    structure VALIDATE_SHAPE_SCHEMA {
+smithy!(
+    structure test::ValidationStruct {
         @LengthTrait::builder().min(1).max(100).build();
         string: STRING
         @RangeTrait::builder().max(BigDecimal::from(100u64)).build();
         requiredInt: INTEGER
         integer: INTEGER
     }
-});
+);
 #[derive(SmithyShape, Clone)]
-#[schema(schema = VALIDATE_SHAPE_SCHEMA)]
+#[schema(schema = VALIDATION_STRUCT)]
 pub struct ValidatedStruct {
     pub string: String,
     pub required_int: i32,
     pub integer: Option<i32>,
 }
 
-smithy!("test#UnvalidatedShape": {
-    structure UNVALIDATED_SHAPE_SCHEMA {
+smithy!(
+    structure test::UnvalidatedShape {
         string: STRING
         requiredInt: INTEGER
         integer: INTEGER
     }
-});
+);
 #[derive(SmithyShape, Clone)]
-#[schema(schema = UNVALIDATED_SHAPE_SCHEMA)]
+#[schema(schema = UNVALIDATED_SHAPE)]
 pub struct UnvalidatedStruct {
     pub string: String,
     pub required_int: i32,
     pub integer: Option<i32>,
 }
 
-smithy!("com.example#ListOfNested": {
-    list LIST_OF_NESTED_SCHEMA {
-        member: VALIDATE_SHAPE_SCHEMA
+smithy!(
+    list com::example::ListOfNested {
+        member: VALIDATION_STRUCT
     }
-});
-smithy!("com.example#MapOfNested": {
-    map MAP_OF_NESTED_SCHEMA {
+);
+smithy!(
+    map com::example::MapOfNested {
         key: STRING
-        value: VALIDATE_SHAPE_SCHEMA
+        value: VALIDATION_STRUCT
     }
-});
+);
 
-smithy!("test#StructWithNestedList": {
-    structure STRUCT_WITH_COLLECTIONS {
-        fieldNestedList: LIST_OF_NESTED_SCHEMA
-        fieldNestedMap: MAP_OF_NESTED_SCHEMA
+smithy!(
+    structure test::StructWithCollections {
+        fieldNestedList: LIST_OF_NESTED
+        fieldNestedMap: MAP_OF_NESTED
     }
-});
+);
 
 #[derive(SmithyShape, Clone)]
 #[schema(schema = STRUCT_WITH_COLLECTIONS)]
@@ -71,12 +71,12 @@ pub struct StructWithCollections {
     pub field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
 }
 
-smithy!("test#StructWithNestedSet": {
-    structure STRUCT_WITH_SET {
+smithy!(
+    structure test::StructWithSet {
         @UniqueItemsTrait::builder().build();
-        fieldNestedSet: LIST_OF_NESTED_SCHEMA
+        fieldNestedSet: LIST_OF_NESTED
     }
-});
+);
 
 #[derive(SmithyShape, Clone)]
 #[schema(schema = STRUCT_WITH_SET)]
@@ -84,11 +84,11 @@ pub struct StructWithSet {
     pub field_nested_set: Option<Vec<ValidatedStruct>>,
 }
 
-smithy!("test#StructWithNestedList": {
-    structure STRUCT_WITH_LIST {
-        fieldNestedList: LIST_OF_NESTED_SCHEMA
+smithy!(
+    structure test::StructWithList {
+        fieldNestedList: LIST_OF_NESTED
     }
-});
+);
 
 // Mostly just for comparison against set implementation.
 #[derive(SmithyShape, Clone)]
@@ -104,7 +104,7 @@ pub fn validate_builder(c: &mut Criterion) {
         .required_int(1);
     c.bench_function("Validate Shape Builder", |b| {
         b.iter(|| {
-            let _ = black_box(DefaultValidator::new().validate(&VALIDATE_SHAPE_SCHEMA, &builder));
+            let _ = black_box(DefaultValidator::new().validate(&VALIDATION_STRUCT, &builder));
         })
     });
 }
@@ -117,8 +117,7 @@ pub fn validate_shape(c: &mut Criterion) {
         .expect("Shape should build");
     c.bench_function("Validate built shape", |b| {
         b.iter(|| {
-            let _ =
-                black_box(DefaultValidator::new().validate(&VALIDATE_SHAPE_SCHEMA, &built_shape));
+            let _ = black_box(DefaultValidator::new().validate(&VALIDATION_STRUCT, &built_shape));
         })
     });
 }
@@ -131,9 +130,8 @@ pub fn unvalidated_shape(c: &mut Criterion) {
     };
     c.bench_function("Shape with no constraints", |b| {
         b.iter(|| {
-            let _ = black_box(
-                DefaultValidator::new().validate(&UNVALIDATED_SHAPE_SCHEMA, &unvalidated_shape),
-            );
+            let _ =
+                black_box(DefaultValidator::new().validate(&UNVALIDATED_SHAPE, &unvalidated_shape));
         })
     });
 }
@@ -152,8 +150,7 @@ pub fn builder_with_collections(c: &mut Criterion) {
         .field_nested_list_builder(list);
     c.bench_function("Collections of Builders", |b| {
         b.iter(|| {
-            let _ =
-                black_box(DefaultValidator::new().validate(&UNVALIDATED_SHAPE_SCHEMA, &collection));
+            let _ = black_box(DefaultValidator::new().validate(&UNVALIDATED_SHAPE, &collection));
         })
     });
 }

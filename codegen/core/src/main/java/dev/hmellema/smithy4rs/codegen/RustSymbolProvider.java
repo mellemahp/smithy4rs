@@ -309,10 +309,6 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
     }
 
     private static String getSchemaName(Shape shapeId) {
-        var baseName = CaseUtils.toSnakeCase(shapeId.toShapeId().getName()).toUpperCase(Locale.ENGLISH);
-        if (GENERATED_TYPES.contains(shapeId.getType())) {
-            return baseName + "_SCHEMA";
-        }
-        return baseName;
+        return CaseUtils.toSnakeCase(shapeId.toShapeId().getName()).toUpperCase(Locale.ENGLISH);
     }
 }
