@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["core", "core-derive", "fuzz", "json-codec", "test-utils"]
-default-members = ["core", "core-derive", "test-utils", "json-codec"]
+default-members = ["core-derive", "core", "test-utils", "json-codec"]
 
 # Config for 'cargo release'
 [workspace.metadata.release]
@@ -29,11 +29,11 @@ thiserror = "2.0.18"
 [workspace.lints.rust]
 future_incompatible = { level = "warn", priority = 2 }
 nonstandard_style = { level = "deny", priority = 1 }
-unsafe_code = "forbid"
+unsafe_code = "deny"
 unused_qualifications = "warn"
 unused_extern_crates = "warn"
-unreachable_code = { level = "forbid", priority = 0 }
-unreachable_patterns = "forbid"
+unreachable_code = { level = "deny", priority = 0 }
+unreachable_patterns = "deny"
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
 elided_lifetimes_in_paths = "warn"

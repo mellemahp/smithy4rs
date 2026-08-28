@@ -615,26 +615,21 @@ mod tests {
     });
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            A: STRING = "a"
-            B: STRING = "b"
-            C: STRING = "c"
-            LIST: LIST_SCHEMA = "list"
-            MAP: MAP_SCHEMA = "map"
+            memberA: STRING
+            memberB: STRING
+            memberOptional: STRING
+            memberList: LIST_SCHEMA
+            memberMap: MAP_SCHEMA
         }
     });
 
     #[derive(SmithyShape, Clone, PartialEq)]
-    #[smithy_schema(SCHEMA)]
+    #[schema(schema = SCHEMA)]
     pub struct SerializeMe {
-        #[smithy_schema(A)]
         pub member_a: String,
-        #[smithy_schema(B)]
         pub member_b: String,
-        #[smithy_schema(C)]
         pub member_optional: Option<String>,
-        #[smithy_schema(LIST)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MAP)]
         pub member_map: IndexMap<String, String>,
     }
 
@@ -653,14 +648,14 @@ mod tests {
         let document: Box<dyn Document> = struct_to_convert.into();
         assert_eq!(document.discriminator().unwrap(), SCHEMA.id());
         if let Some(members) = document.as_map() {
-            let doc_a = &members.get("a").unwrap();
+            let doc_a = &members.get("memberA").unwrap();
             assert_eq!(doc_a.as_string().unwrap(), "a");
-            let doc_b = &members.get("b").unwrap();
+            let doc_b = &members.get("memberB").unwrap();
             assert_eq!(doc_b.as_string().unwrap(), "b");
-            let doc_c = &members.get("c").unwrap();
+            let doc_c = &members.get("memberOptional").unwrap();
             assert_eq!(doc_c.as_string().unwrap(), "c");
-            assert!(members.contains_key("map"));
-            assert!(members.contains_key("list"));
+            assert!(members.contains_key("memberMap"));
+            assert!(members.contains_key("memberList"));
         } else {
             panic!("Expected document");
         }
@@ -825,27 +820,36 @@ mod tests {
         let doc_map = doc.as_map().expect("Should be a map");
 
         // Check member_a
-        let member_a_doc = doc_map.get("a").expect("Should have member a").clone();
+        let member_a_doc = doc_map
+            .get("memberA")
+            .expect("Should have member a")
+            .clone();
         let a_value: String = member_a_doc.try_into().unwrap();
         assert_eq!(a_value, "value_a".to_string());
 
         // Check member_b
-        let member_b_doc = doc_map.get("b").expect("Should have member b").clone();
+        let member_b_doc = doc_map
+            .get("memberB")
+            .expect("Should have member b")
+            .clone();
         let b_value: String = member_b_doc.try_into().unwrap();
         assert_eq!(b_value, "value_b");
 
         // Check member_optional
-        let member_c_doc = doc_map.get("c").expect("Should have member c").clone();
+        let member_c_doc = doc_map
+            .get("memberOptional")
+            .expect("Should have member optional")
+            .clone();
         let c_value: String = member_c_doc.try_into().unwrap();
         assert_eq!(c_value, "value_c");
 
         // Check list
-        let list_doc = doc_map.get("list").expect("Should have list").clone();
+        let list_doc = doc_map.get("memberList").expect("Should have list").clone();
         let list_value: Vec<String> = list_doc.try_into().unwrap();
         assert_eq!(list_value, original_list);
 
         // Check map
-        let map_doc = doc_map.get("map").expect("Should have map").clone();
+        let map_doc = doc_map.get("memberMap").expect("Should have map").clone();
         let map_value: IndexMap<String, String> = map_doc.try_into().unwrap();
         assert_eq!(map_value, original_map);
     }

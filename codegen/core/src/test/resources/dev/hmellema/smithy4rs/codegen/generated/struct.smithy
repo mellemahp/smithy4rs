@@ -4,18 +4,18 @@ namespace com.test
 
 structure AllPrimitivesStruct {
     @required
-    string_field: String
+    stringField: String
     @required
-    byte_field: Byte
-    short_field: Short
+    byteField: Byte
+    shortField: Short
     @required
-    integer_field: Integer
-    long_field: Long
-    float_field: Float
+    integerField: Integer
+    longField: Long
+    floatField: Float
     @required
-    double_field: Double
-    boolean_field: Boolean
-    blob_field: Blob
+    doubleField: Double
+    booleanField: Boolean
+    blobField: Blob
     @required
-    timestamp_field: Timestamp
+    timestampField: Timestamp
 }

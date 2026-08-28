@@ -16,7 +16,7 @@ import software.amazon.smithy.model.shapes.Shape;
 final class NewTypeWrapperGenerator {
     private static final String TEMPLATE = """
             ${derive:C|}
-            #[smithy_schema(${shape:I})]
+            #[schema(schema = ${shape:I})]
             #[repr(transparent)]
             pub struct ${shape:T}(${inner:T});
             """;

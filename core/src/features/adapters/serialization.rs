@@ -378,24 +378,20 @@ mod tests {
     });
     smithy!("com.example#Test": {
         structure SCHEMA {
-            A: STRING = "a"
-            B: STRING = "b"
-            MAP: MAP_SCHEMA = "map"
-            LIST: LIST_SCHEMA = "list"
+            a: STRING
+            b: STRING
+            map: MAP_SCHEMA
+            list: LIST_SCHEMA
         }
     });
 
     #[derive(SmithyShape)]
-    #[smithy_schema(SCHEMA)]
+    #[schema(schema = SCHEMA)]
     pub struct Test {
-        #[smithy_schema(A)]
-        a: String,
-        #[smithy_schema(B)]
-        b: String,
-        #[smithy_schema(LIST)]
-        member_list: Vec<String>,
-        #[smithy_schema(MAP)]
-        member_map: IndexMap<String, String>,
+        pub a: String,
+        pub b: String,
+        pub list: Vec<String>,
+        pub map: IndexMap<String, String>,
     }
 
     fn get_test_shape() -> Test {
@@ -405,8 +401,8 @@ mod tests {
         Test {
             a: "a".to_string(),
             b: "b".to_string(),
-            member_list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
-            member_map: map,
+            list: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+            map,
         }
     }
 
@@ -443,14 +439,13 @@ mod tests {
     smithy!("com.example#Rename": {
         structure RENAME {
             @JsonNameTrait::new("renamed");
-            A: STRING = "a"
+            a: STRING
         }
     });
     #[derive(SmithyShape)]
-    #[smithy_schema(RENAME)]
+    #[schema(schema = RENAME)]
     pub struct TestRename {
-        #[smithy_schema(A)]
-        a: String,
+        pub a: String,
     }
 
     #[test]
@@ -470,18 +465,16 @@ mod tests {
         structure XML_TRAITS {
             @XmlNameTrait::new("renamed");
             @XmlAttributeTrait::builder().build();
-            A: STRING = "a"
+            a: STRING
             @XmlNameTrait::new("int");
-            B: STRING = "b"
+            b: STRING
         }
     });
     #[derive(SmithyShape)]
-    #[smithy_schema(XML_TRAITS)]
+    #[schema(schema = XML_TRAITS)]
     pub struct TestXml {
-        #[smithy_schema(A)]
-        a: String,
-        #[smithy_schema(B)]
-        b: i32,
+        pub a: String,
+        pub b: i32,
     }
 
     #[test]

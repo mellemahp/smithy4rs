@@ -10,9 +10,9 @@
 //! For example:
 //! ```rust,ignore
 //!  #[derive(SmithyShape)]
-//!  #[smithy_schema(SCHEMA)]
+//!  #[schema(schema = SCHEMA)]
 //!  pub struct Test {
-//!      #[smithy_schema(A)]
+//!      #[schema(schema = A)]
 //!      a: String,
 //!  }
 //! ```

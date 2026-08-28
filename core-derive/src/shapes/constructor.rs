@@ -1,29 +1,26 @@
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::FieldsUnnamed;
 
-use crate::shapes::utils::{get_crate_name, parse_wrapper_type};
+use crate::attr::SimpleShape;
 
-// ============================================================================
-// Wrapper (Newtype) constructor
-// ============================================================================
-
-pub(crate) fn get_tuple_constructor(
-    schema_ident: &Ident,
-    shape_name: &Ident,
-    fields: &FieldsUnnamed,
+/// Adds a validated [`new`] constructor for wrapper types
+pub(crate) fn expand_tuple_constructor(
+    shape: &SimpleShape,
+    crate_ident: &TokenStream,
 ) -> TokenStream {
-    let inner_type = parse_wrapper_type(fields);
-    let crate_name = get_crate_name();
+    let name = &shape.ident;
+    let schema = &shape.schema;
+    let inner_type = shape.inner_type();
     quote! {
-        impl #shape_name {
-            #[doc = concat!("Create a new [`", stringify!(#shape_name), "`] instance")]
+        impl #name {
+            #[allow(clippy::new_without_default)]
+            #[doc = concat!("Create a new [`", stringify!(#name), "`] instance")]
             #[automatically_derived]
             #[inline]
-            pub fn new<T: Into<#inner_type>>(value: T) -> #crate_name::serde::validation::Validated<#shape_name> {
-                let mut validator = #crate_name::serde::validation::DefaultValidator::new();
-                let res = #shape_name(value.into());
-                #crate_name::serde::validation::Validator::validate(&mut validator, &#schema_ident, &res)?;
+            pub fn new<T: Into<#inner_type>>(value: T) -> #crate_ident::serde::validation::Validated<#name> {
+                let mut validator = #crate_ident::serde::validation::DefaultValidator::new();
+                let res = #name(value.into());
+                #crate_ident::serde::validation::Validator::validate(&mut validator, &#schema, &res)?;
                 Ok(res)
             }
         }

@@ -32,7 +32,7 @@ public class UnionGenerator implements
     public static final String STRUCT_TEMPLATE = """
             #[${union:T}]
             ${derive:C|}
-            #[smithy_schema(${shape:I})]
+            #[schema(schema = ${shape:I})]
             pub enum ${shape:T} {${#memberVariants}
                 ${value:C|}${/memberVariants}
             }
@@ -96,7 +96,7 @@ public class UnionGenerator implements
 
         private static final String TEMPLATE = """
                 ${?hasMemberTraits}${memberTraits:C|}
-                ${/hasMemberTraits}${memberSchema:L}: ${member:I} = ${memberName:S}""";
+                ${/hasMemberTraits}${memberName:L}: ${member:I}""";
         @Override
         public void run() {
             writer.pushState();
@@ -115,9 +115,7 @@ public class UnionGenerator implements
             SymbolProvider provider,
             String membername,
             MemberShape shape) implements Runnable {
-        private static final String TEMPLATE = """
-                #[smithy_schema(${memberSchema:L})]
-                ${memberName:L}(${member:T}),""";
+        private static final String TEMPLATE = "${memberName:L}(${member:T}),";
 
         @Override
         public void run() {
@@ -135,6 +133,11 @@ public class UnionGenerator implements
     }
 
     private static String toMemberName(String memberName) {
-        return StringUtils.capitalize(CaseUtils.toCamelCase(memberName));
+        // If snake or camel case
+        if (memberName.contains("-") || memberName.contains("_")) {
+            return StringUtils.capitalize(CaseUtils.toCamelCase(memberName));
+        } else {
+            return StringUtils.capitalize(memberName);
+        }
     }
 }

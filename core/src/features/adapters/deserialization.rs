@@ -736,25 +736,23 @@ mod tests {
 
     smithy!("test#OptionalFieldsStruct": {
         structure OPTIONAL_FIELDS_STRUCT_SCHEMA {
-            REQUIRED: STRING = "required_field"
-            OPTIONAL: STRING = "optional_field"
+            requiredField: STRING
+            optionalField: STRING
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(OPTIONAL_FIELDS_STRUCT_SCHEMA)]
+    #[schema(schema = OPTIONAL_FIELDS_STRUCT_SCHEMA)]
     pub struct OptionalFieldsStruct {
-        #[smithy_schema(REQUIRED)]
-        required_field: String,
-        #[smithy_schema(OPTIONAL)]
-        optional_field: Option<String>,
+        pub required_field: String,
+        pub optional_field: Option<String>,
     }
 
     #[test]
     fn test_simple_struct_with_serde_json() {
         let json = r#"{
-            "required_field": "hello",
-            "optional_field": "world"
+            "requiredField": "hello",
+            "optionalField": "world"
         }"#;
 
         let result: OptionalFieldsStruct = serde_json::from_str(json).unwrap();
@@ -766,7 +764,7 @@ mod tests {
     #[test]
     fn test_simple_struct_with_optional_none() {
         let json = r#"{
-            "required_field": "hello"
+            "requiredField": "hello"
         }"#;
 
         let result: OptionalFieldsStruct = serde_json::from_str(json).unwrap();
@@ -778,18 +776,16 @@ mod tests {
     // Nested struct tests
     smithy!("test#NestedStruct": {
         structure NESTED_STRUCT_SCHEMA {
-            FIELD_A: STRING = "field_a"
-            FIELD_B: STRING = "field_b"
+            fieldA: STRING
+            fieldB: STRING
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(NESTED_STRUCT_SCHEMA)]
+    #[schema(schema = NESTED_STRUCT_SCHEMA)]
     pub struct NestedStruct {
-        #[smithy_schema(FIELD_A)]
-        field_a: String,
-        #[smithy_schema(FIELD_B)]
-        field_b: String,
+        pub field_a: String,
+        pub field_b: String,
     }
 
     // List schema for tags
@@ -801,55 +797,47 @@ mod tests {
 
     smithy!("test#ParentStruct": {
         structure PARENT_STRUCT_SCHEMA {
-            NAME: STRING = "name"
-            NESTED: NESTED_STRUCT_SCHEMA = "nested"
-            OPTIONAL_NESTED: NESTED_STRUCT_SCHEMA = "optional_nested"
-            TAGS: TAGS_LIST_SCHEMA = "tags"
+            name: STRING
+            nested: NESTED_STRUCT_SCHEMA
+            optionalNested: NESTED_STRUCT_SCHEMA
+            tags: TAGS_LIST_SCHEMA
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(PARENT_STRUCT_SCHEMA)]
+    #[schema(schema = PARENT_STRUCT_SCHEMA)]
     pub struct ParentStruct {
-        #[smithy_schema(NAME)]
-        name: String,
-        #[smithy_schema(NESTED)]
-        nested: NestedStruct,
-        #[smithy_schema(OPTIONAL_NESTED)]
-        optional_nested: Option<NestedStruct>,
-        #[smithy_schema(TAGS)]
-        tags: Vec<String>,
+        pub name: String,
+        pub nested: NestedStruct,
+        pub optional_nested: Option<NestedStruct>,
+        pub tags: Vec<String>,
     }
 
     smithy!("test#MultiPrimitive": {
         structure MULTI_PRIMITIVE_SCHEMA {
-            STRING_FIELD: STRING = "string_field"
-            INT_FIELD: INTEGER = "int_field"
-            BOOL_FIELD: BOOLEAN = "bool_field"
-            FLOAT_FIELD: FLOAT = "float_field"
+            stringField: STRING
+            intField: INTEGER
+            boolField: BOOLEAN
+            floatField: FLOAT
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(MULTI_PRIMITIVE_SCHEMA)]
+    #[schema(schema = MULTI_PRIMITIVE_SCHEMA)]
     pub struct MultiPrimitive {
-        #[smithy_schema(STRING_FIELD)]
-        string_field: String,
-        #[smithy_schema(INT_FIELD)]
-        int_field: i32,
-        #[smithy_schema(BOOL_FIELD)]
-        bool_field: bool,
-        #[smithy_schema(FLOAT_FIELD)]
-        float_field: f32,
+        pub string_field: String,
+        pub int_field: i32,
+        pub bool_field: bool,
+        pub float_field: f32,
     }
 
     #[test]
     fn test_multiple_primitives() {
         let json = r#"{
-            "string_field": "test",
-            "int_field": 42,
-            "bool_field": true,
-            "float_field": 3.1111
+            "stringField": "test",
+            "intField": 42,
+            "boolField": true,
+            "floatField": 3.1111
         }"#;
 
         let result: MultiPrimitive = serde_json::from_str(json).unwrap();
@@ -863,10 +851,10 @@ mod tests {
     #[test]
     fn test_unknown_fields_ignored() {
         let json = r#"{
-            "required_field": "hello",
-            "optional_field": "world",
-            "unknown_field": "should be ignored",
-            "another_unknown": 123
+            "requiredField": "hello",
+            "optionalField": "world",
+            "unknownField": "should be ignored",
+            "anotherUnknown": 123
         }"#;
 
         let result: OptionalFieldsStruct = serde_json::from_str(json).unwrap();
@@ -878,18 +866,16 @@ mod tests {
     // Test nested list in struct
     smithy!("test#StructWithList": {
         structure STRUCT_WITH_LIST_SCHEMA {
-            NAME: STRING = "name"
-            TAGS: STRING_LIST_SCHEMA = "tags"
+            name: STRING
+            tags: STRING_LIST_SCHEMA
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(STRUCT_WITH_LIST_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_LIST_SCHEMA)]
     pub struct StructWithList {
-        #[smithy_schema(NAME)]
-        name: String,
-        #[smithy_schema(TAGS)]
-        tags: Vec<String>,
+        pub name: String,
+        pub tags: Vec<String>,
     }
 
     #[test]
@@ -908,21 +894,18 @@ mod tests {
     // Comprehensive deep nesting test
     smithy!("test#Address": {
         structure ADDRESS_SCHEMA {
-            STREET: STRING = "street"
-            CITY: STRING = "city"
-            ZIP: INTEGER = "zipCode"
+            street: STRING
+            city: STRING
+            zipCode: INTEGER
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(ADDRESS_SCHEMA)]
+    #[schema(schema = ADDRESS_SCHEMA)]
     pub struct Address {
-        #[smithy_schema(STREET)]
-        street: String,
-        #[smithy_schema(CITY)]
-        city: String,
-        #[smithy_schema(ZIP)]
-        zip_code: i32,
+        pub street: String,
+        pub city: String,
+        pub zip_code: i32,
     }
 
     smithy!("test#PhoneList": {
@@ -933,40 +916,34 @@ mod tests {
 
     smithy!("test#Contact": {
         structure CONTACT_SCHEMA {
-            EMAIL: STRING = "email"
-            PHONES: PHONE_LIST_SCHEMA = "phones"
-            ADDRESS: ADDRESS_SCHEMA = "address"
-            BACKUP: ADDRESS_SCHEMA = "backupAddress"
+            email: STRING
+            phones: PHONE_LIST_SCHEMA
+            address: ADDRESS_SCHEMA
+            backupAddress: ADDRESS_SCHEMA
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(CONTACT_SCHEMA)]
+    #[schema(schema = CONTACT_SCHEMA)]
     pub struct Contact {
-        #[smithy_schema(EMAIL)]
-        email: String,
-        #[smithy_schema(PHONES)]
-        phones: Vec<String>,
-        #[smithy_schema(ADDRESS)]
-        address: Address,
-        #[smithy_schema(BACKUP)]
-        backup_address: Option<Address>,
+        pub email: String,
+        pub phones: Vec<String>,
+        pub address: Address,
+        pub backup_address: Option<Address>,
     }
 
     smithy!("test#Hobby": {
         structure HOBBY_SCHEMA {
-            NAME: STRING = "name"
-            YEARS: INTEGER = "yearsOfExperience"
+            name: STRING
+            yearsOfExperience: INTEGER
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(HOBBY_SCHEMA)]
+    #[schema(schema = HOBBY_SCHEMA)]
     pub struct Hobby {
-        #[smithy_schema(NAME)]
-        name: String,
-        #[smithy_schema(YEARS)]
-        years_of_experience: i32,
+        pub name: String,
+        pub years_of_experience: i32,
     }
 
     smithy!("test#HobbyList": {
@@ -984,36 +961,28 @@ mod tests {
 
     smithy!("test#Person": {
         structure PERSON_SCHEMA {
-            NAME: STRING = "name"
-            AGE: INTEGER = "age"
-            ACTIVE: BOOLEAN = "isActive"
-            SCORE: FLOAT = "score"
-            CONTACT: CONTACT_SCHEMA = "contact"
-            HOBBIES: HOBBY_LIST_SCHEMA = "hobbies"
-            METADATA: STRING_MAP_SCHEMA = "metadata"
-            NOTES: STRING = "notes"
+            name: STRING
+            age: INTEGER
+            isActive: BOOLEAN
+            score: FLOAT
+            contact: CONTACT_SCHEMA
+            hobbies: HOBBY_LIST_SCHEMA
+            metadata: STRING_MAP_SCHEMA
+            notes: STRING
         }
     });
 
     #[derive(SmithyShape, PartialEq, Clone)]
-    #[smithy_schema(PERSON_SCHEMA)]
+    #[schema(schema = PERSON_SCHEMA)]
     pub struct Person {
-        #[smithy_schema(NAME)]
-        name: String,
-        #[smithy_schema(AGE)]
-        age: i32,
-        #[smithy_schema(ACTIVE)]
-        is_active: bool,
-        #[smithy_schema(SCORE)]
-        score: f32,
-        #[smithy_schema(CONTACT)]
-        contact: Contact,
-        #[smithy_schema(HOBBIES)]
-        hobbies: Vec<Hobby>,
-        #[smithy_schema(METADATA)]
-        metadata: IndexMap<String, String>,
-        #[smithy_schema(NOTES)]
-        notes: Option<String>,
+        pub name: String,
+        pub age: i32,
+        pub is_active: bool,
+        pub score: f32,
+        pub contact: Contact,
+        pub hobbies: Vec<Hobby>,
+        pub metadata: IndexMap<String, String>,
+        pub notes: Option<String>,
     }
 
     #[test]
@@ -1136,18 +1105,16 @@ mod tests {
 
     smithy!("test#IpAddr": {
         union IP_ADDR {
-            V4: STRING = "v4"
-            V6: STRING = "v6"
+            v4: STRING
+            v6: STRING
         }
     });
 
     #[smithy_union]
     #[derive(SmithyShape, PartialEq)]
-    #[smithy_schema(IP_ADDR)]
+    #[schema(schema = IP_ADDR)]
     pub enum IpAddr {
-        #[smithy_schema(V4)]
         V4(String),
-        #[smithy_schema(V6)]
         V6(String),
     }
 
@@ -1172,7 +1139,7 @@ mod tests {
 
     #[smithy_enum]
     #[derive(SmithyShape)]
-    #[smithy_schema(A_OR_B)]
+    #[schema(schema = A_OR_B)]
     pub enum AorB {
         A = "a",
         B = "b",
@@ -1196,7 +1163,7 @@ mod tests {
 
     #[smithy_enum]
     #[derive(SmithyShape)]
-    #[smithy_schema(C_OR_D)]
+    #[schema(schema = C_OR_D)]
     pub enum CorD {
         C = 1,
         D = 2,

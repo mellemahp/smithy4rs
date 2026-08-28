@@ -4,7 +4,7 @@ use smithy4rs_test_utils::*;
 
 #[test]
 fn test_string_for_integer() {
-    let json = br#"{"field_a": "test", "field_b": "not_an_int"}"#;
+    let json = br#"{"fieldA": "test", "fieldB": "not_an_int"}"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
 
@@ -22,7 +22,7 @@ fn test_string_for_integer() {
 
 #[test]
 fn test_integer_for_string() {
-    let json = br#"{"field_a": 123, "field_b": 456}"#;
+    let json = br#"{"fieldA": 123, "fieldB": 456}"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
 
@@ -76,7 +76,7 @@ fn test_object_for_array() {
 
 #[test]
 fn test_bool_for_integer() {
-    let json = br#"{"field_a": "test", "field_b": true}"#;
+    let json = br#"{"fieldA": "test", "fieldB": true}"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
 

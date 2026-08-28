@@ -1,36 +1,33 @@
+use darling::util::Override;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Field, FieldsNamed, Type};
 
-use crate::shapes::utils::{
-    IdentOrExpr, extract_option_type, get_crate_ident, get_ident, get_inner_type, is_optional,
-    is_primitive, no_builder, parse_default, parse_schema, replace_inner,
+use crate::{
+    attr::{StructMember, StructShape},
+    shapes::serialization::serialize_struct,
+    utils::{TargetType, resolve_builder_target},
 };
 
-pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
-    let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
-    let crate_ident = get_crate_ident();
-
-    // Generate builder struct fields
-    let builder_fields = field_data
-        .iter()
-        .map(|d| d.field_type(&crate_ident))
-        .collect::<Vec<_>>();
-
-    // Generate new() initialization
-    let new_fields = field_data
-        .iter()
-        .map(|d| d.initializer(&crate_ident))
-        .collect::<Vec<_>>();
-
-    // Generate setter methods - consuming for chaining
-    let setters = field_data
-        .iter()
-        .map(|d| d.setters(&crate_ident))
-        .collect::<Vec<_>>();
+pub(crate) fn expand_builder(shape: &StructShape, crate_ident: &TokenStream) -> TokenStream {
+    let struct_impls = expand_struct_impl(shape, crate_ident);
+    let builder_struct = expand_builder_struct(shape, crate_ident);
+    let builder_impls = expand_builder_impls(shape, crate_ident);
 
     quote! {
-        #[doc = concat!("Builder for [`", stringify!(#shape_name), "`]")]
+        #struct_impls
+
+        #builder_struct
+
+        #builder_impls
+    }
+}
+
+fn expand_struct_impl(shape: &StructShape, crate_ident: &TokenStream) -> TokenStream {
+    let shape_name = &shape.ident;
+    let builder_name = shape.builder();
+
+    quote! {
+        #[doc = concat!(" Builder for [`", stringify!(#shape_name), "`]")]
         #[automatically_derived]
         impl #shape_name {
             /// Get a new builder for this shape.
@@ -40,8 +37,24 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
                 <Self as #crate_ident::serde::Buildable<#builder_name>>::builder()
             }
         }
+    }
+}
 
-        #[doc = concat!("Builder for [`", stringify!(#shape_name), "`]")]
+fn expand_builder_struct(shape: &StructShape, crate_ident: &TokenStream) -> TokenStream {
+    let shape_name = &shape.ident;
+    let builder_name = shape.builder();
+    let fields = shape.data.as_struct().expect("Not a struct");
+
+    let builder_fields = fields.iter().map(|m| field_type(m, crate_ident));
+
+    // Generate new() initialization
+    let new_fields = fields.iter().map(|m| initializer(m, crate_ident));
+
+    // Generate setter methods - consuming for chaining
+    let setters = fields.iter().map(|m| setter(m, crate_ident));
+
+    quote! {
+        #[doc = concat!(" Builder for [`", stringify!(#shape_name), "`]")]
         #[automatically_derived]
         #[derive(Clone)]
         pub struct #builder_name {
@@ -52,7 +65,7 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
         impl #builder_name {
             #[doc = concat!("Create a new `", stringify!(#builder_name), "` instance")]
             pub fn new() -> Self {
-                Self {
+                #builder_name {
                     #(#new_fields,)*
                 }
             }
@@ -70,264 +83,210 @@ pub(crate) fn builder_struct(shape_name: &Ident, field_data: &[BuilderFieldData]
             pub fn build_with_validator(self, validator: impl #crate_ident::serde::validation::Validator) -> #crate_ident::serde::validation::Validated<#shape_name> {
                 #crate_ident::serde::ShapeBuilder::build_with_validator(self, validator)
             }
+
+            /// Error correct builder
+            pub fn correct(self) -> #shape_name {
+                <Self as #crate_ident::serde::correction::ErrorCorrection>::correct(self)
+            }
         }
     }
 }
 
-pub fn builder_impls(shape_name: &Ident, field_data: &[BuilderFieldData]) -> TokenStream {
-    let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
+fn expand_builder_impls(shape: &StructShape, crate_ident: &TokenStream) -> TokenStream {
+    let shape_name = &shape.ident;
+    let schema = &shape.schema;
+    let builder_name = shape.builder();
+    let fields = shape.data.as_struct().expect("Not a struct");
+    let ser = serialize_struct(shape);
 
     // Generate correct() method used to automatically derive `build()` methods
-    let build_fields = field_data
-        .iter()
-        .map(BuilderFieldData::correct)
-        .collect::<Vec<_>>();
+    let build_fields = fields.iter().map(correct);
 
+    // TODO: Update so we can reuse same impls as other shapes.
     quote! {
-        #[automatically_derived]
-        impl _ErrorCorrection for #builder_name {
-            type Value = #shape_name;
+        const _: () = {
+            use #crate_ident::serde::correction::ErrorCorrection as _ErrorCorrection;
 
-            fn correct(self) -> Self::Value {
-                #shape_name {
-                    #(#build_fields,)*
+            #[automatically_derived]
+            impl _ErrorCorrection for #builder_name {
+                type Value = #shape_name;
+
+                fn correct(self) -> Self::Value {
+                    Self::Value {
+                        #(#build_fields,)*
+                    }
                 }
             }
-        }
-
-        #[automatically_derived]
-        impl<'de> _ShapeBuilder<'de, #shape_name> for #builder_name {
-            fn new() -> Self {
-                Self::new()
-            }
-        }
-
-        #[automatically_derived]
-        impl _ErrorCorrectionDefault for #shape_name {
-            fn default() -> Self {
-                #builder_name::new().correct()
-            }
-        }
-    }
-}
-
-pub fn get_builder_fields(schema_ident: &Ident, fields: &FieldsNamed) -> Vec<BuilderFieldData> {
-    let mut field_data = Vec::new();
-    for field in &fields.named {
-        let schema = Ident::new(
-            &format!("_{}_MEMBER_{}", schema_ident, parse_schema(&field.attrs)),
-            Span::call_site(),
-        );
-        let field_ident = field.ident.as_ref().unwrap().clone();
-        let field_ty = &field.ty;
-        let default = parse_default(&field.attrs);
-        let optional = is_optional(field_ty) && default.is_none();
-        let target = resolve_build_target(field, optional);
-
-        field_data.push(BuilderFieldData {
-            schema,
-            field_ident,
-            default,
-            optional,
-            target,
-        });
-    }
-    field_data
-}
-
-fn resolve_build_target(field: &Field, optional: bool) -> BuildTarget {
-    // The target type is the inner type of any optional
-    let ty = if optional {
-        extract_option_type(&field.ty).unwrap_or(&field.ty)
-    } else {
-        &field.ty
-    };
-
-    // Get the inner type of parametrized types (i.e. `Vec<T>`, `IndexMap<String, T>`)
-    let inner_type = get_inner_type(ty);
-
-    // If the inner type is a primitive type, just return that
-    if is_primitive(inner_type) || no_builder(field) {
-        return BuildTarget::Primitive(ty.clone());
-    }
-
-    // We will create two target types. One with the builder
-    // and the other with the "built" type.
-    let mut builder_type = ty.clone();
-    let type_ident = get_ident(inner_type);
-    let builder_ident = Ident::new(&format!("{type_ident}Builder"), Span::call_site());
-    replace_inner(&mut builder_type, builder_ident);
-
-    // Create the build target for a `MaybeBuilt<>` impl
-    BuildTarget::Builable {
-        shape: ty.clone(),
-        builder: builder_type.clone(),
-    }
-}
-
-pub(crate) struct BuilderFieldData {
-    schema: Ident,
-    field_ident: Ident,
-    default: Option<IdentOrExpr>,
-    optional: bool,
-    target: BuildTarget,
-}
-#[allow(clippy::large_enum_variant)]
-enum BuildTarget {
-    /// A type that also implements `ShapeBuilder` and so must be wrapped with `MaybeBuilder<>`.
-    Builable { shape: Type, builder: Type },
-    /// A simple type (`string`, `i32`, etc.) that needs no additional wrapping.
-    Primitive(Type),
-}
-impl BuilderFieldData {
-    /// Type to use when representing this type as a field in a builder struct definition
-    fn field_type(&self, crate_ident: &TokenStream) -> TokenStream {
-        let ty = match &self.target {
-            BuildTarget::Builable { shape, builder } => {
-                quote! { #crate_ident::serde::MaybeBuilt<#shape, #builder> }
-            }
-            BuildTarget::Primitive(ty) => quote! { #ty },
         };
-        let field_name = &self.field_ident;
-        if self.optional {
-            quote! {
-                #field_name: Option<#ty>
+
+        const _: () = {
+            use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
+
+            #[automatically_derived]
+            impl<'de> _ShapeBuilder<'de, #shape_name> for #builder_name {
+                fn new() -> Self {
+                    #builder_name::new()
+                }
             }
-        } else {
-            quote! {
-                #field_name: #crate_ident::serde::Required<#ty>
+        };
+
+        const _: () = {
+            use #crate_ident::schema::Schema as _Schema;
+            use #crate_ident::serde::serializers::Serializer as _Serializer;
+            use #crate_ident::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
+            use #crate_ident::serde::serializers::StructWriter as _StructWriter;
+
+            #[automatically_derived]
+            impl _SerializeWithSchema for #builder_name {
+                fn serialize_with_schema<S: _Serializer>(
+                    &self,
+                    schema: &_Schema,
+                    serializer: S,
+                ) -> Result<S::Ok, S::Error> {
+                    #ser
+                }
             }
+        };
+
+        const _: () = {
+            use #crate_ident::serde::Buildable as _Buildable;
+
+            impl <'de> _Buildable<'de, #builder_name> for #shape_name {}
+        };
+
+        const _: () = {
+            use #crate_ident::schema::Schema as _Schema;
+            use #crate_ident::schema::StaticSchemaShape as _StaticSchemaShape;
+
+            #[automatically_derived]
+            impl _StaticSchemaShape for #builder_name {
+                #[inline]
+                fn schema() -> &'static _Schema {
+                    &#schema
+                }
+            }
+        };
+    }
+}
+
+/// The fully resolved field type to set on builders
+fn field_type(member: &StructMember, crate_ident: &TokenStream) -> TokenStream {
+    let ty = match resolve_builder_target(member) {
+        TargetType::Builable { shape, builder } => {
+            quote! { #crate_ident::serde::MaybeBuilt<#shape, #builder> }
+        }
+        TargetType::Primitive(ty) => quote! { #ty },
+    };
+    let field_name = member
+        .ident
+        .as_ref()
+        .expect("struct members should be named");
+    if member.optional() {
+        quote! {
+            #field_name: Option<#ty>
+        }
+    } else {
+        quote! {
+            #field_name: #crate_ident::serde::Required<#ty>
         }
     }
+}
 
-    /// Initializer to use for setting a builder field in `new()` method
-    /// - all optional fields are `None`.
-    /// - All required fields are `Required::Unset`
-    fn initializer(&self, crate_ident: &TokenStream) -> TokenStream {
-        let field_name = &self.field_ident;
-        if self.optional {
-            quote! { #field_name: None }
-        } else if let Some(default) = self.default.as_ref() {
+/// Initializer to use for setting a builder field in `new()` method
+/// - all optional fields are `None`.
+/// - All required fields are `Required::Unset`
+fn initializer(member: &StructMember, crate_ident: &TokenStream) -> TokenStream {
+    let field_name = &member.ident;
+    if member.optional() {
+        quote! { #field_name: None }
+    } else if let Some(default_override) = member.default.as_ref() {
+        if let Override::Explicit(default) = default_override {
             quote! { #field_name: #crate_ident::serde::Required::Set(#default) }
         } else {
-            quote! { #field_name: #crate_ident::serde::Required::Unset }
+            let ty = &member.ty;
+            // TODO: How to handle with wrappers?
+            quote! { #field_name: #crate_ident::serde::Required::Set(#ty::default()) }
         }
+    } else {
+        quote! { #field_name: #crate_ident::serde::Required::Unset }
     }
+}
 
-    /// Generate builder setters.
-    ///
-    /// Setters consume `self` to allow for chaining.
-    fn setters(&self, crate_ident: &TokenStream) -> TokenStream {
-        let field_name = &self.field_ident;
-        let wrapper = if self.optional {
-            quote! { Some }
-        } else {
-            quote! { #crate_ident::serde::Required::Set }
-        };
+/// Generate builder setters.
+///
+/// Setters consume `self` to allow for chaining.
+fn setter(member: &StructMember, crate_ident: &TokenStream) -> TokenStream {
+    let field_name = member
+        .ident
+        .as_ref()
+        .expect("struct members should be named");
 
-        match &self.target {
-            BuildTarget::Builable { shape, builder } => {
-                let builder_fn = Ident::new(&format!("{field_name}_builder"), Span::call_site());
-                quote! {
-                    #[doc = concat!("Set `", stringify!(#field_name), "`.")]
-                    pub fn #field_name(mut self, value: #shape) -> Self {
-                        self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Struct(value));
-                        self
-                    }
+    let wrapper = if member.optional() {
+        quote! { Some }
+    } else {
+        quote! { #crate_ident::serde::Required::Set }
+    };
 
-                    #[doc = concat!("Set `", stringify!(#field_name), "`.")]
-                    pub fn #builder_fn(mut self, value: #builder) -> Self {
-                        self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Builder(value));
-                        self
-                    }
-                }
-            }
-            BuildTarget::Primitive(ty) => {
-                quote! {
-                    #[doc = concat!("Set `", stringify!(#field_name), "`.")]
-                    pub fn #field_name<T: Into<#ty>>(mut self, value: T) -> Self {
-                        self.#field_name = #wrapper(value.into());
-                        self
-                    }
-                }
-            }
-        }
-    }
+    match resolve_builder_target(member) {
+        TargetType::Builable { shape, builder } => {
+            let builder_fn = Ident::new(&format!("{field_name}_builder"), Span::call_site());
 
-    /// Get the `correct`/`build` methods that extract value out of builder.
-    fn correct(&self) -> TokenStream {
-        let field_name = &self.field_ident;
-        match (self.optional, &self.target) {
-            // === Optional types ===
-            (true, BuildTarget::Primitive(_)) => {
-                // simply pass through
-                quote! {
-                    #field_name: self.#field_name
+            quote! {
+                #[doc = concat!("Set `", stringify!(#field_name), "`.")]
+                pub fn #field_name(mut self, value: #shape) -> Self {
+                    self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Struct(value));
+                    self
                 }
-            }
-            (true, BuildTarget::Builable { .. }) => {
-                // Unwrap the `MaybeBuilt`
-                quote! {
-                    #field_name: self.#field_name.correct()
-                }
-            }
-            // === Required types ===
-            (false, BuildTarget::Primitive(_)) => {
-                // Resolve value from `Required` wrapper
-                quote! {
-                    #field_name: self.#field_name.get()
-                }
-            }
-            (false, BuildTarget::Builable { .. }) => {
-                // Resolve value from `Required` wrapper and then unwrap from `MaybeBuilt`
-                quote! {
-                    #field_name: self.#field_name.get().correct()
+
+                #[doc = concat!("Set `", stringify!(#field_name), "`.")]
+                pub fn #builder_fn(mut self, value: #builder) -> Self {
+                    self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Builder(value));
+                    self
                 }
             }
         }
-    }
-
-    /// Get the corresponding match arm for the builder field
-    pub(crate) fn deserialize_match_arm(&self, crate_ident: &TokenStream) -> TokenStream {
-        let field_name = &self.field_ident;
-        let schema = &self.schema;
-        // Buildable fields use the `_builder` setter for deserialization
-        // to take an unbuilt shape as input.
-        match (self.optional, &self.target) {
-            // === Optional types ===
-            // For optional fields, use deserialize_optional_member! with inner type
-            (true, BuildTarget::Primitive(ty)) => {
-                quote! {
-                    #crate_ident::deserialize_optional_member!(member_schema, #schema, reader, builder, #field_name, #ty);
-                }
-            }
-            (true, BuildTarget::Builable { builder, .. }) => {
-                let field_builder =
-                    Ident::new(format!("{field_name}_builder").as_str(), Span::call_site());
-                quote! {
-                    #crate_ident::deserialize_optional_member!(member_schema, #schema, reader, builder, #field_builder, #builder);
-                }
-            }
-            // === Required types ===
-            // For required fields, use deserialize_member!
-            (false, BuildTarget::Primitive(ty)) => {
-                quote! {
-                    #crate_ident::deserialize_member!(member_schema, #schema, reader, builder, #field_name, #ty);
-                }
-            }
-            (false, BuildTarget::Builable { builder, .. }) => {
-                let field_builder =
-                    Ident::new(format!("{field_name}_builder").as_str(), Span::call_site());
-                quote! {
-                    #crate_ident::deserialize_member!(member_schema, #schema, reader, builder, #field_builder, #builder);
+        TargetType::Primitive(ty) => {
+            quote! {
+                #[doc = concat!("Set `", stringify!(#field_name), "`.")]
+                pub fn #field_name<T: Into<#ty>>(mut self, value: T) -> Self {
+                    self.#field_name = #wrapper(value.into());
+                    self
                 }
             }
         }
     }
 }
 
-pub(crate) fn buildable(shape_name: &Ident, builder_name: &Ident) -> TokenStream {
-    quote! {
-       impl <'de> _Buildable<'de, #builder_name> for #shape_name {}
+/// Get the `correct`/`build` methods that extract value out of builder.
+fn correct(member: &StructMember) -> TokenStream {
+    let field_name = &member.ident;
+    let target = resolve_builder_target(member);
+    match (member.optional(), &target) {
+        // === Optional types ===
+        (true, TargetType::Primitive(_)) => {
+            // simply pass through
+            quote! {
+                #field_name: self.#field_name
+            }
+        }
+        (true, TargetType::Builable { .. }) => {
+            // Unwrap the `MaybeBuilt`
+            quote! {
+                #field_name: self.#field_name.correct()
+            }
+        }
+        // === Required types ===
+        (false, TargetType::Primitive(_)) => {
+            // Resolve value from `Required` wrapper
+            quote! {
+                #field_name: self.#field_name.get()
+            }
+        }
+        (false, TargetType::Builable { .. }) => {
+            // Resolve value from `Required` wrapper and then unwrap from `MaybeBuilt`
+            quote! {
+                #field_name: self.#field_name.get().correct()
+            }
+        }
     }
 }

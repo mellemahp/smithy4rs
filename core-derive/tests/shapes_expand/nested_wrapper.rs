@@ -1,6 +1,6 @@
 use smithy4rs_core::prelude::STRING;
 use smithy4rs_core::smithy;
-use smithy4rs_core_derive::{SmithyShape, SmithyTraitImpl};
+use smithy4rs_core_derive::{SmithyShape, SmithyTrait};
 
 smithy!("test#SimpleTrait": {
     list NESTED {
@@ -8,8 +8,8 @@ smithy!("test#SimpleTrait": {
     }
 });
 
-#[derive(SmithyShape, SmithyTraitImpl, Clone)]
-#[smithy_schema(NESTED)]
+#[derive(SmithyShape, SmithyTrait, Clone)]
+#[schema(NESTED)]
 #[repr(transparent)]
 pub struct NestedWrapper(Vec<Nested>);
 
@@ -20,8 +20,8 @@ smithy!("test#SimpleStruct": {
 });
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(SIMPLE_SCHEMA)]
+#[schema(SIMPLE_SCHEMA)]
 pub struct Nested {
-    #[smithy_schema(A)]
+    #[schema(A)]
     pub field_a: String,
 }

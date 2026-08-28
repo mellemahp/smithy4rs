@@ -22,23 +22,19 @@ smithy!("com.example#List": {
 });
 smithy!("com.example#Shape": {
     structure SCHEMA {
-        A: STRING = "a"
-        B: INTEGER = "b"
-        LIST: LIST_SCHEMA = "list"
-        MAP: MAP_SCHEMA = "map"
+        memberA: STRING
+        memberB: INTEGER
+        memberList: LIST_SCHEMA
+        memberMap: MAP_SCHEMA
     }
 });
 
 #[derive(SmithyShape, Clone, PartialEq)]
-#[smithy_schema(SCHEMA)]
+#[schema(schema = SCHEMA)]
 pub struct SerializeMe {
-    #[smithy_schema(A)]
     pub member_a: String,
-    #[smithy_schema(B)]
     pub member_b: i32,
-    #[smithy_schema(LIST)]
     pub member_list: Vec<String>,
-    #[smithy_schema(MAP)]
     pub member_map: IndexMap<String, String>,
 }
 

@@ -17,7 +17,7 @@ smithy!("com.test#MyIntEnum": {
 
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(MY_INT_ENUM_SCHEMA)]
+#[schema(schema = MY_INT_ENUM_SCHEMA)]
 pub enum MyIntEnum {
     Third = 3,
     Second = 2,
@@ -36,7 +36,7 @@ smithy!("com.test#Suits": {
 
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[smithy_schema(SUITS_SCHEMA)]
+#[schema(schema = SUITS_SCHEMA)]
 pub enum Suits {
     Spade = "spade",
     Heart = "heart",

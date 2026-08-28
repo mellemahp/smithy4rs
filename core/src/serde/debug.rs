@@ -393,48 +393,43 @@ mod tests {
             member: STRING
         }
     });
+
     smithy!("com.example#Shape": {
         structure SCHEMA {
-            A: STRING = "a"
+            memberA: STRING
             @SensitiveTrait::builder().build();
-            B: STRING = "b"
-            C: STRING = "c"
-            MAP: MAP_SCHEMA = "map"
-            LIST: LIST_SCHEMA = "list"
+            memberB: STRING
+            memberOptional: STRING
+            memberMap: MAP_SCHEMA
+            memberList: LIST_SCHEMA
         }
     });
+
     smithy!("com.example#Shape": {
         structure REDACTED_AGGREGATES {
             @SensitiveTrait::builder().build();
-            MAP_REDACT: MAP_SCHEMA = "map"
+            map: MAP_SCHEMA
             @SensitiveTrait::builder().build();
             @MediaTypeTrait::new("application/json");
-            LIST_REDACT: LIST_SCHEMA = "list"
+            list: LIST_SCHEMA
         }
     });
 
     #[derive(SmithyShape)]
-    #[smithy_schema(SCHEMA)]
+    #[schema(schema = SCHEMA)]
     pub struct SerializeMe {
-        #[smithy_schema(A)]
         pub member_a: String,
-        #[smithy_schema(B)]
         pub member_b: String,
-        #[smithy_schema(C)]
         pub member_optional: Option<String>,
-        #[smithy_schema(LIST)]
         pub member_list: Vec<String>,
-        #[smithy_schema(MAP)]
         pub member_map: IndexMap<String, String>,
     }
 
     #[derive(SmithyShape)]
-    #[smithy_schema(REDACTED_AGGREGATES)]
+    #[schema(schema = REDACTED_AGGREGATES)]
     pub struct RedactMe {
-        #[smithy_schema(LIST_REDACT)]
-        pub member_list: Vec<String>,
-        #[smithy_schema(MAP_REDACT)]
-        pub member_map: IndexMap<String, String>,
+        pub list: Vec<String>,
+        pub map: IndexMap<String, String>,
     }
 
     #[test]
@@ -451,7 +446,7 @@ mod tests {
         };
         assert_eq!(
             format!("{struct_to_write:?}"),
-            "Shape { member_a: \"a\", member_b: **REDACTED**, member_optional: \"c\", member_list: [\"a\", \"b\"], member_map: {\"a\": \"b\"} }"
+            "Shape { memberA: \"a\", memberB: **REDACTED**, memberOptional: \"c\", memberList: [\"a\", \"b\"], memberMap: {\"a\": \"b\"} }"
         );
     }
 
@@ -470,14 +465,14 @@ mod tests {
         assert_eq!(
             format!("{struct_to_write:#?}"),
             r#"Shape {
-    member_a: "a",
-    member_b: **REDACTED**,
-    member_optional: "c",
-    member_list: [
+    memberA: "a",
+    memberB: **REDACTED**,
+    memberOptional: "c",
+    memberList: [
         "a",
         "b",
     ],
-    member_map: {
+    memberMap: {
         "a": "b",
     },
 }"#
@@ -489,14 +484,11 @@ mod tests {
         let mut map = IndexMap::new();
         map.insert(String::from("a"), String::from("b"));
         let list = vec!["a".to_string(), "b".to_string()];
-        let struct_to_write = RedactMe {
-            member_list: list,
-            member_map: map,
-        };
+        let struct_to_write = RedactMe { list, map };
         let output = format!("{struct_to_write:?}");
         assert_eq!(
             output,
-            "Shape { member_list: [**REDACTED**], member_map: {**REDACTED**} }"
+            "Shape { list: [**REDACTED**], map: {**REDACTED**} }"
         );
     }
 
@@ -505,10 +497,7 @@ mod tests {
         let mut map = IndexMap::new();
         map.insert(String::from("a"), String::from("b"));
         let list = vec!["a".to_string(), "b".to_string()];
-        let struct_to_write = RedactMe {
-            member_list: list,
-            member_map: map,
-        };
+        let struct_to_write = RedactMe { list, map };
         let document: Box<dyn Document> = struct_to_write.into();
         let output = format!("{document:#?}");
         let expected = r#"Document {

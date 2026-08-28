@@ -11,7 +11,7 @@ smithy!("test#SimpleStruct": {
 
 #[smithy_enum]
 #[derive(SmithyShape)]
-#[smithy_schema(SIMPLE_ENUM)]
+#[schema(schema = SIMPLE_ENUM)]
 pub enum TestEnum {
     A = "a",
     B = "b",

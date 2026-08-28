@@ -4,7 +4,7 @@ use smithy4rs_test_utils::*;
 
 #[test]
 fn test_overflow_for_byte() {
-    let json = br#"{"byte_val": 200, "short_val": 0, "int_val": 0, "long_val": 0, "float_val": 0.0, "double_val": 0.0}"#;
+    let json = br#"{"byteVal": 200, "shortVal": 0, "intVal": 0, "longVal": 0, "floatVal": 0.0, "doubleVal": 0.0}"#;
     let mut de = JsonDeserializer::new(json);
     let result =
         NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, &mut de);
@@ -24,7 +24,7 @@ fn test_overflow_for_byte() {
 
 #[test]
 fn test_overflow_for_short() {
-    let json = br#"{"byte_val": 0, "short_val": 40000, "int_val": 0, "long_val": 0, "float_val": 0.0, "double_val": 0.0}"#;
+    let json = br#"{"byteVal": 0, "shortVal": 40000, "intVal": 0, "longVal": 0, "floatVal": 0.0, "doubleVal": 0.0}"#;
     let mut de = JsonDeserializer::new(json);
     let result =
         NumericTypesStructBuilder::deserialize_with_schema(&NUMERIC_TYPES_STRUCT_SCHEMA, &mut de);

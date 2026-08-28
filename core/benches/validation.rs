@@ -16,39 +16,33 @@ use smithy4rs_core::{
 smithy!("test#ValidationStruct": {
     structure VALIDATE_SHAPE_SCHEMA {
         @LengthTrait::builder().min(1).max(100).build();
-        STRING: STRING = "string"
+        string: STRING
         @RangeTrait::builder().max(BigDecimal::from(100u64)).build();
-        REQUIRED_INT: INTEGER = "required_int"
-        INTEGER: INTEGER = "integer"
+        requiredInt: INTEGER
+        integer: INTEGER
     }
 });
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(VALIDATE_SHAPE_SCHEMA)]
+#[schema(schema = VALIDATE_SHAPE_SCHEMA)]
 pub struct ValidatedStruct {
-    #[smithy_schema(STRING)]
-    string: String,
-    #[smithy_schema(REQUIRED_INT)]
-    required_int: i32,
-    #[smithy_schema(INTEGER)]
-    integer: Option<i32>,
+    pub string: String,
+    pub required_int: i32,
+    pub integer: Option<i32>,
 }
 
 smithy!("test#UnvalidatedShape": {
     structure UNVALIDATED_SHAPE_SCHEMA {
-        STRING: STRING = "string"
-        REQUIRED_INT: INTEGER = "required_int"
-        INT: INTEGER = "integer"
+        string: STRING
+        requiredInt: INTEGER
+        integer: INTEGER
     }
 });
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(UNVALIDATED_SHAPE_SCHEMA)]
+#[schema(schema = UNVALIDATED_SHAPE_SCHEMA)]
 pub struct UnvalidatedStruct {
-    #[smithy_schema(STRING)]
-    string: String,
-    #[smithy_schema(REQUIRED_INT)]
-    required_int: i32,
-    #[smithy_schema(INT)]
-    integer: Option<i32>,
+    pub string: String,
+    pub required_int: i32,
+    pub integer: Option<i32>,
 }
 
 smithy!("com.example#ListOfNested": {
@@ -65,46 +59,42 @@ smithy!("com.example#MapOfNested": {
 
 smithy!("test#StructWithNestedList": {
     structure STRUCT_WITH_COLLECTIONS {
-        LIST: LIST_OF_NESTED_SCHEMA = "field_nested_list"
-        MAP: MAP_OF_NESTED_SCHEMA = "field_nested_map"
+        fieldNestedList: LIST_OF_NESTED_SCHEMA
+        fieldNestedMap: MAP_OF_NESTED_SCHEMA
     }
 });
 
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(STRUCT_WITH_COLLECTIONS)]
+#[schema(schema = STRUCT_WITH_COLLECTIONS)]
 pub struct StructWithCollections {
-    #[smithy_schema(LIST)]
-    field_nested_list: Option<Vec<ValidatedStruct>>,
-    #[smithy_schema(MAP)]
-    field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
+    pub field_nested_list: Option<Vec<ValidatedStruct>>,
+    pub field_nested_map: Option<IndexMap<String, ValidatedStruct>>,
 }
 
 smithy!("test#StructWithNestedSet": {
     structure STRUCT_WITH_SET {
         @UniqueItemsTrait::builder().build();
-        NESTED_SET: LIST_OF_NESTED_SCHEMA = "field_nested_set"
+        fieldNestedSet: LIST_OF_NESTED_SCHEMA
     }
 });
 
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(STRUCT_WITH_SET)]
+#[schema(schema = STRUCT_WITH_SET)]
 pub struct StructWithSet {
-    #[smithy_schema(NESTED_SET)]
-    field_nested_set: Option<Vec<ValidatedStruct>>,
+    pub field_nested_set: Option<Vec<ValidatedStruct>>,
 }
 
 smithy!("test#StructWithNestedList": {
     structure STRUCT_WITH_LIST {
-        NESTED_LIST: LIST_OF_NESTED_SCHEMA = "field_nested_list"
+        fieldNestedList: LIST_OF_NESTED_SCHEMA
     }
 });
 
 // Mostly just for comparison against set implementation.
 #[derive(SmithyShape, Clone)]
-#[smithy_schema(STRUCT_WITH_LIST)]
+#[schema(schema = STRUCT_WITH_LIST)]
 pub struct StructWithList {
-    #[smithy_schema(NESTED_LIST)]
-    field_nested_list: Option<Vec<ValidatedStruct>>,
+    pub field_nested_list: Option<Vec<ValidatedStruct>>,
 }
 
 // ==== Benchmarks ====

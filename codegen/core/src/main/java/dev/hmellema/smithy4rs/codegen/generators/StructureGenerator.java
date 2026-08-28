@@ -11,6 +11,7 @@ import dev.hmellema.smithy4rs.codegen.sections.MemberSection;
 import dev.hmellema.smithy4rs.codegen.sections.ShapeSection;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.function.Consumer;
 import software.amazon.smithy.codegen.core.SymbolProvider;
@@ -34,7 +35,7 @@ public final class StructureGenerator implements
             """;
     private static final String STRUCT_TEMPLATE = """
             ${derive:C|}
-            #[smithy_schema(${shape:I})]
+            #[schema(schema = ${shape:I})]
             pub struct ${shape:T} {${#memberFields}
                 ${value:C|}${/memberFields}
             }
@@ -100,7 +101,7 @@ public final class StructureGenerator implements
             MemberShape shape) implements Runnable {
         private static final String TEMPLATE = """
                 ${?hasMemberTraits}${memberTraits:C|}
-                ${/hasMemberTraits}${memberIdent:L}: ${shape:I} = ${memberName:S}""";
+                ${/hasMemberTraits}${memberName:L}: ${shape:I}""";
 
         @Override
         public void run() {
@@ -124,23 +125,26 @@ public final class StructureGenerator implements
             MemberShape shape) implements Runnable {
         private static final String TEMPLATE =
                 """
-                        ${?noBuilder}#[no_builder]
-                        ${/noBuilder}${?default}#[default(${default:C})]
-                        ${/default}#[smithy_schema(${memberIdent:L})]
-                        pub ${memberName:L}: ${member:N},""";
+                        ${?hasProps}#[schema(${#props}${value:C}${^key.last}, ${/key.last}${/props})]
+                        ${/hasProps}pub ${memberName:L}: ${member:N},""";
 
         @Override
         public void run() {
             writer.pushState(new MemberSection(shape));
             var symbol = provider.toSymbol(shape);
-            writer.putContext("noBuilder", symbol.getProperty(SymbolProperties.NO_BUILDER));
             writer.putContext("memberName", provider.toMemberName(shape));
             writer.putContext("member", provider.toSymbol(shape));
             writer.putContext("memberIdent", getMemberIdent(membername));
+            var props = new ArrayList<Runnable>();
             if (shape.hasTrait(DefaultTrait.class)) {
                 var defaultValue = shape.expectTrait(DefaultTrait.class).toNode();
-                writer.putContext("default", new DefaultGenerator(writer, model, shape, provider, defaultValue));
+                props.add(new DefaultGenerator(writer, model, shape, provider, defaultValue));
             }
+            if (symbol.getProperty(SymbolProperties.NO_BUILDER).isPresent()) {
+                props.add(() -> writer.writeInline("no_builder"));
+            }
+            writer.putContext("hasProps", !props.isEmpty());
+            writer.putContext("props", props);
             writer.write(TEMPLATE);
             writer.popState();
         }

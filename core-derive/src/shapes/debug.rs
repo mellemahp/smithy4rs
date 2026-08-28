@@ -1,14 +1,23 @@
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 
+use crate::attr::Shape;
+
 /// Generates `Debug` impl for Smithy Shapes.
-pub(crate) fn debug_impl(shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
+pub(crate) fn expand_debug(shape: &Shape, crate_ident: &TokenStream) -> TokenStream {
+    let name = shape.name();
+    let schema = shape.schema();
+
     quote! {
-        #[automatically_derived]
-        impl std::fmt::Debug for #shape_name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                std::fmt::Debug::fmt(&_DebugWrapper::new(&#schema_ident, self), f)
+        const _: () = {
+            use #crate_ident::serde::debug::DebugWrapper as _DebugWrapper;
+
+            #[automatically_derived]
+            impl std::fmt::Debug for #name {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    std::fmt::Debug::fmt(&_DebugWrapper::new(&#schema, self), f)
+                }
             }
-        }
+        };
     }
 }

@@ -1,13 +1,12 @@
 use smithy4rs_core::smithy;
-use smithy4rs_core_derive::{SmithyShape, SmithyTraitImpl};
+use smithy4rs_core_derive::{SmithyShape, SmithyTrait};
 pub static STRING_TRAIT: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 { ::smithy4rs_core::schema::Schema::create_string("test#SimpleTrait", Vec::new()) });
-#[smithy_schema(STRING_TRAIT)]
+#[schema(schema = STRING_TRAIT)]
 pub struct SimpleTrait(String);
 const _: () = {
-    extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::Schema as _Schema;
-    use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
+    use ::smithy4rs_core::schema::Schema as _Schema;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
     #[automatically_derived]
     impl _StaticSchemaShape for SimpleTrait {
         #[inline]
@@ -17,11 +16,18 @@ const _: () = {
     }
 };
 const _: () = {
-    extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::Schema as _Schema;
-    use _smithy4rs::serde::serializers::Serializer as _Serializer;
-    use _smithy4rs::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
-    use _smithy4rs::serde::serializers::StructWriter as _StructWriter;
+    use ::smithy4rs_core::serde::debug::DebugWrapper as _DebugWrapper;
+    #[automatically_derived]
+    impl std::fmt::Debug for SimpleTrait {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            std::fmt::Debug::fmt(&_DebugWrapper::new(&STRING_TRAIT, self), f)
+        }
+    }
+};
+const _: () = {
+    use ::smithy4rs_core::schema::Schema as _Schema;
+    use ::smithy4rs_core::serde::serializers::Serializer as _Serializer;
+    use ::smithy4rs_core::serde::serializers::SerializeWithSchema as _SerializeWithSchema;
     #[automatically_derived]
     impl _SerializeWithSchema for SimpleTrait {
         fn serialize_with_schema<S: _Serializer>(
@@ -34,10 +40,9 @@ const _: () = {
     }
 };
 const _: () = {
-    extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::Schema as _Schema;
-    use _smithy4rs::serde::deserializers::Deserializer as _Deserializer;
-    use _smithy4rs::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
+    use ::smithy4rs_core::schema::Schema as _Schema;
+    use ::smithy4rs_core::serde::deserializers::Deserializer as _Deserializer;
+    use ::smithy4rs_core::serde::deserializers::DeserializeWithSchema as _DeserializeWithSchema;
     #[automatically_derived]
     impl<'de> _DeserializeWithSchema<'de> for SimpleTrait {
         #[inline]
@@ -52,37 +57,24 @@ const _: () = {
                 schema,
                 deserializer,
             )?;
-            Ok(Self(inner))
+            Ok(SimpleTrait(inner))
         }
     }
 };
 const _: () = {
-    extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::serde::debug::DebugWrapper as _DebugWrapper;
-    #[automatically_derived]
-    impl std::fmt::Debug for SimpleTrait {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            std::fmt::Debug::fmt(&_DebugWrapper::new(&STRING_TRAIT, self), f)
+    use ::smithy4rs_core::serde::correction::ErrorCorrectionDefault as _ErrorCorrectionDefault;
+    impl _ErrorCorrectionDefault for SimpleTrait {
+        #[inline]
+        #[automatically_derived]
+        fn default() -> Self {
+            {
+                ::core::panicking::panic_fmt(
+                    format_args!("not yet implemented: {0}", format_args!("TODO!")),
+                );
+            }
         }
     }
 };
-impl SimpleTrait {
-    ///Create a new [`SimpleTrait`] instance
-    #[automatically_derived]
-    #[inline]
-    pub fn new<T: Into<String>>(
-        value: T,
-    ) -> smithy4rs_core::serde::validation::Validated<SimpleTrait> {
-        let mut validator = smithy4rs_core::serde::validation::DefaultValidator::new();
-        let res = SimpleTrait(value.into());
-        smithy4rs_core::serde::validation::Validator::validate(
-            &mut validator,
-            &STRING_TRAIT,
-            &res,
-        )?;
-        Ok(res)
-    }
-}
 const _: () = {
     use std::ops::Deref as _Deref;
     impl _Deref for SimpleTrait {
@@ -94,12 +86,29 @@ const _: () = {
         }
     }
 };
+impl SimpleTrait {
+    #[allow(clippy::new_without_default)]
+    ///Create a new [`SimpleTrait`] instance
+    #[automatically_derived]
+    #[inline]
+    pub fn new<T: Into<String>>(
+        value: T,
+    ) -> ::smithy4rs_core::serde::validation::Validated<SimpleTrait> {
+        let mut validator = ::smithy4rs_core::serde::validation::DefaultValidator::new();
+        let res = SimpleTrait(value.into());
+        ::smithy4rs_core::serde::validation::Validator::validate(
+            &mut validator,
+            &STRING_TRAIT,
+            &res,
+        )?;
+        Ok(res)
+    }
+}
 const _: () = {
-    extern crate smithy4rs_core as _smithy4rs;
-    use _smithy4rs::schema::StaticTraitId as _StaticTraitId;
-    use _smithy4rs::schema::ShapeId as _ShapeId;
-    use _smithy4rs::LazyLock as _LazyLock;
-    use _smithy4rs::schema::StaticSchemaShape as _StaticSchemaShape;
+    use ::smithy4rs_core::schema::StaticTraitId as _StaticTraitId;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::LazyLock as _LazyLock;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
     impl _StaticTraitId for SimpleTrait {
         #[inline]
         #[automatically_derived]
@@ -111,9 +120,13 @@ const _: () = {
         }
     }
 };
-impl PartialEq for SimpleTrait {
-    fn eq(&self, other: &Self) -> bool {
-        &self.0 == &other.0
+#[automatically_derived]
+impl ::core::marker::StructuralPartialEq for SimpleTrait {}
+#[automatically_derived]
+impl ::core::cmp::PartialEq for SimpleTrait {
+    #[inline]
+    fn eq(&self, other: &SimpleTrait) -> bool {
+        self.0 == other.0
     }
 }
 #[automatically_derived]

@@ -27,7 +27,7 @@ fn test_missing_required_field() {
 
 #[test]
 fn test_null_for_required_field() {
-    let json = br#"{"field_a": null, "field_b": 42}"#;
+    let json = br#"{"fieldA": null, "fieldB": 42}"#;
     let mut de = JsonDeserializer::new(json);
     let result = SimpleStructBuilder::deserialize_with_schema(&SIMPLE_STRUCT_SCHEMA, &mut de);
 

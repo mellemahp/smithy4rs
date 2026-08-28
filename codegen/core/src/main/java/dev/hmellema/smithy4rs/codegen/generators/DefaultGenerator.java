@@ -7,6 +7,7 @@ package dev.hmellema.smithy4rs.codegen.generators;
 import dev.hmellema.smithy4rs.codegen.symbols.Smithy4Rs;
 import dev.hmellema.smithy4rs.codegen.symbols.StdLib;
 import dev.hmellema.smithy4rs.codegen.writer.RustWriter;
+import java.util.EnumSet;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.node.ArrayNode;
@@ -27,6 +28,9 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
     private final Shape shape;
     private final SymbolProvider provider;
     private final Node value;
+    private final EnumSet<ShapeType> USES_ROOT_DEFAULT = EnumSet.of(
+            ShapeType.LIST,
+            ShapeType.MAP);
 
     public DefaultGenerator(
             RustWriter writer,
@@ -45,6 +49,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
     @Override
     public void run() {
         writer.pushState();
+        writer.writeInline("default");
         shape.accept(this);
         writer.popState();
     }
@@ -75,8 +80,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
             // TODO: Specific error
             throw new RuntimeException("Only empty lists are permitted for defaults");
         }
-        var member = provider.toSymbol(listShape.getMember());
-        writer.writeInline("$T::<$T>::new()", StdLib.VEC, member);
+        // Just use base Vec::default
         return null;
     }
 
@@ -86,12 +90,7 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
             // TODO: Specific error
             throw new RuntimeException("Only empty maps are permitted for defaults");
         }
-        writer.pushState();
-        writer.putContext("map", Smithy4Rs.INDEX_MAP);
-        writer.putContext("key", provider.toSymbol(mapShape.getKey()));
-        writer.putContext("value", provider.toSymbol(mapShape.getValue()));
-        writer.writeInline("${map:T}::<${key:T}, ${value:T}>::default()");
-        writer.popState();
+        // Just uses the base IndexMap::default()
         return null;
     }
 
@@ -189,12 +188,15 @@ public final class DefaultGenerator extends ShapeVisitor.Default<Void> implement
 
     @Override
     public Void memberShape(MemberShape memberShape) {
-        return model.expectShape(memberShape.getTarget()).accept(this);
+        var target = model.expectShape(memberShape.getTarget());
+        if (!USES_ROOT_DEFAULT.contains(target.getType())) {
+            writer.writeInline(" = ");
+        }
+        return target.accept(this);
     }
 
     @Override
     public Void timestampShape(TimestampShape timestampShape) {
-
         // TODO
         return null;
     }

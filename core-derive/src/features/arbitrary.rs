@@ -1,48 +1,40 @@
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{Data, DeriveInput, Fields};
+
+use crate::attr::{Shape, StructShape};
 
 /// `Arbitrary` implementation for generated shapes
-pub(crate) fn arbitrary_impl(
-    crate_ident: &TokenStream,
-    shape_name: &Ident,
-    schema_ident: &Ident,
-    input: &DeriveInput,
-) -> TokenStream {
-    let arbitrary_impl = match &input.data {
-        Data::Struct(ds) => match ds.fields {
-            Fields::Named(_) => arbitrary_struct(crate_ident, shape_name, schema_ident),
-            Fields::Unnamed(_) | Fields::Unit => {
-                arbitrary_other(crate_ident, shape_name, schema_ident)
-            }
-        },
-        Data::Enum(_) => arbitrary_other(crate_ident, shape_name, schema_ident),
-        _ => panic!("SerializableShape can only be derived for structs, enum, or unions"),
+pub(crate) fn expand_arbitrary(shape: &Shape, crate_ident: &TokenStream) -> TokenStream {
+    let arbitrary_impl = if let Shape::Struct(struct_shape) = &shape {
+        arbitrary_builder(struct_shape, crate_ident)
+    } else {
+        arbitrary_other(shape.name(), shape.schema())
     };
-    quote! {
-        use _arbitrary::Unstructured as _Unstructured;
-        use _arbitrary::Arbitrary as _Arbitrary;
-        use _arbitrary::MaxRecursionReached as _MaxRecursionReached;
-        use #crate_ident::features::arbitrary::ArbitraryDeserializer as _ArbitraryDeserializer;
-        use #crate_ident::features::arbitrary::TrySizeHint as _TrySizeHint;
-        use #crate_ident::serde::deserializers::DeserializableShape as _DeserializableShape;
 
-        #arbitrary_impl
+    quote! {
+        const _: () = {
+            extern crate arbitrary as _arbitrary;
+            use _arbitrary::Unstructured as _Unstructured;
+            use _arbitrary::Arbitrary as _Arbitrary;
+            use _arbitrary::MaxRecursionReached as _MaxRecursionReached;
+            use #crate_ident::features::arbitrary::ArbitraryDeserializer as _ArbitraryDeserializer;
+            use #crate_ident::features::arbitrary::TrySizeHint as _TrySizeHint;
+            use #crate_ident::serde::deserializers::DeserializableShape as _DeserializableShape;
+
+            #arbitrary_impl
+        };
     }
 }
 
-/// Generates an `Arbitrary` impl for a shape and its builder
-fn arbitrary_struct(
-    crate_ident: &TokenStream,
-    shape_name: &Ident,
-    schema_ident: &Ident,
-) -> TokenStream {
-    let builder_name = Ident::new(&format!("{shape_name}Builder"), Span::call_site());
+fn arbitrary_builder(struct_shape: &StructShape, crate_ident: &TokenStream) -> TokenStream {
+    let builder_name = struct_shape.builder();
+    let name = &struct_shape.ident;
+    let schema = &struct_shape.schema;
     quote! {
         use #crate_ident::serde::ShapeBuilder as _ShapeBuilder;
 
         #[automatically_derived]
-        impl<'a> _Arbitrary<'a> for #shape_name {
+        impl<'a> _Arbitrary<'a> for #name {
             fn arbitrary(u: &mut _Unstructured<'a>) -> _arbitrary::Result<Self> {
                 <#builder_name as _DeserializableShape>::deserialize(_ArbitraryDeserializer::new(u))?
                 .build()
@@ -56,7 +48,7 @@ fn arbitrary_struct(
 
             #[inline]
             fn try_size_hint(depth: usize) -> Result<(usize, Option<usize>), _MaxRecursionReached> {
-                #schema_ident.try_size_hint(depth)
+                #schema.try_size_hint(depth)
             }
         }
 
@@ -74,17 +66,13 @@ fn arbitrary_struct(
 
             #[inline]
             fn try_size_hint(depth: usize) -> Result<(usize, Option<usize>), _MaxRecursionReached> {
-                #schema_ident.try_size_hint(depth)
+                #schema.try_size_hint(depth)
             }
         }
     }
 }
 
-fn arbitrary_other(
-    _crate_ident: &TokenStream,
-    shape_name: &Ident,
-    schema_ident: &Ident,
-) -> TokenStream {
+fn arbitrary_other(shape_name: &Ident, schema_ident: &Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl<'a> _Arbitrary<'a> for #shape_name {
