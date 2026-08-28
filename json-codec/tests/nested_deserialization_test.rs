@@ -45,7 +45,7 @@ fn test_nested_struct_deserialization() {
 
     let mut de = JsonDeserializer::new(json.as_bytes());
     let nested = NestedCollectionsStructBuilder::deserialize_with_schema(
-        &NESTED_COLLECTIONS_STRUCT_SCHEMA,
+        &NESTED_COLLECTIONS_STRUCT,
         &mut de,
     )
     .unwrap()
@@ -116,13 +116,11 @@ fn test_recursive_struct_deserialization() {
     }"#;
 
     let mut de = JsonDeserializer::new(json.as_bytes());
-    let top = RecursiveShapesStructBuilder::deserialize_with_schema(
-        &RECURSIVE_SHAPES_STRUCT_SCHEMA,
-        &mut de,
-    )
-    .unwrap()
-    .build()
-    .unwrap();
+    let top =
+        RecursiveShapesStructBuilder::deserialize_with_schema(&RECURSIVE_SHAPES_STRUCT, &mut de)
+            .unwrap()
+            .build()
+            .unwrap();
 
     println!("Deserialized recursive struct: {:?}", top);
 
@@ -182,7 +180,7 @@ fn test_deeply_nested_without_recursion() {
 
     let mut de = JsonDeserializer::new(json.as_bytes());
     let nested = NestedCollectionsStructBuilder::deserialize_with_schema(
-        &NESTED_COLLECTIONS_STRUCT_SCHEMA,
+        &NESTED_COLLECTIONS_STRUCT,
         &mut de,
     )
     .unwrap()

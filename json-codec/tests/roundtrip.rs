@@ -49,7 +49,7 @@ fn test_optional_data_with_value() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
+    let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT);
     assert_eq!(data, result);
 }
 
@@ -61,7 +61,7 @@ fn test_optional_data_without_value() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT_SCHEMA);
+    let result = roundtrip(&data, &OPTIONAL_FIELDS_STRUCT);
     assert_eq!(data, result);
 }
 
@@ -77,7 +77,7 @@ fn test_numbers_roundtrip() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
+    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT);
     assert_eq!(numbers, result);
 }
 
@@ -93,7 +93,7 @@ fn test_numbers_negative_values() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
+    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT);
     assert_eq!(numbers, result);
 }
 
@@ -109,7 +109,7 @@ fn test_numbers_edge_cases() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT_SCHEMA);
+    let result = roundtrip(&numbers, &NUMERIC_TYPES_STRUCT);
     assert_eq!(numbers.byte_val, result.byte_val);
     assert_eq!(numbers.short_val, result.short_val);
     assert_eq!(numbers.int_val, result.int_val);
@@ -127,7 +127,7 @@ fn test_special_characters_in_strings() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    let result = roundtrip(&data, &SIMPLE_STRUCT);
     assert_eq!(data, result);
 }
 
@@ -139,7 +139,7 @@ fn test_unicode_strings() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    let result = roundtrip(&data, &SIMPLE_STRUCT);
     assert_eq!(data, result);
 }
 
@@ -151,7 +151,7 @@ fn test_empty_strings() {
         .build()
         .unwrap();
 
-    let result = roundtrip(&data, &SIMPLE_STRUCT_SCHEMA);
+    let result = roundtrip(&data, &SIMPLE_STRUCT);
     assert_eq!(data, result);
 }
 

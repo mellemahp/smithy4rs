@@ -11,82 +11,82 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#DocumentedEnum": {
+smithy!(
     /// Schema for [`DocumentedEnum`]
-    enum DOCUMENTED_ENUM_SCHEMA {
+    enum com::test::DocumentedEnum {
         One = "one"
         Two = "two"
     }
-});
+);
 
 /// A Documented Enum
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = DOCUMENTED_ENUM_SCHEMA)]
+#[schema(schema = DOCUMENTED_ENUM)]
 pub enum DocumentedEnum {
     One = "one",
     Two = "two",
 }
 
-smithy!("com.test#DocumentedIntEnum": {
+smithy!(
     /// Schema for [`DocumentedIntEnum`]
-    intEnum DOCUMENTED_INT_ENUM_SCHEMA {
+    intEnum com::test::DocumentedIntEnum {
         One = 1
         Two = 2
     }
-});
+);
 
 /// A Documented IntEnum
 #[smithy_enum]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = DOCUMENTED_INT_ENUM_SCHEMA)]
+#[schema(schema = DOCUMENTED_INT_ENUM)]
 pub enum DocumentedIntEnum {
     One = 1,
     Two = 2,
 }
 
-smithy!("com.test#DocumentedList": {
+smithy!(
     /// Documented List
-    list DOCUMENTED_LIST {
+    list com::test::DocumentedList {
         member: STRING
     }
-});
+);
 
-smithy!("com.test#DocumentedMap": {
+smithy!(
     /// Documented Map
-    map DOCUMENTED_MAP {
+    map com::test::DocumentedMap {
         key: STRING
         value: STRING
     }
-});
+);
 
-smithy!("com.test#DocumentedStruct": {
+smithy!(
     /// Schema for [`DocumentedStruct`]
-    structure DOCUMENTED_STRUCT_SCHEMA {
+    structure com::test::DocumentedStruct {
         documentedMember: STRING
     }
-});
+);
 
 /// A Documented Structure
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = DOCUMENTED_STRUCT_SCHEMA)]
+#[schema(schema = DOCUMENTED_STRUCT)]
 pub struct DocumentedStruct {
     /// Documented! Yay!
     pub documented_member: Option<String>,
 }
 
-smithy!("com.test#DocumentedUnion": {
+smithy!(
     /// Schema for [`DocumentedUnion`]
-    union DOCUMENTED_UNION_SCHEMA {
+    union com::test::DocumentedUnion {
         variantA: STRING
         variantB: INTEGER
     }
-});
+);
 
 /// A Documented Union
 #[smithy_union]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = DOCUMENTED_UNION_SCHEMA)]
+#[schema(schema = DOCUMENTED_UNION)]
 pub enum DocumentedUnion {
     /// A String variant
     VariantA(String),
@@ -94,7 +94,7 @@ pub enum DocumentedUnion {
     VariantB(i32),
 }
 
-smithy!("com.test#DocumentedScalar": {
+smithy!(
     /// Documented Scalar
-    string DOCUMENTED_SCALAR
-});
+    string com::test::DocumentedScalar
+);

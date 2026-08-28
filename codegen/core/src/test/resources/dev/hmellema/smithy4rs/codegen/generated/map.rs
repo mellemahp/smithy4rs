@@ -6,9 +6,9 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#MyMap": {
-    map MY_MAP {
+smithy!(
+    map com::test::MyMap {
         key: STRING
         value: INTEGER
     }
-});
+);

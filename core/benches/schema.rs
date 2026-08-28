@@ -7,12 +7,12 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.example#Example": {
+smithy!(
     @HttpQueryTrait::new("foo");
     @HttpQueryParamsTrait::builder().build();
     @HttpChecksumRequiredTrait::builder().build();
-    string TRAIT_SCHEMA
-});
+    string com::example::TraitSchema
+);
 
 pub fn trait_access_id(c: &mut Criterion) {
     c.bench_function("Trait Access By ID", |b| {

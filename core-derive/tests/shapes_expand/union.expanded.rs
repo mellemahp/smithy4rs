@@ -7,7 +7,7 @@ use smithy4rs_core_derive::{SmithyShape, smithy_union};
 pub static UNION_BUILDER: ::smithy4rs_core::LazyLock<
     ::smithy4rs_core::Ref<::smithy4rs_core::schema::SchemaBuilder>,
 > = ::smithy4rs_core::LazyLock::new(|| ::smithy4rs_core::Ref::new(
-    ::smithy4rs_core::schema::Schema::union_builder("test#SimpleUnion", Vec::new()),
+    ::smithy4rs_core::schema::Schema::union_builder("test#Union", Vec::new()),
 ));
 pub static UNION: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
 {

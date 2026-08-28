@@ -4,44 +4,44 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#DeprecatedStruct": {
+smithy!(
     /// Schema for [`DeprecatedStruct`]
-    structure DEPRECATED_STRUCT_SCHEMA {
+    structure com::test::DeprecatedStruct {
         deprecatedMember: STRING
     }
-});
+);
 
 #[deprecated(since = "1.0", note = "Plz dont use")]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = DEPRECATED_STRUCT_SCHEMA)]
+#[schema(schema = DEPRECATED_STRUCT)]
 pub struct DeprecatedStruct {
     #[deprecated(since = "5ever", note = "Dont use this")]
     pub deprecated_member: Option<String>,
 }
 
-smithy!("com.test#ExternalDocumentationStruct": {
+smithy!(
     /// Schema for [`ExternalDocumentationStruct`]
-    structure EXTERNAL_DOCUMENTATION_STRUCT_SCHEMA {
+    structure com::test::ExternalDocumentationStruct {
         string: STRING
     }
-});
+);
 
 /// ## References
 /// - [**Homepage**]("https://www.example.com/")
 /// - [**API Reference**]("https://www.example.com/api-ref")
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = EXTERNAL_DOCUMENTATION_STRUCT_SCHEMA)]
+#[schema(schema = EXTERNAL_DOCUMENTATION_STRUCT)]
 pub struct ExternalDocumentationStruct {
     pub string: Option<String>,
 }
 
-smithy!("com.test#SinceStruct": {
+smithy!(
     /// Schema for [`SinceStruct`]
-    structure SINCE_STRUCT_SCHEMA {
+    structure com::test::SinceStruct {
         sinceMember: STRING
     }
-});
+);
 
 /// <div class="note">
 ///
@@ -50,7 +50,7 @@ smithy!("com.test#SinceStruct": {
 /// </div>
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = SINCE_STRUCT_SCHEMA)]
+#[schema(schema = SINCE_STRUCT)]
 pub struct SinceStruct {
     /// <div class="note">
     ///
@@ -61,12 +61,12 @@ pub struct SinceStruct {
     pub since_member: Option<String>,
 }
 
-smithy!("com.test#UnstableStructure": {
+smithy!(
     /// Schema for [`UnstableStructure`]
-    structure UNSTABLE_STRUCTURE_SCHEMA {
+    structure com::test::UnstableStructure {
         unstableMember: STRING
     }
-});
+);
 
 /// <div class="warning">
 ///
@@ -75,7 +75,7 @@ smithy!("com.test#UnstableStructure": {
 /// </div>
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = UNSTABLE_STRUCTURE_SCHEMA)]
+#[schema(schema = UNSTABLE_STRUCTURE)]
 pub struct UnstableStructure {
     /// <div class="warning">
     ///

@@ -27,6 +27,9 @@ public final class Utils {
     public static final ReservedWords MEMBER_ESCAPER = new ReservedWordsBuilder()
             .loadCaseInsensitiveWords(RUST_RESERVED_WORDS, word -> word + "Member")
             .build();
+    public static final ReservedWords SCHEMA_ESCAPER = new ReservedWordsBuilder()
+            .loadCaseInsensitiveWords(RUST_RESERVED_WORDS, word -> "r#" + word)
+            .build();
     private static final String DEFAULT_CRATE_IDENT = "smithy4rs_core";
     private static final String CRATE = "crate";
     public static final String DELIM = "::";

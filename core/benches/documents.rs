@@ -9,28 +9,28 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.example#Map": {
-    map MAP_SCHEMA {
+smithy!(
+    map com::example::Map {
         key: STRING
         value: STRING
     }
-});
-smithy!("com.example#List": {
-    list LIST_SCHEMA {
+);
+smithy!(
+    list com::example::List {
         member: STRING
     }
-});
-smithy!("com.example#Shape": {
-    structure SCHEMA {
+);
+smithy!(
+    structure com::example::Shape {
         memberA: STRING
         memberB: INTEGER
-        memberList: LIST_SCHEMA
-        memberMap: MAP_SCHEMA
+        memberList: LIST
+        memberMap: MAP
     }
-});
+);
 
 #[derive(SmithyShape, Clone, PartialEq)]
-#[schema(schema = SCHEMA)]
+#[schema(schema = SHAPE)]
 pub struct SerializeMe {
     pub member_a: String,
     pub member_b: i32,

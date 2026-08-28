@@ -28,7 +28,7 @@ public final class ListGenerator
                     writer.pushState();
                     writer.putContext("smithy", Smithy4Rs.SMITHY_MACRO);
                     writer.putContext("id", directive.shape().getId());
-                    writer.openBlock("${smithy:T}!(${id:S}: {", "});", () -> {
+                    writer.openBlock("${smithy:T}!(", ");", () -> {
                         writer.pushState(new SchemaSection(directive.shape()));
                         writer.putContext("shape", directive.symbolProvider().toSymbol(directive.shape()));
                         writer.putContext("member", directive.symbolProvider().toSymbol(directive.shape().getMember()));
@@ -48,7 +48,7 @@ public final class ListGenerator
                                         directive.context()));
                         // Write schema body
                         writer.write("""
-                                list ${shape:I} {${?hasMemberTraits}
+                                list ${id:P} {${?hasMemberTraits}
                                     ${memberTraits:C}${/hasMemberTraits}
                                     member: ${member:I}
                                 }""");

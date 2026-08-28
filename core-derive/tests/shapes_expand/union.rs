@@ -5,13 +5,13 @@ use smithy4rs_core::{
 };
 use smithy4rs_core_derive::{SmithyShape, smithy_union};
 
-smithy!("test#SimpleUnion": {
-    union UNION {
+smithy!(
+    union test::Union {
         a: STRING
         b: INTEGER
         c: UNIT
     }
-});
+);
 
 #[smithy_union]
 #[derive(SmithyShape)]

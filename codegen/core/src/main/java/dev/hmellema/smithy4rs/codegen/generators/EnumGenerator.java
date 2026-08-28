@@ -23,13 +23,13 @@ public final class EnumGenerator<T extends ShapeDirective<Shape, CodeGenerationC
         implements Consumer<T> {
 
     private static final String SCHEMA_TEMPLATE = """
-            ${smithy:T}!(${id:S}: {
+            ${smithy:T}!(
                 /// Schema for [`${shape:T}`]${?hasTraits}
                 ${traits:C}${/hasTraits}
-                ${enumType:L} ${shape:I} {${#variants}
+                ${enumType:L} ${id:P} {${#variants}
                     ${value:C|}${/variants}
                 }
-            });
+            );
             """;
     private static final String SHAPE_TEMPLATE = """
             #[${smithyEnum:T}]

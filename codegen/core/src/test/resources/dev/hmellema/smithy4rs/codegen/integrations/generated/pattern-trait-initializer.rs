@@ -3,7 +3,7 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#StringWithPattern": {
+smithy!(
     @PatternTrait::new("^[a-z]*$");
-    string STRING_WITH_PATTERN
-});
+    string com::test::StringWithPattern
+);

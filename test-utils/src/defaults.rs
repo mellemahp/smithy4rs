@@ -2,8 +2,8 @@
 
 use smithy4rs_core::{ByteBuffer, Instant, derive::SmithyShape, prelude::*, smithy};
 
-smithy!("test#AllPrimitivesDefaults": {
-    structure ALL_PRIMITIVES_DEFAULTS_SCHEMA {
+smithy!(
+    structure test::AllPrimitivesDefaults {
         stringField: STRING
         byteField: BYTE
         shortField: SHORT
@@ -15,10 +15,10 @@ smithy!("test#AllPrimitivesDefaults": {
         blobField: BLOB
         timestampField: TIMESTAMP
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = ALL_PRIMITIVES_DEFAULTS_SCHEMA)]
+#[schema(schema = ALL_PRIMITIVES_DEFAULTS)]
 pub struct AllPrimitivesDefaults {
     #[schema(default = "default".to_string())]
     pub string_field: String,

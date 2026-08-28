@@ -3,17 +3,17 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("com.test#NumWithMin": {
+smithy!(
     @RangeTrait::builder().min(1).build();
-    integer NUM_WITH_MIN
-});
+    integer com::test::NumWithMin
+);
 
-smithy!("com.test#NumWithMinAndMax": {
+smithy!(
     @RangeTrait::builder().min(2).max(4).build();
-    bigDecimal NUM_WITH_MIN_AND_MAX
-});
+    bigDecimal com::test::NumWithMinAndMax
+);
 
-smithy!("com.test#NumWithMax": {
+smithy!(
     @RangeTrait::builder().max(2).build();
-    float NUM_WITH_MAX
-});
+    float com::test::NumWithMax
+);

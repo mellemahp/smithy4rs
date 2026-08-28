@@ -9,13 +9,13 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("test#SimpleUnion": {
-    union UNION {
+smithy!(
+    union test::Union {
         a: STRING
         b: INTEGER
         c: UNIT
     }
-});
+);
 
 #[smithy_union]
 #[derive(SmithyShape, PartialEq)]
@@ -26,3 +26,10 @@ pub enum TestUnion {
     // Unit variant
     C,
 }
+
+smithy!(
+    structure com::example::MySchema {
+        a: STRING
+        b: INTEGER
+    }
+);

@@ -1,7 +1,7 @@
 use smithy4rs_core::smithy;
 use smithy4rs_core_derive::{SmithyShape, SmithyTrait};
 pub static STRING_TRAIT: ::smithy4rs_core::LazyLock<::smithy4rs_core::schema::Schema> = ::smithy4rs_core::LazyLock::new(||
-{ ::smithy4rs_core::schema::Schema::create_string("test#SimpleTrait", Vec::new()) });
+{ ::smithy4rs_core::schema::Schema::create_string("test#StringTrait", Vec::new()) });
 #[schema(schema = STRING_TRAIT)]
 pub struct SimpleTrait(String);
 const _: () = {

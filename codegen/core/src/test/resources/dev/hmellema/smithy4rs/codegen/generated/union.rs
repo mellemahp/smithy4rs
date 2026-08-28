@@ -7,36 +7,36 @@ use smithy4rs_core::{
     prelude::{
         INTEGER,
         STRING,
-        UNIT_SCHEMA,
+        UNIT,
     },
     schema::DynamicTrait,
     smithy,
 };
 
-smithy!("smithy.api#Unit": {
+smithy!(
     /// Schema for [`Unit`]
     @DynamicTrait::from("smithy.api#unitType", doc_map![]);
-    structure UNIT_SCHEMA {
+    structure smithy::api::Unit {
     }
-});
+);
 
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = UNIT_SCHEMA)]
+#[schema(schema = UNIT)]
 pub struct Unit {
 }
 
-smithy!("com.test#MyUnion": {
+smithy!(
     /// Schema for [`MyUnion`]
-    union MY_UNION_SCHEMA {
+    union com::test::MyUnion {
         string_variant: STRING
         integer_variant: INTEGER
-        unit_variant: UNIT_SCHEMA
+        unit_variant: UNIT
     }
-});
+);
 
 #[smithy_union]
 #[derive(SmithyShape, PartialEq, Clone)]
-#[schema(schema = MY_UNION_SCHEMA)]
+#[schema(schema = MY_UNION)]
 pub enum MyUnion {
     StringVariant(String),
     IntegerVariant(i32),

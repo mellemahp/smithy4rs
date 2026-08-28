@@ -67,7 +67,7 @@ fn test_nested_struct_serialization() {
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
     nested
-        .serialize_with_schema(&NESTED_COLLECTIONS_STRUCT_SCHEMA, serializer)
+        .serialize_with_schema(&NESTED_COLLECTIONS_STRUCT, serializer)
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
@@ -121,7 +121,7 @@ fn test_recursive_struct_serialization() {
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
     child
-        .serialize_with_schema(&RECURSIVE_SHAPES_STRUCT_SCHEMA, serializer)
+        .serialize_with_schema(&RECURSIVE_SHAPES_STRUCT, serializer)
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
@@ -187,7 +187,7 @@ fn test_deeply_nested_without_recursion() {
     let mut buf = Vec::new();
     let serializer = JsonSerializer::new(&mut buf);
     nested
-        .serialize_with_schema(&NESTED_COLLECTIONS_STRUCT_SCHEMA, serializer)
+        .serialize_with_schema(&NESTED_COLLECTIONS_STRUCT, serializer)
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();

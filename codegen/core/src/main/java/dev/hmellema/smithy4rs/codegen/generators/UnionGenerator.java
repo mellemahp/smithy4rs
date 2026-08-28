@@ -21,13 +21,13 @@ import software.amazon.smithy.utils.StringUtils;
 public class UnionGenerator implements
         Consumer<GenerateUnionDirective<CodeGenerationContext, RustCodegenSettings>> {
     public static final String SCHEMA_TEMPLATE = """
-            ${smithy:T}!(${id:S}: {
+            ${smithy:T}!(
                 /// Schema for [`${shape:T}`]${?hasTraits}
                 ${traits:C}${/hasTraits}
-                union ${shape:I} {${#memberSchemas}
+                union ${id:P} {${#memberSchemas}
                     ${value:C|}${/memberSchemas}
                 }
-            });
+            );
             """;
     public static final String STRUCT_TEMPLATE = """
             #[${union:T}]

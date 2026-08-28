@@ -382,41 +382,41 @@ mod tests {
         smithy,
     };
 
-    smithy!("com.example#Map": {
-        map MAP_SCHEMA {
+    smithy!(
+        map com::example::Map {
             key: STRING
             value: STRING
         }
-    });
-    smithy!("com.example#List": {
-        list LIST_SCHEMA {
+    );
+    smithy!(
+        list com::example::List {
             member: STRING
         }
-    });
+    );
 
-    smithy!("com.example#Shape": {
-        structure SCHEMA {
+    smithy!(
+        structure com::example::Shape {
             memberA: STRING
             @SensitiveTrait::builder().build();
             memberB: STRING
             memberOptional: STRING
-            memberMap: MAP_SCHEMA
-            memberList: LIST_SCHEMA
+            memberMap: MAP
+            memberList: LIST
         }
-    });
+    );
 
-    smithy!("com.example#Shape": {
-        structure REDACTED_AGGREGATES {
+    smithy!(
+        structure com::example::RedactedAggregates {
             @SensitiveTrait::builder().build();
-            map: MAP_SCHEMA
+            map: MAP
             @SensitiveTrait::builder().build();
             @MediaTypeTrait::new("application/json");
-            list: LIST_SCHEMA
+            list: LIST
         }
-    });
+    );
 
     #[derive(SmithyShape)]
-    #[schema(schema = SCHEMA)]
+    #[schema(schema = SHAPE)]
     pub struct SerializeMe {
         pub member_a: String,
         pub member_b: String,
@@ -488,7 +488,7 @@ mod tests {
         let output = format!("{struct_to_write:?}");
         assert_eq!(
             output,
-            "Shape { list: [**REDACTED**], map: {**REDACTED**} }"
+            "RedactedAggregates { list: [**REDACTED**], map: {**REDACTED**} }"
         );
     }
 
@@ -503,7 +503,7 @@ mod tests {
         let expected = r#"Document {
     schema: StructSchema {
         shape_type: Structure,
-        id: "com.example#Shape",
+        id: "com.example#RedactedAggregates",
         traits: {},
         members: {
             "map": {
@@ -521,11 +521,11 @@ mod tests {
             },
         },
     },
-    value: Shape {
+    value: RedactedAggregates {
         map: {**REDACTED**},
         list: [**REDACTED**],
     },
-    discriminator: "com.example#Shape",
+    discriminator: "com.example#RedactedAggregates",
 }"#;
         assert_eq!(output, expected);
     }

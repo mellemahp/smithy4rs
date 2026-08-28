@@ -1137,34 +1137,34 @@ mod tests {
     }
 
     // ==== Basic Shape Validations ====
-    smithy!("com.test#ValidatedList": {
+    smithy!(
         @LengthTrait::builder().max(3).build();
         @UniqueItemsTrait::builder().build();
-        list LIST_SCHEMA {
+        list com::test::ValidatedList {
             @LengthTrait::builder().max(4).build();
             member: STRING
         }
-    });
-    smithy!("com.test#ValidatedMap": {
+    );
+    smithy!(
         @LengthTrait::builder().max(2).build();
-        map MAP_SCHEMA {
+        map com::test::ValidatedMap {
             @PatternTrait::new("^[a-zA-Z]*$");
             key: STRING
             @LengthTrait::builder().max(4).build();
             value: STRING
         }
-    });
-    smithy!("com.test#ValidationStruct": {
-        structure BASIC_VALIDATION_SCHEMA {
+    );
+    smithy!(
+        structure com::test::BasicValidation {
             @PatternTrait::new("^[a-zA-Z]*$");
             fieldA: STRING
             fieldB: INTEGER
-            fieldList: LIST_SCHEMA
-            fieldMap: MAP_SCHEMA
+            fieldList: VALIDATED_LIST
+            fieldMap: VALIDATED_MAP
         }
-    });
+    );
     #[derive(SmithyShape)]
-    #[schema(schema = BASIC_VALIDATION_SCHEMA)]
+    #[schema(schema = BASIC_VALIDATION)]
     pub struct SimpleStruct {
         pub field_a: String,
         pub field_b: Option<i32>,
@@ -1193,7 +1193,7 @@ mod tests {
         assert_eq!(
             error_field_a.paths,
             vec![PathElement::Schema(
-                _BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_A.clone()
+                _BASIC_VALIDATION_MEMBER_FIELD_A.clone()
             )]
         );
         assert_eq!(
@@ -1219,7 +1219,7 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![PathElement::Schema(
-                _BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_A.clone()
+                _BASIC_VALIDATION_MEMBER_FIELD_A.clone()
             )]
         );
         assert_eq!(
@@ -1231,7 +1231,7 @@ mod tests {
         assert_eq!(
             error_length.paths,
             vec![
-                PathElement::Schema(_BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_LIST.clone()),
+                PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()),
                 PathElement::Index(0)
             ]
         );
@@ -1255,7 +1255,7 @@ mod tests {
         assert_eq!(
             error_required.paths,
             vec![PathElement::Schema(
-                _BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_A.clone()
+                _BASIC_VALIDATION_MEMBER_FIELD_A.clone()
             )]
         );
         assert_eq!(
@@ -1266,7 +1266,7 @@ mod tests {
         assert_eq!(
             error_length.paths,
             vec![
-                PathElement::Schema(_BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_LIST.clone()),
+                PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()),
                 PathElement::Index(0)
             ]
         );
@@ -1301,7 +1301,7 @@ mod tests {
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(
-                _BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_LIST.clone()
+                _BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()
             )]
         );
         assert_eq!(
@@ -1313,7 +1313,7 @@ mod tests {
         assert_eq!(
             error_unique.paths,
             vec![
-                PathElement::Schema(_BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_LIST.clone()),
+                PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()),
                 PathElement::Index(3)
             ]
         );
@@ -1344,7 +1344,7 @@ mod tests {
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(
-                _BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_MAP.clone()
+                _BASIC_VALIDATION_MEMBER_FIELD_MAP.clone()
             )]
         );
         assert_eq!(
@@ -1356,7 +1356,7 @@ mod tests {
         assert_eq!(
             error_key.paths,
             vec![
-                PathElement::Schema(_BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_MAP.clone()),
+                PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_MAP.clone()),
                 PathElement::Key("bad-key".to_string())
             ]
         );
@@ -1369,7 +1369,7 @@ mod tests {
         assert_eq!(
             error_value.paths,
             vec![
-                PathElement::Schema(_BASIC_VALIDATION_SCHEMA_MEMBER_FIELD_MAP.clone()),
+                PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_MAP.clone()),
                 PathElement::Key("a".to_string())
             ]
         );
@@ -1382,29 +1382,29 @@ mod tests {
 
     // ====== NESTED SHAPE VALIDATION =====
     // Nested Shape
-    smithy!("test#ValidationStruct": {
-        structure NESTED_SCHEMA {
+    smithy!(
+        structure test::Nested {
             @RequiredTrait::builder().build();
             @PatternTrait::new("^[a-z]*$");
             c: STRING
         }
-    });
+    );
 
     #[derive(SmithyShape, Clone)]
-    #[schema(schema = NESTED_SCHEMA)]
+    #[schema(schema = NESTED)]
     pub struct NestedStruct {
         pub c: String,
     }
 
-    smithy!("test#StructWithNested": {
-        structure STRUCT_WITH_NESTED_SCHEMA {
-            nested: NESTED_SCHEMA
+    smithy!(
+        structure test::StructWithNested {
+            nested: NESTED
             @RequiredTrait::builder().build();
-            required: NESTED_SCHEMA
+            required: NESTED
         }
-    });
+    );
     #[derive(SmithyShape, Clone)]
-    #[schema(schema = STRUCT_WITH_NESTED_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_NESTED)]
     pub struct StructWithNested {
         pub nested: Option<NestedStruct>,
         pub required: NestedStruct,
@@ -1445,8 +1445,8 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_SCHEMA_MEMBER_REQUIRED.clone()),
-                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+                PathElement::Schema(_STRUCT_WITH_NESTED_MEMBER_REQUIRED.clone()),
+                PathElement::Schema(_NESTED_MEMBER_C.clone())
             ]
         );
         assert_eq!(
@@ -1456,34 +1456,34 @@ mod tests {
     }
 
     // ==== Nested List Validations ====
-    smithy!("com.example#ListOfNested": {
+    smithy!(
         @LengthTrait::builder().max(3).build();
-        list LIST_OF_NESTED_SCHEMA {
-            member: NESTED_SCHEMA
+        list com::example::ListOfNested {
+            member: BASIC_VALIDATION
         }
-    });
-    smithy!("com.example#ListOfList": {
+    );
+    smithy!(
         @LengthTrait::builder().max(2).build();
-        list LIST_OF_LIST_OF_NESTED_SCHEMA {
-            member: LIST_OF_NESTED_SCHEMA
+        list com::example::ListOfList {
+            member: LIST_OF_NESTED
         }
-    });
-    smithy!("com.example#ListOfListOfList": {
+    );
+    smithy!(
         @LengthTrait::builder().max(2).build();
-        list LIST_OF_LIST_OF_LIST_OF_NESTED {
-            member: LIST_OF_LIST_OF_NESTED_SCHEMA
+        list com::example::ListOfListOfList {
+            member: LIST_OF_LIST
         }
-    });
-    smithy!("test#StructWithNestedList": {
-        structure STRUCT_WITH_NESTED_LIST_SCHEMA {
-            list: LIST_OF_NESTED_SCHEMA
-            listRequired: LIST_OF_NESTED_SCHEMA
-            deeplyNested: LIST_OF_LIST_OF_LIST_OF_NESTED
+    );
+    smithy!(
+        structure test::StructWithNestedList {
+            list: LIST_OF_NESTED
+            listRequired: LIST_OF_NESTED
+            deeplyNested: LIST_OF_LIST_OF_LIST
         }
-    });
+    );
 
     #[derive(SmithyShape, Clone)]
-    #[schema(schema = STRUCT_WITH_NESTED_LIST_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_NESTED_LIST)]
     pub struct StructWithNestedLists {
         pub list: Option<Vec<NestedStruct>>,
         pub list_required: Vec<NestedStruct>,
@@ -1537,7 +1537,7 @@ mod tests {
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(
-                _STRUCT_WITH_NESTED_LIST_SCHEMA_MEMBER_LIST_REQUIRED.clone()
+                _STRUCT_WITH_NESTED_LIST_MEMBER_LIST_REQUIRED.clone()
             )]
         );
         assert_eq!(
@@ -1549,9 +1549,9 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_LIST_SCHEMA_MEMBER_LIST_REQUIRED.clone()),
+                PathElement::Schema(_STRUCT_WITH_NESTED_LIST_MEMBER_LIST_REQUIRED.clone()),
                 PathElement::Index(2),
-                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+                PathElement::Schema(_NESTED_MEMBER_C.clone())
             ]
         );
         assert_eq!(
@@ -1581,11 +1581,11 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_LIST_SCHEMA_MEMBER_DEEPLY_NESTED.clone()),
+                PathElement::Schema(_STRUCT_WITH_NESTED_LIST_MEMBER_DEEPLY_NESTED.clone()),
                 PathElement::Index(0),
                 PathElement::Index(0),
                 PathElement::Index(0),
-                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+                PathElement::Schema(_NESTED_MEMBER_C.clone())
             ]
         );
         assert_eq!(
@@ -1595,49 +1595,49 @@ mod tests {
     }
 
     // ==== `@uniqueItem` Validations ====
-    smithy!("com.example#SetOfStruct": {
+    smithy!(
         @UniqueItemsTrait::builder().build();
-        list SET_OF_STRUCT {
-            member: NESTED_SCHEMA
+        list com::example::SetOfStruct {
+            member: NESTED
         }
-    });
-    smithy!("com.example#SetOfString": {
+    );
+    smithy!(
         @UniqueItemsTrait::builder().build();
-        list SET_OF_STRING {
+        list com::example::SetOfString {
             member: STRING
         }
-    });
-    smithy!("com.example#ListOfInt": {
-        list LIST_OF_INT {
+    );
+    smithy!(
+        list com::example::ListOfInt {
             member: INTEGER
         }
-    });
-    smithy!("com.example#SetOfList": {
+    );
+    smithy!(
         @UniqueItemsTrait::builder().build();
-        list SET_OF_LIST {
+        list com::example::SetOfList {
             member: LIST_OF_INT
         }
-    });
-    smithy!("com.example#MapOfInt": {
-        map MAP_OF_INT {
+    );
+    smithy!(
+        map com::example::MapOfInt {
             key: STRING
             value: INTEGER
         }
-    });
-    smithy!("com.example#SetOfMap": {
+    );
+    smithy!(
         @UniqueItemsTrait::builder().build();
-        list SET_OF_MAP {
+        list com::example::SetOfMap {
             member: MAP_OF_INT
         }
-    });
-    smithy!("test#StructWithSets": {
-        structure STRUCT_WITH_SETS {
+    );
+    smithy!(
+        structure test::StructWithSets {
             setOfStruct: SET_OF_STRUCT
             setOfSimple: SET_OF_STRING
             setOfList: SET_OF_LIST
             setOfMap: SET_OF_MAP
         }
-    });
+    );
 
     #[derive(SmithyShape, Clone)]
     #[schema(schema = STRUCT_WITH_SETS)]
@@ -1727,37 +1727,40 @@ mod tests {
     }
 
     // ==== Nested Map Validations ====
-    smithy!("com.example#MapOfNested": {
+    smithy!(
         @LengthTrait::builder().max(2).build();
-        map MAP_OF_NESTED_SCHEMA {
+        map com::example::MapOfNested {
             key: STRING
-            value: NESTED_SCHEMA
+            value: BASIC_VALIDATION
         }
-    });
-    smithy!("com.example#MapOfMap": {
+    );
+
+    smithy!(
         @LengthTrait::builder().max(2).build();
-        map MAP_OF_MAP_OF_NESTED {
+        map com::example::MapOfMap {
             key: STRING
-            value: MAP_OF_NESTED_SCHEMA
+            value: MAP_OF_NESTED
         }
-    });
-    smithy!("com.example#MapOfMapOfMap": {
+    );
+
+    smithy!(
         @LengthTrait::builder().max(2).build();
-        map MAP_OF_MAP_OF_MAP_OF_NESTED {
+        map com::example::MapOfMapOfMap {
             key: STRING
-            value: MAP_OF_MAP_OF_NESTED
+            value: MAP_OF_MAP
         }
-    });
-    smithy!("test#StructWithNestedMap": {
-        structure STRUCT_WITH_NESTED_MAP_SCHEMA {
-            optional: MAP_OF_NESTED_SCHEMA
-            required: MAP_OF_NESTED_SCHEMA
-            deeplyNested: MAP_OF_MAP_OF_MAP_OF_NESTED
+    );
+
+    smithy!(
+        structure com::test::StructWithNestedMap {
+            optional: MAP_OF_NESTED
+            required: MAP_OF_NESTED
+            deeplyNested: MAP_OF_MAP_OF_MAP
         }
-    });
+    );
 
     #[derive(SmithyShape, Clone)]
-    #[schema(schema = STRUCT_WITH_NESTED_MAP_SCHEMA)]
+    #[schema(schema = STRUCT_WITH_NESTED_MAP)]
     pub struct StructWithNestedMaps {
         pub optional: Option<IndexMap<String, NestedStruct>>,
         pub required: IndexMap<String, NestedStruct>,
@@ -1822,7 +1825,7 @@ mod tests {
         assert_eq!(
             error_length.paths,
             vec![PathElement::Schema(
-                _STRUCT_WITH_NESTED_MAP_SCHEMA_MEMBER_REQUIRED.clone()
+                _STRUCT_WITH_NESTED_MAP_MEMBER_REQUIRED.clone()
             )]
         );
         assert_eq!(
@@ -1834,9 +1837,9 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_MAP_SCHEMA_MEMBER_REQUIRED.clone()),
+                PathElement::Schema(_STRUCT_WITH_NESTED_MAP_MEMBER_REQUIRED.clone()),
                 PathElement::Key("b".to_string()),
-                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+                PathElement::Schema(_NESTED_MEMBER_C.clone())
             ]
         );
         assert_eq!(
@@ -1877,11 +1880,11 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_MAP_SCHEMA_MEMBER_DEEPLY_NESTED.clone()),
+                PathElement::Schema(_STRUCT_WITH_NESTED_MAP_MEMBER_DEEPLY_NESTED.clone()),
                 PathElement::Key("a".to_string()),
                 PathElement::Key("a".to_string()),
                 PathElement::Key("a".to_string()),
-                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+                PathElement::Schema(_NESTED_MEMBER_C.clone())
             ]
         );
         assert_eq!(
@@ -1891,12 +1894,12 @@ mod tests {
     }
 
     // ==== Enum Validations ====
-    smithy!("test#Enum": {
-        enum TEST_ENUM {
+    smithy!(
+        enum test::TestEnum {
             A = "a"
             B = "b"
         }
-    });
+    );
 
     #[test]
     fn checks_string_against_enum_value() {
@@ -1912,17 +1915,17 @@ mod tests {
         );
     }
 
-    smithy!("test#intEnum": {
-        intEnum TEST_INT_ENUM {
+    smithy!(
+        intEnum test::intEnum {
             A = 1
             B = 2
         }
-    });
+    );
 
     #[test]
     fn checks_int_against_int_enum_value() {
         let mut validator = DefaultValidator::new();
-        let Err(err) = validator.validate(&TEST_INT_ENUM, &4) else {
+        let Err(err) = validator.validate(&INT_ENUM, &4) else {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 1);
@@ -1934,10 +1937,10 @@ mod tests {
     }
 
     // ==== `@uniqueItem` Validations ====
-    smithy!("com.example#Lowercase": {
+    smithy!(
         @PatternTrait::new("^[a-z]*$");
-        string LOWERCASE
-    });
+        string com::example::Lowercase
+    );
 
     #[test]
     fn string_document_checked() {
@@ -1954,10 +1957,10 @@ mod tests {
         );
     }
 
-    smithy!("com.example#Lowercase": {
+    smithy!(
         @RangeTrait::builder().min(2).max(5).build();
-        integer BETWEEN_TWO_AND_FIVE
-    });
+        integer com::example::BetweenTwoAndFive
+    );
 
     #[test]
     fn number_document_checked() {
@@ -1983,7 +1986,7 @@ mod tests {
         let document: Box<dyn Document> = root.into();
         let mut validator = DefaultValidator::new();
 
-        let Err(err) = validator.validate(&STRUCT_WITH_NESTED_SCHEMA, &document) else {
+        let Err(err) = validator.validate(&STRUCT_WITH_NESTED, &document) else {
             panic!("Expected an error");
         };
         assert_eq!(err.errors.len(), 2);
@@ -1991,7 +1994,7 @@ mod tests {
         assert_eq!(
             error_required.paths,
             vec![PathElement::Schema(
-                _STRUCT_WITH_NESTED_SCHEMA_MEMBER_REQUIRED.clone()
+                _STRUCT_WITH_NESTED_MEMBER_REQUIRED.clone()
             )]
         );
         assert_eq!(
@@ -2002,8 +2005,8 @@ mod tests {
         assert_eq!(
             error_pattern.paths,
             vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_SCHEMA_MEMBER_NESTED.clone()),
-                PathElement::Schema(_NESTED_SCHEMA_MEMBER_C.clone())
+                PathElement::Schema(_STRUCT_WITH_NESTED_MEMBER_NESTED.clone()),
+                PathElement::Schema(_NESTED_MEMBER_C.clone())
             ]
         );
         assert_eq!(
