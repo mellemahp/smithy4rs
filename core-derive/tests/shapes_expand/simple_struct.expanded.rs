@@ -183,21 +183,25 @@ impl SimpleStructBuilder {
         }
     }
     ///Set `field_a`.
+    #[inline]
     pub fn field_a<T: Into<String>>(mut self, value: T) -> Self {
         self.field_a = ::smithy4rs_core::serde::Required::Set(value.into());
         self
     }
     ///Set `field_b`.
+    #[inline]
     pub fn field_b<T: Into<i32>>(mut self, value: T) -> Self {
         self.field_b = ::smithy4rs_core::serde::Required::Set(value.into());
         self
     }
     ///Set `field_c`.
+    #[inline]
     pub fn field_c(mut self, value: Nested) -> Self {
         self.field_c = Some(::smithy4rs_core::serde::MaybeBuilt::Struct(value));
         self
     }
     ///Set `field_c`.
+    #[inline]
     pub fn field_c_builder(mut self, value: NestedBuilder) -> Self {
         self.field_c = Some(::smithy4rs_core::serde::MaybeBuilt::Builder(value));
         self
@@ -445,6 +449,7 @@ impl NestedBuilder {
         }
     }
     ///Set `field_d`.
+    #[inline]
     pub fn field_d<T: Into<String>>(mut self, value: T) -> Self {
         self.field_d = ::smithy4rs_core::serde::Required::Set(value.into());
         self

@@ -233,12 +233,15 @@ fn setter(member: &StructMember, crate_ident: &TokenStream) -> TokenStream {
 
             quote! {
                 #[doc = concat!("Set `", stringify!(#field_name), "`.")]
+                #[inline]
                 pub fn #field_name(mut self, value: #shape) -> Self {
                     self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Struct(value));
                     self
                 }
 
+
                 #[doc = concat!("Set `", stringify!(#field_name), "`.")]
+                #[inline]
                 pub fn #builder_fn(mut self, value: #builder) -> Self {
                     self.#field_name = #wrapper(#crate_ident::serde::MaybeBuilt::Builder(value));
                     self
@@ -248,6 +251,7 @@ fn setter(member: &StructMember, crate_ident: &TokenStream) -> TokenStream {
         TargetType::Primitive(ty) => {
             quote! {
                 #[doc = concat!("Set `", stringify!(#field_name), "`.")]
+                #[inline]
                 pub fn #field_name<T: Into<#ty>>(mut self, value: T) -> Self {
                     self.#field_name = #wrapper(value.into());
                     self
