@@ -104,6 +104,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = DEFAULT_STRUCTURE)]
 pub struct DefaultStructure {
     #[schema(default = true)]

@@ -25,6 +25,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = APPLIED_TO)]
 pub struct AppliedTo {
 }
@@ -38,6 +39,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = MY_CUSTOM_STRUCT)]
 pub struct MyCustomStructTrait {
     pub a: Option<String>,

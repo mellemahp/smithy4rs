@@ -35,6 +35,7 @@ public final class StructureGenerator implements
             """;
     private static final String STRUCT_TEMPLATE = """
             ${derive:C|}
+            #[non_exhaustive]
             #[schema(schema = ${shape:I})]
             pub struct ${shape:T} {${#memberFields}
                 ${value:C|}${/memberFields}
