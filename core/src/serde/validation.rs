@@ -59,8 +59,9 @@ use std::{
     collections::BTreeSet,
     convert::Into,
     error::Error,
-    fmt::Display,
+    fmt::{Debug, Display},
     hash::{Hash, Hasher},
+    ops::Deref,
 };
 
 use arrayvec::ArrayVec;
@@ -73,7 +74,7 @@ use thiserror::Error;
 use crate::{
     BigDecimal, FxIndexSet, Instant,
     schema::{
-        Document, Schema, ShapeType, TraitRef,
+        Document, Schema, SchemaValue, ShapeType, TraitRef,
         prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
     },
     serde::{
@@ -979,7 +980,32 @@ impl serializers::Error for ValidationErrors {
 
 impl Display for ValidationErrors {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{:#?}", self.errors)
+        if f.alternate() {
+            // Pretty print
+            writeln!(f, "[")?;
+            let mut iter = self.errors.iter().peekable();
+            while let Some(item) = iter.next() {
+                if iter.peek().is_none() {
+                    // Last line
+                    writeln!(f, "    {}", item)?;
+                } else {
+                    writeln!(f, "    {},", item)?;
+                }
+            }
+            write!(f, "]")
+        } else {
+            write!(f, "[")?;
+            let mut iter = self.errors.iter().peekable();
+            while let Some(item) = iter.next() {
+                if iter.peek().is_none() {
+                    // Last line
+                    write!(f, "{}", item)?;
+                } else {
+                    write!(f, "{}, ", item)?;
+                }
+            }
+            write!(f, "]")
+        }
     }
 }
 
@@ -987,15 +1013,34 @@ impl Display for ValidationErrors {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct ValidationErrorField {
-    paths: Vec<PathElement>,
+    path: Vec<PathElement>,
     error: Box<dyn ValidationError>,
 }
 impl ValidationErrorField {
     /// Create a new validation error field from a validation error and a path
     pub fn new(paths: &[PathElement], error: impl Into<Box<dyn ValidationError>>) -> Self {
         Self {
-            paths: Vec::from(paths),
+            path: Vec::from(paths),
             error: error.into(),
+        }
+    }
+}
+impl Display for ValidationErrorField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let path = &self
+            .path
+            .iter()
+            .map(|p| format!("{}", p))
+            .collect::<Vec<_>>()
+            .join("/");
+        if f.alternate() {
+            // pretty-printed with {:#}
+            writeln!(f, "{{")?;
+            writeln!(f, "    path: {},", path)?;
+            writeln!(f, "    error: {}", self.error)?;
+            writeln!(f, "}}")
+        } else {
+            write!(f, "{{ path: /{}, error: {} }}", path, self.error)
         }
     }
 }
@@ -1028,6 +1073,23 @@ pub enum PathElement {
 impl From<&Schema> for PathElement {
     fn from(schema_ref: &Schema) -> Self {
         PathElement::Schema(schema_ref.clone())
+    }
+}
+
+impl Display for PathElement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PathElement::Schema(s) => {
+                let SchemaValue::Member(m) = s.deref() else {
+                    // This branch cant occur, but we don't pre-resolve into
+                    // member schema to avoid derefs in the validation hot path.
+                    unreachable!("Validation path cannot be non-member")
+                };
+                write!(f, "{}", m.name())
+            }
+            PathElement::Index(i) => write!(f, "{}", i),
+            PathElement::Key(k) => write!(f, "{}", k),
+        }
     }
 }
 
@@ -1191,7 +1253,7 @@ mod tests {
 
         let error_field_a = err.errors.first().unwrap();
         assert_eq!(
-            error_field_a.paths,
+            error_field_a.path,
             vec![PathElement::Schema(
                 _BASIC_VALIDATION_MEMBER_FIELD_A.clone()
             )]
@@ -1217,7 +1279,7 @@ mod tests {
         assert_eq!(err.errors.len(), 2);
         let error_pattern = err.errors.first().unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![PathElement::Schema(
                 _BASIC_VALIDATION_MEMBER_FIELD_A.clone()
             )]
@@ -1229,7 +1291,7 @@ mod tests {
 
         let error_length = err.errors.get(1).unwrap();
         assert_eq!(
-            error_length.paths,
+            error_length.path,
             vec![
                 PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()),
                 PathElement::Index(0)
@@ -1253,7 +1315,7 @@ mod tests {
         let error_length = err.errors.get(1).unwrap();
 
         assert_eq!(
-            error_required.paths,
+            error_required.path,
             vec![PathElement::Schema(
                 _BASIC_VALIDATION_MEMBER_FIELD_A.clone()
             )]
@@ -1264,7 +1326,7 @@ mod tests {
         );
 
         assert_eq!(
-            error_length.paths,
+            error_length.path,
             vec![
                 PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()),
                 PathElement::Index(0)
@@ -1299,7 +1361,7 @@ mod tests {
         let error_length = err.errors.first().unwrap();
 
         assert_eq!(
-            error_length.paths,
+            error_length.path,
             vec![PathElement::Schema(
                 _BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()
             )]
@@ -1311,7 +1373,7 @@ mod tests {
 
         let error_unique = err.errors.get(1).unwrap();
         assert_eq!(
-            error_unique.paths,
+            error_unique.path,
             vec![
                 PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_LIST.clone()),
                 PathElement::Index(3)
@@ -1342,7 +1404,7 @@ mod tests {
 
         let error_length = err.errors.first().unwrap();
         assert_eq!(
-            error_length.paths,
+            error_length.path,
             vec![PathElement::Schema(
                 _BASIC_VALIDATION_MEMBER_FIELD_MAP.clone()
             )]
@@ -1354,7 +1416,7 @@ mod tests {
 
         let error_key = err.errors.get(1).unwrap();
         assert_eq!(
-            error_key.paths,
+            error_key.path,
             vec![
                 PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_MAP.clone()),
                 PathElement::Key("bad-key".to_string())
@@ -1367,7 +1429,7 @@ mod tests {
 
         let error_value = err.errors.get(2).unwrap();
         assert_eq!(
-            error_value.paths,
+            error_value.path,
             vec![
                 PathElement::Schema(_BASIC_VALIDATION_MEMBER_FIELD_MAP.clone()),
                 PathElement::Key("a".to_string())
@@ -1443,7 +1505,7 @@ mod tests {
         assert_eq!(err.errors.len(), 1);
         let error_pattern = err.errors.first().unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_NESTED_MEMBER_REQUIRED.clone()),
                 PathElement::Schema(_NESTED_MEMBER_C.clone())
@@ -1535,7 +1597,7 @@ mod tests {
 
         let error_length = err.errors.first().unwrap();
         assert_eq!(
-            error_length.paths,
+            error_length.path,
             vec![PathElement::Schema(
                 _STRUCT_WITH_NESTED_LIST_MEMBER_LIST_REQUIRED.clone()
             )]
@@ -1547,7 +1609,7 @@ mod tests {
 
         let error_pattern = err.errors.get(1).unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_NESTED_LIST_MEMBER_LIST_REQUIRED.clone()),
                 PathElement::Index(2),
@@ -1579,7 +1641,7 @@ mod tests {
 
         let error_pattern = err.errors.first().unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_NESTED_LIST_MEMBER_DEEPLY_NESTED.clone()),
                 PathElement::Index(0),
@@ -1691,7 +1753,7 @@ mod tests {
 
         let error_unique_struct = err.errors.first().unwrap();
         assert_eq!(
-            error_unique_struct.paths,
+            error_unique_struct.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_SETS_MEMBER_SET_OF_STRUCT.clone()),
                 PathElement::Index(2)
@@ -1700,7 +1762,7 @@ mod tests {
 
         let error_unique_simple = err.errors.get(1).unwrap();
         assert_eq!(
-            error_unique_simple.paths,
+            error_unique_simple.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_SETS_MEMBER_SET_OF_SIMPLE.clone()),
                 PathElement::Index(2)
@@ -1709,7 +1771,7 @@ mod tests {
 
         let error_unique_list = err.errors.get(2).unwrap();
         assert_eq!(
-            error_unique_list.paths,
+            error_unique_list.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_SETS_MEMBER_SET_OF_LIST.clone()),
                 PathElement::Index(2)
@@ -1718,7 +1780,7 @@ mod tests {
 
         let error_unique_map = err.errors.get(3).unwrap();
         assert_eq!(
-            error_unique_map.paths,
+            error_unique_map.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_SETS_MEMBER_SET_OF_MAP.clone()),
                 PathElement::Index(2)
@@ -1823,7 +1885,7 @@ mod tests {
 
         let error_length = err.errors.first().unwrap();
         assert_eq!(
-            error_length.paths,
+            error_length.path,
             vec![PathElement::Schema(
                 _STRUCT_WITH_NESTED_MAP_MEMBER_REQUIRED.clone()
             )]
@@ -1835,7 +1897,7 @@ mod tests {
 
         let error_pattern = err.errors.get(1).unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_NESTED_MAP_MEMBER_REQUIRED.clone()),
                 PathElement::Key("b".to_string()),
@@ -1878,7 +1940,7 @@ mod tests {
 
         let error_pattern = err.errors.first().unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_NESTED_MAP_MEMBER_DEEPLY_NESTED.clone()),
                 PathElement::Key("a".to_string()),
@@ -1992,7 +2054,7 @@ mod tests {
         assert_eq!(err.errors.len(), 2);
         let error_required = err.errors.first().unwrap();
         assert_eq!(
-            error_required.paths,
+            error_required.path,
             vec![PathElement::Schema(
                 _STRUCT_WITH_NESTED_MEMBER_REQUIRED.clone()
             )]
@@ -2003,7 +2065,7 @@ mod tests {
         );
         let error_pattern = err.errors.get(1).unwrap();
         assert_eq!(
-            error_pattern.paths,
+            error_pattern.path,
             vec![
                 PathElement::Schema(_STRUCT_WITH_NESTED_MEMBER_NESTED.clone()),
                 PathElement::Schema(_NESTED_MEMBER_C.clone())
@@ -2013,5 +2075,67 @@ mod tests {
             error_pattern.error.to_string(),
             "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string()
         );
+    }
+
+    #[test]
+    fn error_displays_correctly() {
+        let path = vec![
+            PathElement::Schema(_STRUCT_WITH_NESTED_MAP_MEMBER_DEEPLY_NESTED.clone()),
+            PathElement::Key("a".to_string()),
+            PathElement::Key("b".to_string()),
+            PathElement::Key("c".to_string()),
+            PathElement::Schema(_NESTED_MEMBER_C.clone()),
+        ];
+        let error = SmithyConstraints::Required;
+        let vef = ValidationErrorField::new(&path, error);
+        // Regular
+        assert_eq!(
+            format!("{}", vef),
+            "{ path: /deeplyNested/a/b/c/c, error: Field is Required. }"
+        );
+
+        // Pretty printed
+        assert_eq!(
+            format!("{:#}", vef),
+            "{\n    path: deeplyNested/a/b/c/c,\n    error: Field is Required.\n}\n"
+        );
+    }
+
+    #[test]
+    fn errors_displays_correctly() {
+        let mut errors = ValidationErrors::new();
+        errors.add(
+            &[
+                PathElement::Schema(_NESTED_MEMBER_C.clone()),
+                PathElement::Index(2),
+            ],
+            SmithyConstraints::Required,
+        );
+        errors.add(
+            &[PathElement::Schema(_NESTED_MEMBER_C.clone())],
+            SmithyConstraints::Length(1, 2, 3),
+        );
+        errors.add(
+            &[PathElement::Key("key".to_string())],
+            SmithyConstraints::Required,
+        );
+        errors.add(
+            &[
+                PathElement::Key("key".to_string()),
+                PathElement::Key("key2".to_string()),
+            ],
+            SmithyConstraints::Required,
+        );
+        assert_eq!(
+            format!("{}", errors),
+            "[{ path: /c/2, error: Field is Required. }, { path: /c, error: Size: 1 does not conform to @length constraint. Expected between 2 and 3. }, { path: /key, error: Field is Required. }, { path: /key/key2, error: Field is Required. }]"
+        );
+        let expected = r#"[
+    { path: /c/2, error: Field is Required. },
+    { path: /c, error: Size: 1 does not conform to @length constraint. Expected between 2 and 3. },
+    { path: /key, error: Field is Required. },
+    { path: /key/key2, error: Field is Required. }
+]"#;
+        assert_eq!(format!("{:#}", errors), expected);
     }
 }

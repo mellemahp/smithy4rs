@@ -13,6 +13,7 @@ smithy!(
 
 #[deprecated(since = "1.0", note = "Plz dont use")]
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = DEPRECATED_STRUCT)]
 pub struct DeprecatedStruct {
     #[deprecated(since = "5ever", note = "Dont use this")]
@@ -31,6 +32,7 @@ smithy!(
 /// - [**API Reference**]("https://www.example.com/api-ref")
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = EXTERNAL_DOCUMENTATION_STRUCT)]
 pub struct ExternalDocumentationStruct {
     pub string: Option<String>,
@@ -50,6 +52,7 @@ smithy!(
 /// </div>
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = SINCE_STRUCT)]
 pub struct SinceStruct {
     /// <div class="note">
@@ -75,6 +78,7 @@ smithy!(
 /// </div>
 ///
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = UNSTABLE_STRUCTURE)]
 pub struct UnstableStructure {
     /// <div class="warning">
