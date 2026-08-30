@@ -23,6 +23,7 @@ smithy!(
 
 /// Indicates that the default trait was added to a member.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = ADDED_DEFAULT)]
 pub struct AddedDefaultTrait {
 }
@@ -46,6 +47,7 @@ smithy!(
 /// The targeted trait must only be applied to service shapes or operation
 /// shapes, must be a structure, and must have the `trait` trait.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = AUTH_DEFINITION)]
 pub struct AuthDefinitionTrait {
     /// The list of traits that auth implementations must understand in order
@@ -78,6 +80,7 @@ smithy!(
 /// target of a member, the member may or may not contain a value, and the
 /// member has no default value.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = BOX)]
 pub struct BoxTrait {
 }
@@ -92,6 +95,7 @@ smithy!(
 /// member as nullable regardless of if the member is also marked with the
 /// required trait.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = CLIENT_OPTIONAL)]
 pub struct ClientOptionalTrait {
 }
@@ -115,6 +119,7 @@ smithy!(
 
 /// Defines how a service supports cross-origin resource sharing.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = CORS)]
 pub struct CorsTrait {
     /// The origin from which browser script-originating requests will be
@@ -153,6 +158,7 @@ smithy!(
 
 /// Marks a shape or member as deprecated.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = DEPRECATED)]
 pub struct DeprecatedTrait {
     /// The reason for deprecation.
@@ -172,6 +178,7 @@ smithy!(
 
 /// Configures a custom operation endpoint.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = ENDPOINT)]
 pub struct EndpointTrait {
     /// A host prefix pattern for the operation.
@@ -196,6 +203,7 @@ smithy!(
 /// An enum definition for the enum trait.
 #[doc(hidden)]
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = ENUM_DEFINITION)]
 pub struct EnumDefinition {
     /// Defines the enum value that is sent over the wire.
@@ -238,6 +246,7 @@ smithy!(
 
 /// Marks a member as a header of an event.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = EVENT_HEADER)]
 pub struct EventHeaderTrait {
 }
@@ -250,6 +259,7 @@ smithy!(
 
 /// Marks a member as the payload of an event.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = EVENT_PAYLOAD)]
 pub struct EventPayloadTrait {
 }
@@ -277,6 +287,7 @@ smithy!(
 /// Binds a top-level operation input structure member to a label
 /// in the hostPrefix of an endpoint trait.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HOST_LABEL)]
 pub struct HostLabelTrait {
 }
@@ -311,6 +322,7 @@ smithy!(
 /// - [**RFC 2617**]("https://tools.ietf.org/html/rfc2617.html")
 ///
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_BASIC_AUTH)]
 pub struct HttpBasicAuthTrait {
 }
@@ -328,6 +340,7 @@ smithy!(
 /// - [**RFC 6750**]("https://tools.ietf.org/html/rfc6750.html")
 ///
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_BEARER_AUTH)]
 pub struct HttpBearerAuthTrait {
 }
@@ -348,6 +361,7 @@ smithy!(
 /// </div>
 ///
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_CHECKSUM_REQUIRED)]
 pub struct HttpChecksumRequiredTrait {
 }
@@ -365,6 +379,7 @@ smithy!(
 /// - [**RFC 2617**]("https://tools.ietf.org/html/rfc2617.html")
 ///
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_DIGEST_AUTH)]
 pub struct HttpDigestAuthTrait {
 }
@@ -383,6 +398,7 @@ smithy!(
 
 /// Configures the HTTP bindings of an operation.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP)]
 pub struct HttpTrait {
     /// The HTTP method of the operation.
@@ -404,6 +420,7 @@ smithy!(
 
 /// Binds an operation input structure member to an HTTP label.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_LABEL)]
 pub struct HttpLabelTrait {
 }
@@ -416,6 +433,7 @@ smithy!(
 
 /// Binds a single structure member to the body of an HTTP request.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_PAYLOAD)]
 pub struct HttpPayloadTrait {
 }
@@ -428,6 +446,7 @@ smithy!(
 
 /// Binds an operation input structure member to the HTTP query string.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_QUERY_PARAMS)]
 pub struct HttpQueryParamsTrait {
 }
@@ -442,6 +461,7 @@ smithy!(
 /// status code. The value MAY differ from the HTTP status code provided
 /// on the response.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = HTTP_RESPONSE_CODE)]
 pub struct HttpResponseCodeTrait {
 }
@@ -456,6 +476,7 @@ smithy!(
 /// Defines the input member of an operation that is used by the server to
 /// identify and discard replayed requests.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = IDEMPOTENCY_TOKEN)]
 pub struct IdempotencyTokenTrait {
 }
@@ -470,6 +491,7 @@ smithy!(
 /// requests with an operation is the same as the effect for a single such
 /// request.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = IDEMPOTENT)]
 pub struct IdempotentTrait {
 }
@@ -490,6 +512,7 @@ smithy!(
 /// shape defined in the same namespace resolves to a shape defined in the
 /// prelude if the prelude shape is not marked with the private trait.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = ID_REF)]
 pub struct IdRefTrait {
     /// Defines the selector that the resolved shape, if found, MUST match.
@@ -513,6 +536,7 @@ smithy!(
 
 /// Specializes a structure for use only as the input of a single operation.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = INPUT)]
 pub struct InputTrait {
 }
@@ -526,6 +550,7 @@ smithy!(
 /// Shapes marked with the internal trait are meant only for internal use and
 /// must not be exposed to customers.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = INTERNAL)]
 pub struct InternalTrait {
 }
@@ -540,6 +565,7 @@ smithy!(
 
 /// Constrains a shape to minimum and maximum number of elements or size.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = LENGTH)]
 pub struct LengthTrait {
     /// Integer value that represents the minimum inclusive length of a shape.
@@ -564,6 +590,7 @@ smithy!(
 
 /// Makes a structure or union a mixin.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = MIXIN)]
 pub struct MixinTrait {
     pub local_traits: Option<Vec<String>>,
@@ -579,6 +606,7 @@ smithy!(
 /// Adjusts the resource property mapping of a lifecycle operation to the
 /// targeted member.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = NESTED_PROPERTIES)]
 pub struct NestedPropertiesTrait {
 }
@@ -600,6 +628,7 @@ smithy!(
 /// Indicates that the put lifecycle operation of a resource can only be used
 /// to create a resource and cannot replace an existing resource.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = NO_REPLACE)]
 pub struct NoReplaceTrait {
 }
@@ -614,6 +643,7 @@ smithy!(
 /// Explicitly excludes a member from resource property mapping or enables
 /// another trait to carry the same implied meaning.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = NOT_PROPERTY)]
 pub struct NotPropertyTrait {
 }
@@ -626,6 +656,7 @@ smithy!(
 
 /// Indicates that an operation can be called without authentication.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = OPTIONAL_AUTH)]
 pub struct OptionalAuthTrait {
 }
@@ -638,6 +669,7 @@ smithy!(
 
 /// Specializes a structure for use only as the output of a single operation.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = OUTPUT)]
 pub struct OutputTrait {
 }
@@ -656,6 +688,7 @@ smithy!(
 /// number of results returned in a single response and that multiple
 /// invocations might be necessary to retrieve all results.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = PAGINATED)]
 pub struct PaginatedTrait {
     /// The name of the operation input member that represents the continuation
@@ -693,6 +726,7 @@ smithy!(
 /// Prevents models defined in a different namespace from referencing the
 /// targeted shape.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = PRIVATE)]
 pub struct PrivateTrait {
 }
@@ -706,6 +740,7 @@ smithy!(
 
 /// Configures a structure member's resource property mapping behavior.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = PROPERTY)]
 pub struct PropertyTrait {
     pub name: Option<String>,
@@ -724,6 +759,7 @@ smithy!(
 /// The targeted trait must only be applied to service shapes, must be a
 /// structure, and must have the `trait` trait.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = PROTOCOL_DEFINITION)]
 pub struct ProtocolDefinitionTrait {
     /// The list of traits that protocol implementations must understand in
@@ -746,6 +782,7 @@ smithy!(
 /// bigDecimal, and bigInteger shapes within an acceptable lower and upper
 /// bound.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = RANGE)]
 pub struct RangeTrait {
     /// Specifies the allowed inclusive minimum value.
@@ -762,6 +799,7 @@ smithy!(
 
 /// Indicates that an operation is effectively read-only.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = READONLY)]
 pub struct ReadonlyTrait {
 }
@@ -775,6 +813,7 @@ smithy!(
 
 /// Indicates that a structure member SHOULD be set.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = RECOMMENDED)]
 pub struct RecommendedTrait {
     /// Provides a reason why the member is recommended.
@@ -794,6 +833,7 @@ smithy!(
 
 #[doc(hidden)]
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = REFERENCE)]
 pub struct Reference {
     /// The shape ID of the referenced resource.
@@ -834,6 +874,7 @@ smithy!(
 /// Indicates that an operation supports compressing requests from clients to
 /// services.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = REQUEST_COMPRESSION)]
 pub struct RequestCompressionTrait {
     pub encodings: Vec<String>,
@@ -848,6 +889,7 @@ smithy!(
 /// Marks a structure member as required, meaning a value for the member MUST
 /// be present.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = REQUIRED)]
 pub struct RequiredTrait {
 }
@@ -860,6 +902,7 @@ smithy!(
 
 /// Indicates that the streaming blob must be finite and has a known size.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = REQUIRES_LENGTH)]
 pub struct RequiresLengthTrait {
 }
@@ -873,6 +916,7 @@ smithy!(
 
 /// Indicates that an error MAY be retried by the client.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = RETRYABLE)]
 pub struct RetryableTrait {
     /// Classifies the retry as throttling.
@@ -888,6 +932,7 @@ smithy!(
 /// Indicates that the data stored in the shape is sensitive and MUST be
 /// handled with care.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = SENSITIVE)]
 pub struct SensitiveTrait {
 }
@@ -921,6 +966,7 @@ smithy!(
 
 /// Marks a list or map as sparse.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = SPARSE)]
 pub struct SparseTrait {
 }
@@ -936,6 +982,7 @@ smithy!(
 /// unknown at the start of a request. If the target is a union then the shape
 /// represents a stream of events.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = STREAMING)]
 pub struct StreamingTrait {
 }
@@ -1038,6 +1085,7 @@ smithy!(
 
 #[doc(hidden)]
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = TRAIT_DIFF_RULE)]
 pub struct TraitDiffRule {
     /// Defines a JSON Pointer to the value to evaluate.
@@ -1072,6 +1120,7 @@ smithy!(
 
 /// Makes a shape a trait.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = TRAIT)]
 pub struct TraitTrait {
     /// The valid places in a model that the trait can be applied.
@@ -1098,6 +1147,7 @@ smithy!(
 
 #[doc(hidden)]
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = TRAIT_VALIDATOR)]
 pub struct TraitValidator {
     /// A Smithy selector that receives only the shape to which the `traitValidators` trait is
@@ -1119,6 +1169,7 @@ smithy!(
 
 /// Indicates that the items in a list MUST be unique.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = UNIQUE_ITEMS)]
 pub struct UniqueItemsTrait {
 }
@@ -1131,6 +1182,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = UNIT)]
 pub struct Unit {
 }
@@ -1145,6 +1197,7 @@ smithy!(
 /// This trait can only be applied to smithy.api#Unit, which ensures that
 /// only a single Unit shape can be created.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = UNIT_TYPE)]
 pub struct UnitTypeTrait {
 }
@@ -1157,6 +1210,7 @@ smithy!(
 
 /// Indicates that the shape is unstable and could change in the future.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = UNSTABLE)]
 pub struct UnstableTrait {
 }
@@ -1170,6 +1224,7 @@ smithy!(
 /// Serializes an object property as an XML attribute rather than a nested XML
 /// element.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = XML_ATTRIBUTE)]
 pub struct XmlAttributeTrait {
 }
@@ -1183,6 +1238,7 @@ smithy!(
 /// Unwraps the values of a list, set, or map into the containing
 /// structure/union.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = XML_FLATTENED)]
 pub struct XmlFlattenedTrait {
 }
@@ -1199,6 +1255,7 @@ smithy!(
 
 /// Adds an xmlns namespace definition URI to an XML element.
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = XML_NAMESPACE)]
 pub struct XmlNamespaceTrait {
     /// The namespace URI for scoping this XML element.

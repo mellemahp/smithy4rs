@@ -21,6 +21,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = UNIT)]
 pub struct Unit {
 }

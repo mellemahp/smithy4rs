@@ -40,6 +40,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = ALL_PRIMITIVES_STRUCT)]
 pub struct AllPrimitivesStruct {
     pub string_field: String,

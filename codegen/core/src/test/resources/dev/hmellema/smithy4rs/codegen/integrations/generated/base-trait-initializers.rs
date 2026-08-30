@@ -17,6 +17,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = MY_STRUCT)]
 pub struct MyStruct {
     pub with_string_trait: Option<String>,

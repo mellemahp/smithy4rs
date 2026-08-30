@@ -69,6 +69,7 @@ smithy!(
 
 /// A Documented Structure
 #[derive(SmithyShape, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = DOCUMENTED_STRUCT)]
 pub struct DocumentedStruct {
     /// Documented! Yay!

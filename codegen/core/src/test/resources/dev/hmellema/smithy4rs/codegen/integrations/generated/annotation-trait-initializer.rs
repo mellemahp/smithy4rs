@@ -15,6 +15,7 @@ smithy!(
 );
 
 #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
 #[schema(schema = MY_ANNOTATION_TRAIT)]
 pub struct MyAnnotationTraitTrait {
 }
