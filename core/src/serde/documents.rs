@@ -87,13 +87,10 @@ impl SerializeWithSchema for Box<dyn Document> {
                         member_schema.get_trait_as::<RequiredTrait>(),
                         document_map.get(key),
                     ) {
-                        (Some(_), Some(value)) => {
-                            struct_serializer.write_member(member_schema, value)?;
-                        }
                         (Some(_), None) => {
                             struct_serializer.write_unknown(member_schema, key)?;
                         }
-                        (None, Some(value)) => {
+                        (Some(_) | None, Some(value)) => {
                             struct_serializer.write_member(member_schema, value)?;
                         }
                         (None, None) => {
@@ -389,7 +386,7 @@ struct DocumentMapReader {
     current_value: Option<Box<dyn Document>>,
 }
 
-impl<'de> Deserializer<'de> for DocumentDeserializer {
+impl Deserializer<'_> for DocumentDeserializer {
     type Error = DocumentError;
     type StructReader = DocumentStructReader;
     type ListReader = DocumentListReader;
@@ -671,7 +668,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "todo"]
     fn number_document_values() {
         // TODO: Add number document tests.
     }
@@ -739,6 +736,7 @@ mod tests {
     }
 
     #[test]
+
     fn roundtrip_floats() {
         // Float
         let original_float = 1.2345f32;
@@ -895,6 +893,7 @@ mod tests {
     }
 
     #[test]
+
     fn float_roundtrip() {
         let float: Box<dyn Document> = 1f32.into();
         let float_value: f32 = float.try_into().unwrap();
@@ -902,6 +901,7 @@ mod tests {
     }
 
     #[test]
+
     fn double_roundtrip() {
         let double: Box<dyn Document> = 1f64.into();
         let double_value: f64 = double.try_into().unwrap();

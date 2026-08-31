@@ -49,11 +49,10 @@ fn size_of_value(
                 ShapeType::Blob => Vec::<u8>::try_size_hint(depth),
                 ShapeType::Boolean => <bool as Arbitrary>::try_size_hint(depth),
                 ShapeType::String => <String as Arbitrary>::try_size_hint(depth),
-                ShapeType::Timestamp => <i64 as Arbitrary>::try_size_hint(depth),
                 ShapeType::Byte => <i8 as Arbitrary>::try_size_hint(depth),
                 ShapeType::Short => <i16 as Arbitrary>::try_size_hint(depth),
                 ShapeType::Integer => <i32 as Arbitrary>::try_size_hint(depth),
-                ShapeType::Long => <i64 as Arbitrary>::try_size_hint(depth),
+                ShapeType::Long | ShapeType::Timestamp => <i64 as Arbitrary>::try_size_hint(depth),
                 ShapeType::Float => <f32 as Arbitrary>::try_size_hint(depth),
                 ShapeType::Double => <f64 as Arbitrary>::try_size_hint(depth),
                 ShapeType::BigInteger => <BigInt as Arbitrary>::try_size_hint(depth),
@@ -85,8 +84,9 @@ fn size_of_value(
                 Ok(arbitrary::size_hint::and_all(&sizes))
             }
         }
-        SchemaValue::Enum(_) => <usize as Arbitrary>::try_size_hint(depth),
-        SchemaValue::IntEnum(_) => <usize as Arbitrary>::try_size_hint(depth),
+        SchemaValue::Enum(_) | SchemaValue::IntEnum(_) => {
+            <usize as Arbitrary>::try_size_hint(depth)
+        }
         SchemaValue::List(_) => {
             Ok(arbitrary::size_hint::and(
                 // usize used to determine how many entries to generate

@@ -38,7 +38,7 @@ pub struct SerializeMe {
     pub member_map: IndexMap<String, String>,
 }
 
-pub fn convert_into(c: &mut Criterion) {
+fn convert_into(c: &mut Criterion) {
     let mut map = IndexMap::new();
     map.insert(String::from("a"), String::from("b"));
     let struct_to_convert = SerializeMeBuilder::new()
@@ -51,11 +51,11 @@ pub fn convert_into(c: &mut Criterion) {
     c.bench_function("Convert Shape into document", |b| {
         b.iter(|| {
             let _: Box<dyn Document> = black_box(struct_to_convert.clone().into());
-        })
+        });
     });
 }
 
-pub fn convert_from(c: &mut Criterion) {
+fn convert_from(c: &mut Criterion) {
     let mut map = IndexMap::new();
     map.insert(String::from("a"), String::from("b"));
     let struct_to_convert = SerializeMeBuilder::new()
@@ -75,7 +75,7 @@ pub fn convert_from(c: &mut Criterion) {
                     .build()
                     .expect("Should build document"),
             );
-        })
+        });
     });
 }
 

@@ -75,11 +75,17 @@ pub trait StructReader<'de> {
     ///
     /// After this returns `Some`, you must call either `read_value()` or
     /// `skip_value()` before calling `read_member()` again.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the member could not be read.
     fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error>;
 
     /// Read the current member's value.
     ///
     /// Must be called after `read_member()` returns `Some`.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the value could not be read.
     fn read_value<T: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
@@ -88,6 +94,10 @@ pub trait StructReader<'de> {
     /// Skip the current member's value.
     ///
     /// Use this for unknown fields or fields you don't need.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the value could not
+    /// be skipped
     fn skip_value(&mut self) -> Result<(), Self::Error>;
 
     /// Hint about the number of remaining members, if known.
@@ -116,6 +126,10 @@ pub trait ListReader<'de> {
     type Error: Error;
 
     /// Read the next element, or `None` if the list is exhausted.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the element of the list
+    /// could not be read.
     fn read_element<T: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
@@ -153,17 +167,28 @@ pub trait MapReader<'de> {
     ///
     /// After this returns `Some`, you must call either `read_value()` or
     /// `skip_value()` before calling `read_key()` again.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the key could not be successfully
+    /// read.
     fn read_key(&mut self) -> Result<Option<String>, Self::Error>;
 
     /// Read the current entry's value.
     ///
     /// Must be called after `read_key()` returns `Some`.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the value could not be read
+    /// successfully
     fn read_value<V: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
     ) -> Result<V, Self::Error>;
 
     /// Skip the current entry's value.
+    ///
+    /// # Errors
+    /// Returns a deserialization error if the value could not be skipped.
     fn skip_value(&mut self) -> Result<(), Self::Error>;
 
     /// Hint about the number of remaining entries, if known.

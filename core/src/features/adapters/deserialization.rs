@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(clippy::cast_precision_loss)] // TODO: correct precision loss
 
 use std::{
     error::Error as StdError,
@@ -288,6 +289,7 @@ pub struct SchemaSeed<'a, T> {
 
 impl<'a, T> SchemaSeed<'a, T> {
     /// Create a new [`SchemaSeed`] instance.
+    #[must_use]
     pub fn new(schema: &'a Schema) -> Self {
         Self {
             schema,
@@ -296,7 +298,7 @@ impl<'a, T> SchemaSeed<'a, T> {
     }
 }
 
-impl<'a, 'de, T> DeserializeSeed<'de> for SchemaSeed<'a, T>
+impl<'de, T> DeserializeSeed<'de> for SchemaSeed<'_, T>
 where
     T: DeserializeWithSchema<'de>,
 {
@@ -358,7 +360,7 @@ struct ListVisitor<'a, T> {
     _phantom: PhantomData<T>,
 }
 
-impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for ListVisitor<'a, T> {
+impl<'de, T: DeserializeWithSchema<'de>> Visitor<'de> for ListVisitor<'_, T> {
     type Value = T;
 
     fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -371,7 +373,7 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for ListVisitor<'a, T>
     {
         let deserializer = SeqAccessDeserializer::new(seq);
         T::deserialize_with_schema(self.schema, deserializer)
-            .map_err(|e| A::Error::custom(format!("{}", e)))
+            .map_err(|e| A::Error::custom(format!("{e}")))
     }
 }
 
@@ -381,7 +383,7 @@ struct MapVisitor<'a, T> {
     _phantom: PhantomData<T>,
 }
 
-impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> {
+impl<'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'_, T> {
     type Value = T;
 
     fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -394,7 +396,7 @@ impl<'a, 'de, T: DeserializeWithSchema<'de>> Visitor<'de> for MapVisitor<'a, T> 
     {
         let deserializer = MapAccessDeserializer::new(map);
         T::deserialize_with_schema(self.schema, deserializer)
-            .map_err(|e| A::Error::custom(format!("{}", e)))
+            .map_err(|e| A::Error::custom(format!("{e}")))
     }
 }
 
@@ -432,7 +434,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for EnumWrapper<'de, D>
     fn read_integer(mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
 
-        impl<'de> Visitor<'de> for IntegerVisitor {
+        impl Visitor<'_> for IntegerVisitor {
             type Value = i32;
 
             fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
@@ -541,7 +543,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_bool(mut self, _schema: &Schema) -> Result<bool, Self::Error> {
         struct BoolVisitor;
-        impl<'de> Visitor<'de> for BoolVisitor {
+        impl Visitor<'_> for BoolVisitor {
             type Value = bool;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a boolean")
@@ -557,7 +559,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_byte(mut self, _schema: &Schema) -> Result<i8, Self::Error> {
         struct ByteVisitor;
-        impl<'de> Visitor<'de> for ByteVisitor {
+        impl Visitor<'_> for ByteVisitor {
             type Value = i8;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a byte (i8)")
@@ -579,7 +581,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_short(mut self, _schema: &Schema) -> Result<i16, Self::Error> {
         struct ShortVisitor;
-        impl<'de> Visitor<'de> for ShortVisitor {
+        impl Visitor<'_> for ShortVisitor {
             type Value = i16;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a short (i16)")
@@ -601,7 +603,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_integer(mut self, _schema: &Schema) -> Result<i32, Self::Error> {
         struct IntegerVisitor;
-        impl<'de> Visitor<'de> for IntegerVisitor {
+        impl Visitor<'_> for IntegerVisitor {
             type Value = i32;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("an integer (i32)")
@@ -623,7 +625,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_long(mut self, _schema: &Schema) -> Result<i64, Self::Error> {
         struct LongVisitor;
-        impl<'de> Visitor<'de> for LongVisitor {
+        impl Visitor<'_> for LongVisitor {
             type Value = i64;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a long (i64)")
@@ -642,7 +644,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_float(mut self, _schema: &Schema) -> Result<f32, Self::Error> {
         struct FloatVisitor;
-        impl<'de> Visitor<'de> for FloatVisitor {
+        impl Visitor<'_> for FloatVisitor {
             type Value = f32;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a float (f32)")
@@ -667,7 +669,7 @@ impl<'de, D: serde::Deserializer<'de>> Deserializer<'de> for PrimitiveWrapper<'d
 
     fn read_double(mut self, _schema: &Schema) -> Result<f64, Self::Error> {
         struct DoubleVisitor;
-        impl<'de> Visitor<'de> for DoubleVisitor {
+        impl Visitor<'_> for DoubleVisitor {
             type Value = f64;
             fn expecting(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 f.write_str("a double (f64)")
@@ -986,6 +988,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_comprehensive_nested_structures() {
         let json = r#"{
             "name": "Alice Johnson",
@@ -1070,6 +1073,7 @@ mod tests {
     }
 
     #[test]
+
     fn test_comprehensive_with_missing_optional_fields() {
         let json = r#"{
             "name": "Bob Smith",
@@ -1127,7 +1131,7 @@ mod tests {
         let IpAddr::V4(value) = result else {
             panic!("Expected v4 address")
         };
-        assert_eq!(value, "192.168.5.0")
+        assert_eq!(value, "192.168.5.0");
     }
 
     smithy!(

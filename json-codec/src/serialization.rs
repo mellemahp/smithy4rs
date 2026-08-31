@@ -56,7 +56,11 @@ impl<'a> JsonSerializer<'a> {
     }
 
     /// Get the serialized JSON as a string slice.
+    ///
+    /// # Panics
+    /// If JSON is not valid UTF-8
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         // We only write valid UTF-8 to the buffer
         std::str::from_utf8(self.buf).expect("JSON is always valid UTF-8")
@@ -64,6 +68,7 @@ impl<'a> JsonSerializer<'a> {
 
     /// Get the serialized JSON as bytes.
     #[inline]
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         self.buf
     }
@@ -210,7 +215,7 @@ pub struct JsonListSerializer<'a> {
     first: bool,
 }
 
-impl<'a> ListWriter for JsonListSerializer<'a> {
+impl ListWriter for JsonListSerializer<'_> {
     type Error = JsonSerdeError;
     type Ok = ();
 
@@ -242,7 +247,7 @@ pub struct JsonMapSerializer<'a> {
     first: bool,
 }
 
-impl<'a> MapWriter for JsonMapSerializer<'a> {
+impl MapWriter for JsonMapSerializer<'_> {
     type Error = JsonSerdeError;
     type Ok = ();
 
@@ -286,7 +291,7 @@ pub struct JsonStructSerializer<'a> {
     first: bool,
 }
 
-impl<'a> StructWriter for JsonStructSerializer<'a> {
+impl StructWriter for JsonStructSerializer<'_> {
     type Error = JsonSerdeError;
     type Ok = ();
 

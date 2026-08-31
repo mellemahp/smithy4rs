@@ -4,11 +4,11 @@ use syn::{Attribute, Expr, Fields, ItemEnum, Lit, MetaNameValue, Variant, parse_
 /// Convert discriminants to `[#enum_value]` attributes
 pub(crate) fn discriminants_to_attributes(enum_data: &mut ItemEnum) {
     // Change all discriminants to attributes for consistency
-    for variant in enum_data.variants.iter_mut() {
+    for variant in &mut enum_data.variants {
         if let Some((_, expr)) = &variant.discriminant {
             variant.attrs.push(parse_quote!(#[schema(value = #expr)]));
             variant.discriminant = None;
-        };
+        }
     }
 }
 
@@ -25,11 +25,10 @@ pub(crate) fn unknown_variant(enum_data: &mut ItemEnum) {
             .as_slice(),
     );
 
-    let field = match &value {
-        Some(Lit::Str(_)) => parse_quote!((String)),
-        Some(Lit::Int(_)) => parse_quote!((i32)),
-        // Default to String for unions!
-        _ => parse_quote!((String)),
+    let field = if let Some(Lit::Int(_)) = &value {
+        parse_quote!((i32))
+    } else {
+        parse_quote!((String))
     };
 
     enum_data.variants.push(Variant {
