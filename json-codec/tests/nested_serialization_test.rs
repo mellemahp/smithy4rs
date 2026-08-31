@@ -71,7 +71,7 @@ fn test_nested_struct_serialization() {
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
-    println!("Serialized nested struct JSON:\n{}", json);
+    println!("Serialized nested struct JSON:\n{json}");
 
     assert!(json.contains("\"name\":\"test_object\""));
     assert!(json.contains("\"count\":42"));
@@ -125,7 +125,7 @@ fn test_recursive_struct_serialization() {
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
-    println!("Serialized recursive struct JSON:\n{}", json);
+    println!("Serialized recursive struct JSON:\n{json}");
 
     assert!(json.contains("\"level_1\""));
     assert!(json.contains("\"top\""));
@@ -191,7 +191,7 @@ fn test_deeply_nested_without_recursion() {
         .unwrap();
 
     let json = String::from_utf8(buf).unwrap();
-    println!("Serialized deeply nested JSON:\n{}", json);
+    println!("Serialized deeply nested JSON:\n{json}");
 
     // Verify all levels are present
     assert!(json.contains("\"complex_object\""));

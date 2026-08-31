@@ -130,6 +130,7 @@ impl TraitRef {
     /// Returns some reference to the inner value if it is of type T, or None if it isn't
     #[allow(trivial_casts)]
     #[inline]
+    #[must_use]
     pub fn downcast_ref<T: SmithyTrait>(&self) -> Option<&T> {
         (&*self.0 as &dyn Any).downcast_ref::<T>()
     }

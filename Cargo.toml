@@ -49,6 +49,15 @@ manual_ok_or = { level = "deny" }
 manual_while_let_some = { level = "deny" }
 unnecessary_wraps = { level = "deny" }
 needless_collect = { level = "deny" }
+needless_pass_by_value = { level = "deny" }
+pedantic = { priority = -1, level = "warn" }
+struct_field_names = "allow"
+similar_names = "allow"
+# TODO: we should be able to remove all of these float ones in the future
+float_cmp = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+
 # documentation lints
 doc_link_with_quotes = { level = "deny" }
 doc_markdown = { level = "deny" }

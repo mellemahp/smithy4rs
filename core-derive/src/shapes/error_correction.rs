@@ -27,7 +27,7 @@ pub(crate) fn expand_error_correction(shape: &Shape, crate_ident: &TokenStream) 
         }
         Shape::Union(_) => {
             quote! {
-                #name::Unknown("".to_string())
+                #name::Unknown(String::new())
             }
         }
     };
@@ -56,7 +56,7 @@ fn determine_enum_filler_value(data: &EnumShape) -> TokenStream {
         .expect("Should have at least one variant");
 
     match variant.value {
-        Some(EnumValue::Str(_)) => quote! { "".to_string() },
+        Some(EnumValue::Str(_)) => quote! { String::new() },
         Some(EnumValue::Int(_)) => quote! { 0i32 },
         _ => panic!("Unexpected enum value"),
     }

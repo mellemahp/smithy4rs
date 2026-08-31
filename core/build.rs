@@ -14,12 +14,11 @@ fn main() {
         .output()
         .unwrap();
 
-    if !output.status.success() {
-        panic!(
-            "Gradlew build failed: {}",
-            String::from_utf8(output.stderr).unwrap()
-        );
-    }
+    assert!(
+        output.status.success(),
+        "Gradlew build failed: {}",
+        String::from_utf8(output.stderr).unwrap()
+    );
 
     println!("cargo::rerun-if-changed=codegen-link");
 

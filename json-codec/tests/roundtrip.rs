@@ -70,10 +70,10 @@ fn test_numbers_roundtrip() {
     let numbers = NumericTypesStructBuilder::new()
         .byte_val(42)
         .short_val(1000i16)
-        .int_val(100000)
-        .long_val(1000000000000i64)
+        .int_val(100_000)
+        .long_val(1_000_000_000_000_i64)
         .float_val(1.234f32)
-        .double_val(1.23456789f64)
+        .double_val(1.234_567_89_f64)
         .build()
         .unwrap();
 
@@ -86,10 +86,10 @@ fn test_numbers_negative_values() {
     let numbers = NumericTypesStructBuilder::new()
         .byte_val(-42)
         .short_val(-1000i16)
-        .int_val(-100000)
-        .long_val(-1000000000000i64)
+        .int_val(-100_000)
+        .long_val(-1_000_000_000_000_i64)
         .float_val(-1.234f32)
-        .double_val(-1.23456789f64)
+        .double_val(-1.234_567_89_f64)
         .build()
         .unwrap();
 
@@ -146,7 +146,7 @@ fn test_unicode_strings() {
 #[test]
 fn test_empty_strings() {
     let data = SimpleStructBuilder::new()
-        .field_a("".to_string())
+        .field_a(String::new())
         .field_b(0)
         .build()
         .unwrap();

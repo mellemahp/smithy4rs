@@ -31,19 +31,19 @@ pub enum Shape {
 impl Shape {
     pub fn name(&self) -> &Ident {
         match &self {
-            Shape::Struct(StructShape { ident, .. }) => ident,
-            Shape::Simple(SimpleShape { ident, .. }) => ident,
-            Shape::Union(UnionShape { ident, .. }) => ident,
-            Shape::Enum(EnumShape { ident, .. }) => ident,
+            Shape::Struct(StructShape { ident, .. })
+            | Shape::Simple(SimpleShape { ident, .. })
+            | Shape::Union(UnionShape { ident, .. })
+            | Shape::Enum(EnumShape { ident, .. }) => ident,
         }
     }
 
     pub fn schema(&self) -> &Ident {
         match &self {
-            Shape::Struct(StructShape { schema, .. }) => schema,
-            Shape::Simple(SimpleShape { schema, .. }) => schema,
-            Shape::Union(UnionShape { schema, .. }) => schema,
-            Shape::Enum(EnumShape { schema, .. }) => schema,
+            Shape::Struct(StructShape { schema, .. })
+            | Shape::Simple(SimpleShape { schema, .. })
+            | Shape::Union(UnionShape { schema, .. })
+            | Shape::Enum(EnumShape { schema, .. }) => schema,
         }
     }
 }
@@ -136,8 +136,7 @@ impl StructMember {
             let location = &self
                 .ident
                 .as_ref()
-                .map(|i| i.span())
-                .unwrap_or_else(|| self.ty.span());
+                .map_or_else(|| self.ty.span(), Ident::span);
             Err(Error::custom("Members must be explicitly public (`pub`)").with_span(location))
         }
     }
@@ -186,7 +185,7 @@ pub struct WrappedField {
 }
 impl ToTokens for WrappedField {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.ty.to_tokens(tokens)
+        self.ty.to_tokens(tokens);
     }
 }
 

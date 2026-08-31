@@ -61,7 +61,6 @@ use std::{
     error::Error,
     fmt::{Debug, Display},
     hash::{Hash, Hasher},
-    ops::Deref,
 };
 
 use arrayvec::ArrayVec;
@@ -423,7 +422,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
             }
             if over_min || over_max {
                 self.emit_error(SmithyConstraints::Range(
-                    format!("{}", value),
+                    format!("{value}"),
                     range.min.clone().unwrap_or_default(),
                     range.max.clone().unwrap_or_default(),
                 ))?;
@@ -453,7 +452,7 @@ impl<'a> Serializer for &'a mut DefaultValidator {
             }
             if over_min || over_max {
                 self.emit_error(SmithyConstraints::Range(
-                    format!("{}", value),
+                    format!("{value}"),
                     range.min.clone().unwrap_or_default(),
                     range.max.clone().unwrap_or_default(),
                 ))?;
@@ -987,9 +986,9 @@ impl Display for ValidationErrors {
             while let Some(item) = iter.next() {
                 if iter.peek().is_none() {
                     // Last line
-                    writeln!(f, "    {}", item)?;
+                    writeln!(f, "    {item}")?;
                 } else {
-                    writeln!(f, "    {},", item)?;
+                    writeln!(f, "    {item},")?;
                 }
             }
             write!(f, "]")
@@ -999,9 +998,9 @@ impl Display for ValidationErrors {
             while let Some(item) = iter.next() {
                 if iter.peek().is_none() {
                     // Last line
-                    write!(f, "{}", item)?;
+                    write!(f, "{item}")?;
                 } else {
-                    write!(f, "{}, ", item)?;
+                    write!(f, "{item}, ")?;
                 }
             }
             write!(f, "]")
@@ -1030,17 +1029,17 @@ impl Display for ValidationErrorField {
         let path = &self
             .path
             .iter()
-            .map(|p| format!("{}", p))
+            .map(|p| format!("{p}"))
             .collect::<Vec<_>>()
             .join("/");
         if f.alternate() {
             // pretty-printed with {:#}
             writeln!(f, "{{")?;
-            writeln!(f, "    path: {},", path)?;
+            writeln!(f, "    path: {path},")?;
             writeln!(f, "    error: {}", self.error)?;
             writeln!(f, "}}")
         } else {
-            write!(f, "{{ path: /{}, error: {} }}", path, self.error)
+            write!(f, "{{ path: /{path}, error: {} }}", self.error)
         }
     }
 }
@@ -1080,15 +1079,15 @@ impl Display for PathElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PathElement::Schema(s) => {
-                let SchemaValue::Member(m) = s.deref() else {
+                let SchemaValue::Member(m) = &**s else {
                     // This branch cant occur, but we don't pre-resolve into
                     // member schema to avoid derefs in the validation hot path.
                     unreachable!("Validation path cannot be non-member")
                 };
                 write!(f, "{}", m.name())
             }
-            PathElement::Index(i) => write!(f, "{}", i),
-            PathElement::Key(k) => write!(f, "{}", k),
+            PathElement::Index(i) => write!(f, "{i}"),
+            PathElement::Key(k) => write!(f, "{k}"),
         }
     }
 }
@@ -2090,13 +2089,13 @@ mod tests {
         let vef = ValidationErrorField::new(&path, error);
         // Regular
         assert_eq!(
-            format!("{}", vef),
+            format!("{vef}"),
             "{ path: /deeplyNested/a/b/c/c, error: Field is Required. }"
         );
 
         // Pretty printed
         assert_eq!(
-            format!("{:#}", vef),
+            format!("{vef:#}"),
             "{\n    path: deeplyNested/a/b/c/c,\n    error: Field is Required.\n}\n"
         );
     }
@@ -2127,15 +2126,15 @@ mod tests {
             SmithyConstraints::Required,
         );
         assert_eq!(
-            format!("{}", errors),
+            format!("{errors}"),
             "[{ path: /c/2, error: Field is Required. }, { path: /c, error: Size: 1 does not conform to @length constraint. Expected between 2 and 3. }, { path: /key, error: Field is Required. }, { path: /key/key2, error: Field is Required. }]"
         );
-        let expected = r#"[
+        let expected = r"[
     { path: /c/2, error: Field is Required. },
     { path: /c, error: Size: 1 does not conform to @length constraint. Expected between 2 and 3. },
     { path: /key, error: Field is Required. },
     { path: /key/key2, error: Field is Required. }
-]"#;
-        assert_eq!(format!("{:#}", errors), expected);
+]";
+        assert_eq!(format!("{errors:#}"), expected);
     }
 }

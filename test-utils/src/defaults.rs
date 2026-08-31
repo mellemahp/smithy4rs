@@ -38,6 +38,6 @@ pub struct AllPrimitivesDefaults {
     pub boolean_field: bool,
     #[schema(default = ByteBuffer::default())]
     pub blob_field: ByteBuffer,
-    #[schema(default = Instant::from_epoch_milliseconds(1000000).expect("Epoch milliseconds must be set"))]
+    #[schema(default = Instant::from_epoch_milliseconds(1_000_000).expect("Epoch milliseconds must be set"))]
     pub timestamp_field: Instant,
 }

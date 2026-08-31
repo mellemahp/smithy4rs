@@ -105,11 +105,11 @@ pub fn validate_builder(c: &mut Criterion) {
     c.bench_function("Validate Shape Builder", |b| {
         b.iter(|| {
             let _ = black_box(DefaultValidator::new().validate(&VALIDATION_STRUCT, &builder));
-        })
+        });
     });
 }
 
-pub fn validate_shape(c: &mut Criterion) {
+fn validate_shape(c: &mut Criterion) {
     let built_shape = ValidatedStructBuilder::new()
         .string("string")
         .required_int(1)
@@ -118,7 +118,7 @@ pub fn validate_shape(c: &mut Criterion) {
     c.bench_function("Validate built shape", |b| {
         b.iter(|| {
             let _ = black_box(DefaultValidator::new().validate(&VALIDATION_STRUCT, &built_shape));
-        })
+        });
     });
 }
 
@@ -132,7 +132,7 @@ pub fn unvalidated_shape(c: &mut Criterion) {
         b.iter(|| {
             let _ =
                 black_box(DefaultValidator::new().validate(&UNVALIDATED_SHAPE, &unvalidated_shape));
-        })
+        });
     });
 }
 
@@ -151,11 +151,11 @@ pub fn builder_with_collections(c: &mut Criterion) {
     c.bench_function("Collections of Builders", |b| {
         b.iter(|| {
             let _ = black_box(DefaultValidator::new().validate(&UNVALIDATED_SHAPE, &collection));
-        })
+        });
     });
 }
 
-pub fn built_shape_with_collections(c: &mut Criterion) {
+fn built_shape_with_collections(c: &mut Criterion) {
     let built = ValidatedStructBuilder::new()
         .string("string")
         .required_int(1)
@@ -175,12 +175,12 @@ pub fn built_shape_with_collections(c: &mut Criterion) {
         b.iter(|| {
             let _ =
                 black_box(DefaultValidator::new().validate(&STRUCT_WITH_COLLECTIONS, &collection));
-        })
+        });
     });
 }
 
 // Primarily for comparison against set implementation.
-pub fn built_shape_with_list(c: &mut Criterion) {
+fn built_shape_with_list(c: &mut Criterion) {
     let built = ValidatedStructBuilder::new()
         .string("string")
         .required_int(1)
@@ -192,11 +192,11 @@ pub fn built_shape_with_list(c: &mut Criterion) {
     c.bench_function("List of Built", |b| {
         b.iter(|| {
             let _ = black_box(DefaultValidator::new().validate(&STRUCT_WITH_LIST, &collection));
-        })
+        });
     });
 }
 
-pub fn built_shape_with_set(c: &mut Criterion) {
+fn built_shape_with_set(c: &mut Criterion) {
     let built1 = ValidatedStructBuilder::new()
         .string("string")
         .required_int(2)
@@ -218,7 +218,7 @@ pub fn built_shape_with_set(c: &mut Criterion) {
     c.bench_function("Set of Built", |b| {
         b.iter(|| {
             let _ = black_box(DefaultValidator::new().validate(&STRUCT_WITH_SET, &collection));
-        })
+        });
     });
 }
 

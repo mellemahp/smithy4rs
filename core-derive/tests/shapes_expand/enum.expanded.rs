@@ -92,7 +92,7 @@ const _: () = {
         #[inline]
         #[automatically_derived]
         fn default() -> Self {
-            TestEnum::Unknown("".to_string())
+            TestEnum::Unknown(String::new())
         }
     }
 };

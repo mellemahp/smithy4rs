@@ -61,7 +61,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "unexpected member:")]
     fn test_not_contains() {
         assert_contains_all(KEYS, &["foo", "quux"]);
     }

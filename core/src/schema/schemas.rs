@@ -640,6 +640,9 @@ impl SchemaBuilder {
     }
 
     /// Build a [`SchemaValue`] and return a [`Schema`] to it.
+    ///
+    /// # Panics
+    /// TODO: Add section or remove need to panic
     // TODO(errors): Convert to `Result<Schema, BuildError>
     #[must_use]
     pub fn build(&self) -> Schema {

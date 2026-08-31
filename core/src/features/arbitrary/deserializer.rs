@@ -26,6 +26,7 @@ use crate::{
 pub struct Error(arbitrary::Error);
 impl Error {
     /// Create a new [`Error`] wrapper instance
+    #[must_use]
     pub const fn new(inner: arbitrary::Error) -> Self {
         Self(inner)
     }
@@ -183,7 +184,7 @@ const MS_PER_DAY: u32 = 24 * 60 * 60 * 1000;
 const NS_MAX_INSTANT: i128 = NS_PER_DAY as i128 * 100_000_000i128;
 const NS_MIN_INSTANT: i128 = -NS_MAX_INSTANT;
 
-impl<'de, 'a, 'u> Deserializer<'de> for ArbitraryDeserializer<'a, 'u> {
+impl<'a, 'u> Deserializer<'_> for ArbitraryDeserializer<'a, 'u> {
     type Error = Error;
     type StructReader = ArbitraryStructReader<'a, 'u>;
     type ListReader = ArbitraryListReader<'a, 'u>;

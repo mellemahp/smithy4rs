@@ -52,7 +52,7 @@ fn test_nested_struct_deserialization() {
     .build()
     .unwrap();
 
-    println!("Deserialized nested struct: {:?}", nested);
+    println!("Deserialized nested struct: {nested:?}");
 
     assert_eq!(nested.name, "test_object");
     assert_eq!(nested.count, 42);
@@ -122,7 +122,7 @@ fn test_recursive_struct_deserialization() {
             .build()
             .unwrap();
 
-    println!("Deserialized recursive struct: {:?}", top);
+    println!("Deserialized recursive struct: {top:?}");
 
     // Top
     assert_eq!(top.string_field, "level_1");
@@ -187,7 +187,7 @@ fn test_deeply_nested_without_recursion() {
     .build()
     .unwrap();
 
-    println!("Deserialized deeply nested struct: {:?}", nested);
+    println!("Deserialized deeply nested struct: {nested:?}");
 
     assert_eq!(nested.name, "complex_object");
     assert_eq!(nested.count, 100);

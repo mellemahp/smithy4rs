@@ -9,21 +9,19 @@ use smithy4rs_core::{
     smithy,
 };
 
-smithy!("test#SimpleStruct": {
-    structure SIMPLE_STRUCT {
-        A: STRING = "field_a"
-        @RequiredTrait;
-        B: INTEGER = "field_b"
+smithy!(
+    structure test::SimpleStruct {
+        fieldA: STRING
+        @RequiredTrait::builder().build();
+        fieldB: INTEGER
     }
-});
+);
 
 // TODO: Replace with validation fuzzer. This is just to verify functionality
 #[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = SIMPLE_STRUCT)]
 pub struct SimpleStruct {
-    #[schema(schema = A)]
     pub field_a: Option<String>,
-    #[schema(schema = B)]
     pub field_b: i32,
 }
 
