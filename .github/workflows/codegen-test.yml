@@ -36,7 +36,7 @@ jobs:
             caches
 
       - name: Set up rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1 # v1.15.2
+        uses: actions-rust-lang/setup-rust-toolchain@v2 # v1.15.2
         with:
           toolchain: nightly
           components: rustfmt
