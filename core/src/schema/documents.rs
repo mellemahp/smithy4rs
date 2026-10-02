@@ -1,16 +1,18 @@
 use std::{error::Error, fmt::Debug, sync::LazyLock};
-
+use bigdecimal::{num_traits, FromPrimitive, ToPrimitive};
+use num_bigint::ToBigInt;
 use thiserror::Error;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{
         SchemaShape, ShapeId, ShapeType,
-        default::{Number, Value},
         prelude::*,
     },
     serde::validation::ValidationErrors,
 };
+use crate::schema::Schema;
+
 // ============================================================================
 // Base Document Wrapper and trait
 // ============================================================================
@@ -176,6 +178,7 @@ pub trait Document: SchemaShape + Send + Sync {
 
     // ========== Basic info Methods ==========
 
+    // TODO: Does it need to be optional?
     /// Get the Shape Type for the underlying contents of the document.
     ///
     /// The type returned from this method will differ from the type of the document (which will
@@ -489,359 +492,380 @@ impl crate::serde::de::Error for DocumentError {
 }
 
 // ============================================================================
-// Default Document Implementation
+// Static Document Implementation
 // ============================================================================
 
-pub(crate) mod default {
-    use bigdecimal::ToPrimitive;
+/// Static/Default Document Implementation
+///
+/// This implementation is used for in-place conversion of generated shapes to
+/// documents.
+///
+/// In order to support proper debug printing and serialization of these documents
+/// they include a reference to the static schema of the corresponding generated shape.
+/// For documents instantiated by a deserializer users should always prefer a
+/// schema-less document type specific to that deserializer
+///
+/// TODO: Include examples!
+#[derive(Clone, PartialEq, Debug)]
+pub struct StaticDocument {
+    /// Reference to the static schema for the shape this was generated from
+    pub schema: &'static Schema,
+    /// Document value
+    pub value: Value
+}
 
-    use crate::{
-        BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-        schema::{DocumentError, Schema, SchemaShape, ShapeId, ShapeType},
+impl SchemaShape for StaticDocument {
+    fn schema(&self) -> &Schema {
+        self.schema
+    }
+}
+
+/// Possible Values for this document
+///
+/// See: <https://smithy.io/2.0/spec/simple-types.html#document>
+#[derive(Clone, PartialEq, Debug)]
+pub enum Value {
+    /// An Empty document
+    Null,
+    /// A numeric document
+    Number(Number),
+    /// A boolean document
+    Boolean(bool),
+    /// A blob document
+    Blob(ByteBuffer),
+    /// A string document
+    String(String),
+    /// A timestamp document
+    Timestamp(Instant),
+    /// A list document
+    List(Vec<Box<dyn Document>>),
+    /// A map document
+    Map(IndexMap<String, Box<dyn Document>>),
+}
+
+/// Represents numbers in the smithy data model
+///
+/// Smithy numbers types include: byte, short, integer, long, float, double, bigInteger, bigDecimal.
+///
+/// <div class ="note">
+/// **NOTE**: `IntEnum` shapes are represented as integers in the Smithy data model.
+/// </div>
+#[derive(Debug, Clone, PartialEq)]
+pub enum Number {
+    /// Smithy `byte` type
+    Byte(i8),
+    /// Smithy `short` type
+    Short(i16),
+    /// Smithy `integer` type
+    Integer(i32),
+    /// Smithy `long` type
+    Long(i64),
+    /// Smithy `big_integer` type
+    BigInt(BigInt),
+    /// Smithy `float` type
+    Float(f32),
+    /// Smithy `double` type
+    Double(f64),
+    /// Smithy `big_decimal` type
+    BigDecimal(BigDecimal),
+}
+
+macro_rules! as_variant {
+    ($variant:ident, $value:expr) => {
+        if let Value::$variant(value) = $value {
+            Some(value)
+        } else {
+            None
+        }
     };
 
-    #[derive(Clone, PartialEq, Debug)]
-    pub struct Document {
-        pub schema: Schema,
-        pub value: Value,
-        pub discriminator: Option<ShapeId>,
+    ($variant:ident, ref $value:expr) => {
+        if let Value::$variant(ref value) = $value {
+            Some(value)
+        } else {
+            None
+        }
+    };
+}
+
+macro_rules! into_variant {
+    ($variant:ident, $value:expr, $msg:expr) => {
+        match $value {
+            Value::$variant(v) => Ok(v),
+            _ => Err(DocumentError::DocumentConversion($msg.to_string()))
+        }
+    };
+}
+
+macro_rules! as_int {
+    ($to_method:ident, $value:expr) => {
+        match $value {
+            Value::Number(Number::Byte(n)) => n.try_into().ok(),
+            Value::Number(Number::Short(n)) => n.try_into().ok(),
+            Value::Number(Number::Integer(n)) => n.try_into().ok(),
+            Value::Number(Number::Long(n)) => n.try_into().ok(),
+            Value::Number(Number::BigInt(ref b)) => b.$to_method(),
+            _ => None,
+        }
+    };
+}
+
+macro_rules! as_float {
+    ($to_method:ident, $value:expr) => {
+        match $value {
+            Value::Number(Number::Float(f)) => num_traits::cast(f),
+            Value::Number(Number::Double(d)) => num_traits::cast(d),
+            Value::Number(Number::BigDecimal(ref b)) => b.$to_method(),
+            _ => None,
+        }
+    };
+}
+
+macro_rules! into_int {
+    ($target_type:ident, $to_method:ident, $value:expr) => {{
+        let err = || DocumentError::DocumentConversion(
+            concat!("Invalid conversion to ", stringify!($target_type)).to_string()
+        );
+
+        match $value {
+            Value::Number(Number::Byte(n)) => n.try_into().map_err(|_| err()),
+            Value::Number(Number::Short(n)) => n.try_into().map_err(|_| err()),
+            Value::Number(Number::Integer(n)) => n.try_into().map_err(|_| err()),
+            Value::Number(Number::Long(n)) => n.try_into().map_err(|_| err()),
+            Value::Number(Number::BigInt(b)) => b.$to_method().ok_or_else(err),
+            _ => Err(err()),
+        }
+    }};
+}
+
+macro_rules! into_float {
+    ($target_type:ident, $to_method:ident, $value:expr) => {{
+        let err = || DocumentError::DocumentConversion(
+            concat!("Invalid conversion to ", stringify!($target_type)).to_string()
+        );
+
+        match $value {
+            Value::Number(Number::Float(f)) => num_traits::cast(f).ok_or_else(err),
+            Value::Number(Number::Double(d)) => num_traits::cast(d).ok_or_else(err),
+            Value::Number(Number::BigDecimal(b)) => b.$to_method().ok_or_else(err),
+            _ => Err(err()),
+        }
+    }};
+}
+
+impl Document for StaticDocument {
+    #[inline]
+    fn discriminator(&self) -> Option<&ShapeId> {
+        // A static document ALWAYS has a discriminator
+        // as it was generated from a shape with a concrete ID
+        Some(self.schema.id())
     }
 
-    impl SchemaShape for Document {
-        fn schema(&self) -> &Schema {
-            &self.schema
-        }
+    // TODO: Is this even needed? Couldnt we just use the schema type?
+    #[inline]
+    fn get_type(&self) -> Option<&ShapeType> {
+        Some(self.schema.shape_type())
     }
 
-    #[derive(Clone, PartialEq, Debug)]
-    pub enum Value {
-        Null,
-        Number(Number),
-        Boolean(bool),
-        Blob(ByteBuffer),
-        String(String),
-        Timestamp(Instant),
-        List(Vec<Box<dyn super::Document>>),
-        Map(IndexMap<String, Box<dyn super::Document>>),
-    }
-
-    impl super::Document for Document {
-        fn discriminator(&self) -> Option<&ShapeId> {
-            self.discriminator.as_ref()
-        }
-
-        fn get_type(&self) -> Option<&ShapeType> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    Number::Byte(_) => Some(&ShapeType::Byte),
-                    Number::Short(_) => Some(&ShapeType::Short),
-                    Number::Integer(_) => Some(&ShapeType::Integer),
-                    Number::Long(_) => Some(&ShapeType::Long),
-                    Number::BigInt(_) => Some(&ShapeType::BigInteger),
-                    Number::Float(_) => Some(&ShapeType::Float),
-                    Number::Double(_) => Some(&ShapeType::Double),
-                    Number::BigDecimal(_) => Some(&ShapeType::BigDecimal),
-                },
-                Value::Boolean(_) => Some(&ShapeType::Boolean),
-                Value::Blob(_) => Some(&ShapeType::Blob),
-                Value::String(_) => Some(&ShapeType::String),
-                Value::Timestamp(_) => Some(&ShapeType::Timestamp),
-                Value::List(_) => Some(&ShapeType::List),
-                Value::Map(_) => {
-                    if self.schema.shape_type() == &ShapeType::Map {
-                        Some(&ShapeType::Map)
-                    } else {
-                        // If we created the document from a structure schema, treat it as a struct
-                        Some(&ShapeType::Structure)
-                    }
-                }
-                // Null is not representable as a shape type
-                Value::Null => None,
-            }
-        }
-
-        fn size(&self) -> usize {
-            match &self.value {
-                Value::List(v) => v.len(),
-                Value::Map(v) => v.len(),
-                _ => 0,
-            }
-        }
-
-        fn as_blob(&self) -> Option<&ByteBuffer> {
-            if let Value::Blob(b) = &self.value {
-                Some(b)
-            } else {
-                None
-            }
-        }
-
-        fn as_bool(&self) -> Option<bool> {
-            if let Value::Boolean(b) = &self.value {
-                Some(*b)
-            } else {
-                None
-            }
-        }
-
-        fn as_string(&self) -> Option<&str> {
-            if let Value::String(s) = &self.value {
-                Some(s.as_str())
-            } else {
-                None
-            }
-        }
-
-        fn as_timestamp(&self) -> Option<&Instant> {
-            if let Value::Timestamp(t) = &self.value {
-                Some(t)
-            } else {
-                None
-            }
-        }
-
-        fn as_byte(&self) -> Option<i8> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    &Number::Byte(b) => Some(b),
-                    &Number::Short(s) => s.try_into().ok(),
-                    &Number::Integer(i) => i.try_into().ok(),
-                    &Number::Long(l) => l.try_into().ok(),
-                    Number::BigInt(b) => b.to_i8(),
-                    _ => None,
-                },
-                _ => None,
-            }
-        }
-
-        fn as_short(&self) -> Option<i16> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    &Number::Byte(b) => Some(b.into()),
-                    &Number::Short(s) => Some(s),
-                    &Number::Integer(i) => i.try_into().ok(),
-                    &Number::Long(l) => l.try_into().ok(),
-                    Number::BigInt(b) => b.to_i16(),
-                    _ => None,
-                },
-                _ => None,
-            }
-        }
-
-        fn as_integer(&self) -> Option<i32> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    &Number::Byte(b) => Some(b.into()),
-                    &Number::Short(s) => Some(s.into()),
-                    &Number::Integer(i) => Some(i),
-                    &Number::Long(l) => l.try_into().ok(),
-                    Number::BigInt(b) => b.to_i32(),
-                    _ => None,
-                },
-                _ => None,
-            }
-        }
-
-        fn as_long(&self) -> Option<i64> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    &Number::Byte(b) => Some(b.into()),
-                    &Number::Short(s) => Some(s.into()),
-                    &Number::Integer(i) => Some(i.into()),
-                    &Number::Long(l) => Some(l),
-                    Number::BigInt(b) => b.to_i64(),
-                    _ => None,
-                },
-                _ => None,
-            }
-        }
-
-        fn as_float(&self) -> Option<f32> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    &Number::Float(f) => Some(f),
-                    &Number::Double(d) => Some(d as f32),
-                    Number::BigDecimal(b) => b.to_f32(),
-                    _ => None,
-                },
-                _ => None,
-            }
-        }
-
-        fn as_double(&self) -> Option<f64> {
-            match &self.value {
-                Value::Number(n) => match n {
-                    &Number::Float(f) => Some(f.into()),
-                    &Number::Double(d) => Some(d),
-                    Number::BigDecimal(b) => b.to_f64(),
-                    _ => None,
-                },
-                _ => None,
-            }
-        }
-
-        fn as_big_integer(&self) -> Option<&BigInt> {
-            todo!()
-        }
-
-        fn as_big_decimal(&self) -> Option<&BigDecimal> {
-            todo!()
-        }
-
-        fn as_list(&self) -> Option<&Vec<Box<dyn super::Document>>> {
-            if let Value::List(document_list) = &self.value {
-                Some(document_list)
-            } else {
-                None
-            }
-        }
-
-        fn as_map(&self) -> Option<&IndexMap<String, Box<dyn super::Document>>> {
-            if let Value::Map(document_map) = &self.value {
-                Some(document_map)
-            } else {
-                None
-            }
-        }
-
-        fn is_null(&self) -> bool {
-            matches!(self.value, Value::Null)
-        }
-
-        fn into_blob(self: Box<Self>) -> Result<ByteBuffer, DocumentError> {
-            if let Value::Blob(value) = self.value {
-                Ok(value)
-            } else {
-                Err(DocumentError::DocumentConversion(
-                    "Expected blob document".to_string(),
-                ))
-            }
-        }
-
-        fn into_bool(self: Box<Self>) -> Result<bool, DocumentError> {
-            if let Value::Boolean(value) = self.value {
-                Ok(value)
-            } else {
-                Err(DocumentError::DocumentConversion(
-                    "Expected boolean document".to_string(),
-                ))
-            }
-        }
-
-        fn into_string(self: Box<Self>) -> Result<String, DocumentError> {
-            if let Value::String(value) = self.value {
-                Ok(value)
-            } else {
-                Err(DocumentError::DocumentConversion(
-                    "Expected string document".to_string(),
-                ))
-            }
-        }
-
-        fn into_timestamp(self: Box<Self>) -> Result<Instant, DocumentError> {
-            if let Value::Timestamp(value) = self.value {
-                Ok(value)
-            } else {
-                Err(DocumentError::DocumentConversion(
-                    "Expected timestamp document".to_string(),
-                ))
-            }
-        }
-
-        // TODO(numeric conversion): Review these numeric conversions.
-        fn into_byte(self: Box<Self>) -> Result<i8, DocumentError> {
-            self.as_byte().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected byte document".to_string())
-            })
-        }
-
-        fn into_short(self: Box<Self>) -> Result<i16, DocumentError> {
-            self.as_short().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected short document".to_string())
-            })
-        }
-
-        fn into_integer(self: Box<Self>) -> Result<i32, DocumentError> {
-            self.as_integer().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected integer document".to_string())
-            })
-        }
-
-        fn into_long(self: Box<Self>) -> Result<i64, DocumentError> {
-            self.as_long().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected long document".to_string())
-            })
-        }
-
-        fn into_float(self: Box<Self>) -> Result<f32, DocumentError> {
-            self.as_float().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected float document".to_string())
-            })
-        }
-
-        fn into_double(self: Box<Self>) -> Result<f64, DocumentError> {
-            self.as_double().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected double document".to_string())
-            })
-        }
-
-        // TODO(numeric conversion): These shouldnt need to clone.
-        fn into_big_integer(self: Box<Self>) -> Result<BigInt, DocumentError> {
-            self.as_big_integer().cloned().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected bigInteger document".to_string())
-            })
-        }
-
-        fn into_big_decimal(self: Box<Self>) -> Result<BigDecimal, DocumentError> {
-            self.as_big_decimal().cloned().ok_or_else(|| {
-                DocumentError::DocumentConversion("Expected bigInteger document".to_string())
-            })
-        }
-
-        fn into_list(self: Box<Self>) -> Result<Vec<Box<dyn super::Document>>, DocumentError> {
-            if let Value::List(value) = self.value {
-                Ok(value)
-            } else {
-                Err(DocumentError::DocumentConversion(
-                    "Expected list document".to_string(),
-                ))
-            }
-        }
-
-        fn into_map(
-            self: Box<Self>,
-        ) -> Result<IndexMap<String, Box<dyn super::Document>>, DocumentError> {
-            if let Value::Map(value) = self.value {
-                Ok(value)
-            } else {
-                Err(DocumentError::DocumentConversion(
-                    "Expected map document".to_string(),
-                ))
-            }
-        }
-
-        fn box_clone(&self) -> Box<dyn super::Document> {
-            Box::new(self.clone())
+    #[inline]
+    fn size(&self) -> usize {
+        match &self.value {
+            Value::List(v) => v.len(),
+            Value::Map(v) => v.len(),
+            _ => 0,
         }
     }
 
-    /// Represents numbers in the smithy data model
-    ///
-    /// Smithy numbers types include: byte, short, integer, long, float, double, bigInteger, bigDecimal.
-    ///
-    /// <div class ="note">
-    /// **NOTE**: `IntEnum` shapes are represented as integers in the Smithy data model.
-    /// </div>
-    #[derive(Debug, Clone, PartialEq)]
-    pub enum Number {
-        Byte(i8),
-        Short(i16),
-        Integer(i32),
-        Long(i64),
-        BigInt(BigInt),
-        Float(f32),
-        Double(f64),
-        BigDecimal(BigDecimal),
+    #[inline]
+    fn as_blob(&self) -> Option<&ByteBuffer> {
+        as_variant!(Blob, ref self.value)
+    }
+
+    #[inline]
+    fn as_bool(&self) -> Option<bool> {
+        as_variant!(Boolean, self.value)
+    }
+
+    #[inline]
+    fn as_string(&self) -> Option<&str> {
+        as_variant!(String, ref self.value)
+    }
+
+    #[inline]
+    fn as_timestamp(&self) -> Option<&Instant> {
+        as_variant!(Timestamp, ref self.value)
+    }
+
+    #[inline]
+    fn as_byte(&self) -> Option<i8> {
+        as_int!(to_i8, self.value)
+    }
+
+    #[inline]
+    fn as_short(&self) -> Option<i16> {
+        as_int!(to_i16, self.value)
+    }
+
+    #[inline]
+    fn as_integer(&self) -> Option<i32> {
+        as_int!(to_i32, self.value)
+    }
+
+    #[inline]
+    fn as_long(&self) -> Option<i64> {
+        as_int!(to_i64, self.value)
+    }
+
+    #[inline]
+    fn as_float(&self) -> Option<f32> {
+        as_float!(to_f32, self.value)
+    }
+
+    #[inline]
+    fn as_double(&self) -> Option<f64> {
+        as_float!(to_f64, self.value)
+    }
+
+    #[inline]
+    fn as_big_integer(&self) -> Option<&BigInt> {
+        if let Value::Number(Number::BigInt(ref b)) = self.value {
+            Some(b)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn as_big_decimal(&self) -> Option<&BigDecimal> {
+        if let Value::Number(Number::BigDecimal(ref b)) = self.value {
+            Some(b)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn as_list(&self) -> Option<&Vec<Box<dyn Document>>> {
+        as_variant!(List, ref self.value)
+    }
+
+    #[inline]
+    fn as_map(&self) -> Option<&IndexMap<String, Box<dyn Document>>> {
+        as_variant!(Map, ref self.value)
+    }
+
+    #[inline]
+    fn is_null(&self) -> bool {
+        matches!(&self.value, Value::Null)
+    }
+
+    #[inline]
+    fn into_blob(self: Box<Self>) -> Result<ByteBuffer, DocumentError> {
+        into_variant!(Blob, self.value, "Expected blob document")
+    }
+
+    #[inline]
+    fn into_bool(self: Box<Self>) -> Result<bool, DocumentError> {
+        into_variant!(Boolean, self.value, "Expected boolean document")
+    }
+
+    #[inline]
+    fn into_string(self: Box<Self>) -> Result<String, DocumentError> {
+        into_variant!(String, self.value, "Expected string document")
+    }
+
+    #[inline]
+    fn into_timestamp(self: Box<Self>) -> Result<Instant, DocumentError> {
+        into_variant!(Timestamp, self.value, "Expected timestamp document")
+    }
+
+    #[inline]
+    fn into_byte(self: Box<Self>) -> Result<i8, DocumentError> {
+        into_int!(i8, to_i8, self.value)
+    }
+
+    #[inline]
+    fn into_short(self: Box<Self>) -> Result<i16, DocumentError> {
+        into_int!(i16, to_i16, self.value)
+    }
+
+    #[inline]
+    fn into_integer(self: Box<Self>) -> Result<i32, DocumentError> {
+        into_int!(i32, to_i32, self.value)
+    }
+
+    #[inline]
+    fn into_long(self: Box<Self>) -> Result<i64, DocumentError> {
+        into_int!(i64, to_i64, self.value)
+    }
+
+    fn into_float(self: Box<Self>) -> Result<f32, DocumentError> {
+        into_float!(f32, to_f32, self.value)
+    }
+
+    fn into_double(self: Box<Self>) -> Result<f64, DocumentError> {
+        into_float!(f64, to_f64, self.value)
+    }
+
+    #[inline]
+    fn into_big_integer(self: Box<Self>) -> Result<BigInt, DocumentError> {
+        let err = || DocumentError::DocumentConversion(
+            "Invalid conversion to BigInt".to_string()
+        );
+
+        match self.value {
+            Value::Number(Number::BigInt(b)) => Ok(b),
+            Value::Number(Number::BigDecimal(b)) => b.to_bigint().ok_or_else(err),
+            Value::Number(Number::Byte(n)) => Ok(BigInt::from(n)),
+            Value::Number(Number::Short(n)) => Ok(BigInt::from(n)),
+            Value::Number(Number::Integer(n)) => Ok(BigInt::from(n)),
+            Value::Number(Number::Long(n)) => Ok(BigInt::from(n)),
+            Value::Number(Number::Float(f)) => BigInt::from_f32(f).ok_or_else(err),
+            Value::Number(Number::Double(d)) => BigInt::from_f64(d).ok_or_else(err),
+            _ => Err(err()),
+        }
+    }
+
+    #[inline]
+    fn into_big_decimal(self: Box<Self>) -> Result<BigDecimal, DocumentError> {
+        let err = || DocumentError::DocumentConversion(
+            "Invalid conversion to BigDecimal".to_string()
+        );
+
+        match self.value {
+            Value::Number(Number::BigDecimal(b)) => Ok(b),
+            Value::Number(Number::BigInt(b)) => Ok(BigDecimal::from_bigint(b, 0)),
+            Value::Number(Number::Byte(n)) => Ok(BigDecimal::from(n)),
+            Value::Number(Number::Short(n)) => Ok(BigDecimal::from(n)),
+            Value::Number(Number::Integer(n)) => Ok(BigDecimal::from(n)),
+            Value::Number(Number::Long(n)) => Ok(BigDecimal::from(n)),
+            Value::Number(Number::Float(f)) => BigDecimal::from_f32(f).ok_or_else(err),
+            Value::Number(Number::Double(d)) => BigDecimal::from_f64(d).ok_or_else(err),
+            _ => Err(err()),
+        }
+    }
+
+    #[inline]
+    fn into_list(self: Box<Self>) -> Result<Vec<Box<dyn Document>>, DocumentError> {
+        into_variant!(List, self.value, "Expected list document")
+    }
+
+    #[inline]
+    fn into_map(self: Box<Self>) -> Result<IndexMap<String, Box<dyn Document>>, DocumentError> {
+        into_variant!(Map, self.value, "Expected map document")
+    }
+
+    #[inline]
+    fn box_clone(&self) -> Box<dyn Document> {
+        Box::new(self.clone())
+    }
+}
+
+// === FROM IMPLS ===
+impl From<StaticDocument> for Box<dyn Document> {
+    #[inline]
+    fn from(value: StaticDocument) -> Self {
+        Box::new(value)
     }
 }
 
@@ -849,179 +873,36 @@ pub(crate) mod default {
 // Conversions INTO Default Document
 // ============================================================================
 
-impl From<default::Document> for Box<dyn Document> {
-    #[inline]
-    fn from(value: default::Document) -> Self {
-        Box::new(value)
-    }
+macro_rules! doc_from_primitive {
+    ($src_type:ty, $schema:expr, $value_expr:expr) => {
+        impl From<$src_type> for Box<dyn Document> {
+            #[inline]
+            fn from(value: $src_type) -> Self {
+                StaticDocument {
+                    schema: &$schema,
+                    value: $value_expr(value),
+                }
+                .into()
+            }
+        }
+    };
 }
+doc_from_primitive!(bool, BOOLEAN, Value::Boolean);
 
-impl From<bool> for Box<dyn Document> {
-    #[inline]
-    fn from(value: bool) -> Self {
-        default::Document {
-            schema: BOOLEAN.clone(),
-            value: Value::Boolean(value),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<i8> for Box<dyn Document> {
-    #[inline]
-    fn from(value: i8) -> Self {
-        default::Document {
-            schema: BYTE.clone(),
-            value: Value::Number(Number::Byte(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<i16> for Box<dyn Document> {
-    #[inline]
-    fn from(value: i16) -> Self {
-        default::Document {
-            schema: SHORT.clone(),
-            value: Value::Number(Number::Short(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<i32> for Box<dyn Document> {
-    #[inline]
-    fn from(value: i32) -> Self {
-        default::Document {
-            schema: INTEGER.clone(),
-            value: Value::Number(Number::Integer(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<i64> for Box<dyn Document> {
-    #[inline]
-    fn from(value: i64) -> Self {
-        default::Document {
-            schema: LONG.clone(),
-            value: Value::Number(Number::Long(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<f32> for Box<dyn Document> {
-    #[inline]
-    fn from(value: f32) -> Self {
-        default::Document {
-            schema: FLOAT.clone(),
-            value: Value::Number(Number::Float(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<f64> for Box<dyn Document> {
-    #[inline]
-    fn from(value: f64) -> Self {
-        default::Document {
-            schema: DOUBLE.clone(),
-            value: Value::Number(Number::Double(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<&str> for Box<dyn Document> {
-    #[inline]
-    fn from(value: &str) -> Self {
-        default::Document {
-            schema: STRING.clone(),
-            value: Value::String(value.to_string()),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<BigInt> for Box<dyn Document> {
-    #[inline]
-    fn from(value: BigInt) -> Self {
-        default::Document {
-            schema: BIG_INTEGER.clone(),
-            value: Value::Number(Number::BigInt(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<BigDecimal> for Box<dyn Document> {
-    #[inline]
-    fn from(value: BigDecimal) -> Self {
-        default::Document {
-            schema: BIG_DECIMAL.clone(),
-            value: Value::Number(Number::BigDecimal(value)),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<ByteBuffer> for Box<dyn Document> {
-    #[inline]
-    fn from(value: ByteBuffer) -> Self {
-        default::Document {
-            schema: BLOB.clone(),
-            value: Value::Blob(value),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<String> for Box<dyn Document> {
-    #[inline]
-    fn from(value: String) -> Self {
-        default::Document {
-            schema: STRING.clone(),
-            value: Value::String(value),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-
-impl From<Instant> for Box<dyn Document> {
-    #[inline]
-    fn from(value: Instant) -> Self {
-        default::Document {
-            schema: TIMESTAMP.clone(),
-            value: Value::Timestamp(value),
-            discriminator: None,
-        }
-        .into()
-    }
-}
-impl From<&Instant> for Box<dyn Document> {
-    #[inline]
-    fn from(value: &Instant) -> Self {
-        default::Document {
-            schema: TIMESTAMP.clone(),
-            value: Value::Timestamp(*value),
-            discriminator: None,
-        }
-        .into()
-    }
-}
+// Numbers
+doc_from_primitive!(i8, BYTE, |v| Value::Number(Number::Byte(v)));
+doc_from_primitive!(i16, SHORT, |v| Value::Number(Number::Short(v)));
+doc_from_primitive!(i32, INTEGER, |v| Value::Number(Number::Integer(v)));
+doc_from_primitive!(i64, LONG, |v| Value::Number(Number::Long(v)));
+doc_from_primitive!(f32, FLOAT, |v| Value::Number(Number::Float(v)));
+doc_from_primitive!(f64, DOUBLE, |v| Value::Number(Number::Double(v)));
+doc_from_primitive!(&str, STRING, |v: &str| Value::String(v.to_string()));
+doc_from_primitive!(BigInt, BIG_INTEGER, |v| Value::Number(Number::BigInt(v)));
+doc_from_primitive!(BigDecimal, BIG_DECIMAL, |v| Value::Number(Number::BigDecimal(v)));
+doc_from_primitive!(ByteBuffer, BLOB, Value::Blob);
+doc_from_primitive!(String, STRING, Value::String);
+doc_from_primitive!(Instant, TIMESTAMP, Value::Timestamp);
+doc_from_primitive!(&Instant, TIMESTAMP, |v: &Instant| Value::Timestamp(*v));
 
 mod list {
     use crate::{prelude::DOCUMENT as PRELUDE_DOCUMENT, smithy};
@@ -1040,10 +921,9 @@ impl<T: Into<Box<dyn Document>>> From<Vec<T>> for Box<dyn Document> {
         for v in value {
             result.push(v.into());
         }
-        default::Document {
-            schema: list::DOCUMENT.clone(),
+        StaticDocument {
+            schema: &list::DOCUMENT,
             value: Value::List(result),
-            discriminator: None,
         }
         .into()
     }
@@ -1070,10 +950,9 @@ impl<T: Into<Box<dyn Document>>> From<IndexMap<String, T>> for Box<dyn Document>
         for (key, value) in value {
             result.insert(key, value.into());
         }
-        default::Document {
-            schema: map::DOCUMENT.clone(),
+        StaticDocument {
+            schema: &map::DOCUMENT,
             value: Value::Map(result),
-            discriminator: None,
         }
         .into()
     }
@@ -1085,10 +964,9 @@ macro_rules! option_conversion {
             fn from(value: Option<$ty>) -> Self {
                 value.map_or_else(
                     || {
-                        default::Document {
-                            schema: $schema.clone(),
+                        StaticDocument {
+                            schema: &$schema,
                             value: Value::Null,
-                            discriminator: None,
                         }
                         .into()
                     },
@@ -1267,10 +1145,9 @@ impl dyn Document {
 // =========================================================================
 #[doc(hidden)]
 pub static NULL: LazyLock<Box<dyn Document>> = LazyLock::new(|| {
-    default::Document {
-        schema: DOCUMENT.clone(),
+    StaticDocument {
+        schema: &DOCUMENT,
         value: Value::Null,
-        discriminator: None,
     }
     .into()
 });

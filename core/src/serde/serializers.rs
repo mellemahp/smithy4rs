@@ -15,7 +15,7 @@
 //! This design (inspired by `serde`) separates iteration from value reading,
 //! allowing callers to control the serialization flow.
 use std::{error::Error as StdError, fmt::Display};
-
+use std::convert::Infallible;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, Schema, SchemaShape, ShapeId},
@@ -74,6 +74,14 @@ pub trait SerializeWithSchema {
 pub trait Error: Sized + StdError {
     /// Create an error with a custom message
     fn custom<T: Display>(msg: T) -> Self;
+}
+
+
+// TODO: Is this wise?
+impl Error for Infallible {
+    fn custom<T: Display>(_msg: T) -> Self {
+        unreachable!()
+    }
 }
 
 // ============================================================================

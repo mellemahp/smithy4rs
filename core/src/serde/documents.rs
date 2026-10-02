@@ -1,11 +1,11 @@
+use std::convert::Infallible;
 use std::fmt::Display;
-
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     prelude::RequiredTrait,
     schema::{
-        Document, DocumentError, NULL, Schema, ShapeId, ShapeType, StaticSchemaShape,
-        TryFromDocument, default::Value,
+        Document, DocumentError, Schema, ShapeType, StaticSchemaShape,
+        TryFromDocument, Value,
     },
     serde::{
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
@@ -15,6 +15,9 @@ use crate::{
         utils::KeySerializer,
     },
 };
+use crate::schema::{Number, StaticDocument};
+use crate::serde::serializers::SerializableShape;
+
 // ============================================================================
 // Errors
 // ============================================================================
@@ -26,7 +29,7 @@ impl Error for DocumentError {
 }
 
 // ============================================================================
-// Serialization INTO document
+// Serialization of a document
 // ============================================================================
 
 impl SerializeWithSchema for Box<dyn Document> {
@@ -107,93 +110,128 @@ impl SerializeWithSchema for Box<dyn Document> {
     }
 }
 
-impl<T> From<T> for Box<dyn Document>
-where
-    T: StaticSchemaShape + SerializeWithSchema,
-{
+// ============================================================================
+// Deserialize a generated shape into a document
+//
+// NOTE: This consumes the shape
+// ============================================================================
+
+impl<T: StaticSchemaShape + SerializableShape> From<T> for Box<dyn Document> {
     fn from(shape: T) -> Self {
+        let schema = <T as StaticSchemaShape>::schema();
         shape
-            .serialize_with_schema(T::schema(), DocumentParser)
-            .expect(
-                "Infallible conversion from StaticSchemaShape to Document failed - this is a bug",
-            )
+            .serialize_with_schema(schema, StaticDocumentParser::new(schema))
+            .expect("Shape failed to serialize to document. This should never happen.")
     }
 }
 
-struct DocumentParser;
-// TODO(document validation): Should this have schema type validation?
-impl Serializer for DocumentParser {
-    type Error = DocumentError;
+struct StaticDocumentParser {
+    schema: &'static Schema,
+}
+impl StaticDocumentParser {
+    fn new(schema: &'static Schema) -> Self {
+        StaticDocumentParser { schema }
+    }
+}
+impl Serializer for StaticDocumentParser {
+    type Error = Infallible;
     type Ok = Box<dyn Document>;
     type ListWriter = DocumentListAccumulator;
     type MapWriter = DocumentMapAccumulator;
-    type StructWriter = DocumentMapAccumulator;
+    type StructWriter = DocumentStructAccumulator;
 
     #[inline]
-    fn write_struct(self, schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error> {
-        Ok(DocumentMapAccumulator {
-            schema: schema.clone(),
+    fn write_struct(self, _schema: &Schema, len: usize) -> Result<Self::StructWriter, Self::Error> {
+        Ok(DocumentStructAccumulator {
+            root_schema: self.schema,
             values: IndexMap::with_capacity(len),
-            discriminator: Some(schema.id().clone()),
         })
     }
 
     #[inline]
-    fn write_map(self, schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error> {
+    fn write_map(self, _schema: &Schema, len: usize) -> Result<Self::MapWriter, Self::Error> {
+        let value_schema = self.schema.get_member("value").expect("must be map schema");
         Ok(DocumentMapAccumulator {
-            schema: schema.clone(),
+            root_schema: self.schema,
+            value_schema,
             values: IndexMap::with_capacity(len),
-            discriminator: Some(schema.id().clone()),
         })
     }
 
     #[inline]
-    fn write_list(self, schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error> {
+    fn write_list(self, _schema: &Schema, len: usize) -> Result<Self::ListWriter, Self::Error> {
+
+        let item_schema = self.schema.get_member("member")
+            .expect("must be list");
         Ok(DocumentListAccumulator {
-            schema: schema.clone(),
+            root_schema: self.schema,
+            item_schema,
             values: Vec::with_capacity(len),
-            discriminator: Some(schema.id().clone()),
         })
     }
 
     #[inline]
     fn write_boolean(self, _schema: &Schema, value: bool) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Boolean(value),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_byte(self, _schema: &Schema, value: i8) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::Byte(value)),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_short(self, _schema: &Schema, value: i16) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::Short(value)),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_integer(self, _schema: &Schema, value: i32) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::Integer(value)),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_long(self, _schema: &Schema, value: i64) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::Long(value)),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_float(self, _schema: &Schema, value: f32) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::Float(value)),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_double(self, _schema: &Schema, value: f64) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::Double(value)),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_big_integer(self, _schema: &Schema, value: &BigInt) -> Result<Self::Ok, Self::Error> {
-        Ok(value.clone().into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::BigInt(value.clone())),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
@@ -202,22 +240,34 @@ impl Serializer for DocumentParser {
         _schema: &Schema,
         value: &BigDecimal,
     ) -> Result<Self::Ok, Self::Error> {
-        Ok(value.clone().into())
+        Ok(StaticDocument {
+            value: Value::Number(Number::BigDecimal(value.clone())),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_string(self, _schema: &Schema, value: &str) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::String(value.to_string()),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_blob(self, _schema: &Schema, value: &ByteBuffer) -> Result<Self::Ok, Self::Error> {
-        Ok(value.clone().into())
+        Ok(StaticDocument {
+            value: Value::Blob(value.clone()),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
     fn write_timestamp(self, _schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
-        Ok(value.into())
+        Ok(StaticDocument {
+            value: Value::Timestamp(*value),
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
@@ -231,24 +281,27 @@ impl Serializer for DocumentParser {
 
     #[inline]
     fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
-        Ok(NULL.clone())
+        Ok(StaticDocument {
+            value: Value::Null,
+            schema: self.schema
+        }.into())
     }
 
     #[inline]
-    fn skip(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
+    fn skip(self, schema: &Schema) -> Result<Self::Ok, Self::Error> {
         // When skipping (e.g., for None values), return a null document
-        Ok(NULL.clone())
+        self.write_null(schema)
     }
 }
 
 #[doc(hidden)]
 pub struct DocumentListAccumulator {
-    schema: Schema,
+    root_schema: &'static Schema,
+    item_schema: &'static Schema,
     values: Vec<Box<dyn Document>>,
-    discriminator: Option<ShapeId>,
 }
 impl ListWriter for DocumentListAccumulator {
-    type Error = DocumentError;
+    type Error = Infallible;
     type Ok = Box<dyn Document>;
 
     #[inline]
@@ -256,17 +309,18 @@ impl ListWriter for DocumentListAccumulator {
     where
         T: SerializeWithSchema,
     {
-        let el = value.serialize_with_schema(element_schema, DocumentParser)?;
+        let el = value.serialize_with_schema(element_schema, StaticDocumentParser {
+            schema: self.item_schema,
+        })?;
         self.values.push(el);
         Ok(())
     }
 
     #[inline]
     fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
-        Ok(crate::schema::default::Document {
-            schema: self.schema,
+        Ok(StaticDocument {
+            schema: self.root_schema,
             value: Value::List(self.values),
-            discriminator: self.discriminator,
         }
         .into())
     }
@@ -274,12 +328,12 @@ impl ListWriter for DocumentListAccumulator {
 
 #[doc(hidden)]
 pub struct DocumentMapAccumulator {
-    schema: Schema,
+    root_schema: &'static Schema,
+    value_schema: &'static Schema,
     values: IndexMap<String, Box<dyn Document>>,
-    discriminator: Option<ShapeId>,
 }
 impl MapWriter for DocumentMapAccumulator {
-    type Error = DocumentError;
+    type Error = Infallible;
     type Ok = Box<dyn Document>;
 
     #[inline]
@@ -295,26 +349,28 @@ impl MapWriter for DocumentMapAccumulator {
         V: SerializeWithSchema,
     {
         // Serialize the key to get its string representation
-        let key_str =
-            key.serialize_with_schema(key_schema, &mut KeySerializer::<DocumentError>::new())?;
-        let val = value.serialize_with_schema(value_schema, DocumentParser)?;
+        let key_str = key.serialize_with_schema(key_schema, &mut KeySerializer::<Infallible>::new())?;
+        let val = value.serialize_with_schema(value_schema, StaticDocumentParser { schema: self.value_schema })?;
         self.values.insert(key_str, val);
         Ok(())
     }
 
     #[inline]
     fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
-        Ok(crate::schema::default::Document {
-            schema: self.schema,
+        Ok(StaticDocument {
+            schema: self.root_schema,
             value: Value::Map(self.values),
-            discriminator: self.discriminator,
         }
         .into())
     }
 }
 
-impl StructWriter for DocumentMapAccumulator {
-    type Error = DocumentError;
+struct DocumentStructAccumulator {
+    root_schema: &'static Schema,
+    values: IndexMap<String, Box<dyn Document>>,
+}
+impl StructWriter for DocumentStructAccumulator {
+    type Error = Infallible;
     type Ok = Box<dyn Document>;
 
     #[inline]
@@ -323,21 +379,19 @@ impl StructWriter for DocumentMapAccumulator {
         T: SerializeWithSchema,
     {
         let Some(me) = member_schema.as_member() else {
-            return Err(DocumentError::DocumentConversion(
-                "Expected member schema!".to_string(),
-            ));
+            unreachable!()
         };
-        let val = value.serialize_with_schema(member_schema, DocumentParser)?;
+        let static_member = self.root_schema.get_member(me.name()).expect("must exist");
+        let val = value.serialize_with_schema(member_schema, StaticDocumentParser { schema: static_member })?;
         self.values.insert(me.name().to_string(), val);
         Ok(())
     }
 
     #[inline]
     fn end(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
-        Ok(crate::schema::default::Document {
-            schema: self.schema,
+        Ok(StaticDocument {
+            schema: self.root_schema,
             value: Value::Map(self.values),
-            discriminator: self.discriminator,
         }
         .into())
     }
