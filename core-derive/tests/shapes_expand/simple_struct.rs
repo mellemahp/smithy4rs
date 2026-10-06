@@ -1,7 +1,4 @@
-use smithy4rs_core::{
-    prelude::{INTEGER, STRING},
-    smithy,
-};
+use smithy4rs_core::{prelude::{INTEGER, STRING}, smithy};
 use smithy4rs_core_derive::SmithyShape;
 
 smithy!(
