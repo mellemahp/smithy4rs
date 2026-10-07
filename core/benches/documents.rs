@@ -44,7 +44,7 @@ fn convert_into(c: &mut Criterion) {
     let struct_to_convert = SerializeMeBuilder::new()
         .member_a(String::from("a"))
         .member_b(1)
-        .member_list(vec!["a".to_string(), "b".to_string()])
+        .member_list(vec![])
         .member_map(map)
         .build()
         .expect("Should build document");

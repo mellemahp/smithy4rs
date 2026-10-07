@@ -15,12 +15,13 @@
 //! This design (inspired by `serde`) separates iteration from value reading,
 //! allowing callers to control the serialization flow.
 use std::{error::Error as StdError, fmt::Display};
+use std::borrow::Cow;
 use std::convert::Infallible;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, Schema, SchemaShape, ShapeId},
 };
-
+use crate::schema::{DocumentVariant, NumberVariant};
 // ============================================================================
 // Shape Traits
 // ============================================================================
@@ -238,7 +239,7 @@ pub trait StructWriter {
     #[inline]
     fn write_member_named<T>(
         &mut self,
-        _member_name: &str,
+        member_name: &'static str,
         member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
@@ -278,7 +279,7 @@ pub trait StructWriter {
     #[inline]
     fn write_optional_member_named<T: SerializeWithSchema>(
         &mut self,
-        member_name: &str,
+        member_name: &'static str,
         member_schema: &Schema,
         value: &Option<T>,
     ) -> Result<(), Self::Error> {
@@ -306,7 +307,7 @@ pub trait StructWriter {
     /// Returns an [`Error`] matching the parent serializer if
     /// the unknown member could not be serialized.
     #[cold]
-    fn write_unknown(&mut self, _schema: &Schema, name: &String) -> Result<(), Self::Error> {
+    fn write_unknown(&mut self, _schema: &Schema, name: &str) -> Result<(), Self::Error> {
         // Error out on unknown by default
         Err(Self::Error::custom(format!(
             "Attempted to serialize unknown value: {name:?}"
@@ -457,7 +458,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `timestamp`.
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error>;
+    fn write_timestamp(self, schema: &Schema, value: Instant) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize an untyped [`Document`]
     ///
@@ -467,10 +468,42 @@ pub trait Serializer: Sized {
     fn write_document(
         self,
         schema: &Schema,
-        value: &Box<dyn Document>,
+        value: &dyn Document,
     ) -> Result<Self::Ok, Self::Error> {
         // Delegate to the document itself for serialization
-        value.serialize_with_schema(schema, self)
+        match value.as_variant() {
+            DocumentVariant::Null => self.write_null(schema),
+            DocumentVariant::Boolean(boolean) => self.write_boolean(schema, boolean),
+            DocumentVariant::Number(NumberVariant::Byte(byte)) => self.write_byte(schema, byte),
+            DocumentVariant::Number(NumberVariant::Short(short)) => self.write_short(schema, short),
+            DocumentVariant::Number(NumberVariant::Integer(int)) => self.write_integer(schema, int),
+            DocumentVariant::Number(NumberVariant::Long(long)) => self.write_long(schema, long),
+            DocumentVariant::Number(NumberVariant::BigInt(bi)) => self.write_big_integer(schema, bi),
+            DocumentVariant::Number(NumberVariant::Float(float)) => self.write_float(schema, float),
+            DocumentVariant::Number(NumberVariant::Double(double)) => self.write_double(schema, double),
+            DocumentVariant::Number(NumberVariant::BigDecimal(bd)) => self.write_big_decimal(schema, bd),
+            DocumentVariant::String(string) => self.write_string(schema, string), 
+            DocumentVariant::Blob(blob) => self.write_blob(schema, blob),
+            DocumentVariant::Timestamp(instant) => self.write_timestamp(schema, instant),
+            DocumentVariant::List(elems) => {
+                let mut list = self.write_list(schema, elems.len())?;
+                for elem in elems {
+                    // We re-use schema here b/c it should be a document and the member of a 
+                    // document is a document with the same schema.
+                    list.write_element(schema, elem)?;
+                }
+                list.end(schema)
+            }
+            DocumentVariant::Map(m) => {
+                let mut map = self.write_map(schema, m.len())?;
+                for (k, v) in m {
+                    // We re-use schema here b/c it should be a document and the key and value of a 
+                    // document is a document with the same schema.
+                    map.write_entry(schema, schema, k, v)?;
+                }
+                map.end(schema)
+            }
+        }
     }
 
     /// Serialize a `null` value
@@ -666,7 +699,7 @@ impl SerializeWithSchema for Instant {
         schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.write_timestamp(schema, self)
+        serializer.write_timestamp(schema, *self)
     }
 }
 
@@ -706,5 +739,11 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         (**self).serialize_with_schema(schema, serializer)
+    }
+}
+
+impl SerializeWithSchema for Cow<'_, str> {
+    fn serialize_with_schema<S: Serializer>(&self, schema: &Schema, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.write_string(schema, self)
     }
 }

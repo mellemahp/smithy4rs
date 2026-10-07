@@ -5,7 +5,7 @@ use std::{
     ops::Deref,
     sync::{LazyLock, OnceLock, RwLock},
 };
-
+use std::borrow::Cow;
 use fast_str::FastStr;
 use rustc_hash::FxBuildHasher;
 
@@ -271,13 +271,13 @@ impl SchemaValue {
     /// **NOTE**: Scalar schemas with no members will return an empty map.
     /// </div>
     #[allow(dead_code)]
-    pub(crate) fn members(&self) -> &FxIndexMap<String, Schema> {
+    pub(crate) fn members(&self) -> &FxIndexMap<Cow<'static, str>, Schema> {
         match self {
             // TODO(errors): Error handling
             SchemaValue::Struct(StructSchema { members, .. }) => members,
             SchemaValue::Member(member) => member.target.members(),
             _ => {
-                static EMPTY: LazyLock<FxIndexMap<String, Schema>> =
+                static EMPTY: LazyLock<FxIndexMap<Cow<'static, str>, Schema>> =
                     LazyLock::new(FxIndexMap::default);
                 &EMPTY
             }
@@ -469,7 +469,7 @@ pub struct StructSchema {
     id: ShapeId,
     pub(crate) shape_type: ShapeType,
     /// Members (i.e. fields) of the structure schema
-    pub(crate) members: FxIndexMap<String, Schema>,
+    pub(crate) members: FxIndexMap<Cow<'static, str>, Schema>,
     traits: TraitMap,
 }
 
@@ -603,7 +603,7 @@ impl SchemaBuilder {
     #[must_use]
     pub fn put_member<M: Into<MemberTarget>>(
         &self,
-        name: &str,
+        name: &'static str,
         target: M,
         traits: TraitList,
     ) -> &Self {
@@ -612,7 +612,7 @@ impl SchemaBuilder {
             .write()
             .expect("Lock poisoned")
             .push(MemberSchemaBuilder::new(
-                name.into(),
+                name,
                 self.id.with_member(name),
                 target.into(),
                 traits,
@@ -660,7 +660,7 @@ impl SchemaBuilder {
                     FxIndexMap::with_capacity_and_hasher(members_mut.len(), FxBuildHasher);
                 for (idx, member_builder) in members_mut.iter_mut().enumerate() {
                     member_builder.set_index(idx);
-                    members.insert(member_builder.name.clone(), member_builder.build());
+                    members.insert(Cow::Borrowed(member_builder.name), member_builder.build());
                 }
                 SchemaValue::Struct(StructSchema {
                     id: self.id.clone(),
@@ -767,7 +767,7 @@ impl From<&Ref<SchemaBuilder>> for MemberTarget {
 
 #[derive(PartialEq, Eq, Debug)]
 struct MemberSchemaBuilder {
-    name: String,
+    name: &'static str,
     id: ShapeId,
     member_target: MemberTarget,
     traits: TraitMap,
@@ -793,7 +793,7 @@ impl Ord for MemberSchemaBuilder {
     }
 }
 impl MemberSchemaBuilder {
-    fn new(name: String, id: ShapeId, member_target: MemberTarget, traits: TraitList) -> Self {
+    fn new(name: &'static str, id: ShapeId, member_target: MemberTarget, traits: TraitList) -> Self {
         MemberSchemaBuilder {
             name,
             id,
@@ -815,7 +815,7 @@ impl MemberSchemaBuilder {
         SchemaValue::Member(MemberSchema {
             id: self.id.clone(),
             target: self.member_target.clone(),
-            name: FastStr::from_ref(&self.name),
+            name: FastStr::from_ref(self.name),
             index: self.member_index.unwrap_or_default(),
             traits: self.traits.clone(),
             flattened_traits: OnceLock::new(),

@@ -34,7 +34,7 @@ use crate::{
 ///
 /// This class should not be used directly by users. Instead, users should use generated
 /// `Debug` implementation for shapes.
-pub struct DebugWrapper<'a, T: SerializeWithSchema>(&'a Schema, &'a T);
+pub struct DebugWrapper<'a, T: SerializeWithSchema + ?Sized>(&'a Schema, &'a T);
 impl<'a, T: SerializeWithSchema> DebugWrapper<'a, T> {
     /// Construct a new Debug wrapper to format type `T` using the provided schema.
     pub const fn new(schema: &'a Schema, value: &'a T) -> Self {
@@ -208,7 +208,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     }
 
     #[inline]
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, value: Instant) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
     }
@@ -217,7 +217,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     fn write_document(
         self,
         schema: &Schema,
-        value: &Box<dyn Document>,
+        value: &dyn Document,
     ) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
         Ok(())
@@ -357,20 +357,6 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
     }
 }
 
-// ============================================================================
-// Type impls
-// ============================================================================
-impl Debug for Box<dyn Document> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let mut s = f.debug_struct("Document");
-        s.field("schema", &self.schema());
-        s.field("value", &DebugWrapper::new(self.schema(), self));
-        self.discriminator()
-            .map(|v| s.field("discriminator", &v.id()));
-        s.finish()
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -501,26 +487,6 @@ mod tests {
         let document: Box<dyn Document> = struct_to_write.into();
         let output = format!("{document:#?}");
         let expected = r#"Document {
-    schema: StructSchema {
-        shape_type: Structure,
-        id: "com.example#RedactedAggregates",
-        traits: {},
-        members: {
-            "map": {
-                "target": "com.example#Map",
-                "traits": {
-                    "smithy.api#sensitive": sensitive,
-                },
-            },
-            "list": {
-                "target": "com.example#List",
-                "traits": {
-                    "smithy.api#mediaType": "application/json",
-                    "smithy.api#sensitive": sensitive,
-                },
-            },
-        },
-    },
     value: RedactedAggregates {
         map: {**REDACTED**},
         list: [**REDACTED**],

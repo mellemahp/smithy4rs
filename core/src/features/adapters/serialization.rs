@@ -231,7 +231,7 @@ impl<S: serde::Serializer> Serializer for SerAdapter<S> {
     }
 
     #[inline]
-    fn write_timestamp(self, _: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _: &Schema, _value: Instant) -> Result<Self::Ok, Self::Error> {
         // TODO(timestamp formatting): How to write timestamps with formatting traits?
         todo!()
     }

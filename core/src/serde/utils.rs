@@ -109,7 +109,7 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     }
 
     #[cold]
-    fn write_timestamp(self, schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, _value: Instant) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
@@ -117,7 +117,7 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     fn write_document(
         self,
         schema: &Schema,
-        _value: &Box<dyn Document>,
+        _value: &dyn Document,
     ) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
