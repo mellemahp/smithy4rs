@@ -1,7 +1,6 @@
 use core::fmt;
 use std::{error::Error, fmt::Debug, sync::LazyLock};
 use std::borrow::Cow;
-use std::fmt::Formatter;
 use bigdecimal::{num_traits, FromPrimitive, ToPrimitive};
 use num_bigint::ToBigInt;
 use thiserror::Error;
@@ -10,7 +9,8 @@ use crate::{BigDecimal, BigInt, ByteBuffer, IndexMap, Instant, schema::{
     ShapeId,
     prelude::*,
 }, serde::validation::ValidationErrors};
-use crate::serde::de::Deserializer;
+use crate::schema::Schema;
+use crate::serde::de::{DeserializeWithSchema, Deserializer, ListReader};
 // ============================================================================
 // Base Document Wrapper and trait
 // ============================================================================
@@ -163,7 +163,7 @@ use crate::serde::de::Deserializer;
 /// conversions during deserialization (i.e. it won't convert the field name `foo` to `bar` based on the `@jsonName` trait).
 ///
 /// However, when we deserialize the document into the final Error type we need to execute the protocol-specific handling of the `jsonName` trait.
-pub trait Document: Send + Sync + BoxClone + DocumentReader {
+pub trait Document: Send + Sync + BoxClone {
     /// Get the discriminator (type ID) of a type document
     ///
     /// The discriminator is primarily used to implement polymorphism using documents in deserialization.
@@ -179,11 +179,145 @@ pub trait Document: Send + Sync + BoxClone + DocumentReader {
     }
 
     /// Get a read-only view of the document type in the smithy data model
+    ///
+    /// Note: This indirection makes it straightforward to handle PartialEq and common
+    /// behaviors
     fn value(&self) -> DocumentValue<'_>;
 
-    /// Into converters
 
+    // === Consumers for deserialization ====
+
+    /// Read the document as a `boolean` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `boolean`
+    fn take_bool(&mut self, _schema: &Schema) -> Result<bool, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as boolean".to_string()))
+    }
+
+    /// Read the document as a `blob` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `blob`
+    fn take_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as blob".to_string()))
+    }
+
+    /// Read the document as a `string` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `string`
+    fn take_string(&mut self, _schema: &Schema) -> Result<String, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as boolean".to_string()))
+    }
+
+    /// Read the document as a `timestamp` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `timestamp`
+    fn take_timestamp(&mut self, _schema: &Schema) -> Result<Instant, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as timestamp".to_string()))
+    }
+
+    /// Read the document as a `byte` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `byte`
+    fn take_byte(&mut self, _schema: &Schema) -> Result<i8, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as byte".to_string()))
+    }
+
+    /// Read the document as a `short` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `short`
+    fn take_short(&mut self, _schema: &Schema) -> Result<i16, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as short".to_string()))
+    }
+
+    /// Read the document as a `integer` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as an `integer`
+    fn take_integer(&mut self, _schema: &Schema) -> Result<i32, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as integer".to_string()))
+    }
+
+    /// Read the document as a `long` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `long`
+    fn take_long(&mut self, _schema: &Schema) -> Result<i64, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as long".to_string()))
+    }
+
+    /// Read the document as a `big_integer` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `big_integer`
+    fn take_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as big integer".to_string()))
+    }
+
+    /// Read the document as a `float` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `float`
+    fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as float".to_string()))
+    }
+
+    /// Read the document as a `double` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `double`
+    fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as double".to_string()))
+    }
+
+    /// Read the document as a `big_decimal` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Error
+    /// Raises `DocumentError` if the Document could not be read as a `big_decimal`
+    fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
+        Err(DocumentError::DocumentConversion("failed to read as big decimal".to_string()))
+    }
+
+    // TODO
+    fn len(&self) -> usize {
+        0
+    }
+
+    /// List accessor
+    fn get_element_mut<'a>(&'a mut self, _index: usize) -> Result<Option<&'a mut dyn Document>, DocumentError> {
+        Err(DocumentError::DocumentConversion("Not a list".to_string()))
+    }
 }
+
 
 // ===== Clone support =====
 
@@ -220,7 +354,7 @@ impl Clone for Box<dyn Document> {
 // Accessors
 // ================================================================
 
-// ==== As-Ers =====
+// ==== As-Ers Convenience Methods =====
 impl dyn Document {
     /// Get the `boolean` value of the Document if it is a `boolean` or can be converted into one.
     ///
@@ -708,89 +842,185 @@ impl PartialEq for NumberVariant<'_> {
 }
 
 // ================================================================
-// Owned Document Data View
+// Document Deserialization Support
+// TODO: Should this be in a different file?
 // ================================================================
-impl Deserializer<'_> for DocumentData {
-    type Error = DocumentError;
-    type StructReader = ();
-    type ListReader = ();
-    type MapReader = ();
 
-
-
-}
 
 // ============================================================================
 // Conversions INTO Default Document
 // ============================================================================
 
-macro_rules! doc_impl_primitive {
-    ($ty:ty, $value_expr:expr, $data_expr:expr) => {
-       impl Document for $ty {
+impl Document for bool {
+    #[inline]
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Boolean(*self)
+    }
+
+    #[inline]
+    fn take_bool(&mut self, _schema: &Schema) -> Result<bool, DocumentError> {
+        Ok(*self)
+    }
+}
+
+impl Document for ByteBuffer {
+    #[inline]
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Blob(self)
+    }
+
+    #[inline]
+    fn take_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, DocumentError> {
+        Ok(std::mem::take(self))
+    }
+}
+
+impl Document for String {
+    #[inline]
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::String(self)
+    }
+
+    #[inline]
+    fn take_string(&mut self, _schema: &Schema) -> Result<String, DocumentError> {
+        Ok(std::mem::take(self))
+    }
+}
+
+impl Document for Instant {
+    #[inline]
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Timestamp(*self)
+    }
+
+    #[inline]
+    fn take_timestamp(&mut self, _schema: &Schema) -> Result<Instant, DocumentError> {
+        Ok(*self)
+    }
+}
+
+macro_rules! integer_doc {
+    ($ty:ty, $variant:ident) => {
+        impl Document for $ty {
             #[inline]
             fn value(&self) -> DocumentValue<'_> {
-                $value_expr(*self)
+                DocumentValue::Number(NumberVariant::$variant(*self))
             }
 
             #[inline]
-            fn data(self) -> DocumentData {
-                $data_expr(self)
-            }
-        }
-    };
-    (ref $ty:ty, $value_expr:expr, $data_expr:expr) => {
-       impl Document for $ty {
-            #[inline]
-            fn value(&self) -> DocumentValue<'_> {
-                $value_expr(self)
+            fn take_byte(&mut self, _schema: &Schema) -> Result<i8, DocumentError> {
+                Ok(*self as i8)
             }
 
             #[inline]
-            fn data(self) -> DocumentData {
-                $data_expr(self)
+            fn take_short(&mut self, _schema: &Schema) -> Result<i16, DocumentError> {
+                Ok(*self as i16)
+            }
+
+            #[inline]
+            fn take_integer(&mut self, _schema: &Schema) -> Result<i32, DocumentError> {
+                Ok(*self as i32)
+            }
+
+            #[inline]
+            fn take_long(&mut self, _schema: &Schema) -> Result<i64, DocumentError> {
+                Ok(*self as i64)
+            }
+
+            #[inline]
+            fn take_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, DocumentError> {
+                Ok(BigInt::from(*self))
             }
         }
     };
 }
-doc_impl_primitive!(bool, DocumentValue::Boolean, DocumentData::Boolean);
-doc_impl_primitive!(ref ByteBuffer, DocumentValue::Blob, DocumentData::Blob);
-doc_impl_primitive!(ref String, DocumentValue::String, DocumentData::String);
-doc_impl_primitive!(Instant, DocumentValue::Timestamp, DocumentData::Timestamp);
-doc_impl_primitive!(
-    i8,
-    |v| DocumentValue::Number(NumberVariant::Byte(v)),
-    |v| DocumentData::Number(NumberData::Byte(v))
-);
-doc_impl_primitive!(
-    i16,
-    |v| DocumentValue::Number(NumberVariant::Short(v)),
-    |v| DocumentData::Number(NumberData::Short(v))
-);
-doc_impl_primitive!(
-    i32,
-    |v| DocumentValue::Number(NumberVariant::Integer(v)),
-    |v| DocumentData::Number(NumberData::Integer(v))
-);
-doc_impl_primitive!(i64,
-    |v| DocumentValue::Number(NumberVariant::Long(v)),
-    |v| DocumentData::Number(NumberData::Long(v))
-);
-doc_impl_primitive!(f32,
-    |v| DocumentValue::Number(NumberVariant::Float(v)),
-    |v| DocumentData::Number(NumberData::Float(v))
-);
-doc_impl_primitive!(f64,
-    |v| DocumentValue::Number(NumberVariant::Double(v)),
-    |v| DocumentData::Number(NumberData::Double(v))
-);
-doc_impl_primitive!(ref BigInt,
-    |v| DocumentValue::Number(NumberVariant::BigInt(v)),
-    |v| DocumentData::Number(NumberData::BigInt(v))
-);
-doc_impl_primitive!(ref BigDecimal,
-    |v| DocumentValue::Number(NumberVariant::BigDecimal(v)),
-    |v| DocumentData::Number(NumberData::BigDecimal(v))
-);
+integer_doc!(i8, Byte);
+integer_doc!(i16, Short);
+integer_doc!(i32, Integer);
+integer_doc!(i64, Long);
+
+// TODO: Should we allow integer conversions between float/int?
+impl Document for f32 {
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Number(NumberVariant::Float(*self))
+    }
+
+    fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
+        Ok(*self)
+    }
+
+    fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
+        Ok(*self as f64)
+    }
+
+    fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
+        BigDecimal::from_f32(*self)
+               .ok_or_else(|| DocumentError::DocumentConversion("Could not convert float".to_string()))
+    }
+}
+
+impl Document for f64 {
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Number(NumberVariant::Double(*self))
+    }
+
+    fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
+        Ok(*self as f32)
+    }
+
+    fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
+        Ok(*self)
+    }
+
+    fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
+        BigDecimal::from_f64(*self)
+            .ok_or_else(|| DocumentError::DocumentConversion("Could not convert double".to_string()))
+    }
+}
+
+impl Document for BigDecimal {
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Number(NumberVariant::BigDecimal(self))
+    }
+
+    fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
+        todo!()
+    }
+
+    fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
+        todo!()
+    }
+
+    fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
+        Ok(std::mem::take(self))
+    }
+}
+
+impl Document for BigInt {
+    fn value(&self) -> DocumentValue<'_> {
+        DocumentValue::Number(NumberVariant::BigInt(self))
+    }
+
+    fn take_byte(&mut self, _schema: &Schema) -> Result<i8, DocumentError> {
+        todo!()
+    }
+
+    fn take_short(&mut self, _schema: &Schema) -> Result<i16, DocumentError> {
+        todo!()
+    }
+
+    fn take_integer(&mut self, _schema: &Schema) -> Result<i32, DocumentError> {
+        todo!()
+    }
+
+    fn take_long(&mut self, _schema: &Schema) -> Result<i64, DocumentError> {
+        todo!()
+    }
+
+    fn take_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, DocumentError> {
+        Ok(std::mem::take(self))
+    }
+}
 
 // Note: necessary for trait instantiators!
 impl Document for &'static str {
@@ -798,19 +1028,24 @@ impl Document for &'static str {
         DocumentValue::String(self)
     }
 
-    fn data(self) -> DocumentData {
-        DocumentData::String(self.to_string())
+    fn take_string(&mut self, _schema: &Schema) -> Result<String, DocumentError> {
+        Ok(self.to_string())
     }
 }
 
 // Collections
 impl <T: Document + Clone + 'static> Document for Vec<T> {
+    #[inline]
     fn value(&self) -> DocumentValue<'_> {
         DocumentValue::List(self)
     }
 
-    fn data(self) -> DocumentData {
-        todo!()
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    fn get_element_mut<'a>(&'a mut self, index: usize) -> Result<Option<&'a mut dyn Document>, DocumentError> {
+        Ok(self.get_mut(index).map(|i| i as &mut dyn Document))
     }
 }
 
@@ -867,9 +1102,7 @@ impl <T: Document + Clone + 'static> Document for Option<T> {
         }
     }
 
-    fn data(self) -> DocumentData {
-        todo!()
-    }
+    // TODO?
 }
 
 // Blanket conver
@@ -883,6 +1116,101 @@ impl <T: Document + 'static> From<T> for Box<dyn Document> {
 // ============================================================================
 // Conversions FROM Document into Shape
 // ============================================================================
+
+pub struct DocumentListReader<'de> {
+    pub list: &'de mut dyn Document,
+    pub index: usize,
+    pub len: usize,
+}
+
+impl <'de> ListReader<'de> for DocumentListReader<'de>
+{
+    type Error = DocumentError;
+
+    fn read_element<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<Option<T>, Self::Error> {
+        if self.index >= self.len {
+            return Ok(None);
+        }
+        match self.list.get_element_mut(self.index)? {
+            Some(sub_doc) => {
+                self.index += 1;
+                let item = T::deserialize_with_schema(schema, &mut *sub_doc)?;
+                Ok(Some(item))
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+
+impl<'de> Deserializer<'de> for &'de mut dyn Document
+{
+    type Error = DocumentError;
+    // Assuming your StructReader uses a similar unboxed/stack pattern
+    type StructReader = DocumentStructReader<'a>;
+    type ListReader = DocumentListReader<'de>;
+    type MapReader = UnsupportedMapReader;
+
+    // Primitives (Bitwise Stack Copies)
+    #[inline]
+    fn read_bool(self, schema: &Schema) -> Result<bool, Self::Error> {
+        self.take_bool(schema)
+    }
+
+    #[inline]
+    fn read_byte(self, schema: &Schema) -> Result<i8, Self::Error> {
+        self.take_byte(schema)
+    }
+
+    #[inline]
+    fn read_short(self, schema: &Schema) -> Result<i16, Self::Error> {
+        self.take_short(schema)
+    }
+
+    #[inline]
+    fn read_integer(self, schema: &Schema) -> Result<i32, Self::Error> {
+        self.take_integer(schema)
+    }
+
+    #[inline]
+    fn read_long(self, schema: &Schema) -> Result<i64, Self::Error> {
+        self.take_long(schema)
+    }
+
+    #[inline]
+    fn read_float(self, schema: &Schema) -> Result<f32, Self::Error> {
+        self.take_float(schema)
+    }
+
+    #[inline]
+    fn read_double(self, schema: &Schema) -> Result<f64, Self::Error> {
+        self.take_double(schema)
+    }
+
+    // Heap-Allocated Extractor (In-place std::mem::take)
+    #[inline]
+    fn read_string(self, schema: &Schema) -> Result<String, Self::Error> {
+        self.take_string(schema)
+    }
+
+    fn read_struct(self, schema: &Schema) -> Result<Self::StructReader, Self::Error> {
+        // Implement similarly via an object-safe DocumentStruct trait or unboxed map borrow
+        todo!("Initialize your unboxed StructReader stack state")
+    }
+
+    #[inline]
+    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
+        let len = self.len();
+        Ok(DocumentListReader {
+            list: self,
+            index: 0,
+            len,
+        })
+    }
+}
 
 /// Owned view of the document datat
 ///
