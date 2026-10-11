@@ -24,30 +24,34 @@ smithy!(
     structure com::example::Shape {
         memberA: STRING
         memberB: INTEGER
-        memberList: LIST
-        memberMap: MAP
     }
 );
+//  memberList: LIST
+// memberMap: MAP
 
 #[derive(SmithyShape, Clone, PartialEq)]
 #[schema(schema = SHAPE)]
 pub struct SerializeMe {
     pub member_a: String,
     pub member_b: i32,
-    pub member_list: Vec<String>,
-    pub member_map: IndexMap<String, String>,
+    //pub member_list: Vec<String>,
+    //pub member_map: IndexMap<String, String>,
 }
 
 fn convert_into(c: &mut Criterion) {
     let mut map = IndexMap::new();
     map.insert(String::from("a"), String::from("b"));
+
     let struct_to_convert = SerializeMeBuilder::new()
         .member_a(String::from("a"))
         .member_b(1)
-        .member_list(vec![])
-        .member_map(map)
+       // .member_list(vec![])
+       // .member_map(map)
         .build()
-        .expect("Should build document");
+        .expect("Should build shape");
+    let pre: Box<dyn Document> = struct_to_convert.clone().into();
+    println!("SHAPE: {:?}", pre);
+    
     c.bench_function("Convert Shape into document", |b| {
         b.iter(|| {
             let _: Box<dyn Document> = black_box(struct_to_convert.clone().into());
@@ -61,8 +65,8 @@ fn convert_from(c: &mut Criterion) {
     let struct_to_convert = SerializeMeBuilder::new()
         .member_a(String::from("a"))
         .member_b(1)
-        .member_list(vec!["a".to_string(), "b".to_string()])
-        .member_map(map)
+       // .member_list(vec!["a".to_string(), "b".to_string()])
+       // .member_map(map)
         .build()
         .expect("Should build document");
     let document: Box<dyn Document> = struct_to_convert.into();

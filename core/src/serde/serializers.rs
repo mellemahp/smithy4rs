@@ -21,7 +21,7 @@ use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
     schema::{Document, Schema, SchemaShape, ShapeId},
 };
-use crate::schema::{DocumentVariant, NumberVariant};
+use crate::schema::{DocumentValue, NumberVariant};
 // ============================================================================
 // Shape Traits
 // ============================================================================
@@ -124,7 +124,7 @@ pub trait ListWriter {
     /// the element could not be serialized.
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema;
+        T: SerializeWithSchema + ?Sized;
 
     /// Finish serializing a sequence.
     ///
@@ -172,8 +172,8 @@ pub trait MapWriter {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema;
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized;
 
     /// Finish serializing a map.
     ///
@@ -228,7 +228,7 @@ pub trait StructWriter {
     /// the member could not be serialized.
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema;
+        T: SerializeWithSchema + ?Sized;
 
     /// Serialize a member on the struct with a pre-known field name.
     /// This is an optimization to avoid extracting the name from the schema.
@@ -470,36 +470,39 @@ pub trait Serializer: Sized {
         schema: &Schema,
         value: &dyn Document,
     ) -> Result<Self::Ok, Self::Error> {
-        // Delegate to the document itself for serialization
-        match value.as_variant() {
-            DocumentVariant::Null => self.write_null(schema),
-            DocumentVariant::Boolean(boolean) => self.write_boolean(schema, boolean),
-            DocumentVariant::Number(NumberVariant::Byte(byte)) => self.write_byte(schema, byte),
-            DocumentVariant::Number(NumberVariant::Short(short)) => self.write_short(schema, short),
-            DocumentVariant::Number(NumberVariant::Integer(int)) => self.write_integer(schema, int),
-            DocumentVariant::Number(NumberVariant::Long(long)) => self.write_long(schema, long),
-            DocumentVariant::Number(NumberVariant::BigInt(bi)) => self.write_big_integer(schema, bi),
-            DocumentVariant::Number(NumberVariant::Float(float)) => self.write_float(schema, float),
-            DocumentVariant::Number(NumberVariant::Double(double)) => self.write_double(schema, double),
-            DocumentVariant::Number(NumberVariant::BigDecimal(bd)) => self.write_big_decimal(schema, bd),
-            DocumentVariant::String(string) => self.write_string(schema, string), 
-            DocumentVariant::Blob(blob) => self.write_blob(schema, blob),
-            DocumentVariant::Timestamp(instant) => self.write_timestamp(schema, instant),
-            DocumentVariant::List(elems) => {
+        match value.value() {
+            DocumentValue::Null => self.write_null(schema),
+            DocumentValue::Boolean(boolean) => self.write_boolean(schema, boolean),
+            DocumentValue::Number(NumberVariant::Byte(byte)) => self.write_byte(schema, byte),
+            DocumentValue::Number(NumberVariant::Short(short)) => self.write_short(schema, short),
+            DocumentValue::Number(NumberVariant::Integer(int)) => self.write_integer(schema, int),
+            DocumentValue::Number(NumberVariant::Long(long)) => self.write_long(schema, long),
+            DocumentValue::Number(NumberVariant::BigInt(bi)) => self.write_big_integer(schema, bi),
+            DocumentValue::Number(NumberVariant::Float(float)) => self.write_float(schema, float),
+            DocumentValue::Number(NumberVariant::Double(double)) => self.write_double(schema, double),
+            DocumentValue::Number(NumberVariant::BigDecimal(bd)) => self.write_big_decimal(schema, bd),
+            DocumentValue::String(string) => self.write_string(schema, string),
+            DocumentValue::Blob(blob) => self.write_blob(schema, blob),
+            DocumentValue::Timestamp(instant) => self.write_timestamp(schema, instant),
+            DocumentValue::List(elems) => {
                 let mut list = self.write_list(schema, elems.len())?;
-                for elem in elems {
-                    // We re-use schema here b/c it should be a document and the member of a 
-                    // document is a document with the same schema.
-                    list.write_element(schema, elem)?;
+                let mut i = 0;
+                while i < elems.len() {
+                    if let Some(child_variant) = elems.get(i) {
+                        list.write_element(schema, child_variant)?;
+                    }
+                    i += 1;
                 }
                 list.end(schema)
             }
-            DocumentVariant::Map(m) => {
+            DocumentValue::Map(m) => {
                 let mut map = self.write_map(schema, m.len())?;
-                for (k, v) in m {
-                    // We re-use schema here b/c it should be a document and the key and value of a 
-                    // document is a document with the same schema.
-                    map.write_entry(schema, schema, k, v)?;
+                let mut i = 0;
+                while i < m.len() {
+                    if let Some((key, val)) = m.get_entry(i) {
+                        map.write_entry(schema, schema, key, val)?;
+                    }
+                    i += 1;
                 }
                 map.end(schema)
             }
@@ -713,6 +716,18 @@ impl SerializeWithSchema for String {
         serializer.write_string(schema, self)
     }
 }
+
+impl SerializeWithSchema for str {
+    #[inline]
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.write_string(schema, self)
+    }
+}
+
 
 // === Wrapper-type implementations ===
 

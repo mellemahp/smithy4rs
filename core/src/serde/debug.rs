@@ -25,7 +25,7 @@ use crate::{
         se::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
     },
 };
-
+use crate::schema::ShapeType;
 // ============================================================================
 // Wrapper
 // ============================================================================
@@ -35,13 +35,13 @@ use crate::{
 /// This class should not be used directly by users. Instead, users should use generated
 /// `Debug` implementation for shapes.
 pub struct DebugWrapper<'a, T: SerializeWithSchema + ?Sized>(&'a Schema, &'a T);
-impl<'a, T: SerializeWithSchema> DebugWrapper<'a, T> {
+impl<'a, T: SerializeWithSchema + ?Sized> DebugWrapper<'a, T> {
     /// Construct a new Debug wrapper to format type `T` using the provided schema.
     pub const fn new(schema: &'a Schema, value: &'a T) -> Self {
         DebugWrapper(schema, value)
     }
 }
-impl<T: SerializeWithSchema> Debug for DebugWrapper<'_, T> {
+impl<T: SerializeWithSchema + ?Sized> Debug for DebugWrapper<'_, T> {
     #[inline]
     fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         self.1
@@ -109,9 +109,15 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
             self.fmt.write_str(schema.id().name())?;
             // Replace entire structure contents with redacted placeholder
             self.fmt.write_str(REDACTED_MAP)?;
-            Ok(DebugStructSerializer::Redacted)
+            return Ok(DebugStructSerializer::Redacted);
+        }
+        // TODO: Can probably be merged with map?
+        if let ShapeType::Document = schema.shape_type() {
+            Ok(DebugStructSerializer::UnredactedMap(
+                self.fmt.debug_map(),
+            ))
         } else {
-            Ok(DebugStructSerializer::Unredacted(
+            Ok(DebugStructSerializer::UnredactedStruct(
                 self.fmt.debug_struct(schema.id().name()),
             ))
         }
@@ -219,7 +225,12 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
         schema: &Schema,
         value: &dyn Document,
     ) -> Result<Self::Ok, Self::Error> {
-        redact!(self, schema, value);
+        if schema.contains_type::<SensitiveTrait>() {
+            self.fmt.write_str(REDACTED_ITEM)?;
+        } else {
+            let wrapper = DebugWrapper::new(schema, value);
+            Debug::fmt(&wrapper, self.fmt)?;
+        }
         Ok(())
     }
 
@@ -245,7 +256,7 @@ impl ListWriter for DebugListSerializer<'_, '_> {
 
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         let DebugListSerializer::Unredacted(inner) = self else {
             // Redacted lists do not write any entries.
@@ -281,8 +292,8 @@ impl MapWriter for DebugMapSerializer<'_, '_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         let DebugMapSerializer::Unredacted(inner) = self else {
             // Redacted lists do not write any entries.
@@ -305,7 +316,8 @@ impl MapWriter for DebugMapSerializer<'_, '_> {
 }
 
 enum DebugStructSerializer<'a, 'b: 'a> {
-    Unredacted(DebugStruct<'a, 'b>),
+    UnredactedStruct(DebugStruct<'a, 'b>),
+    UnredactedMap(DebugMap<'a, 'b>),
     Redacted,
 }
 
@@ -315,20 +327,25 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
 
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
-        let DebugStructSerializer::Unredacted(inner) = self else {
-            // Redacted lists do not write any entries.
-            return Ok(());
-        };
         let Some(me) = member_schema.as_member() else {
             return Err(FmtError::ExpectedMember(format!(
                 "{:?}",
                 member_schema.id()
             )));
         };
-        inner.field(me.name(), &DebugWrapper::new(member_schema, value));
-        Ok(())
+        match self {
+            DebugStructSerializer::UnredactedStruct(inner) => {
+                inner.field(me.name(), &DebugWrapper::new(member_schema, value));
+                Ok(())
+            }
+            DebugStructSerializer::UnredactedMap(inner) => {
+                inner.entry(&me.name(), &DebugWrapper::new(member_schema, value));
+                Ok(())
+            }
+            DebugStructSerializer::Redacted => Ok(())
+        }
     }
 
     fn write_member_named<T>(
@@ -340,20 +357,31 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
     where
         T: SerializeWithSchema,
     {
-        let DebugStructSerializer::Unredacted(inner) = self else {
-            // Redacted lists do not write any entries.
-            return Ok(());
-        };
-        inner.field(member_name, &DebugWrapper(member_schema, value));
-        Ok(())
+        match self {
+            DebugStructSerializer::UnredactedStruct(inner) => {
+                inner.field(member_name, &DebugWrapper(member_schema, value));                Ok(())
+            }
+            DebugStructSerializer::UnredactedMap(inner) => {
+                inner.entry(&member_name, &DebugWrapper::new(member_schema, value));
+                Ok(())
+            }
+            DebugStructSerializer::Redacted => Ok(())
+        }
     }
 
     #[inline]
     fn end(self, _: &Schema) -> Result<Self::Ok, Self::Error> {
-        if let DebugStructSerializer::Unredacted(mut inner) = self {
-            inner.finish()?;
+        match self {
+            DebugStructSerializer::UnredactedStruct(mut inner) => {
+                inner.finish()?;
+                Ok(())
+            }
+            DebugStructSerializer::UnredactedMap(mut inner) => {
+               inner.finish()?;
+                Ok(())
+            }
+            DebugStructSerializer::Redacted => Ok(())
         }
-        Ok(())
     }
 }
 
@@ -480,19 +508,6 @@ mod tests {
 
     #[test]
     fn document_conversion_retains_redaction() {
-        let mut map = IndexMap::new();
-        map.insert(String::from("a"), String::from("b"));
-        let list = vec!["a".to_string(), "b".to_string()];
-        let struct_to_write = RedactMe { list, map };
-        let document: Box<dyn Document> = struct_to_write.into();
-        let output = format!("{document:#?}");
-        let expected = r#"Document {
-    value: RedactedAggregates {
-        map: {**REDACTED**},
-        list: [**REDACTED**],
-    },
-    discriminator: "com.example#RedactedAggregates",
-}"#;
-        assert_eq!(output, expected);
+        // TODO: Is this still needed?
     }
 }

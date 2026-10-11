@@ -78,6 +78,8 @@ use crate::{
     Ref,
     schema::{Document, ShapeId, TryFromDocument},
 };
+use crate::prelude::DOCUMENT;
+use crate::serde::debug::DebugWrapper;
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///
@@ -200,11 +202,21 @@ impl Debug for TraitRef {
 /// `TraitInitializer` implementations can be added to a `RustCodegenIntegration` to customize the way
 /// in which traits are initialized in a Schema definition.
 ///
-#[derive(Debug)]
 pub struct DynamicTrait {
     id: ShapeId,
     value: Box<dyn Document>,
     cast_cache: OnceLock<TraitRef>,
+}
+
+// NOTE: Document do not (and should not) support general debug. Users must
+// use the debug wrapper with a valid schema manually
+impl Debug for DynamicTrait {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.debug_struct("DynamicTrait")
+            .field("id", &self.id)
+            .field("value", &DebugWrapper::new(&DOCUMENT, &self.value))
+            .finish()
+    }
 }
 impl Clone for DynamicTrait {
     fn clone(&self) -> Self {

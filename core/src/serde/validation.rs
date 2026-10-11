@@ -547,7 +547,7 @@ impl ListWriter for DefaultListValidator<'_> {
 
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         self.root.push_path(PathElement::Index(self.index))?;
         if self.unique {
@@ -592,7 +592,7 @@ impl UniquenessTracker {
     /// Add an item to the set.
     ///
     /// Returns true if the item was already in the set.
-    fn add<T: SerializeWithSchema>(
+    fn add<T: SerializeWithSchema + ?Sized>(
         &mut self,
         schema: &Schema,
         value: &T,
@@ -754,7 +754,7 @@ impl ListWriter for InnerHasher<'_> {
     #[inline]
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         value.serialize_with_schema(element_schema, &mut *self.root)?;
         Ok(())
@@ -778,8 +778,8 @@ impl MapWriter for InnerHasher<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         key.serialize_with_schema(key_schema, &mut *self.root)?;
         value.serialize_with_schema(value_schema, &mut *self.root)?;
@@ -797,7 +797,7 @@ impl StructWriter for InnerHasher<'_> {
 
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         let Some(member_name) = member_schema.id().member() else {
             return Err(ValidationFailure::ExpectedMember(
@@ -817,7 +817,7 @@ impl StructWriter for InnerHasher<'_> {
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         self.root.hash(member_name);
         value.serialize_with_schema(member_schema, &mut *self.root)?;
@@ -846,8 +846,8 @@ impl MapWriter for DefaultMapValidator<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         match key.serialize_with_schema(key_schema, &mut KeySerializer::<ValidationFailure>::new())
         {
@@ -877,7 +877,7 @@ impl StructWriter for DefaultStructValidator<'_> {
     #[inline]
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         self.root.push_path(member_schema)?;
         value.serialize_with_schema(member_schema, &mut *self.root)?;
