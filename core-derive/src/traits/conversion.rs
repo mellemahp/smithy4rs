@@ -19,7 +19,8 @@ pub(crate) fn expand_try_from_document(shape: &Shape, crate_ident: &TokenStream)
             use #crate_ident::schema::TryFromDocument as _TryFromDocument;
 
             impl _TryFromDocument for #name {
-                fn try_from(document: Box<dyn _Document>) -> Result<Self, _DocumentError> {
+                #[inline]
+                fn try_from<'a>(document: &mut (dyn _Document + 'a)) -> Result<Self, _DocumentError> {
                     Ok(<#builder as _TryFromDocument>::try_from(document)?.build()?)
                 }
             }

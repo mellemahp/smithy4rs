@@ -46,7 +46,10 @@ public final class Utils {
             // TODO: Fails due to clone impl
             ShapeId.from("smithy.api#ExampleError"),
             // TODO: Needs member name escaping
-            HttpApiKeyAuthTrait.ID);
+            HttpApiKeyAuthTrait.ID,
+            // TODO: not really sure what is up with this one?
+            ShapeId.from("smithy.api#ShapeClosures"),
+            ShapeId.from("smithy.api#ShapeClosure"));
 
     public static boolean inCore() {
         return EnvironmentVariable.IN_SMITH4RS_CORE.isSet();

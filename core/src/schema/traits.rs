@@ -249,7 +249,7 @@ impl DynamicTrait {
             return t.downcast_ref::<T>();
         }
         // Resolve and cache trait if possible
-        <T as TryFromDocument>::try_from(self.value.clone()).map_or(None, |t| {
+        <T as TryFromDocument>::try_from(&mut *self.value.clone()).map_or(None, |t| {
             match self.cast_cache.set(TraitRef::from(t)) {
                 Ok(()) => self.as_type::<T>(),
                 Err(_) => None,

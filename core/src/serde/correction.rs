@@ -10,7 +10,7 @@ use bigdecimal::Zero;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-    schema::{Document, NULL},
+    schema::Document,
     serde::{MaybeBuilt, serializers::SerializeWithSchema},
 };
 
@@ -99,7 +99,7 @@ correction_default_impl!(ByteBuffer, ByteBuffer::new());
 impl ErrorCorrectionDefault for Box<dyn Document> {
     #[inline]
     fn default() -> Self {
-        NULL.clone()
+        todo!()
     }
 }
 

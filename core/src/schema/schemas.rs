@@ -515,7 +515,7 @@ pub struct MemberSchema {
     /// Shape that this member targets
     pub(crate) target: MemberTarget,
     /// Name of the member
-    name: FastStr,
+    pub(crate) name: FastStr,
     /// Index of the member.
     ///
     /// This is the member's definition order or

@@ -239,7 +239,7 @@ pub trait StructWriter {
     #[inline]
     fn write_member_named<T>(
         &mut self,
-        member_name: &'static str,
+        _member_name: &'static str,
         member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
@@ -486,23 +486,19 @@ pub trait Serializer: Sized {
             DocumentValue::Timestamp(instant) => self.write_timestamp(schema, instant),
             DocumentValue::List(elems) => {
                 let mut list = self.write_list(schema, elems.len())?;
-                let mut i = 0;
-                while i < elems.len() {
-                    if let Some(child_variant) = elems.get(i) {
-                        list.write_element(schema, child_variant)?;
+                for i in 0..elems.len() {
+                    if let Some(elem) = elems.get(i) {
+                        list.write_element(schema, elem)?;
                     }
-                    i += 1;
                 }
                 list.end(schema)
             }
             DocumentValue::Map(m) => {
                 let mut map = self.write_map(schema, m.len())?;
-                let mut i = 0;
-                while i < m.len() {
+                for i in 0..m.len() {
                     if let Some((key, val)) = m.get_entry(i) {
                         map.write_entry(schema, schema, key, val)?;
                     }
-                    i += 1;
                 }
                 map.end(schema)
             }

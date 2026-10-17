@@ -1,7 +1,8 @@
 use core::fmt;
-use std::{error::Error, fmt::Debug, sync::LazyLock};
+use std::{error::Error, fmt::Debug};
 use std::borrow::Cow;
 use bigdecimal::{num_traits, FromPrimitive, ToPrimitive};
+use indexmap::map::MutableKeys;
 use num_bigint::ToBigInt;
 use thiserror::Error;
 
@@ -10,7 +11,7 @@ use crate::{BigDecimal, BigInt, ByteBuffer, IndexMap, Instant, schema::{
     prelude::*,
 }, serde::validation::ValidationErrors};
 use crate::schema::Schema;
-use crate::serde::de::{DeserializeWithSchema, Deserializer, ListReader};
+
 // ============================================================================
 // Base Document Wrapper and trait
 // ============================================================================
@@ -180,10 +181,9 @@ pub trait Document: Send + Sync + BoxClone {
 
     /// Get a read-only view of the document type in the smithy data model
     ///
-    /// Note: This indirection makes it straightforward to handle PartialEq and common
+    /// Note: This indirection makes it straightforward to handle `PartialEq` and common
     /// behaviors
     fn value(&self) -> DocumentValue<'_>;
-
 
     // === Consumers for deserialization ====
 
@@ -191,7 +191,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `boolean`
     fn take_bool(&mut self, _schema: &Schema) -> Result<bool, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as boolean".to_string()))
@@ -201,7 +201,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `blob`
     fn take_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as blob".to_string()))
@@ -211,17 +211,17 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `string`
     fn take_string(&mut self, _schema: &Schema) -> Result<String, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as boolean".to_string()))
+        Err(DocumentError::DocumentConversion("failed to read as string".to_string()))
     }
 
     /// Read the document as a `timestamp` if possible
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `timestamp`
     fn take_timestamp(&mut self, _schema: &Schema) -> Result<Instant, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as timestamp".to_string()))
@@ -231,7 +231,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `byte`
     fn take_byte(&mut self, _schema: &Schema) -> Result<i8, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as byte".to_string()))
@@ -241,7 +241,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `short`
     fn take_short(&mut self, _schema: &Schema) -> Result<i16, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as short".to_string()))
@@ -251,7 +251,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as an `integer`
     fn take_integer(&mut self, _schema: &Schema) -> Result<i32, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as integer".to_string()))
@@ -261,7 +261,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `long`
     fn take_long(&mut self, _schema: &Schema) -> Result<i64, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as long".to_string()))
@@ -271,7 +271,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `big_integer`
     fn take_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as big integer".to_string()))
@@ -281,7 +281,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `float`
     fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as float".to_string()))
@@ -291,7 +291,7 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `double`
     fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as double".to_string()))
@@ -301,26 +301,57 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// Default implementation errors
     ///
-    /// # Error
+    /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `big_decimal`
     fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
         Err(DocumentError::DocumentConversion("failed to read as big decimal".to_string()))
     }
 
-    // TODO
+    /// Get the length of the document
+    ///
+    /// Defaults to 0. List and Map documents should override this
     fn len(&self) -> usize {
         0
     }
 
-    /// List accessor
-    fn get_element_mut<'a>(&'a mut self, _index: usize) -> Result<Option<&'a mut dyn Document>, DocumentError> {
+    /// Get an element of a list document
+    ///
+    /// # Errors
+    /// Raises a `DocumentError` if the document is not a list
+    fn get_element_mut(&mut self, _index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
         Err(DocumentError::DocumentConversion("Not a list".to_string()))
+    }
+
+    /// Get a map document entry
+    ///
+    /// TODO: Should we update to split from key?
+    /// Note: Should only really be used by deserializers.
+    ///
+    /// # Errors
+    /// Raises a `DocumentError` if the document is not a map
+    fn get_entry_mut(&mut self, _index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        Err(DocumentError::DocumentConversion("Not a map".to_string()))
+    }
+
+    /// Get the map key
+    ///
+    /// TODO: Support non-string maps
+    /// # Errors
+    /// Raises a `DocumentError` if the document is not a map
+    fn get_key_mut(&mut self, _index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
+        Err(DocumentError::DocumentConversion("Not a map".to_string()))
+    }
+
+    /// Check if this document is empty
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
 
 // ===== Clone support =====
 
+/// Bridge trait to allow us to clone boxed Document
 pub trait BoxClone {
     /// Clone implementation for dyn trait to allow us to support clones of
     /// `Box<dyn Document>`
@@ -355,10 +386,10 @@ impl Clone for Box<dyn Document> {
 // ================================================================
 
 // ==== As-Ers Convenience Methods =====
-impl dyn Document {
+impl dyn Document + '_ {
     /// Get the `boolean` value of the Document if it is a `boolean` or can be converted into one.
     ///
-    /// # Error
+    /// # Errors
     /// Returns a `DocumentError` if the document could not be converted to a `boolean`.
     #[inline]
     pub fn as_boolean(&self) -> Result<bool, DocumentError> {
@@ -486,10 +517,6 @@ impl dyn Document {
         self.value().is_null()
     }
 }
-
-// Converters
-
-// TODO
 
 // ============================================================================
 // Document Errors
@@ -633,7 +660,7 @@ pub trait MapCursor {
     /// Get entry for a specific idx
     fn get_entry(&self, idx: usize) -> Option<(&str, &dyn Document)>;
 
-    /// Number of elements in map
+    /// Number of entries map document;
     fn len(&self) -> usize;
 }
 
@@ -825,8 +852,9 @@ impl <'document> DocumentValue<'document> {
         }
     }
 
+    /// TODO
     #[inline]
-    fn is_null(&self) -> bool {
+    pub fn is_null(&self) -> bool {
         matches!(self, DocumentValue::Null)
     }
 }
@@ -840,12 +868,6 @@ impl PartialEq for NumberVariant<'_> {
         }
     }
 }
-
-// ================================================================
-// Document Deserialization Support
-// TODO: Should this be in a different file?
-// ================================================================
-
 
 // ============================================================================
 // Conversions INTO Default Document
@@ -901,6 +923,7 @@ impl Document for Instant {
 
 macro_rules! integer_doc {
     ($ty:ty, $variant:ident) => {
+        #[allow(trivial_casts)]
         impl Document for $ty {
             #[inline]
             fn value(&self) -> DocumentValue<'_> {
@@ -908,21 +931,29 @@ macro_rules! integer_doc {
             }
 
             #[inline]
+            #[allow(trivial_numeric_casts)]
+            #[allow(clippy::cast_lossless)]
             fn take_byte(&mut self, _schema: &Schema) -> Result<i8, DocumentError> {
                 Ok(*self as i8)
             }
 
             #[inline]
+            #[allow(trivial_numeric_casts)]
+            #[allow(clippy::cast_lossless)]
             fn take_short(&mut self, _schema: &Schema) -> Result<i16, DocumentError> {
                 Ok(*self as i16)
             }
 
             #[inline]
+            #[allow(trivial_numeric_casts)]
+            #[allow(clippy::cast_lossless)]
             fn take_integer(&mut self, _schema: &Schema) -> Result<i32, DocumentError> {
                 Ok(*self as i32)
             }
 
             #[inline]
+            #[allow(trivial_numeric_casts)]
+            #[allow(clippy::cast_lossless)]
             fn take_long(&mut self, _schema: &Schema) -> Result<i64, DocumentError> {
                 Ok(*self as i64)
             }
@@ -949,8 +980,9 @@ impl Document for f32 {
         Ok(*self)
     }
 
+    #[allow(clippy::cast_lossless)]
     fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
-        Ok(*self as f64)
+        Ok(f64::from(*self))
     }
 
     fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
@@ -1040,18 +1072,22 @@ impl <T: Document + Clone + 'static> Document for Vec<T> {
         DocumentValue::List(self)
     }
 
+    #[inline]
     fn len(&self) -> usize {
         self.len()
     }
 
-    fn get_element_mut<'a>(&'a mut self, index: usize) -> Result<Option<&'a mut dyn Document>, DocumentError> {
-        Ok(self.get_mut(index).map(|i| i as &mut dyn Document))
+    #[inline]
+    #[allow(trivial_casts)]
+    fn get_element_mut(&mut self, index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
+        Ok(self.get_mut(index).map(|item| item as &mut dyn Document))
     }
 }
 
 impl <T: Document> ListCursor for Vec<T> {
     #[inline]
     #[allow(trivial_casts)]
+    #[allow(clippy::unnecessary_cast)]
     fn get(&self, idx: usize) -> Option<&dyn Document> {
         self[..].get(idx).map(|doc| doc as &dyn Document)
     }
@@ -1067,8 +1103,24 @@ impl <T: Document + Clone + 'static> Document for IndexMap<String, T> {
         DocumentValue::Map(self)
     }
 
-    fn data(self) -> DocumentData {
-        todo!()
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    #[inline]
+    #[allow(trivial_casts)]
+    fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        let Some((k, v)) = self.get_index_mut(index) else {
+            return Err(DocumentError::DocumentConversion("Could not get entry".to_string()));
+        };
+        Ok((k.as_str(), v as &mut dyn Document))
+    }
+
+    #[inline]
+    #[allow(trivial_casts)]
+    fn get_key_mut(&mut self, index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
+        Ok(self.get_index_mut2(index).map(|(k, _)| k as &mut dyn Document))
     }
 }
 
@@ -1094,167 +1146,26 @@ impl <T: Document + Clone> MapCursor for IndexMap<String, T> {
         self.len()
     }
 }
+
+// TODO: Is this right?
 impl <T: Document + Clone + 'static> Document for Option<T> {
     fn value(&self) -> DocumentValue<'_> {
-        match self {
-            Some(v) => v.value(),
-            None => DocumentValue::Null
-        }
+        self.as_ref().map_or(DocumentValue::Null, |v| v.value())
     }
-
-    // TODO?
 }
 
-// Blanket conver
+// Blanket conversion into a boxed document type
 impl <T: Document + 'static> From<T> for Box<dyn Document> {
     #[inline]
+    #[allow(trivial_casts)]
     fn from(value: T) -> Self {
-        Box::new(value)
+        Box::new(value) as Box<dyn Document>
     }
 }
 
 // ============================================================================
 // Conversions FROM Document into Shape
 // ============================================================================
-
-pub struct DocumentListReader<'de> {
-    pub list: &'de mut dyn Document,
-    pub index: usize,
-    pub len: usize,
-}
-
-impl <'de> ListReader<'de> for DocumentListReader<'de>
-{
-    type Error = DocumentError;
-
-    fn read_element<T: DeserializeWithSchema<'de>>(
-        &mut self,
-        schema: &Schema,
-    ) -> Result<Option<T>, Self::Error> {
-        if self.index >= self.len {
-            return Ok(None);
-        }
-        match self.list.get_element_mut(self.index)? {
-            Some(sub_doc) => {
-                self.index += 1;
-                let item = T::deserialize_with_schema(schema, &mut *sub_doc)?;
-                Ok(Some(item))
-            }
-            None => Ok(None),
-        }
-    }
-}
-
-
-impl<'de> Deserializer<'de> for &'de mut dyn Document
-{
-    type Error = DocumentError;
-    // Assuming your StructReader uses a similar unboxed/stack pattern
-    type StructReader = DocumentStructReader<'a>;
-    type ListReader = DocumentListReader<'de>;
-    type MapReader = UnsupportedMapReader;
-
-    // Primitives (Bitwise Stack Copies)
-    #[inline]
-    fn read_bool(self, schema: &Schema) -> Result<bool, Self::Error> {
-        self.take_bool(schema)
-    }
-
-    #[inline]
-    fn read_byte(self, schema: &Schema) -> Result<i8, Self::Error> {
-        self.take_byte(schema)
-    }
-
-    #[inline]
-    fn read_short(self, schema: &Schema) -> Result<i16, Self::Error> {
-        self.take_short(schema)
-    }
-
-    #[inline]
-    fn read_integer(self, schema: &Schema) -> Result<i32, Self::Error> {
-        self.take_integer(schema)
-    }
-
-    #[inline]
-    fn read_long(self, schema: &Schema) -> Result<i64, Self::Error> {
-        self.take_long(schema)
-    }
-
-    #[inline]
-    fn read_float(self, schema: &Schema) -> Result<f32, Self::Error> {
-        self.take_float(schema)
-    }
-
-    #[inline]
-    fn read_double(self, schema: &Schema) -> Result<f64, Self::Error> {
-        self.take_double(schema)
-    }
-
-    // Heap-Allocated Extractor (In-place std::mem::take)
-    #[inline]
-    fn read_string(self, schema: &Schema) -> Result<String, Self::Error> {
-        self.take_string(schema)
-    }
-
-    fn read_struct(self, schema: &Schema) -> Result<Self::StructReader, Self::Error> {
-        // Implement similarly via an object-safe DocumentStruct trait or unboxed map borrow
-        todo!("Initialize your unboxed StructReader stack state")
-    }
-
-    #[inline]
-    fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
-        let len = self.len();
-        Ok(DocumentListReader {
-            list: self,
-            index: 0,
-            len,
-        })
-    }
-}
-
-/// Owned view of the document datat
-///
-/// Used for deserialization / conversion
-pub enum DocumentData {
-    /// An empty (null) document
-    Null,
-    /// A `boolean` document
-    Boolean(bool),
-    /// A number document
-    Number(NumberData),
-    /// A `string` document
-    String(String),
-    /// A `blob` document
-    Blob(ByteBuffer),
-    /// A `timestamp` document
-    Timestamp(Instant),
-    /// A `list` document
-    /// TODO
-    List(String),
-    /// A `map` document
-    /// TODO
-    Map(String),
-}
-
-/// A numeric document type in the Smithy data model
-pub enum NumberData {
-    /// Smithy `byte` type
-    Byte(i8),
-    /// Smithy `short` type
-    Short(i16),
-    /// Smithy `integer` type
-    Integer(i32),
-    /// Smithy `long` type
-    Long(i64),
-    /// Smithy `big_integer` type
-    BigInt(BigInt),
-    /// Smithy `float` type
-    Float(f32),
-    /// Smithy `double` type
-    Double(f64),
-    /// Smithy `big_decimal` type
-    BigDecimal(BigDecimal),
-}
 
 /// Attempt to create a typed shape from an untyped document.
 ///
@@ -1269,116 +1180,139 @@ pub trait TryFromDocument: Sized {
     /// ## Errors
     /// Returns [`DocumentError`] if the type could not be converted to a
     /// document value.
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError>;
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError>;
 }
 
 // === Impls for basic types ===
 
+// TODO: MOVE
+impl Document for IndexMap<String, Box<dyn Document>> {
+    fn value(&self) -> DocumentValue<'_> {
+        todo!()
+    }
+}
+
+impl Document for Vec<Box<dyn Document>> {
+    fn value(&self) -> DocumentValue<'_> {
+        todo!()
+    }
+}
+
 impl TryFromDocument for bool {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_bool()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_bool(&BOOLEAN)
     }
 }
 
 impl TryFromDocument for i8 {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_byte()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_byte(&BYTE)
     }
 }
 
 impl TryFromDocument for i16 {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_short()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_short(&SHORT)
     }
 }
 
 impl TryFromDocument for i32 {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_integer()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_integer(&INTEGER)
     }
 }
 
 impl TryFromDocument for i64 {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_long()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_long(&LONG)
     }
 }
 
 impl TryFromDocument for f32 {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_float()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_float(&FLOAT)
     }
 }
 
 impl TryFromDocument for f64 {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_double()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_double(&DOUBLE)
     }
 }
 
 impl TryFromDocument for BigInt {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let cow_data = document.as_variant().to_big_integer()?;
-        Ok(cow_data.into_owned())
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_big_integer(&BIG_INTEGER)
     }
 }
 
 impl TryFromDocument for BigDecimal {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let cow_data = document.as_variant().to_big_decimal()?;
-        Ok(cow_data.into_owned())
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_big_decimal(&BIG_DECIMAL)
     }
 }
 
 impl TryFromDocument for ByteBuffer {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let borrow = document.as_variant().to_blob()?;
-        Ok(borrow.clone())
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_blob(&BLOB)
     }
 }
 
 impl TryFromDocument for String {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let str = document.as_variant().to_str()?;
-        Ok(str.to_string())
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_string(&STRING)
     }
 }
 
 impl TryFromDocument for Instant {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        document.as_variant().to_timestamp()
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        document.take_timestamp(&TIMESTAMP)
     }
 }
 
 impl<T: TryFromDocument> TryFromDocument for Vec<T> {
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let list = document.try_into_list()?;
-        let mut result = Vec::with_capacity(list.len());
-        for item in list {
-            result.push(item.try_into()?);
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        let len = document.len();
+        if len == 0 {
+            return Ok(Vec::new());
+        }
+        let mut idx = 0;
+        let mut result = Vec::with_capacity(len);
+        loop {
+            let Some(inner) = document.get_element_mut(idx)? else {
+                break;
+            };
+            idx += 1;
+            result.push(T::try_from(inner)?);
         }
         Ok(result)
     }
 }
 
 impl<T: TryFromDocument> TryFromDocument for IndexMap<String, T> {
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        let map = document.try_into_map()?;
-        let mut result: IndexMap<String, T> = IndexMap::with_capacity(map.len());
-        for (key, value) in map {
-            result.insert(key.to_string(), value.try_into()?);
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        let len = document.len();
+        if len == 0 {
+            return Ok(IndexMap::new());
+        }
+        let mut idx = 0;
+        let mut result = IndexMap::with_capacity(len);
+        while idx < len {
+            let (k, v) = document.get_entry_mut(idx)?;
+            idx += 1;
+            result.insert(k.to_string(), T::try_from(v)?);
         }
         Ok(result)
     }
@@ -1386,11 +1320,11 @@ impl<T: TryFromDocument> TryFromDocument for IndexMap<String, T> {
 
 impl<T: TryFromDocument> TryFromDocument for Option<T> {
     #[inline]
-    fn try_from(document: Box<dyn Document>) -> Result<Self, DocumentError> {
-        if matches!(document.as_variant(), DocumentValue::Null) {
+    fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
+        if document.is_null() {
             Ok(None)
         } else {
-            Ok(Some(document.try_into()?))
+            Ok(Some(T::try_from(document)?))
         }
     }
 }
@@ -1403,22 +1337,10 @@ impl dyn Document {
     /// Returns [`DocumentError`] if the type could not be converted to a
     /// document value.
     #[inline]
-    pub fn try_into<S: TryFromDocument>(self: Box<Self>) -> Result<S, DocumentError> {
-        <S as TryFromDocument>::try_from(self)
+    pub fn try_into<S: TryFromDocument>(mut self: Box<Self>) -> Result<S, DocumentError> {
+        <S as TryFromDocument>::try_from(&mut *self)
     }
 }
-
-// =========================================================================
-// Null Document
-// =========================================================================
-#[doc(hidden)]
-pub static NULL: LazyLock<Box<dyn Document>> = LazyLock::new(|| {
-    StaticDocument {
-        schema: &DOCUMENT,
-        value: Value::Null,
-    }
-    .into()
-});
 
 #[cfg(test)]
 mod tests {
@@ -1427,11 +1349,11 @@ mod tests {
     #[test]
     fn string_document_value() {
         let document_str: Box<dyn Document> = "MyStr".into();
-        let output_str: String = document_str.as_variant().to_str().unwrap().to_string();
+        let output_str: String = document_str.as_str().unwrap().to_string();
         assert_eq!(output_str, "MyStr".to_string());
 
         let document_string: Box<dyn Document> = "MyString".into();
-        let output_string: String = document_string.as_variant().to_str().unwrap().to_string();
+        let output_string: String = document_string.as_str().unwrap().to_string();
         assert_eq!(&output_string, &"MyString");
     }
 
@@ -1439,7 +1361,7 @@ mod tests {
     fn list_document_value() {
         let vec = vec!["a", "b", "c"];
         let document_list: Box<dyn Document> = vec.into();
-        assert_eq!(document_list.size(), 3);
+        assert_eq!(document_list.len(), 3);
         let vec_out: Vec<String> = document_list.try_into().unwrap();
         assert_eq!(vec_out.len(), 3);
         assert_eq!(vec_out[0], "a");
@@ -1452,7 +1374,7 @@ mod tests {
         let mut map_in: IndexMap<String, String> = IndexMap::new();
         map_in.insert("a".to_string(), "b".to_string());
         let map_doc: Box<dyn Document> = map_in.into();
-        assert_eq!(map_doc.size(), 1);
+        assert_eq!(map_doc.len(), 1);
 
         let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
         assert_eq!(map_out.len(), 1);
@@ -1468,13 +1390,12 @@ mod tests {
 
     #[test]
     fn float_document_values() {
-        // TODO: Update
-        // let float: Box<dyn Document> = 1f32.into();
-        // let double: Box<dyn Document> = 1f64.into();
-        //
-        // let float_value: f32 = float.try_into().unwrap();
-        // assert_eq!(float_value, 1f32);
-        // let double_value: f64 = double.try_into().unwrap();
-        // assert_eq!(double_value, 1f64);
+        let float: Box<dyn Document> = 1f32.into();
+        let double: Box<dyn Document> = 1f64.into();
+
+        let float_value: f32 = float.try_into().unwrap();
+        assert_eq!(float_value, 1f32);
+        let double_value: f64 = double.try_into().unwrap();
+        assert_eq!(double_value, 1f64);
     }
 }
