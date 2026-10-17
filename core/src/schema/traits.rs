@@ -20,7 +20,7 @@
 //! # use std::sync::LazyLock;
 //! # use smithy4rs_core::{smithy, traits, Ref};
 //! # use smithy4rs_core::prelude::{LengthTrait, SensitiveTrait, STRING};
-//! # use smithy4rs_core::schema::{SchemaValue, StaticTraitId, Schema, NULL};
+//! # use smithy4rs_core::schema::{SchemaValue, StaticTraitId, Schema};
 //! # use smithy4rs_core::serde::{ShapeBuilder, Buildable};
 //!
 //! smithy!(

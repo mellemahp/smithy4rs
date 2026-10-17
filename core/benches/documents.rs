@@ -6,7 +6,7 @@ use smithy4rs_core::{
     schema::Document,
     smithy,
 };
-use smithy4rs_core::schema::{DocumentValue, MapCursor, ShapeId};
+use smithy4rs_core::schema::{DocumentError, DocumentValue, MapCursor, ShapeId, TryFromDocument};
 
 smithy!(
     map com::example::Map {
@@ -27,6 +27,7 @@ smithy!(
         memberMap: MAP
     }
 );
+// TODO: Add back optional
 
 #[derive(SmithyShape, Clone, PartialEq)]
 #[schema(schema = SHAPE)]
@@ -38,16 +39,33 @@ pub struct SerializeMe {
 }
 
 impl Document for SerializeMe {
+    #[inline]
     fn discriminator(&self) -> Option<&ShapeId> {
         Some(SHAPE.id())
     }
 
+    #[inline]
     fn value(&self) -> DocumentValue<'_> {
         DocumentValue::Map(self)
     }
 
+    #[inline]
     fn len(&self) -> usize {
         4
+    }
+
+    fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        let out: (&str, &mut dyn Document) = match index {
+            0 => ("memberA", &mut self.member_a),
+            1 => ("memberB", &mut self.member_b),
+            // 2 => ("memberOptional", &mut self.member_optional),
+            2 => ("memberList", &mut self.member_list),
+            3 => ("memberMap", &mut self.member_map),
+            _ => {
+                return Err(DocumentError::CustomError("Invalid index".to_string()));
+            }
+        };
+        Ok(out)
     }
 }
 
@@ -57,9 +75,9 @@ impl MapCursor for SerializeMe {
         match idx {
             0 => Some("memberA"),
             1 => Some("memberB"),
-            2 => Some("memberOptional"),
-            3 => Some("memberList"),
-            4 => Some("memberMap"),
+            //2 => Some("memberOptional"),
+            2 => Some("memberList"),
+            3 => Some("memberMap"),
             _ => None,
         }
     }
@@ -117,29 +135,32 @@ fn convert_into(c: &mut Criterion) {
 }
 
 fn convert_from(c: &mut Criterion) {
-    // let mut map = IndexMap::new();
-    // map.insert(String::from("a"), String::from("b"));
-    // let struct_to_convert = SerializeMeBuilder::new()
-    //     .member_a(String::from("a"))
-    //     .member_b(1)
-    //    // .member_list(vec!["a".to_string(), "b".to_string()])
-    //    // .member_map(map)
-    //     .build()
-    //     .expect("Should build document");
-    // let document: Box<dyn Document> = struct_to_convert.into();
-    //
-    // c.bench_function("Document to shape", |b| {
-    //     b.iter(|| {
-    //         let _ = black_box(
-    //             <SerializeMeBuilder as TryFromDocument>::try_from(document.clone())
-    //                 .expect("Should convert to document")
-    //                 .build()
-    //                 .expect("Should build document"),
-    //         );
-    //     });
-    // });
+    let mut map = IndexMap::new();
+    map.insert(String::from("a"), String::from("b"));
+    let struct_to_convert = SerializeMeBuilder::new()
+        .member_a(String::from("a"))
+        .member_b(1)
+        .member_list(vec!["a".to_string(), "b".to_string()])
+        .member_map(map)
+        .build()
+        .expect("Should build document");
+    let document: Box<dyn Document> = struct_to_convert.into();
+
+    // TODO: use .into()?
+    c.bench_function("Convert Document into Shape", |b| {
+        b.iter_batched(
+            || document.clone(),
+            |mut shape| {
+                <SerializeMeBuilder as TryFromDocument>::try_from(&mut *shape)
+                    .expect("Should convert to document")
+                    .build()
+                    .expect("Should build document")
+            },
+            BatchSize::SmallInput
+        );
+    });
 }
 
 criterion_group!(into, convert_into);
-// criterion_group!(from, convert_from);
-criterion_main!(into); //, from
+criterion_group!(from, convert_from);
+criterion_main!(into, from);
