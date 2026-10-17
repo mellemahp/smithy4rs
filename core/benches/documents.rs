@@ -54,6 +54,7 @@ impl Document for SerializeMe {
         4
     }
 
+    #[inline]
     fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
         let out: (&str, &mut dyn Document) = match index {
             0 => ("memberA", &mut self.member_a),
@@ -61,9 +62,7 @@ impl Document for SerializeMe {
             // 2 => ("memberOptional", &mut self.member_optional),
             2 => ("memberList", &mut self.member_list),
             3 => ("memberMap", &mut self.member_map),
-            _ => {
-                return Err(DocumentError::CustomError("Invalid index".to_string()));
-            }
+            _ =>  return Err(DocumentError::CustomError("Invalid index".to_string()))
         };
         Ok(out)
     }
