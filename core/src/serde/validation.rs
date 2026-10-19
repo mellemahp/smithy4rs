@@ -2046,7 +2046,7 @@ mod tests {
         // root.insert("nested".to_string(), nested.into());
         // let document: Box<dyn Document> = root.into();
         // let mut validator = DefaultValidator::new();
-        // 
+        //
         // let Err(err) = validator.validate(&STRUCT_WITH_NESTED, &document) else {
         //     panic!("Expected an error");
         // };

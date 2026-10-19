@@ -1,11 +1,12 @@
 use std::{
+    borrow::Cow,
     cmp::Ordering,
     fmt::{Debug, Formatter},
     hash::Hash,
     ops::Deref,
     sync::{LazyLock, OnceLock, RwLock},
 };
-use std::borrow::Cow;
+
 use fast_str::FastStr;
 use rustc_hash::FxBuildHasher;
 
@@ -793,7 +794,12 @@ impl Ord for MemberSchemaBuilder {
     }
 }
 impl MemberSchemaBuilder {
-    fn new(name: &'static str, id: ShapeId, member_target: MemberTarget, traits: TraitList) -> Self {
+    fn new(
+        name: &'static str,
+        id: ShapeId,
+        member_target: MemberTarget,
+        traits: TraitList,
+    ) -> Self {
         MemberSchemaBuilder {
             name,
             id,

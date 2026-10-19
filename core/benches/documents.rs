@@ -1,12 +1,11 @@
-use criterion::{Criterion, criterion_group, criterion_main, BatchSize};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::{INTEGER, STRING},
-    schema::Document,
+    schema::{Document, DocumentError, DocumentValue, MapCursor, ShapeId, TryFromDocument},
     smithy,
 };
-use smithy4rs_core::schema::{DocumentError, DocumentValue, MapCursor, ShapeId, TryFromDocument};
 
 smithy!(
     map com::example::Map {
@@ -40,7 +39,7 @@ pub struct SerializeMe {
 
 impl Document for SerializeMe {
     #[inline]
-    fn discriminator(&self) -> Option<&ShapeId> {
+    fn discriminant(&self) -> Option<&ShapeId> {
         Some(SHAPE.id())
     }
 
@@ -62,7 +61,7 @@ impl Document for SerializeMe {
             // 2 => ("memberOptional", &mut self.member_optional),
             2 => ("memberList", &mut self.member_list),
             3 => ("memberMap", &mut self.member_map),
-            _ =>  return Err(DocumentError::CustomError("Invalid index".to_string()))
+            _ => return Err(DocumentError::CustomError("Invalid index".to_string())),
         };
         Ok(out)
     }
@@ -89,7 +88,7 @@ impl MapCursor for SerializeMe {
             "memberB" => Some(&self.member_b),
             "memberList" => Some(&self.member_list),
             "memberMap" => Some(&self.member_map),
-            _ => None
+            _ => None,
         }
     }
 
@@ -107,7 +106,6 @@ impl MapCursor for SerializeMe {
         4
     }
 }
-
 
 fn convert_into(c: &mut Criterion) {
     let mut map = IndexMap::new();
@@ -128,7 +126,7 @@ fn convert_into(c: &mut Criterion) {
                 let doc: Box<dyn Document> = shape.into();
                 doc
             },
-            BatchSize::SmallInput
+            BatchSize::SmallInput,
         );
     });
 }
@@ -146,7 +144,7 @@ fn convert_from(c: &mut Criterion) {
     let document: Box<dyn Document> = struct_to_convert.into();
 
     // TODO: use .into()?
-    c.bench_function("Convert Document into Shape", |b| {
+    c.bench_function("Document to shape", |b| {
         b.iter_batched(
             || document.clone(),
             |mut shape| {
@@ -155,7 +153,7 @@ fn convert_from(c: &mut Criterion) {
                     .build()
                     .expect("Should build document")
             },
-            BatchSize::SmallInput
+            BatchSize::SmallInput,
         );
     });
 }

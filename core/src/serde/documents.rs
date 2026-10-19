@@ -1,11 +1,8 @@
-
 use std::fmt::Display;
+
 use crate::{
-    prelude::RequiredTrait,
-    schema::{
-        Document, DocumentError, Schema, ShapeType,
-        TryFromDocument,
-    },
+    prelude::{DOCUMENT, RequiredTrait, STRING},
+    schema::{Document, DocumentError, Schema, ShapeType, TryFromDocument},
     serde::{
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
         deserializers::DeserializableShape,
@@ -13,7 +10,6 @@ use crate::{
         serializers::{Error, SerializeWithSchema},
     },
 };
-use crate::prelude::{DOCUMENT, STRING};
 
 // ============================================================================
 // Errors
@@ -30,13 +26,18 @@ impl Error for DocumentError {
 // ============================================================================
 
 impl SerializeWithSchema for Box<dyn Document> {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &Schema, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         let doc = self.as_ref();
         doc.serialize_with_schema(schema, serializer)
     }
 }
 
 impl SerializeWithSchema for dyn Document + '_ {
+    #[allow(clippy::too_many_lines)]
     fn serialize_with_schema<S: Serializer>(
         &self,
         schema: &Schema,
@@ -48,62 +49,98 @@ impl SerializeWithSchema for dyn Document + '_ {
         }
         // Try to coerce into schema requested type if possible
         match schema.shape_type() {
-            ShapeType::Blob => {
-                serializer.write_blob(schema, self.as_blob().map_err(S::Error::custom)?)
-            },
-            ShapeType::Boolean => {
-                serializer.write_boolean(schema, self.as_boolean().map_err(S::Error::custom)?)
-            },
-            ShapeType::String | ShapeType::Enum => {
-                serializer.write_string(schema, self.as_str().map_err(S::Error::custom)?)
-            }
-            ShapeType::Timestamp => {
-                serializer.write_timestamp(schema, self.as_timestamp().map_err(S::Error::custom)?)
-            }
-            ShapeType::Byte => {
-                serializer.write_byte(schema, self.as_byte().map_err(S::Error::custom)?)
-            },
-            ShapeType::Short => {
-                serializer.write_short(schema, self.as_short().map_err(S::Error::custom)?)
-            },
-            ShapeType::Integer | ShapeType::IntEnum => {
-                serializer.write_integer(schema, self.as_integer().map_err(S::Error::custom)?)
-            }
-            ShapeType::Long => {
-                serializer.write_long(schema, self.as_long().map_err(S::Error::custom)?)
-            },
-            ShapeType::Float => {
-                serializer.write_float(schema, self.as_float().map_err(S::Error::custom)?)
-            },
-            ShapeType::Double => {
-                serializer.write_double(schema, self.as_double().map_err(S::Error::custom)?)
-            },
+            ShapeType::Blob => serializer.write_blob(
+                schema,
+                self.as_blob()
+                    .ok_or_else(|| S::Error::custom("could not be represented as blob"))?,
+            ),
+            ShapeType::Boolean => serializer.write_boolean(
+                schema,
+                self.as_boolean()
+                    .ok_or_else(|| S::Error::custom("could not be represented as boolean"))?,
+            ),
+            ShapeType::String | ShapeType::Enum => serializer.write_string(
+                schema,
+                self.as_str()
+                    .ok_or_else(|| S::Error::custom("could not be represented as string"))?,
+            ),
+            ShapeType::Timestamp => serializer.write_timestamp(
+                schema,
+                self.as_timestamp().ok_or_else(|| {
+                    S::Error::custom(
+                        "could not be represented as times\
+                    ",
+                    )
+                })?,
+            ),
+            ShapeType::Byte => serializer.write_byte(
+                schema,
+                self.as_byte()
+                    .ok_or_else(|| S::Error::custom("could not be represented as byte"))?,
+            ),
+            ShapeType::Short => serializer.write_short(
+                schema,
+                self.as_short()
+                    .ok_or_else(|| S::Error::custom("could not be represented as short"))?,
+            ),
+            ShapeType::Integer | ShapeType::IntEnum => serializer.write_integer(
+                schema,
+                self.as_integer()
+                    .ok_or_else(|| S::Error::custom("could not be represented as integer"))?,
+            ),
+            ShapeType::Long => serializer.write_long(
+                schema,
+                self.as_long()
+                    .ok_or_else(|| S::Error::custom("could not be represented as long"))?,
+            ),
+            ShapeType::Float => serializer.write_float(
+                schema,
+                self.as_float()
+                    .ok_or_else(|| S::Error::custom("could not be represented as float"))?,
+            ),
+            ShapeType::Double => serializer.write_double(
+                schema,
+                self.as_double()
+                    .ok_or_else(|| S::Error::custom("could not be represented as double"))?,
+            ),
             ShapeType::BigInteger => {
-                let b = self.as_big_integer().map_err(S::Error::custom)?;
+                let b = self
+                    .as_big_integer()
+                    .ok_or_else(|| S::Error::custom("could not be represented as big_integer"))?;
                 serializer.write_big_integer(schema, &b)
             }
             ShapeType::BigDecimal => {
-                let d = self.as_big_decimal().map_err(S::Error::custom)?;
+                let d = self
+                    .as_big_decimal()
+                    .ok_or_else(|| S::Error::custom("could not be represented as big_decimal"))?;
                 serializer.write_big_decimal(schema, &d)
             }
             ShapeType::Document => serializer.write_document(schema, self),
             ShapeType::List => {
-                let cursor = self.as_list().map_err(S::Error::custom)?;
+                let cursor = self
+                    .as_list()
+                    .ok_or_else(|| S::Error::custom("not a list"))?;
                 let mut list = serializer.write_list(schema, cursor.len())?;
                 let value_schema = schema
                     .get_list_member()
                     .ok_or_else(|| S::Error::custom("Expected a list schema"))?;
                 let mut i = 0;
                 while i < cursor.len() {
-                    let item = cursor.get(i).ok_or_else(|| S::Error::custom("Expected document"))?;
+                    let item = cursor
+                        .get(i)
+                        .ok_or_else(|| S::Error::custom("Expected document"))?;
                     list.write_element(value_schema, item)?;
                     i += 1;
                 }
                 list.end(schema)
             }
             ShapeType::Map => {
-                let cursor = self.as_map().map_err(S::Error::custom)?;
-                let (key_schema, value_schema) = schema.get_key_value().ok_or_else(|| S::Error::custom("Expected a map schema"))?;
+                let cursor = self
+                    .as_map()
+                    .ok_or_else(|| S::Error::custom("could not be represented as map"))?;
+                let (key_schema, value_schema) = schema
+                    .get_key_value()
+                    .ok_or_else(|| S::Error::custom("Expected a map schema"))?;
                 let mut map = serializer.write_map(schema, cursor.len())?;
 
                 let mut i = 0;
@@ -116,9 +153,11 @@ impl SerializeWithSchema for dyn Document + '_ {
                 map.end(schema)
             }
             ShapeType::Structure | ShapeType::Union => {
-                let document_map = self.as_map().map_err(S::Error::custom)?;
+                let document_map = self
+                    .as_map()
+                    .ok_or_else(|| S::Error::custom("could not be represented as map"))?;
                 let mut struct_serializer = serializer.write_struct(&DOCUMENT, self.len())?;
-                if let Some(discriminator) = &self.discriminator() {
+                if let Some(discriminator) = &self.discriminant() {
                     struct_serializer.write_discriminator(discriminator)?;
                 }
                 for (key, member_schema) in schema.members() {
@@ -145,19 +184,6 @@ impl SerializeWithSchema for dyn Document + '_ {
 }
 
 // ============================================================================
-// Deserialize a generated shape into a document
-//
-// NOTE: This consumes the shape
-// ============================================================================
-
-// impl<'de, T: StaticSchemaShape + DeserializeWithSchema<'de>> From<T> for Box<dyn Document> {
-//     fn from(shape: T) -> Self {
-//         let schema = <T as StaticSchemaShape>::schema();
-//
-//     }
-// }
-
-// ============================================================================
 // Deserialization FROM Document
 // ============================================================================
 
@@ -173,15 +199,14 @@ pub struct DocumentCollectionReader<'b, 'doc> {
     /// Current index of the reader
     idx: usize,
 }
-impl <'b, 'doc> DocumentCollectionReader<'b, 'doc> {
+impl<'b, 'doc> DocumentCollectionReader<'b, 'doc> {
     #[inline]
     fn new(inner: &'b mut (dyn Document + 'doc)) -> Self {
         Self { inner, idx: 0 }
     }
 }
 
-impl <'de> ListReader<'de> for DocumentCollectionReader<'_, '_>
-{
+impl<'de> ListReader<'de> for DocumentCollectionReader<'_, '_> {
     type Error = DocumentError;
 
     fn read_element<T: DeserializeWithSchema<'de>>(
@@ -189,24 +214,27 @@ impl <'de> ListReader<'de> for DocumentCollectionReader<'_, '_>
         schema: &Schema,
     ) -> Result<Option<T>, Self::Error> {
         let Some(elem) = self.inner.get_element_mut(self.idx)? else {
-            return Ok(None)
+            return Ok(None);
         };
         self.idx += 1;
         T::deserialize_with_schema(schema, elem).map(Some)
     }
 }
 
-impl <'de> MapReader<'de> for DocumentCollectionReader<'_, '_>{
+impl<'de> MapReader<'de> for DocumentCollectionReader<'_, '_> {
     type Error = DocumentError;
 
     fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
         let Some(key) = self.inner.get_key_mut(self.idx)? else {
-            return Ok(None)
+            return Ok(None);
         };
         Ok(Some(key.take_string(&STRING)?))
     }
 
-    fn read_value<V: DeserializeWithSchema<'de>>(&mut self, schema: &Schema) -> Result<V, Self::Error> {
+    fn read_value<V: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<V, Self::Error> {
         // Todo: Seems a bit off to read key if we dont use.
         let (_k, elem) = self.inner.get_entry_mut(self.idx)?;
         self.idx += 1;
@@ -218,14 +246,17 @@ impl <'de> MapReader<'de> for DocumentCollectionReader<'_, '_>{
     }
 }
 
-impl <'de> StructReader<'de> for DocumentCollectionReader<'_, '_>{
+impl<'de> StructReader<'de> for DocumentCollectionReader<'_, '_> {
     type Error = DocumentError;
 
     fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
         Ok(schema.members().get_index(self.idx).map(|(_, v)| v))
     }
 
-    fn read_value<T: DeserializeWithSchema<'de>>(&mut self, schema: &Schema) -> Result<T, Self::Error> {
+    fn read_value<T: DeserializeWithSchema<'de>>(
+        &mut self,
+        schema: &Schema,
+    ) -> Result<T, Self::Error> {
         let (_key, doc) = self.inner.get_entry_mut(self.idx)?;
         self.idx += 1;
         T::deserialize_with_schema(schema, doc)
@@ -241,9 +272,7 @@ impl <'de> StructReader<'de> for DocumentCollectionReader<'_, '_>{
     }
 }
 
-
-impl<'b, 'doc> Deserializer<'_> for &'b mut (dyn Document + 'doc)
-{
+impl<'b, 'doc> Deserializer<'_> for &'b mut (dyn Document + 'doc) {
     type Error = DocumentError;
     // Assuming your StructReader uses a similar unboxed/stack pattern
     type StructReader = DocumentCollectionReader<'b, 'doc>;
@@ -317,7 +346,9 @@ impl<'b, 'doc> Deserializer<'_> for &'b mut (dyn Document + 'doc)
             Ok(())
         } else {
             // TODO: More appropriate error?
-            Err(DocumentError::DocumentConversion("Document is not null".into()))
+            Err(DocumentError::DocumentConversion(
+                "Document is not null".into(),
+            ))
         }
     }
 }
@@ -334,32 +365,32 @@ impl<'de, S: DeserializableShape<'de>> TryFromDocument for S {
 // Document Reader Implementations
 // ============================================================================
 
-    //
-    // fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
-    //     loop {
-    //         match self.iter.next() {
-    //             Some((key, value)) => {
-    //                 if let Some(member_schema) = schema.get_member(&key) {
-    //                     self.current_value = Some(value);
-    //                     return Ok(Some(member_schema));
-    //                 }
-    //                 // Unknown key — skip internally and continue
-    //             }
-    //             None => return Ok(None),
-    //         }
-    //     }
-    // }
+//
+// fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
+//     loop {
+//         match self.iter.next() {
+//             Some((key, value)) => {
+//                 if let Some(member_schema) = schema.get_member(&key) {
+//                     self.current_value = Some(value);
+//                     return Ok(Some(member_schema));
+//                 }
+//                 // Unknown key — skip internally and continue
+//             }
+//             None => return Ok(None),
+//         }
+//     }
+// }
 
-    // fn read_value<T: DeserializeWithSchema<'de>>(
-    //     &mut self,
-    //     schema: &Schema,
-    // ) -> Result<T, Self::Error> {
-    //     let doc = self.current_value.take().ok_or_else(|| {
-    //         DocumentError::DocumentConversion("No current member to read".to_string())
-    //     })?;
-    //     let de = DocumentDeserializer::new(doc);
-    //     T::deserialize_with_schema(schema, de)
-    // }
+// fn read_value<T: DeserializeWithSchema<'de>>(
+//     &mut self,
+//     schema: &Schema,
+// ) -> Result<T, Self::Error> {
+//     let doc = self.current_value.take().ok_or_else(|| {
+//         DocumentError::DocumentConversion("No current member to read".to_string())
+//     })?;
+//     let de = DocumentDeserializer::new(doc);
+//     T::deserialize_with_schema(schema, de)
+// }
 
 // === Needed for Trait deser ===
 impl<'de> DeserializeWithSchema<'de> for Box<dyn Document> {
@@ -374,10 +405,16 @@ impl<'de> DeserializeWithSchema<'de> for Box<dyn Document> {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+
     use indexmap::IndexMap;
+
     use super::*;
-    use crate::{derive::SmithyShape, schema::prelude::*, smithy, BigInt, BigDecimal};
-    use crate::schema::{DocumentValue, MapCursor, ShapeId};
+    use crate::{
+        BigDecimal, BigInt,
+        derive::SmithyShape,
+        schema::{DocumentValue, MapCursor, ShapeId, prelude::*},
+        smithy,
+    };
 
     smithy!(
         map com::example::Map {
@@ -400,7 +437,6 @@ mod tests {
     );
     //          memberOptional: STRING
 
-
     #[derive(SmithyShape, Clone, PartialEq)]
     #[schema(schema = SHAPE)]
     pub struct SerializeMe {
@@ -413,7 +449,7 @@ mod tests {
 
     impl Document for SerializeMe {
         #[inline]
-        fn discriminator(&self) -> Option<&ShapeId> {
+        fn discriminant(&self) -> Option<&ShapeId> {
             Some(SHAPE.id())
         }
 
@@ -426,7 +462,10 @@ mod tests {
             3
         }
 
-        fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        fn get_entry_mut(
+            &mut self,
+            index: usize,
+        ) -> Result<(&str, &mut dyn Document), DocumentError> {
             let out: (&str, &mut dyn Document) = match index {
                 0 => ("memberA", &mut self.member_a),
                 1 => ("memberB", &mut self.member_b),
@@ -463,7 +502,7 @@ mod tests {
                 // "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
                 "memberList" => Some(&self.member_list),
                 "memberMap" => Some(&self.member_map),
-                _ => None
+                _ => None,
             }
         }
 
@@ -496,7 +535,7 @@ mod tests {
             member_list: list,
         };
         let document: Box<dyn Document> = struct_to_convert.into();
-        assert_eq!(document.discriminator().unwrap(), SHAPE.id());
+        assert_eq!(document.discriminant().unwrap(), SHAPE.id());
         let members = document.as_map().unwrap();
         let doc_a = members.get("memberA").unwrap();
         assert_eq!(doc_a.as_str().unwrap(), "a");
@@ -670,16 +709,12 @@ mod tests {
         let doc_map = doc.as_map().expect("Should be a map");
 
         // Check member_a
-        let member_a_doc = doc_map
-            .get("memberA")
-            .expect("Should have member a");
+        let member_a_doc = doc_map.get("memberA").expect("Should have member a");
         let a_value = member_a_doc.as_str().unwrap();
         assert_eq!(a_value, "value_a".to_string());
 
         // Check member_b
-        let member_b_doc = doc_map
-            .get("memberB")
-            .expect("Should have member b");
+        let member_b_doc = doc_map.get("memberB").expect("Should have member b");
         // TODO: Use try_into impl
         let b_value = member_b_doc.as_str().unwrap();
         assert_eq!(b_value, "value_b");

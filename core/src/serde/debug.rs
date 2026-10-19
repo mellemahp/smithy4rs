@@ -19,13 +19,12 @@ use thiserror::Error;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, Schema, prelude::SensitiveTrait},
+    schema::{Document, Schema, ShapeType, prelude::SensitiveTrait},
     serde::{
         debug::FmtError::Custom,
         se::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
     },
 };
-use crate::schema::ShapeType;
 // ============================================================================
 // Wrapper
 // ============================================================================
@@ -113,9 +112,7 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
         }
         // TODO: Can probably be merged with map?
         if let ShapeType::Document = schema.shape_type() {
-            Ok(DebugStructSerializer::UnredactedMap(
-                self.fmt.debug_map(),
-            ))
+            Ok(DebugStructSerializer::UnredactedMap(self.fmt.debug_map()))
         } else {
             Ok(DebugStructSerializer::UnredactedStruct(
                 self.fmt.debug_struct(schema.id().name()),
@@ -344,7 +341,7 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
                 inner.entry(&me.name(), &DebugWrapper::new(member_schema, value));
                 Ok(())
             }
-            DebugStructSerializer::Redacted => Ok(())
+            DebugStructSerializer::Redacted => Ok(()),
         }
     }
 
@@ -359,13 +356,14 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
     {
         match self {
             DebugStructSerializer::UnredactedStruct(inner) => {
-                inner.field(member_name, &DebugWrapper(member_schema, value));                Ok(())
+                inner.field(member_name, &DebugWrapper(member_schema, value));
+                Ok(())
             }
             DebugStructSerializer::UnredactedMap(inner) => {
                 inner.entry(&member_name, &DebugWrapper::new(member_schema, value));
                 Ok(())
             }
-            DebugStructSerializer::Redacted => Ok(())
+            DebugStructSerializer::Redacted => Ok(()),
         }
     }
 
@@ -377,10 +375,10 @@ impl StructWriter for DebugStructSerializer<'_, '_> {
                 Ok(())
             }
             DebugStructSerializer::UnredactedMap(mut inner) => {
-               inner.finish()?;
+                inner.finish()?;
                 Ok(())
             }
-            DebugStructSerializer::Redacted => Ok(())
+            DebugStructSerializer::Redacted => Ok(()),
         }
     }
 }

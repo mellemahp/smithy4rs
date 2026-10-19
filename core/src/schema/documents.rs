@@ -1,16 +1,16 @@
 use core::fmt;
-use std::{error::Error, fmt::Debug};
-use std::borrow::Cow;
-use bigdecimal::{num_traits, FromPrimitive, ToPrimitive};
+use std::{borrow::Cow, error::Error, fmt::Debug};
+
+use bigdecimal::{FromPrimitive, ToPrimitive, num_traits};
 use indexmap::map::MutableKeys;
 use num_bigint::ToBigInt;
 use thiserror::Error;
 
-use crate::{BigDecimal, BigInt, ByteBuffer, IndexMap, Instant, schema::{
-    ShapeId,
-    prelude::*,
-}, serde::validation::ValidationErrors};
-use crate::schema::Schema;
+use crate::{
+    BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
+    schema::{Schema, ShapeId, prelude::*},
+    serde::validation::ValidationErrors,
+};
 
 // ============================================================================
 // Base Document Wrapper and trait
@@ -165,25 +165,136 @@ use crate::schema::Schema;
 ///
 /// However, when we deserialize the document into the final Error type we need to execute the protocol-specific handling of the `jsonName` trait.
 pub trait Document: Send + Sync + BoxClone {
-    /// Get the discriminator (type ID) of a type document
+    /// Get the discriminant (type ID) of a type document
     ///
-    /// The discriminator is primarily used to implement polymorphism using documents in deserialization.
+    /// The discriminant is primarily used to implement polymorphism using documents in deserialization.
     ///
     /// <div class="warning">
-    /// It is expected that protocols set the discriminator on deserialization if applicable
+    /// ### Protocol Support
+    ///
+    /// It is expected that protocols set the discriminant on deserialization if applicable
     /// </div>
     ///
     /// Default implementation is `None`
     #[must_use]
-    fn discriminator(&self) -> Option<&ShapeId> {
+    fn discriminant(&self) -> Option<&ShapeId> {
         None
     }
 
     /// Get a read-only view of the document type in the smithy data model
     ///
-    /// Note: This indirection makes it straightforward to handle `PartialEq` and common
-    /// behaviors
-    fn value(&self) -> DocumentValue<'_>;
+    /// This view of documents makes possible to support equality checks between
+    /// document types and allows default conversions between comparable types.
+    fn (&self) -> DocumentValue<'_>;
+
+    // === As-ers convenience methods for borrow-only views
+    /// Get the `boolean` value of the Document if it is a `boolean` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `boolean`.
+    fn as_boolean(&self) -> Option<bool> {
+        self.value().as_bool()
+    }
+
+    /// Get the `blob` value of the Document if it is a `blob` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `blob`.
+    fn as_blob(&self) -> Option<&ByteBuffer> {
+        self.value().as_blob()
+    }
+
+    /// Get the `string` value of the Document if it is a `string` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `string`.
+    fn as_str(&self) -> Option<&str> {
+        self.value().as_str()
+    }
+
+    /// Get the `timestamp` value of the Document if it is a `timestamp` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `timestamp`.
+    fn as_timestamp(&self) -> Option<Instant> {
+        self.value().as_timestamp()
+    }
+
+    /// Get the `byte` value of the Document if it is a `byte` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `byte`.
+    fn as_byte(&self) -> Option<i8> {
+        self.value().as_byte()
+    }
+
+    /// Get the `short` value of the Document if it is a `short` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `short`.
+    fn as_short(&self) -> Option<i16> {
+        self.value().as_short()
+    }
+
+    /// Get the `integer` value of the Document if it is an `integer` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as an `integer`.
+    fn as_integer(&self) -> Option<i32> {
+        self.value().as_integer()
+    }
+
+    /// Get the `long` value of the Document if it is a `long` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `long`.
+    fn as_long(&self) -> Option<i64> {
+        self.value().as_long()
+    }
+
+    /// Get the `big_integer` value of the Document if it is a `big_integer` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `big_integer`.
+    pub fn as_big_integer(&self) -> Option<Cow<'_, BigInt>> {
+        self.value().as_big_integer()
+    }
+
+    /// Get the `float` value of the Document if it is a `float` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `float`.
+    #[inline]
+    pub fn as_float(&self) -> Option<f32> {
+        self.value().as_float()
+    }
+
+    /// Get the `double` value of the Document if it is a `double` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `double`.
+    #[inline]
+    pub fn as_double(&self) -> Option<f64> {
+        self.value().as_double()
+    }
+
+    /// Get the `big_decimal` value of the Document if it is a `big_decimal` or can be converted into one.
+    ///
+    /// Returns `None` if Document could not be represented as a `big_decimal`.
+    pub fn as_big_decimal(&self) -> Option<Cow<'_, BigDecimal>> {
+        self.value().as_big_decimal()
+    }
+
+    /// Get a `list` cursor for the Document if it is a `list`.
+    ///
+    /// Returns `None` if document is not a list
+    #[inline]
+    pub fn as_list(&self) -> Option<&dyn ListCursor> {
+        self.value().as_list()
+    }
+
+    /// Get a `map` cursor for the Document if it is a map or can be represented as one.
+    ///
+    /// Returns `None` if document is not representable as a map.
+    #[inline]
+    pub fn as_map(&self) -> Option<&dyn MapCursor> {
+        self.value().as_map()
+    }
+
+    /// Check if the Document is Null (empty)
+    #[inline]
+    pub fn is_null(&self) -> bool {
+        self.value().is_null()
+    }
 
     // === Consumers for deserialization ====
 
@@ -194,7 +305,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `boolean`
     fn take_bool(&mut self, _schema: &Schema) -> Result<bool, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as boolean".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as boolean".to_string(),
+        ))
     }
 
     /// Read the document as a `blob` if possible
@@ -204,7 +317,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `blob`
     fn take_blob(&mut self, _schema: &Schema) -> Result<ByteBuffer, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as blob".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as blob".to_string(),
+        ))
     }
 
     /// Read the document as a `string` if possible
@@ -214,7 +329,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `string`
     fn take_string(&mut self, _schema: &Schema) -> Result<String, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as string".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as string".to_string(),
+        ))
     }
 
     /// Read the document as a `timestamp` if possible
@@ -224,7 +341,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `timestamp`
     fn take_timestamp(&mut self, _schema: &Schema) -> Result<Instant, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as timestamp".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as timestamp".to_string(),
+        ))
     }
 
     /// Read the document as a `byte` if possible
@@ -234,7 +353,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `byte`
     fn take_byte(&mut self, _schema: &Schema) -> Result<i8, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as byte".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as byte".to_string(),
+        ))
     }
 
     /// Read the document as a `short` if possible
@@ -244,7 +365,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `short`
     fn take_short(&mut self, _schema: &Schema) -> Result<i16, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as short".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as short".to_string(),
+        ))
     }
 
     /// Read the document as a `integer` if possible
@@ -254,7 +377,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as an `integer`
     fn take_integer(&mut self, _schema: &Schema) -> Result<i32, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as integer".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as integer".to_string(),
+        ))
     }
 
     /// Read the document as a `long` if possible
@@ -264,7 +389,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `long`
     fn take_long(&mut self, _schema: &Schema) -> Result<i64, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as long".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as long".to_string(),
+        ))
     }
 
     /// Read the document as a `big_integer` if possible
@@ -274,7 +401,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `big_integer`
     fn take_big_integer(&mut self, _schema: &Schema) -> Result<BigInt, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as big integer".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as big integer".to_string(),
+        ))
     }
 
     /// Read the document as a `float` if possible
@@ -284,7 +413,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `float`
     fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as float".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as float".to_string(),
+        ))
     }
 
     /// Read the document as a `double` if possible
@@ -294,7 +425,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `double`
     fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as double".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as double".to_string(),
+        ))
     }
 
     /// Read the document as a `big_decimal` if possible
@@ -304,7 +437,9 @@ pub trait Document: Send + Sync + BoxClone {
     /// # Errors
     /// Raises `DocumentError` if the Document could not be read as a `big_decimal`
     fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
-        Err(DocumentError::DocumentConversion("failed to read as big decimal".to_string()))
+        Err(DocumentError::DocumentConversion(
+            "failed to read as big decimal".to_string(),
+        ))
     }
 
     /// Get the length of the document
@@ -318,7 +453,10 @@ pub trait Document: Send + Sync + BoxClone {
     ///
     /// # Errors
     /// Raises a `DocumentError` if the document is not a list
-    fn get_element_mut(&mut self, _index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
+    fn get_element_mut(
+        &mut self,
+        _index: usize,
+    ) -> Result<Option<&mut dyn Document>, DocumentError> {
         Err(DocumentError::DocumentConversion("Not a list".to_string()))
     }
 
@@ -347,7 +485,6 @@ pub trait Document: Send + Sync + BoxClone {
         self.len() == 0
     }
 }
-
 
 // ===== Clone support =====
 
@@ -386,137 +523,6 @@ impl Clone for Box<dyn Document> {
 // ================================================================
 
 // ==== As-Ers Convenience Methods =====
-impl dyn Document + '_ {
-    /// Get the `boolean` value of the Document if it is a `boolean` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `boolean`.
-    #[inline]
-    pub fn as_boolean(&self) -> Result<bool, DocumentError> {
-        self.value().as_bool()
-    }
-
-    /// Get the `blob` value of the Document if it is a `blob` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `blob`.
-    #[inline]
-    pub fn as_blob(&self) -> Result<&ByteBuffer, DocumentError>  {
-        self.value().as_blob()
-    }
-
-    /// Get the `string` value of the Document if it is a `string` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `string`.
-    #[inline]
-    pub fn as_str(&self) -> Result<&str, DocumentError> {
-        self.value().as_str()
-    }
-
-    /// Get the `timestamp` value of the Document if it is a `timestamp` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `timestamp`.
-    #[inline]
-    pub fn as_timestamp(&self) -> Result<Instant, DocumentError> {
-        self.value().as_timestamp()
-    }
-
-    /// Get the `byte` value of the Document if it is a `byte` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `byte`.
-    #[inline]
-    pub fn as_byte(&self) -> Result<i8, DocumentError> {
-        self.value().as_byte()
-    }
-
-    /// Get the `short` value of the Document if it is a `short` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `short`.
-    #[inline]
-    pub fn as_short(&self) -> Result<i16, DocumentError> {
-        self.value().as_short()
-    }
-
-    /// Get the `integer` value of the Document if it is a `integer` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `integer`.
-    #[inline]
-    pub fn as_integer(&self) -> Result<i32, DocumentError> {
-        self.value().as_integer()
-    }
-
-    /// Get the `long` value of the Document if it is a `long` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `long`.
-    #[inline]
-    pub fn as_long(&self) -> Result<i64, DocumentError> {
-        self.value().as_long()
-    }
-
-    /// Get the `big_integer` value of the Document if it is a `big_integer` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `big_integer`.
-    pub fn as_big_integer(&self) -> Result<Cow<'_, BigInt>, DocumentError> {
-        self.value().as_big_integer()
-    }
-
-    /// Get the `float` value of the Document if it is a `float` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `float`.
-    #[inline]
-    pub fn as_float(&self) -> Result<f32, DocumentError> {
-        self.value().as_float()
-    }
-
-    /// Get the `double` value of the Document if it is a `double` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `double`.
-    #[inline]
-    pub fn as_double(&self) -> Result<f64, DocumentError> {
-        self.value().as_double()
-    }
-
-    /// Get the `big_decimal` value of the Document if it is a `big_decimal` or can be converted into one.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `big_decimal`.
-    pub fn as_big_decimal(&self) -> Result<Cow<'_, BigDecimal>, DocumentError> {
-        self.value().as_big_decimal()
-    }
-
-    /// Get the `list` value of the Document if it is a `list`.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `list`.
-    #[inline]
-    pub fn as_list(&self) -> Result<&dyn ListCursor, DocumentError> {
-        self.value().as_list()
-    }
-
-    /// Get the `big_decimal` value of the Document if it is a `map` or `structure`.
-    ///
-    /// # Errors
-    /// Returns a `DocumentError` if the document could not be converted to a `map`.
-    #[inline]
-    pub fn as_map(&self) -> Result<&dyn MapCursor, DocumentError> {
-        self.value().as_map()
-    }
-
-    /// Check if the Document is Null (empty)
-    #[inline]
-    pub fn is_null(&self) -> bool {
-        self.value().is_null()
-    }
-}
 
 // ============================================================================
 // Document Errors
@@ -547,7 +553,6 @@ impl crate::serde::de::Error for DocumentError {
         DocumentError::CustomError(msg.to_string())
     }
 }
-
 
 // ================================================================
 // Read-Only Document View
@@ -603,7 +608,7 @@ impl PartialEq for DocumentValue<'_> {
                     }
                 }
                 true
-            },
+            }
             (DocumentValue::Blob(b1), DocumentValue::Blob(b2)) => b1 == b2,
             (DocumentValue::Timestamp(t), DocumentValue::Timestamp(o)) => t == o,
             (DocumentValue::Map(t), DocumentValue::Map(o)) => {
@@ -628,8 +633,8 @@ impl PartialEq for DocumentValue<'_> {
                     }
                 }
                 true
-            },
-            _ => false
+            }
+            _ => false,
         }
     }
 }
@@ -684,176 +689,154 @@ pub enum NumberVariant<'document> {
     BigDecimal(&'document BigDecimal),
 }
 
-macro_rules! into_variant_d {
-    ($variant:ident, $value:expr, $msg:expr) => {
+macro_rules! into_variant {
+    ($variant:ident, $value:expr) => {
         match $value {
-            DocumentValue::$variant(v) => Ok(v),
-            _ => Err(DocumentError::DocumentConversion($msg.to_string()))
+            DocumentValue::$variant(v) => Some(*v),
+            _ => None,
+        }
+    };
+    (ref $variant:ident, $value:expr) => {
+        match $value {
+            DocumentValue::$variant(v) => Some(v),
+            _ => None,
         }
     };
 }
 
-macro_rules! to_int_d {
+macro_rules! to_int {
     ($target_type:ident, $to_method:ident, $value:expr) => {{
-        let err = || DocumentError::DocumentConversion(
-            concat!("Invalid conversion to ", stringify!($target_type)).to_string()
-        );
         match *$value {
-            DocumentValue::Number(NumberVariant::Byte(n)) => n.try_into().map_err(|_| err()),
-            DocumentValue::Number(NumberVariant::Short(n)) => n.try_into().map_err(|_| err()),
-            DocumentValue::Number(NumberVariant::Integer(n)) => n.try_into().map_err(|_| err()),
-            DocumentValue::Number(NumberVariant::Long(n)) => n.try_into().map_err(|_| err()),
-            DocumentValue::Number(NumberVariant::BigInt(ref b)) => b.$to_method().ok_or_else(err),
-            _ => Err(err()),
+            DocumentValue::Number(NumberVariant::Byte(n)) => n.try_into().ok(),
+            DocumentValue::Number(NumberVariant::Short(n)) => n.try_into().ok(),
+            DocumentValue::Number(NumberVariant::Integer(n)) => n.try_into().ok(),
+            DocumentValue::Number(NumberVariant::Long(n)) => n.try_into().ok(),
+            DocumentValue::Number(NumberVariant::BigInt(ref b)) => b.$to_method(),
+            _ => None,
         }
     }};
 }
 
-macro_rules! to_float_d {
+macro_rules! to_float {
     ($target_type:ident, $to_method:ident, $value:expr) => {{
-        let err = || DocumentError::DocumentConversion(
-            concat!("Invalid conversion to ", stringify!($target_type)).to_string()
-        );
-
         match *$value {
-            DocumentValue::Number(NumberVariant::Float(f)) => num_traits::cast(f).ok_or_else(err),
-            DocumentValue::Number(NumberVariant::Double(d)) => num_traits::cast(d).ok_or_else(err),
-            DocumentValue::Number(NumberVariant::BigDecimal(b)) => b.$to_method().ok_or_else(err),
-            _ => Err(err()),
+            DocumentValue::Number(NumberVariant::Float(f)) => num_traits::cast(f),
+            DocumentValue::Number(NumberVariant::Double(d)) => num_traits::cast(d),
+            DocumentValue::Number(NumberVariant::BigDecimal(b)) => b.$to_method(),
+            _ => None,
         }
     }};
 }
 
-
-impl <'document> DocumentValue<'document> {
+impl<'document> DocumentValue<'document> {
     #[inline]
-    fn as_bool(&self) -> Result<bool, DocumentError> {
-        match self {
-            &DocumentValue::Boolean(b) => Ok(b),
-            _ => Err(DocumentError::DocumentConversion("Expected Boolean Document".to_string()))
-        }
+    fn as_bool(&self) -> Option<bool> {
+        into_variant!(Boolean, self)
     }
 
     #[inline]
-    fn as_blob(&self) -> Result<&'document ByteBuffer, DocumentError>  {
-        into_variant_d!(Blob, self, "Expected Blob Document")
+    fn as_blob(&self) -> Option<&'document ByteBuffer> {
+        into_variant!(ref Blob, self)
     }
 
     #[inline]
-    fn as_str(&self) -> Result<&'document str, DocumentError> {
-        into_variant_d!(String, self, "Expected String Document")
+    fn as_str(&self) -> Option<&'document str> {
+        into_variant!(String, self)
     }
 
     #[inline]
-    fn as_timestamp(&self) -> Result<Instant, DocumentError> {
-        match self {
-            &DocumentValue::Timestamp(t) => Ok(t),
-            _ => Err(DocumentError::DocumentConversion("Expected timestamp Document".to_string()))
-        }
+    fn as_timestamp(&self) -> Option<Instant> {
+        into_variant!(Timestamp, self)
     }
 
     #[inline]
-    fn as_byte(&self) -> Result<i8, DocumentError> {
-        to_int_d!(i8, to_i8, self)
+    fn as_byte(&self) -> Option<i8> {
+        to_int!(i8, to_i8, self)
     }
 
     #[inline]
-    fn as_short(&self) -> Result<i16, DocumentError> {
-        to_int_d!(i16, to_i16, self)
+    fn as_short(&self) -> Option<i16> {
+        to_int!(i16, to_i16, self)
     }
 
     #[inline]
-    fn as_integer(&self) -> Result<i32, DocumentError> {
-        to_int_d!(i32, to_i32, self)
+    fn as_integer(&self) -> Option<i32> {
+        to_int!(i32, to_i32, self)
     }
 
     #[inline]
-    fn as_long(&self) -> Result<i64, DocumentError> {
-        to_int_d!(i64, to_i64, self)
+    fn as_long(&self) -> Option<i64> {
+        to_int!(i64, to_i64, self)
     }
 
-    fn as_big_integer(&self) -> Result<Cow<'document, BigInt>, DocumentError> {
-        let err = || DocumentError::DocumentConversion(
-            "Invalid conversion to BigInt".to_string()
-        );
-
+    #[inline]
+    fn as_big_integer(&self) -> Option<Cow<'document, BigInt>> {
         match *self {
-            DocumentValue::Number(NumberVariant::BigInt(b)) => Ok(Cow::Borrowed(b)),
-            DocumentValue::Number(NumberVariant::Byte(b)) => Ok(Cow::Owned(BigInt::from(b))),
-            DocumentValue::Number(NumberVariant::Short(s)) => Ok(Cow::Owned(BigInt::from(s))),
-            DocumentValue::Number(NumberVariant::Integer(i)) => Ok(Cow::Owned(BigInt::from(i))),
-            DocumentValue::Number(NumberVariant::Long(l)) => Ok(Cow::Owned(BigInt::from(l))),
-            DocumentValue::Number(NumberVariant::Float(f)) => {
-                let b = BigInt::from_f32(f).ok_or_else(err)?;
-                Ok(Cow::Owned(b))
-            },
-            DocumentValue::Number(NumberVariant::Double(d)) => {
-                let b = BigInt::from_f64(d).ok_or_else(err)?;
-                Ok(Cow::Owned(b))
-            },
-            DocumentValue::Number(NumberVariant::BigDecimal(b)) => {
-                let b = b.to_bigint().ok_or_else(err)?;
-                Ok(Cow::Owned(b))
-            },
-            _ => Err(err()),
+            DocumentValue::Number(NumberVariant::BigInt(b)) => Some(Cow::Borrowed(b)),
+            DocumentValue::Number(NumberVariant::Byte(b)) => Some(Cow::Owned(BigInt::from(b))),
+            DocumentValue::Number(NumberVariant::Short(s)) => Some(Cow::Owned(BigInt::from(s))),
+            DocumentValue::Number(NumberVariant::Integer(i)) => Some(Cow::Owned(BigInt::from(i))),
+            DocumentValue::Number(NumberVariant::Long(l)) => Some(Cow::Owned(BigInt::from(l))),
+            DocumentValue::Number(NumberVariant::Float(f)) => BigInt::from_f32(f).map(Cow::Owned),
+            DocumentValue::Number(NumberVariant::Double(d)) => BigInt::from_f64(d).map(Cow::Owned),
+            DocumentValue::Number(NumberVariant::BigDecimal(b)) => b.to_bigint().map(Cow::Owned),
+            _ => None,
         }
     }
 
     #[inline]
-    fn as_float(&self) -> Result<f32, DocumentError> {
-        to_float_d!(f32, to_f32, self)
+    fn as_float(&self) -> Option<f32> {
+        to_float!(f32, to_f32, self)
     }
 
     #[inline]
-    fn as_double(&self) -> Result<f64, DocumentError> {
-        to_float_d!(f64, to_f64, self)
+    fn as_double(&self) -> Option<f64> {
+        to_float!(f64, to_f64, self)
     }
 
-    fn as_big_decimal(&self) -> Result<Cow<'document, BigDecimal>, DocumentError> {
-        let err = || DocumentError::DocumentConversion(
-            "Invalid conversion to BigDecimal".to_string()
-        );
-
+    #[inline]
+    fn as_big_decimal(&self) -> Option<Cow<'document, BigDecimal>> {
         match *self {
-            DocumentValue::Number(NumberVariant::BigDecimal(b)) => Ok(Cow::Borrowed(b)),
+            DocumentValue::Number(NumberVariant::BigDecimal(b)) => Some(Cow::Borrowed(b)),
+            DocumentValue::Number(NumberVariant::Byte(n)) => Some(Cow::Owned(BigDecimal::from(n))),
+            DocumentValue::Number(NumberVariant::Short(n)) => Some(Cow::Owned(BigDecimal::from(n))),
+            DocumentValue::Number(NumberVariant::Integer(n)) => {
+                Some(Cow::Owned(BigDecimal::from(n)))
+            }
+            DocumentValue::Number(NumberVariant::Long(n)) => Some(Cow::Owned(BigDecimal::from(n))),
             DocumentValue::Number(NumberVariant::BigInt(b)) => {
-                let bd = BigDecimal::from_bigint(b.clone(), 0);
-                Ok(Cow::Owned(bd))
-            },
-            DocumentValue::Number(NumberVariant::Byte(n)) => Ok(Cow::Owned(BigDecimal::from(n))),
-            DocumentValue::Number(NumberVariant::Short(n)) => Ok(Cow::Owned(BigDecimal::from(n))),
-            DocumentValue::Number(NumberVariant::Integer(n)) => Ok(Cow::Owned(BigDecimal::from(n))),
-            DocumentValue::Number(NumberVariant::Long(n)) => Ok(Cow::Owned(BigDecimal::from(n))),
+                Some(Cow::Owned(BigDecimal::from_bigint(b.clone(), 0)))
+            }
             DocumentValue::Number(NumberVariant::Float(f)) => {
-                let d = BigDecimal::from_f32(f).ok_or_else(err)?;
-                Ok(Cow::Owned(d))
-            },
+                BigDecimal::from_f32(f).map(Cow::Owned)
+            }
             DocumentValue::Number(NumberVariant::Double(d)) => {
-                let d = BigDecimal::from_f64(d).ok_or_else(err)?;
-                Ok(Cow::Owned(d))
-            },
-            _ => Err(err()),
+                BigDecimal::from_f64(d).map(Cow::Owned)
+            }
+            _ => None,
         }
     }
 
     #[inline]
-    fn as_list(&self) -> Result<&'document dyn ListCursor, DocumentError> {
+    fn as_list(&self) -> Option<&'document dyn ListCursor> {
         match self {
-            &DocumentValue::List(v) => Ok(v),
-            _ => Err(DocumentError::DocumentConversion("Expected List".to_string()))
+            &DocumentValue::List(v) => Some(v),
+            _ => None,
         }
     }
 
     #[inline]
-    fn as_map(&self) -> Result<&'document dyn MapCursor, DocumentError> {
+    fn as_map(&self) -> Option<&'document dyn MapCursor> {
         match self {
-            &DocumentValue::Map(v) => Ok(v),
-            _ => Err(DocumentError::DocumentConversion("Expected Map".to_string()))
+            &DocumentValue::Map(v) => Some(v),
+            _ => None,
         }
     }
 
-    /// TODO
+    /// Check if the document variant is null
+    /// TODO: Do we need this?
     #[inline]
+    #[must_use]
     pub fn is_null(&self) -> bool {
         matches!(self, DocumentValue::Null)
     }
@@ -864,7 +847,7 @@ impl PartialEq for NumberVariant<'_> {
         // TODO: Add all combos!
         match (self, other) {
             (NumberVariant::BigInt(a), NumberVariant::BigInt(b)) => a == b,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -987,7 +970,7 @@ impl Document for f32 {
 
     fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
         BigDecimal::from_f32(*self)
-               .ok_or_else(|| DocumentError::DocumentConversion("Could not convert float".to_string()))
+            .ok_or_else(|| DocumentError::DocumentConversion("Could not convert float".to_string()))
     }
 }
 
@@ -1005,8 +988,9 @@ impl Document for f64 {
     }
 
     fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
-        BigDecimal::from_f64(*self)
-            .ok_or_else(|| DocumentError::DocumentConversion("Could not convert double".to_string()))
+        BigDecimal::from_f64(*self).ok_or_else(|| {
+            DocumentError::DocumentConversion("Could not convert double".to_string())
+        })
     }
 }
 
@@ -1066,7 +1050,7 @@ impl Document for &'static str {
 }
 
 // Collections
-impl <T: Document + Clone + 'static> Document for Vec<T> {
+impl<T: Document + Clone + 'static> Document for Vec<T> {
     #[inline]
     fn value(&self) -> DocumentValue<'_> {
         DocumentValue::List(self)
@@ -1079,12 +1063,15 @@ impl <T: Document + Clone + 'static> Document for Vec<T> {
 
     #[inline]
     #[allow(trivial_casts)]
-    fn get_element_mut(&mut self, index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
+    fn get_element_mut(
+        &mut self,
+        index: usize,
+    ) -> Result<Option<&mut dyn Document>, DocumentError> {
         Ok(self.get_mut(index).map(|item| item as &mut dyn Document))
     }
 }
 
-impl <T: Document> ListCursor for Vec<T> {
+impl<T: Document> ListCursor for Vec<T> {
     #[inline]
     #[allow(trivial_casts)]
     #[allow(clippy::unnecessary_cast)]
@@ -1098,7 +1085,7 @@ impl <T: Document> ListCursor for Vec<T> {
     }
 }
 
-impl <T: Document + Clone + 'static> Document for IndexMap<String, T> {
+impl<T: Document + Clone + 'static> Document for IndexMap<String, T> {
     fn value(&self) -> DocumentValue<'_> {
         DocumentValue::Map(self)
     }
@@ -1112,7 +1099,9 @@ impl <T: Document + Clone + 'static> Document for IndexMap<String, T> {
     #[allow(trivial_casts)]
     fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
         let Some((k, v)) = self.get_index_mut(index) else {
-            return Err(DocumentError::DocumentConversion("Could not get entry".to_string()));
+            return Err(DocumentError::DocumentConversion(
+                "Could not get entry".to_string(),
+            ));
         };
         Ok((k.as_str(), v as &mut dyn Document))
     }
@@ -1120,11 +1109,13 @@ impl <T: Document + Clone + 'static> Document for IndexMap<String, T> {
     #[inline]
     #[allow(trivial_casts)]
     fn get_key_mut(&mut self, index: usize) -> Result<Option<&mut dyn Document>, DocumentError> {
-        Ok(self.get_index_mut2(index).map(|(k, _)| k as &mut dyn Document))
+        Ok(self
+            .get_index_mut2(index)
+            .map(|(k, _)| k as &mut dyn Document))
     }
 }
 
-impl <T: Document + Clone> MapCursor for IndexMap<String, T> {
+impl<T: Document + Clone> MapCursor for IndexMap<String, T> {
     #[inline]
     fn get_key(&self, idx: usize) -> Option<&str> {
         self.get_index(idx).map(|(k, _)| k.as_str())
@@ -1139,7 +1130,8 @@ impl <T: Document + Clone> MapCursor for IndexMap<String, T> {
     #[inline]
     #[allow(trivial_casts)]
     fn get_entry(&self, idx: usize) -> Option<(&str, &dyn Document)> {
-        self.get_index(idx).map(|(k, v)| (k.as_str(), v as &dyn Document))
+        self.get_index(idx)
+            .map(|(k, v)| (k.as_str(), v as &dyn Document))
     }
 
     fn len(&self) -> usize {
@@ -1148,14 +1140,14 @@ impl <T: Document + Clone> MapCursor for IndexMap<String, T> {
 }
 
 // TODO: Is this right?
-impl <T: Document + Clone + 'static> Document for Option<T> {
+impl<T: Document + Clone + 'static> Document for Option<T> {
     fn value(&self) -> DocumentValue<'_> {
         self.as_ref().map_or(DocumentValue::Null, |v| v.value())
     }
 }
 
 // Blanket conversion into a boxed document type
-impl <T: Document + 'static> From<T> for Box<dyn Document> {
+impl<T: Document + 'static> From<T> for Box<dyn Document> {
     #[inline]
     #[allow(trivial_casts)]
     fn from(value: T) -> Self {
@@ -1346,15 +1338,14 @@ impl dyn Document {
 mod tests {
     use super::*;
 
+    // ==== As-ers ====
     #[test]
     fn string_document_value() {
         let document_str: Box<dyn Document> = "MyStr".into();
-        let output_str: String = document_str.as_str().unwrap().to_string();
-        assert_eq!(output_str, "MyStr".to_string());
-
-        let document_string: Box<dyn Document> = "MyString".into();
-        let output_string: String = document_string.as_str().unwrap().to_string();
-        assert_eq!(&output_string, &"MyString");
+        let output_str = document_str
+            .as_str()
+            .expect("Could not get document as str");
+        assert_eq!(output_str, "MyStr");
     }
 
     #[test]
@@ -1376,7 +1367,8 @@ mod tests {
         let map_doc: Box<dyn Document> = map_in.into();
         assert_eq!(map_doc.len(), 1);
 
-        let map_out: IndexMap<String, String> = map_doc.try_into().unwrap();
+        let map_out: IndexMap<String, String> =
+            map_doc.try_into().expect("Failed to convert document");
         assert_eq!(map_out.len(), 1);
         assert_eq!(map_out["a"], "b");
     }
@@ -1391,11 +1383,14 @@ mod tests {
     #[test]
     fn float_document_values() {
         let float: Box<dyn Document> = 1f32.into();
-        let double: Box<dyn Document> = 1f64.into();
-
-        let float_value: f32 = float.try_into().unwrap();
+        let float_value: f32 = float.try_into().expect("Failed to convert float");
         assert_eq!(float_value, 1f32);
-        let double_value: f64 = double.try_into().unwrap();
+    }
+
+    #[test]
+    fn double_document_value() {
+        let double: Box<dyn Document> = 1f64.into();
+        let double_value: f64 = double.try_into().expect("Failed to convert double");
         assert_eq!(double_value, 1f64);
     }
 }

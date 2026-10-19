@@ -76,10 +76,10 @@ use std::{any::Any, collections::BTreeMap, fmt::Debug, ops::Deref, sync::OnceLoc
 
 use crate::{
     Ref,
+    prelude::DOCUMENT,
     schema::{Document, ShapeId, TryFromDocument},
+    serde::debug::DebugWrapper,
 };
-use crate::prelude::DOCUMENT;
-use crate::serde::debug::DebugWrapper;
 
 /// Base trait for all [Smithy Trait](https://smithy.io/2.0/spec/model.html#traits) implementations.
 ///

@@ -14,14 +14,12 @@
 //!
 //! This design (inspired by `serde`) separates iteration from value reading,
 //! allowing callers to control the serialization flow.
-use std::{error::Error as StdError, fmt::Display};
-use std::borrow::Cow;
-use std::convert::Infallible;
+use std::{borrow::Cow, convert::Infallible, error::Error as StdError, fmt::Display};
+
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-    schema::{Document, Schema, SchemaShape, ShapeId},
+    schema::{Document, DocumentValue, NumberVariant, Schema, SchemaShape, ShapeId},
 };
-use crate::schema::{DocumentValue, NumberVariant};
 // ============================================================================
 // Shape Traits
 // ============================================================================
@@ -76,7 +74,6 @@ pub trait Error: Sized + StdError {
     /// Create an error with a custom message
     fn custom<T: Display>(msg: T) -> Self;
 }
-
 
 // TODO: Is this wise?
 impl Error for Infallible {
@@ -479,8 +476,12 @@ pub trait Serializer: Sized {
             DocumentValue::Number(NumberVariant::Long(long)) => self.write_long(schema, long),
             DocumentValue::Number(NumberVariant::BigInt(bi)) => self.write_big_integer(schema, bi),
             DocumentValue::Number(NumberVariant::Float(float)) => self.write_float(schema, float),
-            DocumentValue::Number(NumberVariant::Double(double)) => self.write_double(schema, double),
-            DocumentValue::Number(NumberVariant::BigDecimal(bd)) => self.write_big_decimal(schema, bd),
+            DocumentValue::Number(NumberVariant::Double(double)) => {
+                self.write_double(schema, double)
+            }
+            DocumentValue::Number(NumberVariant::BigDecimal(bd)) => {
+                self.write_big_decimal(schema, bd)
+            }
             DocumentValue::String(string) => self.write_string(schema, string),
             DocumentValue::Blob(blob) => self.write_blob(schema, blob),
             DocumentValue::Timestamp(instant) => self.write_timestamp(schema, instant),
@@ -724,7 +725,6 @@ impl SerializeWithSchema for str {
     }
 }
 
-
 // === Wrapper-type implementations ===
 
 impl<T: SerializeWithSchema> SerializeWithSchema for Option<T> {
@@ -754,7 +754,11 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
 }
 
 impl SerializeWithSchema for Cow<'_, str> {
-    fn serialize_with_schema<S: Serializer>(&self, schema: &Schema, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         serializer.write_string(schema, self)
     }
 }
