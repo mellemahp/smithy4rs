@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    prelude::{DOCUMENT, RequiredTrait, STRING},
+    prelude::{DOCUMENT, RequiredTrait},
     schema::{Document, DocumentError, Schema, ShapeType, TryFromDocument},
     serde::{
         de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
@@ -10,7 +10,7 @@ use crate::{
         serializers::{Error, SerializeWithSchema},
     },
 };
-
+use crate::schema::{ListAccessor, MapAccessor};
 // ============================================================================
 // Errors
 // ============================================================================
@@ -156,7 +156,7 @@ impl SerializeWithSchema for dyn Document + '_ {
                 let document_map = self
                     .as_map()
                     .ok_or_else(|| S::Error::custom("could not be represented as map"))?;
-                let mut struct_serializer = serializer.write_struct(&DOCUMENT, self.len())?;
+                let mut struct_serializer = serializer.write_struct(&DOCUMENT, document_map.len())?;
                 if let Some(discriminator) = &self.discriminant() {
                     struct_serializer.write_discriminator(discriminator)?;
                 }
@@ -187,33 +187,27 @@ impl SerializeWithSchema for dyn Document + '_ {
 // Deserialization FROM Document
 // ============================================================================
 
-/// Reader structure for collection (i.e. List, Map, Struct) document types.
+/// Reader structure for List document types.
 ///
-/// Note: Reading a collection will `take` its values so it will no longer be
+/// Note: Reading a list will `take` its values so it will no longer be
 /// usable for re-read and should be dropped.
-pub struct DocumentCollectionReader<'b, 'doc> {
+pub struct DocumentListReader<'b> {
     /// Inner document.
     ///
     /// Note: Should always represent a collection (Struct, List, Map)
-    inner: &'b mut (dyn Document + 'doc),
+    inner: &'b mut (dyn ListAccessor + 'b),
     /// Current index of the reader
     idx: usize,
 }
-impl<'b, 'doc> DocumentCollectionReader<'b, 'doc> {
-    #[inline]
-    fn new(inner: &'b mut (dyn Document + 'doc)) -> Self {
-        Self { inner, idx: 0 }
-    }
-}
 
-impl<'de> ListReader<'de> for DocumentCollectionReader<'_, '_> {
+impl<'de> ListReader<'de> for DocumentListReader<'_> {
     type Error = DocumentError;
 
     fn read_element<T: DeserializeWithSchema<'de>>(
         &mut self,
         schema: &Schema,
     ) -> Result<Option<T>, Self::Error> {
-        let Some(elem) = self.inner.get_element_mut(self.idx)? else {
+        let Some(elem) = self.inner.get_element_mut(self.idx) else {
             return Ok(None);
         };
         self.idx += 1;
@@ -221,14 +215,30 @@ impl<'de> ListReader<'de> for DocumentCollectionReader<'_, '_> {
     }
 }
 
-impl<'de> MapReader<'de> for DocumentCollectionReader<'_, '_> {
+
+/// Reader structure for objects (i.e. Map, Struct, Unions) document types.
+///
+/// Note: Reading a collection will `take` its values so it will no longer be
+/// usable for re-read and should be dropped.
+pub struct DocumentObjectReader<'b>
+{
+    /// Inner document.
+    ///
+    /// Note: Should always represent a collection (Struct, List, Map)
+    inner: &'b mut (dyn MapAccessor + 'b),
+    /// Current index of the reader
+    idx: usize,
+}
+
+impl<'de> MapReader<'de> for DocumentObjectReader<'_> {
     type Error = DocumentError;
 
+    // TODO: How to handle numeric keys?
     fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
-        let Some(key) = self.inner.get_key_mut(self.idx)? else {
+        let Some(key) = self.inner.get_key_mut(self.idx) else {
             return Ok(None);
         };
-        Ok(Some(key.take_string(&STRING)?))
+        Ok(Some(key.into_owned()))
     }
 
     fn read_value<V: DeserializeWithSchema<'de>>(
@@ -246,7 +256,7 @@ impl<'de> MapReader<'de> for DocumentCollectionReader<'_, '_> {
     }
 }
 
-impl<'de> StructReader<'de> for DocumentCollectionReader<'_, '_> {
+impl<'de> StructReader<'de> for DocumentObjectReader<'_> {
     type Error = DocumentError;
 
     fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
@@ -272,12 +282,12 @@ impl<'de> StructReader<'de> for DocumentCollectionReader<'_, '_> {
     }
 }
 
-impl<'b, 'doc> Deserializer<'_> for &'b mut (dyn Document + 'doc) {
+impl<'b> Deserializer<'_> for &'b mut (dyn Document + '_) {
     type Error = DocumentError;
     // Assuming your StructReader uses a similar unboxed/stack pattern
-    type StructReader = DocumentCollectionReader<'b, 'doc>;
-    type ListReader = DocumentCollectionReader<'b, 'doc>;
-    type MapReader = DocumentCollectionReader<'b, 'doc>;
+    type StructReader = DocumentObjectReader<'b>;
+    type ListReader = DocumentListReader<'b>;
+    type MapReader = DocumentObjectReader<'b>;
 
     // Primitives (Bitwise Stack Copies)
     #[inline]
@@ -323,26 +333,35 @@ impl<'b, 'doc> Deserializer<'_> for &'b mut (dyn Document + 'doc) {
 
     #[inline]
     fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
-        Ok(DocumentCollectionReader::new(self))
+        Ok(DocumentObjectReader {
+            inner: self.take_map()?,
+            idx: 0
+        })
     }
 
     #[inline]
     fn read_list(self, _schema: &Schema) -> Result<Self::ListReader, Self::Error> {
-        Ok(DocumentCollectionReader::new(self))
+        Ok(DocumentListReader {
+            inner: self.take_list()?,
+            idx: 0,
+        })
     }
 
     #[inline]
     fn read_map(self, _schema: &Schema) -> Result<Self::MapReader, Self::Error> {
-        Ok(DocumentCollectionReader::new(self))
+        Ok(DocumentObjectReader {
+            inner: self.take_map()?,
+            idx: 0
+        })
     }
 
     fn is_null(&mut self) -> bool {
         // TODO: on top-level?
-        self.value().is_null()
+        todo!()
     }
 
-    fn read_null(self) -> Result<(), Self::Error> {
-        if self.value().is_null() {
+    fn read_null(mut self) -> Result<(), Self::Error> {
+        if self.is_null() {
             Ok(())
         } else {
             // TODO: More appropriate error?
@@ -404,6 +423,7 @@ impl<'de> DeserializeWithSchema<'de> for Box<dyn Document> {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
     use std::str::FromStr;
 
     use indexmap::IndexMap;
@@ -412,7 +432,7 @@ mod tests {
     use crate::{
         BigDecimal, BigInt,
         derive::SmithyShape,
-        schema::{DocumentValue, MapCursor, ShapeId, prelude::*},
+        schema::{MapAccessor, prelude::*},
         smithy,
     };
 
@@ -447,19 +467,30 @@ mod tests {
         pub member_map: IndexMap<String, String>,
     }
 
-    impl Document for SerializeMe {
+    impl MapAccessor for SerializeMe {
         #[inline]
-        fn discriminant(&self) -> Option<&ShapeId> {
-            Some(SHAPE.id())
+        #[allow(trivial_casts)]
+        fn get(&self, key: &str) -> Option<&dyn Document> {
+            match key {
+                "memberA" => Some(&self.member_a),
+                "memberB" => Some(&self.member_b),
+                // "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
+                "memberList" => Some(&self.member_list),
+                "memberMap" => Some(&self.member_map),
+                _ => None,
+            }
         }
 
         #[inline]
-        fn value(&self) -> DocumentValue<'_> {
-            DocumentValue::Map(self)
-        }
-
-        fn len(&self) -> usize {
-            3
+        fn get_entry(&self, idx: usize) -> Option<(&str, &dyn Document)> {
+            match idx {
+                0 => Some(("memberA", &self.member_a)),
+                1 => Some(("memberB", &self.member_b)),
+                // 2 => Some(("memberOptional", &self.member_optional)),
+                3 => Some(("memberList", &self.member_list)),
+                4 => Some(("memberMap", &self.member_map)),
+                _ => None,
+            }
         }
 
         fn get_entry_mut(
@@ -478,47 +509,14 @@ mod tests {
             };
             Ok(out)
         }
-    }
 
-    impl MapCursor for SerializeMe {
-        #[inline]
-        fn get_key(&self, idx: usize) -> Option<&str> {
-            match idx {
-                0 => Some("memberA"),
-                1 => Some("memberB"),
-                // 2 => Some("memberOptional"),
-                2 => Some("memberList"),
-                3 => Some("memberMap"),
-                _ => None,
-            }
+        fn get_key_mut(&mut self, _index: usize) -> Option<Cow<'_, str>> {
+            todo!()
         }
 
         #[inline]
-        #[allow(trivial_casts)]
-        fn get(&self, key: &str) -> Option<&dyn Document> {
-            match key {
-                "memberA" => Some(&self.member_a),
-                "memberB" => Some(&self.member_b),
-                // "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
-                "memberList" => Some(&self.member_list),
-                "memberMap" => Some(&self.member_map),
-                _ => None,
-            }
-        }
-
-        fn get_entry(&self, idx: usize) -> Option<(&str, &dyn Document)> {
-            match idx {
-                0 => Some(("memberA", &self.member_a)),
-                1 => Some(("memberB", &self.member_b)),
-                // 2 => Some(("memberOptional", &self.member_optional)),
-                3 => Some(("memberList", &self.member_list)),
-                4 => Some(("memberMap", &self.member_map)),
-                _ => None,
-            }
-        }
-
         fn len(&self) -> usize {
-            5
+            4
         }
     }
 

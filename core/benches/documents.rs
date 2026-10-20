@@ -1,11 +1,13 @@
+use std::borrow::Cow;
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
     prelude::{INTEGER, STRING},
-    schema::{Document, DocumentError, DocumentValue, MapCursor, ShapeId, TryFromDocument},
+    schema::{Document, DocumentError, TryFromDocument},
     smithy,
 };
+use smithy4rs_core::schema::MapAccessor;
 
 smithy!(
     map com::example::Map {
@@ -37,49 +39,7 @@ pub struct SerializeMe {
     pub member_map: IndexMap<String, String>,
 }
 
-impl Document for SerializeMe {
-    #[inline]
-    fn discriminant(&self) -> Option<&ShapeId> {
-        Some(SHAPE.id())
-    }
-
-    #[inline]
-    fn value(&self) -> DocumentValue<'_> {
-        DocumentValue::Map(self)
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        4
-    }
-
-    #[inline]
-    fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
-        let out: (&str, &mut dyn Document) = match index {
-            0 => ("memberA", &mut self.member_a),
-            1 => ("memberB", &mut self.member_b),
-            // 2 => ("memberOptional", &mut self.member_optional),
-            2 => ("memberList", &mut self.member_list),
-            3 => ("memberMap", &mut self.member_map),
-            _ => return Err(DocumentError::CustomError("Invalid index".to_string())),
-        };
-        Ok(out)
-    }
-}
-
-impl MapCursor for SerializeMe {
-    #[inline]
-    fn get_key(&self, idx: usize) -> Option<&str> {
-        match idx {
-            0 => Some("memberA"),
-            1 => Some("memberB"),
-            //2 => Some("memberOptional"),
-            2 => Some("memberList"),
-            3 => Some("memberMap"),
-            _ => None,
-        }
-    }
-
+impl MapAccessor for SerializeMe {
     #[inline]
     #[allow(trivial_casts)]
     fn get(&self, key: &str) -> Option<&dyn Document> {
@@ -102,6 +62,32 @@ impl MapCursor for SerializeMe {
         }
     }
 
+    #[inline]
+    fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        let out: (&str, &mut dyn Document) = match index {
+            0 => ("memberA", &mut self.member_a),
+            1 => ("memberB", &mut self.member_b),
+            // 2 => ("memberOptional", &mut self.member_optional),
+            2 => ("memberList", &mut self.member_list),
+            3 => ("memberMap", &mut self.member_map),
+            _ => return Err(DocumentError::CustomError("Invalid index".to_string())),
+        };
+        Ok(out)
+    }
+
+    #[inline]
+    #[allow(trivial_casts)]
+    fn get_key_mut(&mut self, index: usize) -> Option<Cow<'_, str>> {
+        match index {
+            0 => Some(Cow::Borrowed("memberA")),
+            1 => Some(Cow::Borrowed("memberB")),
+            2 => Some(Cow::Borrowed("memberList")),
+            3 => Some(Cow::Borrowed("memberMap")),
+            _ => None,
+        }
+    }
+
+    #[inline]
     fn len(&self) -> usize {
         4
     }
