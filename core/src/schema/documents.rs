@@ -286,7 +286,7 @@ pub trait Document: Send + Sync + BoxClone {
     }
 
     /// Check if the Document is Null (empty)
-    fn is_null(&self) -> bool {
+    fn null(&self) -> bool {
         matches!(self.document_type(), DocumentType::Null)
     }
 
@@ -558,7 +558,7 @@ impl<T: Document + Clone + 'static> BoxClone for T {
 impl PartialEq for dyn Document + '_ {
     fn eq(&self, other: &Self) -> bool {
         match self.document_type() {
-            DocumentType::Null => other.is_null(),
+            DocumentType::Null => other.null(),
             DocumentType::Boolean => self.as_boolean() == other.as_boolean(),
             DocumentType::Number(number) => match number {
                 Number::Byte => self.as_byte() == other.as_byte(),
@@ -1079,8 +1079,8 @@ impl<T: Document + Clone + 'static> Document for Option<T> {
     }
 
     #[inline]
-    fn is_null(&self) -> bool {
-        self.as_ref().is_none_or(Document::is_null)
+    fn null(&self) -> bool {
+        self.as_ref().is_none_or(Document::null)
     }
 
     // ==== Delegation of takers to inner document type ====
@@ -1321,7 +1321,7 @@ impl<T: TryFromDocument> TryFromDocument for IndexMap<String, T> {
 impl<T: TryFromDocument> TryFromDocument for Option<T> {
     #[inline]
     fn try_from<'a>(document: &mut (dyn Document + 'a)) -> Result<Self, DocumentError> {
-        if document.is_null() {
+        if document.null() {
             Ok(None)
         } else {
             Ok(Some(T::try_from(document)?))

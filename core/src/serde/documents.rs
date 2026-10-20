@@ -44,7 +44,7 @@ impl SerializeWithSchema for dyn Document + '_ {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         // Try to coerce into schema requested type if possible
-        if self.is_null() {
+        if self.null() {
             return serializer.write_null(schema);
         }
         // Try to coerce into schema requested type if possible
@@ -356,12 +356,11 @@ impl<'b> Deserializer<'_> for &'b mut (dyn Document + '_) {
     }
 
     fn is_null(&mut self) -> bool {
-        // TODO: on top-level?
-        todo!()
+        self.null()
     }
 
-    fn read_null(mut self) -> Result<(), Self::Error> {
-        if self.is_null() {
+    fn read_null(self) -> Result<(), Self::Error> {
+        if self.null() {
             Ok(())
         } else {
             // TODO: More appropriate error?
@@ -427,7 +426,6 @@ mod tests {
     use std::str::FromStr;
 
     use indexmap::IndexMap;
-
     use super::*;
     use crate::{
         BigDecimal, BigInt,
@@ -451,18 +449,19 @@ mod tests {
         structure com::example::Shape {
             memberA: STRING
             memberB: STRING
+            memberOptional: STRING
             memberList: LIST
             memberMap: MAP
         }
     );
-    //          memberOptional: STRING
+    //
 
     #[derive(SmithyShape, Clone, PartialEq)]
     #[schema(schema = SHAPE)]
     pub struct SerializeMe {
         pub member_a: String,
         pub member_b: String,
-        // pub member_optional: Option<String>,
+        pub member_optional: Option<String>,
         pub member_list: Vec<String>,
         pub member_map: IndexMap<String, String>,
     }
@@ -474,7 +473,7 @@ mod tests {
             match key {
                 "memberA" => Some(&self.member_a),
                 "memberB" => Some(&self.member_b),
-                // "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
+                "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
                 "memberList" => Some(&self.member_list),
                 "memberMap" => Some(&self.member_map),
                 _ => None,
@@ -486,7 +485,7 @@ mod tests {
             match idx {
                 0 => Some(("memberA", &self.member_a)),
                 1 => Some(("memberB", &self.member_b)),
-                // 2 => Some(("memberOptional", &self.member_optional)),
+                2 => Some(("memberOptional", &self.member_optional)),
                 3 => Some(("memberList", &self.member_list)),
                 4 => Some(("memberMap", &self.member_map)),
                 _ => None,
@@ -500,9 +499,9 @@ mod tests {
             let out: (&str, &mut dyn Document) = match index {
                 0 => ("memberA", &mut self.member_a),
                 1 => ("memberB", &mut self.member_b),
-                // 2 => ("memberOptional", &mut self.member_optional),
-                2 => ("memberList", &mut self.member_list),
-                3 => ("memberMap", &mut self.member_map),
+                2 => ("memberOptional", &mut self.member_optional),
+                3 => ("memberList", &mut self.member_list),
+                4 => ("memberMap", &mut self.member_map),
                 _ => {
                     return Err(DocumentError::CustomError("Invalid index".to_string()));
                 }
@@ -516,7 +515,7 @@ mod tests {
 
         #[inline]
         fn len(&self) -> usize {
-            4
+            5
         }
     }
 
@@ -528,7 +527,7 @@ mod tests {
         let struct_to_convert = SerializeMe {
             member_a: "a".to_string(),
             member_b: "b".to_string(),
-            // member_optional: None,
+            member_optional: None,
             member_map: map,
             member_list: list,
         };
@@ -571,7 +570,7 @@ mod tests {
         let struct_to_convert = SerializeMe {
             member_a: "a".to_string(),
             member_b: "b".to_string(),
-            // member_optional: Some("c".to_string()),
+            member_optional: Some("c".to_string()),
             member_map: map,
             member_list: list,
         };
@@ -680,6 +679,7 @@ mod tests {
         assert_eq!(original, result);
     }
 
+    // TODO: Add conversion tests
     #[test]
     fn roundtrip_struct() {
         let mut original_map = IndexMap::new();
@@ -695,7 +695,7 @@ mod tests {
         let original = SerializeMe {
             member_a: "value_a".to_string(),
             member_b: "value_b".to_string(),
-            // member_optional: Some("value_c".to_string()),
+            member_optional: Some("value_c".to_string()),
             member_map: original_map.clone(),
             member_list: original_list,
         };
@@ -713,28 +713,31 @@ mod tests {
 
         // Check member_b
         let member_b_doc = doc_map.get("memberB").expect("Should have member b");
-        // TODO: Use try_into impl
         let b_value = member_b_doc.as_str().unwrap();
         assert_eq!(b_value, "value_b");
 
         // Check member_optional
-        // let member_c_doc = doc_map
-        //     .get("memberOptional")
-        //     .expect("Should have member optional");
-        // let c_value = member_c_doc.as_str().unwrap();
-        // assert_eq!(c_value, "value_c");
-
-        // TODO: RE-ADD
+        let member_c_doc = doc_map
+            .get("memberOptional")
+            .expect("Should have member optional");
+        let c_value = member_c_doc.as_str().unwrap();
+        assert_eq!(c_value, "value_c");
 
         // Check list
-        // let list_doc = doc_map.get("memberList").expect("Should have list").clone();
-        // let list_value: Vec<String> = list_doc.try_into().unwrap();
-        // assert_eq!(list_value, original_list);
-        //
+        let list_doc = doc_map.get("memberList").expect("Should have list");
+        let list = list_doc.as_list().expect("Should be a list");
+        assert!(!list.is_empty());
+        assert_eq!(list.len(), 3);
+        let item_one = list.get(0).expect("Should have an item");
+        let item_str = item_one.as_str().expect("Should be a string");
+        assert_eq!(item_str, "listitem1");
+
         // // Check map
-        // let map_doc = doc_map.get("memberMap").expect("Should have map").clone();
-        // let map_value: IndexMap<String, String> = map_doc.try_into().unwrap();
-        // assert_eq!(map_value, original_map);
+        let map_doc = doc_map.get("memberMap").expect("Should have map");
+        let map_member = map_doc.as_map().expect("Should be a map");
+        let map_value_one = map_member.get("mapkey1").expect("Should have mapkey1 key");
+        let value = map_value_one.as_str().expect("Should be a string");
+        assert_eq!(value, "mapvalue1");
     }
 
     #[test]

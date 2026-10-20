@@ -24,6 +24,7 @@ smithy!(
     structure com::example::Shape {
         memberA: STRING
         memberB: INTEGER
+        memberOptional: STRING
         memberList: LIST
         memberMap: MAP
     }
@@ -35,6 +36,7 @@ smithy!(
 pub struct SerializeMe {
     pub member_a: String,
     pub member_b: i32,
+    pub member_optional: Option<String>,
     pub member_list: Vec<String>,
     pub member_map: IndexMap<String, String>,
 }
@@ -46,6 +48,7 @@ impl MapAccessor for SerializeMe {
         match key {
             "memberA" => Some(&self.member_a),
             "memberB" => Some(&self.member_b),
+            "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
             "memberList" => Some(&self.member_list),
             "memberMap" => Some(&self.member_map),
             _ => None,
@@ -56,6 +59,7 @@ impl MapAccessor for SerializeMe {
         match idx {
             0 => Some(("memberA", &self.member_a)),
             1 => Some(("memberB", &self.member_b)),
+            2 => Some(("memberOptional", &self.member_optional)),
             3 => Some(("memberList", &self.member_list)),
             4 => Some(("memberMap", &self.member_map)),
             _ => None,
@@ -67,9 +71,9 @@ impl MapAccessor for SerializeMe {
         let out: (&str, &mut dyn Document) = match index {
             0 => ("memberA", &mut self.member_a),
             1 => ("memberB", &mut self.member_b),
-            // 2 => ("memberOptional", &mut self.member_optional),
-            2 => ("memberList", &mut self.member_list),
-            3 => ("memberMap", &mut self.member_map),
+            2 => ("memberOptional", &mut self.member_optional),
+            3 => ("memberList", &mut self.member_list),
+            4 => ("memberMap", &mut self.member_map),
             _ => return Err(DocumentError::CustomError("Invalid index".to_string())),
         };
         Ok(out)
@@ -81,15 +85,16 @@ impl MapAccessor for SerializeMe {
         match index {
             0 => Some(Cow::Borrowed("memberA")),
             1 => Some(Cow::Borrowed("memberB")),
-            2 => Some(Cow::Borrowed("memberList")),
-            3 => Some(Cow::Borrowed("memberMap")),
+            2 => Some(Cow::Borrowed("memberOptional")),
+            3 => Some(Cow::Borrowed("memberList")),
+            4 => Some(Cow::Borrowed("memberMap")),
             _ => None,
         }
     }
 
     #[inline]
     fn len(&self) -> usize {
-        4
+        5
     }
 }
 
