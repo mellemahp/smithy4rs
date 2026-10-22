@@ -19,6 +19,8 @@ use syn::{DeriveInput, ItemEnum, parse, parse_macro_input, parse_quote};
 use crate::features::expand_arbitrary;
 #[cfg(feature = "serde-adapter")]
 use crate::features::expand_serde_adapter;
+#[cfg(feature = "documents")]
+use crate::features::expand_try_from_document;
 use crate::{
     attr::Shape,
     r#enum::{discriminants_to_attributes, unknown_variant},
@@ -27,7 +29,7 @@ use crate::{
         expand_error_correction, expand_schema, expand_serialize_from_schema,
         expand_tuple_constructor,
     },
-    traits::{expand_trait_id, expand_try_from_document},
+    traits::expand_trait_id,
 };
 
 // ============================================================================

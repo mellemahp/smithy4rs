@@ -7,8 +7,8 @@ use crate::{
         smithy_enum,
     },
     doc_map,
+    features::documents::Document,
     schema::{
-        Document,
         DynamicTrait,
         RegexWrapper,
     },

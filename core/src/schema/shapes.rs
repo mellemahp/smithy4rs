@@ -117,7 +117,8 @@ impl ShapeId {
 
 /// Smithy shape type representing one of the shapes in the
 /// [Smithy Data Model](https://smithy.io/2.0/spec/model.html#shapes)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, Hash)]
+#[allow(clippy::derived_hash_with_manual_eq)]
 pub enum ShapeType {
     /// [`blob`](https://smithy.io/2.0/spec/simple-types.html#blob) type
     Blob,
@@ -165,6 +166,37 @@ pub enum ShapeType {
     Resource,
     /// [`operation`](https://smithy.io/2.0/spec/service-types.html#operation) type
     Operation,
+}
+impl PartialEq for ShapeType {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (ShapeType::Blob, ShapeType::Blob)
+                | (ShapeType::Boolean, ShapeType::Boolean)
+                | (ShapeType::String, ShapeType::String)
+                | (ShapeType::Timestamp, ShapeType::Timestamp)
+                | (ShapeType::Byte, ShapeType::Byte)
+                | (ShapeType::Short, ShapeType::Short)
+                | (ShapeType::Integer, ShapeType::Integer)
+                | (ShapeType::Long, ShapeType::Long)
+                | (ShapeType::Float, ShapeType::Float)
+                | (ShapeType::Double, ShapeType::Double)
+                | (ShapeType::BigInteger, ShapeType::BigInteger)
+                | (ShapeType::BigDecimal, ShapeType::BigDecimal)
+                | (ShapeType::Document | _, ShapeType::Document)
+                | (ShapeType::Enum, ShapeType::Enum)
+                | (ShapeType::IntEnum, ShapeType::IntEnum)
+                | (ShapeType::List, ShapeType::List)
+                | (ShapeType::Map, ShapeType::Map)
+                | (ShapeType::Structure, ShapeType::Structure)
+                | (ShapeType::Union, ShapeType::Union)
+                | (ShapeType::Member, ShapeType::Member)
+                | (ShapeType::Service, ShapeType::Service)
+                | (ShapeType::Resource, ShapeType::Resource)
+                | (ShapeType::Operation, ShapeType::Operation)
+                | (ShapeType::Document, _)
+        )
+    }
 }
 
 impl Display for ShapeType {

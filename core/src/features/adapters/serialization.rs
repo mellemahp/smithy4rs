@@ -262,7 +262,7 @@ impl<S: serde::Serializer> ListWriter for ListSerializeAdapter<S> {
     #[inline]
     fn write_element<T>(&mut self, value_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         Ok(self
             .serializer
@@ -297,8 +297,8 @@ impl<S: serde::Serializer> MapWriter for MapSerializerAdapter<S> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         Ok(self.serializer.serialize_entry(
             &ValueWrapper(key_schema, key),
@@ -329,7 +329,7 @@ impl<S: serde::Serializer> StructWriter for StructSerializerAdapter<S> {
     #[inline]
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         let name = self.mapper.get_member_name::<Self>(member_schema)?;
         Ok(self
@@ -349,8 +349,8 @@ impl<S: serde::Serializer> StructWriter for StructSerializerAdapter<S> {
 // Wraps inner values of
 //========================================================================
 
-struct ValueWrapper<'a, T: SerializeWithSchema>(&'a Schema, &'a T);
-impl<T: SerializeWithSchema> Serialize for ValueWrapper<'_, T> {
+struct ValueWrapper<'a, T: SerializeWithSchema + ?Sized>(&'a Schema, &'a T);
+impl<T: SerializeWithSchema + ?Sized> Serialize for ValueWrapper<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

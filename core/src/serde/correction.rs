@@ -8,12 +8,12 @@
 //!
 use bigdecimal::Zero;
 
+#[cfg(feature = "documents")]
+use crate::features::documents::Document;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-    schema::Document,
     serde::{MaybeBuilt, serializers::SerializeWithSchema},
 };
-
 //////////////////////////////////////////////////////////////////////////////
 // Traits
 //////////////////////////////////////////////////////////////////////////////
@@ -96,6 +96,7 @@ correction_default_impl!(BigDecimal, BigDecimal::zero());
 correction_default_impl!(BigInt, BigInt::zero());
 correction_default_impl!(ByteBuffer, ByteBuffer::new());
 
+#[cfg(feature = "documents")]
 impl ErrorCorrectionDefault for Box<dyn Document> {
     #[inline]
     fn default() -> Self {

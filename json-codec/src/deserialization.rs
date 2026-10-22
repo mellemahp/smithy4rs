@@ -185,10 +185,11 @@ impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         })
     }
 
+
     fn read_document(
         self,
         _schema: &Schema,
-    ) -> Result<Box<dyn smithy4rs_core::schema::Document>, Self::Error> {
+    ) -> Result<Box<dyn smithy4rs_core::features::documents::Document>, Self::Error> {
         todo!("Support deserialization of documents")
     }
 

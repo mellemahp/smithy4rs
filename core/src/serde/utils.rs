@@ -10,7 +10,7 @@ use num_bigint::BigInt;
 use temporal_rs::Instant;
 
 use crate::{
-    schema::{Document, Schema},
+    schema::Schema,
     serde::se::{Error, ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
 };
 
@@ -110,15 +110,6 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
 
     #[cold]
     fn write_timestamp(self, schema: &Schema, _value: Instant) -> Result<Self::Ok, Self::Error> {
-        Err(invalid_key_error(schema))
-    }
-
-    #[cold]
-    fn write_document(
-        self,
-        schema: &Schema,
-        _value: &dyn Document,
-    ) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 

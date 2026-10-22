@@ -1,13 +1,13 @@
 use std::borrow::Cow;
+
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
+    features::documents::{Document, DocumentError, MapAccessor, TryFromDocument},
     prelude::{INTEGER, STRING},
-    schema::{Document, DocumentError, TryFromDocument},
     smithy,
 };
-use smithy4rs_core::schema::MapAccessor;
 
 smithy!(
     map com::example::Map {

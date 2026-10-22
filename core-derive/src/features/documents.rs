@@ -14,9 +14,9 @@ pub(crate) fn expand_try_from_document(shape: &Shape, crate_ident: &TokenStream)
 
     quote! {
         const _: () = {
-            use #crate_ident::schema::Document as _Document;
-            use #crate_ident::schema::DocumentError as _DocumentError;
-            use #crate_ident::schema::TryFromDocument as _TryFromDocument;
+            use #crate_ident::features::documents::Document as _Document;
+            use #crate_ident::features::documents::DocumentError as _DocumentError;
+            use #crate_ident::features::documents::TryFromDocument as _TryFromDocument;
 
             impl _TryFromDocument for #name {
                 #[inline]

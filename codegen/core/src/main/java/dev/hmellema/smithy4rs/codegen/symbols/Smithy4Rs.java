@@ -18,8 +18,8 @@ public final class Smithy4Rs {
         return String.format("%s::derive", Utils.crateIdent());
     }
 
-    private static String schema() {
-        return String.format("%s::schema", Utils.crateIdent());
+    private static String documents() {
+        return String.format("%s::features::documents", Utils.crateIdent());
     }
 
     public static final Symbol SMITHY_MACRO = Symbol.builder()
@@ -64,6 +64,6 @@ public final class Smithy4Rs {
             .build();
     public static final Symbol DOCUMENT = Symbol.builder()
             .name("Document")
-            .namespace(schema(), "::")
+            .namespace(documents(), "::")
             .build();
 }

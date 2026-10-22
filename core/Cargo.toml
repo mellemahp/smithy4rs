@@ -50,6 +50,8 @@ smithy-cargo = "1.1.0"
 workspace = true
 
 [features]
+default = ["documents"]
+documents = ["smithy4rs-core-derive/documents"]
 serde-adapters = ["dep:serde", "smithy4rs-core-derive/serde-adapter", "num-bigint/serde", "bigdecimal/serde"]
 arbitrary = ["dep:arbitrary", "smithy4rs-core-derive/arbitrary", "num-bigint/arbitrary", "indexmap/arbitrary"]
 

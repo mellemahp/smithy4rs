@@ -28,6 +28,7 @@ pub mod features;
 #[doc(hidden)]
 pub mod macros;
 mod assert;
+
 pub use assert::assert_contains_all;
 
 /// Common cheaply-copyable reference type.

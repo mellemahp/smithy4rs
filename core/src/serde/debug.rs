@@ -19,12 +19,13 @@ use thiserror::Error;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, Instant,
-    schema::{Document, Schema, ShapeType, prelude::SensitiveTrait},
+    schema::{Schema, ShapeType, prelude::SensitiveTrait},
     serde::{
         debug::FmtError::Custom,
         se::{ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
     },
 };
+
 // ============================================================================
 // Wrapper
 // ============================================================================
@@ -213,21 +214,6 @@ impl<'a, 'b> Serializer for DebugSerializer<'a, 'b> {
     #[inline]
     fn write_timestamp(self, schema: &Schema, value: Instant) -> Result<Self::Ok, Self::Error> {
         redact!(self, schema, value);
-        Ok(())
-    }
-
-    #[inline]
-    fn write_document(
-        self,
-        schema: &Schema,
-        value: &dyn Document,
-    ) -> Result<Self::Ok, Self::Error> {
-        if schema.contains_type::<SensitiveTrait>() {
-            self.fmt.write_str(REDACTED_ITEM)?;
-        } else {
-            let wrapper = DebugWrapper::new(schema, value);
-            Debug::fmt(&wrapper, self.fmt)?;
-        }
         Ok(())
     }
 

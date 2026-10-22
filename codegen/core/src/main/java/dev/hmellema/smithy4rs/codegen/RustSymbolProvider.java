@@ -32,7 +32,7 @@ public record RustSymbolProvider(Model model) implements ShapeVisitor<Symbol>, S
             ShapeType.STRUCTURE);
     private static final Symbol DOCUMENT_DYN = Symbol.builder()
             .name("Document")
-            .namespace(String.format("%s::schema", Utils.crateIdent()), DELIM)
+            .namespace(String.format("%s::features::documents", Utils.crateIdent()), DELIM)
             .putProperty(SymbolProperties.IS_DYN, true)
             .build();
     private static final EnumSet<ShapeType> NO_BUILDER_TYPES = EnumSet.of(

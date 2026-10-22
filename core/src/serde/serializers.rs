@@ -18,9 +18,8 @@ use std::{borrow::Cow, convert::Infallible, error::Error as StdError, fmt::Displ
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-    schema::{Document, Schema, SchemaShape, ShapeId},
+    schema::{Schema, SchemaShape, ShapeId},
 };
-use crate::schema::{DocumentType, Number};
 
 // ============================================================================
 // Shape Traits
@@ -458,102 +457,6 @@ pub trait Serializer: Sized {
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `timestamp`.
     fn write_timestamp(self, schema: &Schema, value: Instant) -> Result<Self::Ok, Self::Error>;
-
-    /// Serialize an untyped [`Document`]
-    ///
-    /// # Errors
-    /// `Self::Error` if the value could not be serialized as a `document`.
-    #[allow(clippy::borrowed_box)]
-    fn write_document(
-        self,
-        schema: &Schema,
-        value: &dyn Document,
-    ) -> Result<Self::Ok, Self::Error> {
-        match value.document_type() {
-            DocumentType::Null => self.write_null(schema),
-            DocumentType::Boolean => {
-                let b = value.as_boolean()
-                    .ok_or_else(|| Self::Error::custom("expected boolean"))?;
-                self.write_boolean(schema, b)
-            }
-            DocumentType::Number(number) => {
-                match number {
-                    Number::Byte => {
-                        let b = value.as_byte()
-                            .ok_or_else(|| Self::Error::custom("expected byte"))?;
-                        self.write_byte(schema, b)
-                    }
-                    Number::Short => {
-                        let s = value.as_short()
-                            .ok_or_else(|| Self::Error::custom("expected short"))?;
-                        self.write_short(schema, s)
-                    }
-                    Number::Integer => {
-                        let i = value.as_integer()
-                            .ok_or_else(|| Self::Error::custom("expected integer"))?;
-                        self.write_integer(schema, i)
-                    }
-                    Number::Long => {
-                        let l = value.as_long()
-                            .ok_or_else(|| Self::Error::custom("expected long"))?;
-                        self.write_long(schema, l)
-                    }
-                    Number::BigInt => {
-                        let b = value.as_big_integer()
-                            .ok_or_else(|| Self::Error::custom("expected big integer"))?;
-                        self.write_big_integer(schema, &b)
-                    }
-                    Number::Float => {
-                        let f = value.as_float()
-                            .ok_or_else(|| Self::Error::custom("expected float"))?;
-                        self.write_float(schema, f)
-                    }
-                    Number::Double => {
-                        let d = value.as_double()
-                            .ok_or_else(|| Self::Error::custom("expected double"))?;
-                        self.write_double(schema, d)
-                    }
-                    Number::BigDecimal => {
-                        let d = value.as_big_decimal()
-                            .ok_or_else(|| Self::Error::custom("expected big decimal"))?;
-                        self.write_big_decimal(schema, &d)
-                    }
-                }
-            }
-            DocumentType::String => {
-                let s = value.as_str()
-                    .ok_or_else(|| Self::Error::custom("expected str"))?;
-                self.write_string(schema, s)
-            }
-            DocumentType::Blob => {
-                let b = value.as_blob()
-                    .ok_or_else(|| Self::Error::custom("expected blob"))?;
-                self.write_blob(schema, b)
-            }
-            DocumentType::List => {
-                let list = value.as_list()
-                    .ok_or_else(|| Self::Error::custom("expected list"))?;
-                let mut ser = self.write_list(schema, list.len())?;
-                for i in 0..list.len() {
-                    if let Some(elem) = list.get(i) {
-                        ser.write_element(schema, elem)?;
-                    }
-                }
-                ser.end(schema)
-            }
-            DocumentType::Map => {
-                let map = value.as_map()
-                    .ok_or_else(|| Self::Error::custom("expected map"))?;
-                let mut ser = self.write_map(schema, map.len())?;
-                for i in 0..map.len() {
-                    if let Some((key, val)) = map.get_entry(i) {
-                        ser.write_entry(schema, schema, key, val)?;
-                    }
-                }
-                ser.end(schema)
-            }
-        }
-    }
 
     /// Serialize a `null` value
     ///

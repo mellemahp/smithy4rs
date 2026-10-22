@@ -17,9 +17,11 @@
 
 use std::{error::Error as StdError, fmt::Display};
 
+#[cfg(feature = "documents")]
+use crate::features::documents::Document;
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-    schema::{Document, Schema, SchemaShape, StaticSchemaShape},
+    schema::{Schema, SchemaShape, StaticSchemaShape},
 };
 
 // ============================================================================
@@ -346,6 +348,7 @@ pub trait Deserializer<'de>: Sized {
     ///
     /// # Errors
     /// Returns [`Error`] if the data could not be read as a `document`.
+    #[cfg(feature = "documents")]
     fn read_document(self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
         Err(Error::custom(
             "read_document is not supported by this deserializer",

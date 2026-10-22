@@ -10,13 +10,16 @@ use std::{
 use fast_str::FastStr;
 use rustc_hash::FxBuildHasher;
 
+#[cfg(feature = "documents")]
+use crate::features::documents::TryFromDocument;
 use crate::{
     FxIndexMap, FxIndexSet, Ref,
     schema::{
-        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef, TryFromDocument,
+        ShapeId, ShapeType, SmithyTrait, StaticTraitId, TraitMap, TraitRef,
         prelude::{DefaultTrait, RequiredTrait},
     },
 };
+
 // ============================================================================
 // Root Schema
 // ============================================================================
@@ -361,6 +364,7 @@ impl SchemaValue {
         self.traits().contains_type::<T>()
     }
 
+    #[cfg(feature = "documents")]
     /// Gets a [`SmithyTrait`] as a specific implementation if it exists.
     ///
     /// If the [`SmithyTrait`] does not exist on this schema, returns `None`.
