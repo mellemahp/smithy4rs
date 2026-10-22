@@ -6,8 +6,32 @@
 // Equality & Smoothing Tests
 // ================================================================
 
+// Note: Because `dyn Document`'s dont implement `Debug`
+// we need to use `assert` rather than `assert_eq`
 mod equality {
-    // TODO: Partial Equality checks?
+    use rstest::rstest;
+
+    use crate::{BigInt, features::documents::Document};
+
+    #[rstest]
+    #[case("a", "a")]
+    #[case(1i8, 1i8)]
+    #[case(1i16, 1i16)]
+    #[case(1.0f32, 1.0f32)]
+    #[case(1f32, 1.0f64)]
+    #[case(1i8, 1i16)]
+    #[case(1i16, 1i32)]
+    #[case(1i32, BigInt::from(1i32))]
+    // TODO: fix this case #[case(BigInt::from(5i64), 5i64)]
+    #[case(vec!["a", "b"], vec!["a", "b"])]
+    fn equality_check(
+        #[case] a_in: impl Into<Box<dyn Document>>,
+        #[case] b_in: impl Into<Box<dyn Document>>,
+    ) {
+        let a: Box<dyn Document> = a_in.into();
+        let b: Box<dyn Document> = b_in.into();
+        assert!(a == b);
+    }
 }
 
 // ================================================================
@@ -191,5 +215,3 @@ mod validation {
         );
     }
 }
-
-// TODO: Debugging

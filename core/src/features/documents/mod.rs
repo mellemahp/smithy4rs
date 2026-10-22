@@ -621,6 +621,8 @@ impl PartialEq for dyn Document + '_ {
             DocumentType::Null => other.null(),
             DocumentType::Boolean => self.as_boolean() == other.as_boolean(),
             DocumentType::Number(number) => match number {
+                // TODO: Still not sure these comparisons are quite correct, but they
+                // are workable for now.
                 Number::Byte => self.as_byte() == other.as_byte(),
                 Number::Short => self.as_short() == other.as_short(),
                 Number::Integer => self.as_integer() == other.as_integer(),

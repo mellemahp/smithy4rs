@@ -23,6 +23,7 @@ use std::{borrow::Cow, mem};
 
 use bigdecimal::{FromPrimitive, num_traits};
 use indexmap::map::MutableKeys;
+use num_traits::ToPrimitive;
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
@@ -237,12 +238,36 @@ impl Document for BigDecimal {
         DocumentType::Number(Number::BigDecimal)
     }
 
-    fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
-        todo!()
+    #[inline]
+    fn as_byte(&self) -> Option<i8> {
+        self.to_i8()
     }
 
+    #[inline]
+    fn as_short(&self) -> Option<i16> {
+        self.to_i16()
+    }
+
+    #[inline]
+    fn as_integer(&self) -> Option<i32> {
+        self.to_i32()
+    }
+
+    #[inline]
+    fn as_long(&self) -> Option<i64> {
+        self.to_i64()
+    }
+
+    #[inline]
+    fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
+        self.to_f32()
+            .ok_or_else(|| DocumentError::ConversionFailed("f32".to_string()))
+    }
+
+    #[inline]
     fn take_double(&mut self, _schema: &Schema) -> Result<f64, DocumentError> {
-        todo!()
+        self.to_f64()
+            .ok_or_else(|| DocumentError::ConversionFailed("f32".to_string()))
     }
 
     fn take_big_decimal(&mut self, _schema: &Schema) -> Result<BigDecimal, DocumentError> {
@@ -254,6 +279,26 @@ impl Document for BigInt {
     #[inline]
     fn document_type(&self) -> DocumentType {
         DocumentType::Number(Number::BigInt)
+    }
+
+    #[inline]
+    fn as_byte(&self) -> Option<i8> {
+        self.to_i8()
+    }
+
+    #[inline]
+    fn as_short(&self) -> Option<i16> {
+        self.to_i16()
+    }
+
+    #[inline]
+    fn as_integer(&self) -> Option<i32> {
+        self.to_i32()
+    }
+
+    #[inline]
+    fn as_long(&self) -> Option<i64> {
+        self.to_i64()
     }
 
     #[inline]

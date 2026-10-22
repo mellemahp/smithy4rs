@@ -42,6 +42,7 @@ mimalloc = "0.1.52"
 serde_json = "1.0.149"
 criterion.workspace = true
 serde-xml-rs = "0.8.2"
+rstest = "0.28.0"
 
 [build-dependencies]
 smithy-cargo = "1.1.0"
