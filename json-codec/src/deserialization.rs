@@ -185,7 +185,6 @@ impl<'de, 'a> Deserializer<'de> for &'a mut JsonDeserializer<'de> {
         })
     }
 
-
     fn read_document(
         self,
         _schema: &Schema,
