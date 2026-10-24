@@ -255,6 +255,13 @@ pub trait StaticSchemaShape {
     fn schema() -> &'static Schema;
 }
 
+impl<T: StaticSchemaShape> StaticSchemaShape for Box<T> {
+    #[inline]
+    fn schema() -> &'static Schema {
+        T::schema()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

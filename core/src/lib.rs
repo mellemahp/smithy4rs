@@ -52,6 +52,8 @@ pub use indexmap::IndexMap;
 pub use num_bigint::BigInt;
 #[doc(hidden)]
 pub use temporal_rs::Instant;
+#[doc(hidden)]
+pub use std::borrow::Cow;
 
 // For public macros
 #[doc(hidden)]

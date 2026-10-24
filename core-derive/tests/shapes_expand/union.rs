@@ -14,7 +14,7 @@ smithy!(
 );
 
 #[smithy_union]
-#[derive(SmithyShape)]
+#[derive(SmithyShape, Clone)]
 #[schema(schema = UNION)]
 pub enum TestEnum {
     A(String),

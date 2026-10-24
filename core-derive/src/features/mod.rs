@@ -10,4 +10,4 @@ pub(crate) use adapter::expand_serde_adapter;
 #[cfg(feature = "arbitrary")]
 pub(crate) use arbitrary::expand_arbitrary;
 #[cfg(feature = "documents")]
-pub(crate) use documents::expand_try_from_document;
+pub(crate) use documents::{expand_document, expand_try_from_document};

@@ -10,7 +10,7 @@ smithy!(
 );
 
 #[smithy_enum]
-#[derive(SmithyShape)]
+#[derive(SmithyShape, Clone)]
 #[schema(schema = SIMPLE_INT_ENUM)]
 pub enum TestIntEnum {
     A = 1,

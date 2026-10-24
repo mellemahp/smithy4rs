@@ -219,7 +219,7 @@ pub trait Document: Send + Sync + BoxClone {
     /// Get the `string` value of the Document if it is a `string` or can be converted into one.
     ///
     /// Returns `None` if Document could not be represented as a `string`.
-    fn as_str(&self) -> Option<&str> {
+    fn as_string(&self) -> Option<&str> {
         None
     }
 
@@ -447,7 +447,9 @@ fn take_error(expected: &'static str) -> DocumentError {
 /// Provides Access to List Document items
 pub trait ListAccessor {
     /// Get an element by index if possible
-    fn get(&self, idx: usize) -> Option<&(dyn Document + '_)>;
+    ///
+    /// Note: Named `get_index` to avoid clash with `vec.get`
+    fn get_index(&self, idx: usize) -> Option<&(dyn Document + '_)>;
 
     /// Get an element of a list document
     ///
@@ -632,7 +634,7 @@ impl PartialEq for dyn Document + '_ {
                 Number::Double => self.as_double() == other.as_double(),
                 Number::BigDecimal => self.as_big_decimal() == other.as_big_decimal(),
             },
-            DocumentType::String => self.as_str() == other.as_str(),
+            DocumentType::String => self.as_string() == other.as_string(),
             DocumentType::Blob => self.as_blob() == other.as_blob(),
             DocumentType::List => {
                 let (Some(tc), Some(oc)) = (self.as_list(), other.as_list()) else {
@@ -642,7 +644,7 @@ impl PartialEq for dyn Document + '_ {
                     return false;
                 }
                 for i in 0..tc.len() {
-                    if tc.get(i) != oc.get(i) {
+                    if tc.get_index(i) != oc.get_index(i) {
                         return false;
                     }
                 }
@@ -664,4 +666,206 @@ impl PartialEq for dyn Document + '_ {
             }
         }
     }
+}
+
+// ================================================================
+// Implementation Macros
+// ================================================================
+
+/// Automatically implements [`Document`] for wrapper types like MyWrapper(String).
+///
+/// Note: Mostly used by generated code to simplify proc macro calls
+#[macro_export]
+macro_rules! wrapped_document {
+    ($ty:ident) => {
+        impl $crate::features::documents::Document for $ty {
+            #[inline]
+            fn discriminant(&self) -> Option<&$crate::schema::ShapeId> {
+                Some(<Self as $crate::schema::StaticSchemaShape>::schema().id())
+            }
+
+            #[inline]
+            fn document_type(&self) -> $crate::features::documents::DocumentType {
+                self.0.document_type()
+            }
+
+            #[inline]
+            fn as_boolean(&self) -> Option<bool> {
+                self.0.as_boolean()
+            }
+
+            #[inline]
+            fn as_blob(&self) -> Option<&$crate::ByteBuffer> {
+                self.0.as_blob()
+            }
+
+            #[inline]
+            fn as_string(&self) -> Option<&str> {
+                self.0.as_string()
+            }
+
+            #[inline]
+            fn as_timestamp(&self) -> Option<$crate::Instant> {
+                self.0.as_timestamp()
+            }
+
+            #[inline]
+            fn as_byte(&self) -> Option<i8> {
+                self.0.as_byte()
+            }
+
+            #[inline]
+            fn as_short(&self) -> Option<i16> {
+                self.0.as_short()
+            }
+
+            #[inline]
+            fn as_integer(&self) -> Option<i32> {
+                self.0.as_integer()
+            }
+
+            #[inline]
+            fn as_long(&self) -> Option<i64> {
+                self.0.as_long()
+            }
+
+            #[inline]
+            fn as_big_integer(&self) -> Option<std::borrow::Cow<'_, $crate::BigInt>> {
+                self.0.as_big_integer()
+            }
+
+            #[inline]
+            fn as_float(&self) -> Option<f32> {
+                self.0.as_float()
+            }
+
+            #[inline]
+            fn as_double(&self) -> Option<f64> {
+                self.0.as_double()
+            }
+
+            #[inline]
+            fn as_big_decimal(&self) -> Option<std::borrow::Cow<'_, $crate::BigDecimal>> {
+                self.0.as_big_decimal()
+            }
+
+            #[inline]
+            fn as_list(&self) -> Option<&dyn $crate::features::documents::ListAccessor> {
+                self.0.as_list()
+            }
+
+            #[inline]
+            fn as_map(&self) -> Option<&dyn $crate::features::documents::MapAccessor> {
+                self.0.as_map()
+            }
+
+            #[inline]
+            fn take_bool(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<bool, $crate::features::documents::DocumentError> {
+                self.0.take_bool(schema)
+            }
+
+            #[inline]
+            fn take_blob(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<$crate::ByteBuffer, $crate::features::documents::DocumentError> {
+                self.0.take_blob(schema)
+            }
+
+            #[inline]
+            fn take_string(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<String, $crate::features::documents::DocumentError> {
+                self.0.take_string(schema)
+            }
+
+            #[inline]
+            fn take_byte(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<i8, $crate::features::documents::DocumentError> {
+                self.0.take_byte(schema)
+            }
+
+            #[inline]
+            fn take_short(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<i16, $crate::features::documents::DocumentError> {
+                self.0.take_short(schema)
+            }
+
+            #[inline]
+            fn take_integer(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<i32, $crate::features::documents::DocumentError> {
+                self.0.take_integer(schema)
+            }
+
+            #[inline]
+            fn take_long(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<i64, $crate::features::documents::DocumentError> {
+                self.0.take_long(schema)
+            }
+
+            #[inline]
+            fn take_big_integer(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<$crate::BigInt, $crate::features::documents::DocumentError> {
+                self.0.take_big_integer(schema)
+            }
+
+            #[inline]
+            fn take_float(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<f32, $crate::features::documents::DocumentError> {
+                self.0.take_float(schema)
+            }
+
+            #[inline]
+            fn take_double(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<f64, $crate::features::documents::DocumentError> {
+                self.0.take_double(schema)
+            }
+
+            #[inline]
+            fn take_big_decimal(
+                &mut self,
+                schema: &$crate::schema::Schema,
+            ) -> Result<$crate::BigDecimal, $crate::features::documents::DocumentError> {
+                self.0.take_big_decimal(schema)
+            }
+
+            #[inline]
+            fn take_list(
+                &mut self,
+            ) -> Result<
+                &mut dyn $crate::features::documents::ListAccessor,
+                $crate::features::documents::DocumentError,
+            > {
+                self.0.take_list()
+            }
+
+            #[inline]
+            fn take_map(
+                &mut self,
+            ) -> Result<
+                &mut dyn $crate::features::documents::MapAccessor,
+                $crate::features::documents::DocumentError,
+            > {
+                self.0.take_map()
+            }
+        }
+    };
 }

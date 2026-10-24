@@ -385,7 +385,7 @@ mod tests {
         }
     );
 
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = TEST)]
     pub struct Test {
         pub a: String,
@@ -442,7 +442,7 @@ mod tests {
             a: STRING
         }
     );
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = RENAME)]
     pub struct TestRename {
         pub a: String,
@@ -470,7 +470,7 @@ mod tests {
             b: STRING
         }
     );
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = XML_TRAITS)]
     pub struct TestXml {
         pub a: String,

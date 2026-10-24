@@ -413,7 +413,7 @@ mod tests {
         }
     );
 
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = SHAPE)]
     pub struct SerializeMe {
         pub member_a: String,
@@ -423,7 +423,7 @@ mod tests {
         pub member_map: IndexMap<String, String>,
     }
 
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = REDACTED_AGGREGATES)]
     pub struct RedactMe {
         pub list: Vec<String>,

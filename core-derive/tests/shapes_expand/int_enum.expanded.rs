@@ -97,3 +97,55 @@ const _: () = {
         }
     }
 };
+const _: () = {
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::schema::Schema as _Schema;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
+    impl _Document for TestIntEnum {
+        #[inline]
+        fn discriminant(&self) -> Option<&_ShapeId> {
+            Some(<TestIntEnum as _StaticSchemaShape>::schema().id())
+        }
+        #[inline]
+        fn document_type(&self) -> _DocumentType {
+            _DocumentType::Number(::smithy4rs_core::features::documents::Number::Integer)
+        }
+        #[inline]
+        fn as_integer(&self) -> Option<i32> {
+            let out = match self {
+                TestIntEnum::A => 1,
+                TestIntEnum::B => 2,
+                TestIntEnum::C => 3,
+                TestIntEnum::Unknown(value) => *value,
+            };
+            Some(out)
+        }
+        #[inline]
+        fn take_integer(&mut self, _schema: &_Schema) -> Result<i32, _DocumentError> {
+            let out = match self {
+                TestIntEnum::A => 1,
+                TestIntEnum::B => 2,
+                TestIntEnum::C => 3,
+                TestIntEnum::Unknown(value) => std::mem::take(value),
+            };
+            Ok(out)
+        }
+    }
+};
+#[automatically_derived]
+impl ::core::clone::Clone for TestIntEnum {
+    #[inline]
+    fn clone(&self) -> TestIntEnum {
+        match self {
+            TestIntEnum::A => TestIntEnum::A,
+            TestIntEnum::B => TestIntEnum::B,
+            TestIntEnum::C => TestIntEnum::C,
+            TestIntEnum::Unknown(__self_0) => {
+                TestIntEnum::Unknown(::core::clone::Clone::clone(__self_0))
+            }
+        }
+    }
+}

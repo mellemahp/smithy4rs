@@ -105,6 +105,186 @@ impl SimpleTrait {
     }
 }
 const _: () = {
+    impl ::smithy4rs_core::features::documents::Document for SimpleTrait {
+        #[inline]
+        fn discriminant(&self) -> Option<&::smithy4rs_core::schema::ShapeId> {
+            Some(<Self as ::smithy4rs_core::schema::StaticSchemaShape>::schema().id())
+        }
+        #[inline]
+        fn document_type(&self) -> ::smithy4rs_core::features::documents::DocumentType {
+            self.0.document_type()
+        }
+        #[inline]
+        fn as_boolean(&self) -> Option<bool> {
+            self.0.as_boolean()
+        }
+        #[inline]
+        fn as_blob(&self) -> Option<&::smithy4rs_core::ByteBuffer> {
+            self.0.as_blob()
+        }
+        #[inline]
+        fn as_string(&self) -> Option<&str> {
+            self.0.as_string()
+        }
+        #[inline]
+        fn as_timestamp(&self) -> Option<::smithy4rs_core::Instant> {
+            self.0.as_timestamp()
+        }
+        #[inline]
+        fn as_byte(&self) -> Option<i8> {
+            self.0.as_byte()
+        }
+        #[inline]
+        fn as_short(&self) -> Option<i16> {
+            self.0.as_short()
+        }
+        #[inline]
+        fn as_integer(&self) -> Option<i32> {
+            self.0.as_integer()
+        }
+        #[inline]
+        fn as_long(&self) -> Option<i64> {
+            self.0.as_long()
+        }
+        #[inline]
+        fn as_big_integer(
+            &self,
+        ) -> Option<std::borrow::Cow<'_, ::smithy4rs_core::BigInt>> {
+            self.0.as_big_integer()
+        }
+        #[inline]
+        fn as_float(&self) -> Option<f32> {
+            self.0.as_float()
+        }
+        #[inline]
+        fn as_double(&self) -> Option<f64> {
+            self.0.as_double()
+        }
+        #[inline]
+        fn as_big_decimal(
+            &self,
+        ) -> Option<std::borrow::Cow<'_, ::smithy4rs_core::BigDecimal>> {
+            self.0.as_big_decimal()
+        }
+        #[inline]
+        fn as_list(
+            &self,
+        ) -> Option<&dyn ::smithy4rs_core::features::documents::ListAccessor> {
+            self.0.as_list()
+        }
+        #[inline]
+        fn as_map(
+            &self,
+        ) -> Option<&dyn ::smithy4rs_core::features::documents::MapAccessor> {
+            self.0.as_map()
+        }
+        #[inline]
+        fn take_bool(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<bool, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_bool(schema)
+        }
+        #[inline]
+        fn take_blob(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<
+            ::smithy4rs_core::ByteBuffer,
+            ::smithy4rs_core::features::documents::DocumentError,
+        > {
+            self.0.take_blob(schema)
+        }
+        #[inline]
+        fn take_string(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<String, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_string(schema)
+        }
+        #[inline]
+        fn take_byte(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<i8, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_byte(schema)
+        }
+        #[inline]
+        fn take_short(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<i16, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_short(schema)
+        }
+        #[inline]
+        fn take_integer(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<i32, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_integer(schema)
+        }
+        #[inline]
+        fn take_long(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<i64, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_long(schema)
+        }
+        #[inline]
+        fn take_big_integer(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<
+            ::smithy4rs_core::BigInt,
+            ::smithy4rs_core::features::documents::DocumentError,
+        > {
+            self.0.take_big_integer(schema)
+        }
+        #[inline]
+        fn take_float(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<f32, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_float(schema)
+        }
+        #[inline]
+        fn take_double(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<f64, ::smithy4rs_core::features::documents::DocumentError> {
+            self.0.take_double(schema)
+        }
+        #[inline]
+        fn take_big_decimal(
+            &mut self,
+            schema: &::smithy4rs_core::schema::Schema,
+        ) -> Result<
+            ::smithy4rs_core::BigDecimal,
+            ::smithy4rs_core::features::documents::DocumentError,
+        > {
+            self.0.take_big_decimal(schema)
+        }
+        #[inline]
+        fn take_list(
+            &mut self,
+        ) -> Result<
+            &mut dyn ::smithy4rs_core::features::documents::ListAccessor,
+            ::smithy4rs_core::features::documents::DocumentError,
+        > {
+            self.0.take_list()
+        }
+        #[inline]
+        fn take_map(
+            &mut self,
+        ) -> Result<
+            &mut dyn ::smithy4rs_core::features::documents::MapAccessor,
+            ::smithy4rs_core::features::documents::DocumentError,
+        > {
+            self.0.take_map()
+        }
+    }
+};
+const _: () = {
     use ::smithy4rs_core::schema::StaticTraitId as _StaticTraitId;
     use ::smithy4rs_core::schema::ShapeId as _ShapeId;
     use ::smithy4rs_core::LazyLock as _LazyLock;

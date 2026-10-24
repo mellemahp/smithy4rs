@@ -15,7 +15,7 @@ pub use schemas::*;
 mod unit;
 
 // Do not include the unit trait as it can remain private.
-pub use unit::{UNIT, Unit};
+pub use unit::{STATIC_UNIT, UNIT, Unit};
 
 use crate::serde::{
     de::{DeserializeWithSchema, Deserializer, Error},

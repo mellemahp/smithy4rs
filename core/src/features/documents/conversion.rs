@@ -195,15 +195,12 @@ impl<T: Document + 'static> From<T> for Box<dyn Document> {
 
 #[cfg(test)]
 mod tests {
-    use std::{borrow::Cow, str::FromStr};
+    use std::str::FromStr;
 
     use indexmap::IndexMap;
 
     use super::*;
-    use crate::{
-        BigDecimal, BigInt, derive::SmithyShape, features::documents::MapAccessor,
-        schema::prelude::*, smithy,
-    };
+    use crate::{BigDecimal, BigInt, derive::SmithyShape, schema::prelude::*, smithy};
 
     smithy!(
         map com::example::Map {
@@ -225,7 +222,6 @@ mod tests {
             memberMap: MAP
         }
     );
-    //
 
     #[derive(SmithyShape, Clone, PartialEq)]
     #[schema(schema = SHAPE)]
@@ -235,59 +231,6 @@ mod tests {
         pub member_optional: Option<String>,
         pub member_list: Vec<String>,
         pub member_map: IndexMap<String, String>,
-    }
-
-    impl MapAccessor for SerializeMe {
-        #[inline]
-        #[allow(trivial_casts)]
-        fn get(&self, key: &str) -> Option<&dyn Document> {
-            match key {
-                "memberA" => Some(&self.member_a),
-                "memberB" => Some(&self.member_b),
-                "memberOptional" => self.member_optional.as_ref().map(|v| v as &dyn Document),
-                "memberList" => Some(&self.member_list),
-                "memberMap" => Some(&self.member_map),
-                _ => None,
-            }
-        }
-
-        #[inline]
-        fn get_entry(&self, idx: usize) -> Option<(&str, &dyn Document)> {
-            match idx {
-                0 => Some(("memberA", &self.member_a)),
-                1 => Some(("memberB", &self.member_b)),
-                2 => Some(("memberOptional", &self.member_optional)),
-                3 => Some(("memberList", &self.member_list)),
-                4 => Some(("memberMap", &self.member_map)),
-                _ => None,
-            }
-        }
-
-        fn get_entry_mut(
-            &mut self,
-            index: usize,
-        ) -> Result<(&str, &mut dyn Document), DocumentError> {
-            let out: (&str, &mut dyn Document) = match index {
-                0 => ("memberA", &mut self.member_a),
-                1 => ("memberB", &mut self.member_b),
-                2 => ("memberOptional", &mut self.member_optional),
-                3 => ("memberList", &mut self.member_list),
-                4 => ("memberMap", &mut self.member_map),
-                _ => {
-                    return Err(DocumentError::CustomError("Invalid index".to_string()));
-                }
-            };
-            Ok(out)
-        }
-
-        fn get_key_mut(&mut self, _index: usize) -> Option<Cow<'_, str>> {
-            todo!()
-        }
-
-        #[inline]
-        fn len(&self) -> usize {
-            5
-        }
     }
 
     #[test]
@@ -306,14 +249,9 @@ mod tests {
         assert_eq!(document.discriminant().unwrap(), SHAPE.id());
         let members = document.as_map().unwrap();
         let doc_a = members.get("memberA").unwrap();
-        assert_eq!(doc_a.as_str().unwrap(), "a");
+        assert_eq!(doc_a.as_string().unwrap(), "a");
         let doc_b = members.get("memberB").unwrap();
-        assert_eq!(doc_b.as_str().unwrap(), "b");
-        // TODO: Add back in
-
-        // let doc_c = &members.get("memberOptional").unwrap();
-        // assert_eq!(doc_c.as_str().unwrap(), "c");
-        // TODO: check values?
+        assert_eq!(doc_b.as_string().unwrap(), "b");
         assert!(members.get("memberMap").is_some());
         assert!(members.get("memberList").is_some());
     }
@@ -321,7 +259,7 @@ mod tests {
     #[test]
     fn string_document_value() {
         let document_str: Box<dyn Document> = "MyStr".into();
-        let output_str = document_str.as_str().expect("string");
+        let output_str = document_str.as_string().expect("string");
         assert_eq!(output_str, &"MyStr".to_string());
     }
 
@@ -474,19 +412,19 @@ mod tests {
 
         // Check member_a
         let member_a_doc = doc_map.get("memberA").expect("Should have member a");
-        let a_value = member_a_doc.as_str().unwrap();
+        let a_value = member_a_doc.as_string().unwrap();
         assert_eq!(a_value, "value_a".to_string());
 
         // Check member_b
         let member_b_doc = doc_map.get("memberB").expect("Should have member b");
-        let b_value = member_b_doc.as_str().unwrap();
+        let b_value = member_b_doc.as_string().unwrap();
         assert_eq!(b_value, "value_b");
 
         // Check member_optional
         let member_c_doc = doc_map
             .get("memberOptional")
             .expect("Should have member optional");
-        let c_value = member_c_doc.as_str().unwrap();
+        let c_value = member_c_doc.as_string().unwrap();
         assert_eq!(c_value, "value_c");
 
         // Check list
@@ -494,15 +432,15 @@ mod tests {
         let list = list_doc.as_list().expect("Should be a list");
         assert!(!list.is_empty());
         assert_eq!(list.len(), 3);
-        let item_one = list.get(0).expect("Should have an item");
-        let item_str = item_one.as_str().expect("Should be a string");
+        let item_one = list.get_index(0).expect("Should have an item");
+        let item_str = item_one.as_string().expect("Should be a string");
         assert_eq!(item_str, "listitem1");
 
         // // Check map
         let map_doc = doc_map.get("memberMap").expect("Should have map");
         let map_member = map_doc.as_map().expect("Should be a map");
         let map_value_one = map_member.get("mapkey1").expect("Should have mapkey1 key");
-        let value = map_value_one.as_str().expect("Should be a string");
+        let value = map_value_one.as_string().expect("Should be a string");
         assert_eq!(value, "mapvalue1");
     }
 

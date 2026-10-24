@@ -222,7 +222,7 @@ impl ListWriter for JsonListSerializer<'_> {
     #[inline]
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         if !self.first {
             write_json_comma(self.buf);
@@ -260,8 +260,8 @@ impl MapWriter for JsonMapSerializer<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         if !self.first {
             write_json_comma(self.buf);
@@ -298,7 +298,7 @@ impl StructWriter for JsonStructSerializer<'_> {
     #[inline]
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         if !self.first {
             write_json_comma(self.buf);

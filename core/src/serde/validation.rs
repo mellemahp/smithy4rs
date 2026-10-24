@@ -1211,7 +1211,7 @@ mod tests {
             fieldMap: VALIDATED_MAP
         }
     );
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = BASIC_VALIDATION)]
     pub struct SimpleStruct {
         pub field_a: String,

@@ -65,7 +65,7 @@ impl SerializeWithSchema for dyn Document + '_ {
                 serializer.write_boolean(schema, try_as!(self, as_boolean, "boolean"))
             }
             ShapeType::String | ShapeType::Enum => {
-                serializer.write_string(schema, try_as!(self, as_str, "string"))
+                serializer.write_string(schema, try_as!(self, as_string, "string"))
             }
             // TODO: Add back in timestamp
             ShapeType::Byte => serializer.write_byte(schema, try_as!(self, as_byte, "byte")),
@@ -153,7 +153,9 @@ fn serialize_document<S: Serializer>(
                 serializer.write_big_decimal(schema, &d)
             }
         },
-        DocumentType::String => serializer.write_string(schema, try_as!(value, as_str, "string")),
+        DocumentType::String => {
+            serializer.write_string(schema, try_as!(value, as_string, "string"))
+        }
         DocumentType::Blob => serializer.write_blob(schema, try_as!(value, as_blob, "string")),
         DocumentType::List => {
             serialize_list_document(schema, try_as!(value, as_list, "list"), serializer)
@@ -177,7 +179,7 @@ fn serialize_list_document<S: Serializer>(
     let mut i = 0;
     while i < accessor.len() {
         let item = accessor
-            .get(i)
+            .get_index(i)
             .ok_or_else(|| S::Error::custom("Expected document"))?;
         list.write_element(value_schema, item)?;
         i += 1;

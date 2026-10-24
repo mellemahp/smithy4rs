@@ -30,7 +30,7 @@ use crate::{
     features::documents::{
         Document, DocumentError, DocumentType, ListAccessor, MapAccessor, Number,
     },
-    schema::{Schema, ShapeId, StaticSchemaShape},
+    schema::{RegexWrapper, Schema, Unit},
 };
 
 impl Document for bool {
@@ -74,7 +74,7 @@ impl Document for String {
     }
 
     #[inline]
-    fn as_str(&self) -> Option<&str> {
+    fn as_string(&self) -> Option<&str> {
         Some(self)
     }
 
@@ -339,7 +339,7 @@ impl Document for &'static str {
     }
 
     #[inline]
-    fn as_str(&self) -> Option<&str> {
+    fn as_string(&self) -> Option<&str> {
         Some(self)
     }
 
@@ -371,7 +371,7 @@ impl<T: Document> ListAccessor for Vec<T> {
     #[inline]
     #[allow(trivial_casts)]
     #[allow(clippy::unnecessary_cast)]
-    fn get(&self, idx: usize) -> Option<&(dyn Document + '_)> {
+    fn get_index(&self, idx: usize) -> Option<&(dyn Document + '_)> {
         self[..].get(idx).map(|doc| doc as &dyn Document)
     }
 
@@ -461,8 +461,8 @@ impl<T: Document + Clone + 'static> Document for Option<T> {
     }
 
     #[inline]
-    fn as_str(&self) -> Option<&str> {
-        self.as_ref().and_then(Document::as_str)
+    fn as_string(&self) -> Option<&str> {
+        self.as_ref().and_then(Document::as_string)
     }
 
     #[inline]
@@ -649,15 +649,31 @@ impl Document for IndexMap<String, Box<dyn Document>> {
 }
 
 // ================================================================
-// Blanket convenience impls for generated shapes
+// Custom Type support
 // ================================================================
 
-impl<T: StaticSchemaShape + MapAccessor + Send + Sync + Clone + 'static> Document for T {
-    #[inline]
-    fn discriminant(&self) -> Option<&ShapeId> {
-        Some(Self::schema().id())
+impl Document for RegexWrapper {
+    fn document_type(&self) -> DocumentType {
+        DocumentType::String
+    }
+    fn as_string(&self) -> Option<&str> {
+        Some(self.0.as_str())
     }
 
+    fn take_string(&mut self, _schema: &Schema) -> Result<String, DocumentError> {
+        Ok(self.0.as_str().to_string())
+    }
+}
+
+impl<T: Document + Clone + 'static> Document for Box<T> {
+    fn document_type(&self) -> DocumentType {
+        todo!()
+    }
+}
+
+// The `Unit` type is treated as an empty map.
+// This is equivalent to the empty object (`{}`) in JSON
+impl Document for Unit {
     #[inline]
     fn document_type(&self) -> DocumentType {
         DocumentType::Map
@@ -673,6 +689,34 @@ impl<T: StaticSchemaShape + MapAccessor + Send + Sync + Clone + 'static> Documen
         Ok(self)
     }
 }
+impl MapAccessor for Unit {
+    #[inline]
+    fn get(&self, _key: &str) -> Option<&(dyn Document + '_)> {
+        None
+    }
+
+    #[inline]
+    fn get_entry(&self, _idx: usize) -> Option<(&str, &dyn Document)> {
+        None
+    }
+
+    #[inline]
+    fn get_entry_mut(&mut self, _index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        Err(DocumentError::CustomError(
+            "Attempted to read entry from Unit type".to_string(),
+        ))
+    }
+
+    #[inline]
+    fn get_key_mut(&mut self, _index: usize) -> Option<Cow<'_, str>> {
+        None
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        0
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -682,7 +726,7 @@ mod tests {
     fn string_document_value() {
         let document_str: Box<dyn Document> = "MyStr".into();
         let output_str = document_str
-            .as_str()
+            .as_string()
             .expect("Could not get document as str");
         assert_eq!(output_str, "MyStr");
     }

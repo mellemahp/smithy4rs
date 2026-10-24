@@ -5,7 +5,7 @@
 
 use crate::{
     features::documents::{Document, DocumentError, ListAccessor, MapAccessor},
-    schema::Schema,
+    schema::{Schema, ShapeType},
     serde::de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
 };
 
@@ -49,6 +49,8 @@ pub struct DocumentObjectReader<'b> {
     inner: &'b mut (dyn MapAccessor + 'b),
     /// Current index of the reader
     idx: usize,
+    /// If the object is a union (requires custom handling)
+    is_union: bool,
 }
 
 impl<'de> MapReader<'de> for DocumentObjectReader<'_> {
@@ -84,6 +86,16 @@ impl<'de> StructReader<'de> for DocumentObjectReader<'_> {
 
     #[inline]
     fn read_member<'a>(&mut self, schema: &'a Schema) -> Result<Option<&'a Schema>, Self::Error> {
+        if self.is_union {
+            // Iterate until we find the populated member
+            for _ in self.idx..self.inner.len() {
+                if self.inner.get_key_mut(self.idx).is_some() {
+                    break;
+                }
+                // No value, keep going.
+                self.idx += 1;
+            }
+        }
         Ok(schema.members().get_index(self.idx).map(|(_, v)| v))
     }
 
@@ -105,6 +117,7 @@ impl<'de> StructReader<'de> for DocumentObjectReader<'_> {
 
     #[inline]
     fn size_hint(&self) -> Option<usize> {
+        // TODO: This might be overly large for unions?
         Some(self.inner.len())
     }
 }
@@ -159,10 +172,11 @@ impl<'b> Deserializer<'_> for &'b mut (dyn Document + '_) {
     }
 
     #[inline]
-    fn read_struct(self, _schema: &Schema) -> Result<Self::StructReader, Self::Error> {
+    fn read_struct(self, schema: &Schema) -> Result<Self::StructReader, Self::Error> {
         Ok(DocumentObjectReader {
             inner: self.take_map()?,
             idx: 0,
+            is_union: matches!(schema.shape_type(), ShapeType::Union),
         })
     }
 
@@ -179,6 +193,7 @@ impl<'b> Deserializer<'_> for &'b mut (dyn Document + '_) {
         Ok(DocumentObjectReader {
             inner: self.take_map()?,
             idx: 0,
+            is_union: false,
         })
     }
 
@@ -210,5 +225,160 @@ impl<'de> DeserializeWithSchema<'de> for Box<dyn Document> {
         D: Deserializer<'de>,
     {
         deserializer.read_document(schema)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indexmap::IndexMap;
+    use smithy4rs_core_derive::{SmithyShape, SmithyTrait, smithy_enum, smithy_union};
+
+    use super::*;
+    use crate::{
+        prelude::{INTEGER, STRING},
+        schema::UNIT,
+        smithy,
+    };
+
+    smithy!(
+        map com::example::Map {
+            key: STRING
+            value: STRING
+        }
+    );
+    smithy!(
+        list com::example::List {
+            member: STRING
+        }
+    );
+    smithy!(
+        structure com::example::Shape {
+            memberA: STRING
+            memberB: INTEGER
+            memberOptional: STRING
+            memberList: LIST
+            memberMap: MAP
+        }
+    );
+
+    #[derive(SmithyShape, Clone, PartialEq)]
+    #[schema(schema = SHAPE)]
+    pub struct SerializeMe {
+        pub member_a: String,
+        pub member_b: i32,
+        pub member_optional: Option<String>,
+        pub member_list: Vec<String>,
+        pub member_map: IndexMap<String, String>,
+    }
+
+    #[test]
+    fn roundtrip_deserialize() {
+        let mut map = IndexMap::new();
+        map.insert(String::from("a"), String::from("b"));
+        let struct_to_convert = SerializeMeBuilder::new()
+            .member_a(String::from("a"))
+            .member_b(1)
+            .member_list(vec!["a".to_string(), "b".to_string()])
+            .member_map(map)
+            .build()
+            .expect("Should build document");
+        let document: Box<dyn Document> = struct_to_convert.into();
+        let builder: SerializeMeBuilder = document.try_into().expect("Should build document");
+        let out = builder.build().expect("Should build document");
+        assert_eq!(out.member_a, String::from("a"));
+        assert_eq!(out.member_b, 1);
+        assert_eq!(out.member_list, vec![String::from("a"), String::from("b")]);
+    }
+
+    smithy!(
+        string test::StringTrait
+    );
+
+    #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+    #[schema(schema = STRING_TRAIT)]
+    pub struct SimpleTrait(String);
+
+    #[test]
+    fn simple_wrapper_roundtrip() {
+        let my_string: SimpleTrait = SimpleTrait(String::from("a"));
+        let document: Box<dyn Document> = my_string.into();
+        let out: SimpleTrait = document.try_into().expect("Should build document");
+        assert_eq!(*out, "a");
+    }
+
+    smithy!(
+        list test::ListTrait {
+            member: STRING
+        }
+    );
+
+    #[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+    #[schema(schema = LIST_TRAIT)]
+    #[repr(transparent)]
+    pub struct SimpleList(Vec<String>);
+
+    #[test]
+    fn list_wrapper_roundtrip() {
+        let my_list: SimpleList = SimpleList(vec![String::from("a"), String::from("b")]);
+        let document: Box<dyn Document> = my_list.into();
+        let out: SimpleList = document.try_into().expect("Should build document");
+        let first = out.get_index(0).unwrap().as_string().unwrap();
+        let second = out.get_index(1).unwrap().as_string().unwrap();
+        assert_eq!(first, "a");
+        assert_eq!(second, "b");
+    }
+
+    smithy!(
+        enum test::SimpleEnum {
+            A = "a"
+            B = "b"
+            C = "c"
+        }
+    );
+
+    #[smithy_enum]
+    #[derive(SmithyShape, Clone, PartialEq)]
+    #[schema(schema = SIMPLE_ENUM)]
+    pub enum TestEnum {
+        A = "a",
+        B = "b",
+        C = "c",
+    }
+
+    #[test]
+    fn enum_roundtrip() {
+        let my_enum = TestEnum::A;
+        let document: Box<dyn Document> = my_enum.into();
+        assert_eq!(document.as_string().expect("string"), "a");
+        let out: TestEnum = document.try_into().expect("Should build document");
+        assert_eq!(TestEnum::A, out);
+    }
+
+    smithy!(
+        union test::Union {
+            a: STRING
+            b: INTEGER
+            c: UNIT
+        }
+    );
+
+    #[smithy_union]
+    #[derive(SmithyShape, PartialEq, Clone)]
+    #[schema(schema = UNION)]
+    pub enum TestUnion {
+        A(String),
+        B(i32),
+        C,
+    }
+
+    #[test]
+    fn union_roundtrip() {
+        let my_enum = TestUnion::A("a".to_string());
+        let document: Box<dyn Document> = my_enum.into();
+        let map = document.as_map().expect("expected map document");
+        let a = map.get("a").expect("expected a");
+        assert_eq!(a.as_string().expect("str"), "a");
+        let out: TestUnion = document.try_into().expect("Should build union");
+        assert_eq!(out, TestUnion::A(String::from("a")));
     }
 }

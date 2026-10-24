@@ -20,7 +20,7 @@ use crate::features::expand_arbitrary;
 #[cfg(feature = "serde-adapter")]
 use crate::features::expand_serde_adapter;
 #[cfg(feature = "documents")]
-use crate::features::expand_try_from_document;
+use crate::features::{expand_document, expand_try_from_document};
 use crate::{
     attr::Shape,
     r#enum::{discriminants_to_attributes, unknown_variant},
@@ -131,6 +131,9 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
     #[cfg(feature = "arbitrary")]
     tokens.push(expand_arbitrary(&parsed, &crate_ident));
 
+    #[cfg(feature = "documents")]
+    tokens.push(expand_document(&parsed, &crate_ident));
+
     // We write tokens still b/c we expect each impl to emit a dummy implementation on errors.
     if !errors.is_empty() {
         let error_tokens = darling::Error::multiple(errors).write_errors();
@@ -163,6 +166,8 @@ pub fn smithy_trait_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStr
     let mut tokens: Vec<TokenStream> = Vec::new();
 
     tokens.push(expand_trait_id(&parsed, &crate_ident));
+
+    #[cfg(feature = "documents")]
     tokens.push(expand_try_from_document(&parsed, &crate_ident));
 
     quote! { #(#tokens)* }.into()
