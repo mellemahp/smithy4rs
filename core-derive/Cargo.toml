@@ -36,5 +36,7 @@ arbitrary = { version = "1.4.2" }
 workspace = true
 
 [features]
+default = ["documents"]
 serde-adapter = ["smithy4rs-core/serde-adapters"]
 arbitrary = ["smithy4rs-core/arbitrary"]
+documents = ["smithy4rs-core/documents"]

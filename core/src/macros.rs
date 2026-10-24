@@ -569,9 +569,10 @@ macro_rules! generated_shapes {
 /// can also be useful for testing.
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "documents")]
 macro_rules! doc_map {
     ($($key:expr => $val:expr),* $(,)?) => {
-        $crate::IndexMap::<String, Box<dyn $crate::schema::Document>>::from_iter([$(($key.into(), $val.into()),)*])
+        $crate::IndexMap::<String, Box<dyn $crate::features::documents::Document>>::from_iter([$(($key.into(), $val.into()),)*])
     }
 }
 

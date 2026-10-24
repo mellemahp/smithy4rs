@@ -41,6 +41,7 @@ thiserror.workspace = true
 serde_json = "1.0.149"
 criterion.workspace = true
 serde-xml-rs = "0.8.2"
+rstest = "0.28.0"
 
 [build-dependencies]
 smithy-cargo = "1.1.0"
@@ -49,6 +50,8 @@ smithy-cargo = "1.1.0"
 workspace = true
 
 [features]
+default = ["documents"]
+documents = ["smithy4rs-core-derive/documents"]
 serde-adapters = ["dep:serde", "smithy4rs-core-derive/serde-adapter", "num-bigint/serde", "bigdecimal/serde"]
 arbitrary = ["dep:arbitrary", "smithy4rs-core-derive/arbitrary", "num-bigint/arbitrary", "indexmap/arbitrary"]
 

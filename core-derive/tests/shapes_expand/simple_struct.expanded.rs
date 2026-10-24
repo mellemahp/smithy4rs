@@ -294,6 +294,88 @@ const _: () = {
         }
     }
 };
+const _: () = {
+    use ::smithy4rs_core::features::documents::MapAccessor as _MapAccessor;
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
+    impl _Document for SimpleStruct {
+        #[inline]
+        fn discriminant(&self) -> Option<&_ShapeId> {
+            Some(<Self as _StaticSchemaShape>::schema().id())
+        }
+        #[inline]
+        fn document_type(&self) -> _DocumentType {
+            _DocumentType::Map
+        }
+        #[inline]
+        fn as_map(&self) -> Option<&dyn _MapAccessor> {
+            Some(self)
+        }
+        #[inline]
+        fn take_map(&mut self) -> Result<&mut dyn _MapAccessor, _DocumentError> {
+            Ok(self)
+        }
+    }
+};
+const _: () = {
+    use ::smithy4rs_core::features::documents::MapAccessor as _MapAccessor;
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::Cow as _Cow;
+    impl _MapAccessor for SimpleStruct {
+        #[inline]
+        #[allow(trivial_casts)]
+        fn get(&self, key: &str) -> Option<&dyn _Document> {
+            match key {
+                "fieldA" => Some(&self.field_a),
+                "fieldB" => Some(&self.field_b),
+                "fieldC" => self.field_c.as_ref().map(|v| v as &dyn _Document),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn get_entry(&self, idx: usize) -> Option<(&str, &dyn _Document)> {
+            match idx {
+                0usize => Some(("fieldA", &self.field_a)),
+                1usize => Some(("fieldB", &self.field_b)),
+                2usize => Some(("fieldC", &self.field_c)),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn get_entry_mut(
+            &mut self,
+            index: usize,
+        ) -> Result<(&str, &mut dyn _Document), _DocumentError> {
+            let out: (&str, &mut dyn _Document) = match index {
+                0usize => ("fieldA", &mut self.field_a),
+                1usize => ("fieldB", &mut self.field_b),
+                2usize => ("fieldC", &mut self.field_c),
+                _ => return Err(_DocumentError::CustomError("Invalid index".to_string())),
+            };
+            Ok(out)
+        }
+        #[inline]
+        #[allow(trivial_casts)]
+        fn get_key_mut(&mut self, index: usize) -> Option<_Cow<'_, str>> {
+            match index {
+                0usize => Some(_Cow::Borrowed("fieldA")),
+                1usize => Some(_Cow::Borrowed("fieldB")),
+                2usize => Some(_Cow::Borrowed("fieldC")),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn len(&self) -> usize {
+            3usize
+        }
+    }
+};
 #[automatically_derived]
 impl ::core::marker::StructuralPartialEq for SimpleStruct {}
 #[automatically_derived]
@@ -527,6 +609,80 @@ const _: () = {
         #[inline]
         fn schema() -> &'static _Schema {
             &NESTED_SCHEMA
+        }
+    }
+};
+const _: () = {
+    use ::smithy4rs_core::features::documents::MapAccessor as _MapAccessor;
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
+    impl _Document for Nested {
+        #[inline]
+        fn discriminant(&self) -> Option<&_ShapeId> {
+            Some(<Self as _StaticSchemaShape>::schema().id())
+        }
+        #[inline]
+        fn document_type(&self) -> _DocumentType {
+            _DocumentType::Map
+        }
+        #[inline]
+        fn as_map(&self) -> Option<&dyn _MapAccessor> {
+            Some(self)
+        }
+        #[inline]
+        fn take_map(&mut self) -> Result<&mut dyn _MapAccessor, _DocumentError> {
+            Ok(self)
+        }
+    }
+};
+const _: () = {
+    use ::smithy4rs_core::features::documents::MapAccessor as _MapAccessor;
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::Cow as _Cow;
+    impl _MapAccessor for Nested {
+        #[inline]
+        #[allow(trivial_casts)]
+        fn get(&self, key: &str) -> Option<&dyn _Document> {
+            match key {
+                "fieldD" => Some(&self.field_d),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn get_entry(&self, idx: usize) -> Option<(&str, &dyn _Document)> {
+            match idx {
+                0usize => Some(("fieldD", &self.field_d)),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn get_entry_mut(
+            &mut self,
+            index: usize,
+        ) -> Result<(&str, &mut dyn _Document), _DocumentError> {
+            let out: (&str, &mut dyn _Document) = match index {
+                0usize => ("fieldD", &mut self.field_d),
+                _ => return Err(_DocumentError::CustomError("Invalid index".to_string())),
+            };
+            Ok(out)
+        }
+        #[inline]
+        #[allow(trivial_casts)]
+        fn get_key_mut(&mut self, index: usize) -> Option<_Cow<'_, str>> {
+            match index {
+                0usize => Some(_Cow::Borrowed("fieldD")),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn len(&self) -> usize {
+            1usize
         }
     }
 };

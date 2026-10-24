@@ -13,7 +13,7 @@ smithy!(
 );
 
 #[smithy_enum]
-#[derive(SmithyShape)]
+#[derive(SmithyShape, Clone)]
 #[schema(schema = STRING_ENUM)]
 pub enum TestEnum {
     A = "a",
@@ -30,7 +30,7 @@ smithy!(
 );
 
 #[smithy_enum]
-#[derive(SmithyShape)]
+#[derive(SmithyShape, Clone)]
 #[schema(schema = INT_ENUM)]
 pub enum TestIntEnum {
     A = 1,
@@ -44,7 +44,7 @@ smithy!(
         a: STRING
     }
 );
-#[derive(SmithyShape)]
+#[derive(SmithyShape, Clone)]
 #[schema(schema = RENAME)]
 pub struct TestRename {
     pub a: String,

@@ -35,3 +35,10 @@ impl StaticSchemaShape for Unit {
         &UNIT
     }
 }
+
+/// Static Unit type used in unions and operations
+/// to represent empty values
+///
+/// This should ONLY be used by generate implementations
+#[doc(hidden)]
+pub const STATIC_UNIT: Unit = Unit;

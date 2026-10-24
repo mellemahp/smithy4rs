@@ -1115,7 +1115,7 @@ mod tests {
     );
 
     #[smithy_union]
-    #[derive(SmithyShape, PartialEq)]
+    #[derive(SmithyShape, PartialEq, Clone)]
     #[schema(schema = IP_ADDR)]
     pub enum IpAddr {
         V4(String),
@@ -1142,7 +1142,7 @@ mod tests {
     );
 
     #[smithy_enum]
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = A_OR_B)]
     pub enum AorB {
         A = "a",
@@ -1166,7 +1166,7 @@ mod tests {
     );
 
     #[smithy_enum]
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = C_OR_D)]
     pub enum CorD {
         C = 1,

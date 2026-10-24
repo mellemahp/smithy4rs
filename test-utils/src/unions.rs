@@ -18,7 +18,7 @@ smithy!(
 );
 
 #[smithy_union]
-#[derive(SmithyShape, PartialEq)]
+#[derive(SmithyShape, PartialEq, Clone)]
 #[schema(schema = UNION)]
 pub enum TestUnion {
     A(String),
@@ -26,10 +26,3 @@ pub enum TestUnion {
     // Unit variant
     C,
 }
-
-smithy!(
-    structure com::example::MySchema {
-        a: STRING
-        b: INTEGER
-    }
-);

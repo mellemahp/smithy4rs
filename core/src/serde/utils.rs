@@ -10,7 +10,7 @@ use num_bigint::BigInt;
 use temporal_rs::Instant;
 
 use crate::{
-    schema::{Document, Schema},
+    schema::Schema,
     serde::se::{Error, ListWriter, MapWriter, SerializeWithSchema, Serializer, StructWriter},
 };
 
@@ -109,16 +109,7 @@ impl<E: Error> Serializer for &mut KeySerializer<E> {
     }
 
     #[cold]
-    fn write_timestamp(self, schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
-        Err(invalid_key_error(schema))
-    }
-
-    #[cold]
-    fn write_document(
-        self,
-        schema: &Schema,
-        _value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, _value: Instant) -> Result<Self::Ok, Self::Error> {
         Err(invalid_key_error(schema))
     }
 
@@ -146,7 +137,7 @@ impl<E: Error> ListWriter for NoOpSerializer<E> {
     #[cold]
     fn write_element<T>(&mut self, _element_schema: &Schema, _value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         unreachable!()
     }
@@ -169,8 +160,8 @@ impl<E: Error> MapWriter for NoOpSerializer<E> {
         _value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         unreachable!()
     }
@@ -186,7 +177,7 @@ impl<E: Error> StructWriter for NoOpSerializer<E> {
 
     fn write_member<T>(&mut self, _member_schema: &Schema, _value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         unreachable!()
     }

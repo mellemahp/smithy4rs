@@ -11,8 +11,10 @@ use bytebuffer::ByteBuffer;
 use num_bigint::BigInt;
 use temporal_rs::Instant;
 
+#[cfg(feature = "documents")]
+use crate::features::documents::Document;
 use crate::{
-    schema::{Document, Schema, SchemaValue, ShapeType},
+    schema::{Schema, SchemaValue, ShapeType},
     serde::de::{DeserializeWithSchema, Deserializer, ListReader, MapReader, StructReader},
 };
 
@@ -268,6 +270,7 @@ impl<'a, 'u> Deserializer<'_> for ArbitraryDeserializer<'a, 'u> {
             .map_err(|_| arbitrary::Error::IncorrectFormat)?)
     }
 
+    #[cfg(feature = "documents")]
     fn read_document(self, _schema: &Schema) -> Result<Box<dyn Document>, Self::Error> {
         todo!()
     }

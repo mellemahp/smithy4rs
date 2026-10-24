@@ -7,8 +7,8 @@ use crate::{
         smithy_enum,
     },
     doc_map,
+    features::documents::Document,
     schema::{
-        Document,
         DynamicTrait,
         RegexWrapper,
     },
@@ -108,9 +108,18 @@ smithy!(
 );
 
 smithy!(
+    #[doc(hidden)]
+    map smithy::api::NonEmptyStringMap {
+        key: NON_EMPTY_STRING
+        value: NON_EMPTY_STRING
+    }
+);
+
+smithy!(
     /// Schema for [`CorsTrait`]
     structure smithy::api::cors {
         origin: NON_EMPTY_STRING
+        origins: NON_EMPTY_STRING_MAP
         maxAge: INTEGER
         additionalAllowedHeaders: NON_EMPTY_STRING_LIST
         additionalExposedHeaders: NON_EMPTY_STRING_LIST
@@ -124,8 +133,17 @@ smithy!(
 pub struct CorsTrait {
     /// The origin from which browser script-originating requests will be
     /// allowed.
+    ///
+    /// The `origin` and `origins` members are mutually exclusive.
     #[schema(default = "*".to_string())]
     pub origin: String,
+    /// A map of named origins from which browser script-originating requests
+    /// will be allowed. Each key is a user-defined name for the origin, and
+    /// each value is the origin URL. This allows for environment-aware origin
+    /// selection (e.g., selecting an origin based on a deployment stage).
+    ///
+    /// The `origin` and `origins` members are mutually exclusive.
+    pub origins: Option<IndexMap<String, String>>,
     /// The maximum number of seconds for which browsers are allowed to cache
     /// the results of a preflight OPTIONS request.
     ///
@@ -482,8 +500,18 @@ pub struct IdempotencyTokenTrait {
 }
 
 smithy!(
+    #[doc(hidden)]
+    list smithy::api::IdempotentErrors {
+        @DynamicTrait::from("smithy.api#idRef", doc_map!["selector" => "[trait|error]"]);
+        member: STRING
+    }
+);
+
+smithy!(
     /// Schema for [`IdempotentTrait`]
     structure smithy::api::idempotent {
+        exists: IDEMPOTENT_ERRORS
+        notFound: IDEMPOTENT_ERRORS
     }
 );
 
@@ -494,6 +522,14 @@ smithy!(
 #[non_exhaustive]
 #[schema(schema = IDEMPOTENT)]
 pub struct IdempotentTrait {
+    /// Describes the errors returned when the operation is called and the
+    /// resource already exists. Applicable to create lifecycle operations.
+    /// An empty list indicates the operation returns a successful response.
+    pub exists: Option<Vec<String>>,
+    /// Describes the errors returned when the operation is called and the
+    /// resource does not exist. Applicable to delete lifecycle operations.
+    /// An empty list indicates the operation returns a successful response.
+    pub not_found: Option<Vec<String>>,
 }
 
 smithy!(
@@ -582,6 +618,65 @@ smithy!(
 );
 
 smithy!(
+    /// Schema for [`LongPollTrait`]
+    structure smithy::api::longPoll {
+        @RequiredTrait::builder().build();
+        @RangeTrait::builder().min(1).build();
+        timeoutMillis: INTEGER
+    }
+);
+
+/// Indicates that the service may not respond immediately to requests for the targeted
+/// operation. This can allow services more time to prepare more detailed responses or
+/// allow them to hold the request open as it waits for information to become
+/// available.
+///
+/// When making requests for an operation targeted by this trait, clients should
+/// wait for at least the amount of time indicated by the `timeoutMillis` member.
+/// If the client's default timeout is longer, it may use the longer value.
+///
+/// Clients may allow users to configure timeouts. If a user configures a timeout
+/// value on a client, the client must use the user-configured value regardless of
+/// whether it is greater or less than `timeoutMillis`. Similarly, if the user
+/// configures a timeout value for a request, clients must use that value.
+/// <div class="warning">
+///
+/// **WARNING**: Unstable feature
+///
+/// </div>
+///
+#[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
+#[schema(schema = LONG_POLL)]
+pub struct LongPollTrait {
+    /// The amount of time in milliseconds that a client should wait for a response.
+    pub timeout_millis: i32,
+}
+
+smithy!(
+    /// Schema for [`MetadataTrait`]
+    structure smithy::api::metadata {
+        @RequiredTrait::builder().build();
+        @LengthTrait::builder().min(1i64).build();
+        key: STRING
+    }
+);
+
+/// Defines a type for a metadata key.
+///
+/// If a matching key is defined in the model, its value will be validated
+/// according to the targeted shape.
+///
+/// The type for any metadata key MUST only be defined once.
+#[derive(SmithyShape, SmithyTrait, PartialEq, Clone)]
+#[non_exhaustive]
+#[schema(schema = METADATA)]
+pub struct MetadataTrait {
+    /// The metadata key to validate. Each key MUST only be defined once.
+    pub key: String,
+}
+
+smithy!(
     /// Schema for [`MixinTrait`]
     structure smithy::api::mixin {
         localTraits: LOCAL_MIXIN_TRAIT_LIST
@@ -597,6 +692,15 @@ pub struct MixinTrait {
 }
 
 smithy!(
+    /// A list of Smithy namespaces.
+    #[doc(hidden)]
+    @UniqueItemsTrait::builder().build();
+    list smithy::api::Namespaces {
+        member: STRING
+    }
+);
+
+smithy!(
     /// Schema for [`NestedPropertiesTrait`]
     @DynamicTrait::from("smithy.api#notProperty", doc_map![]);
     structure smithy::api::nestedProperties {
@@ -610,14 +714,6 @@ smithy!(
 #[schema(schema = NESTED_PROPERTIES)]
 pub struct NestedPropertiesTrait {
 }
-
-smithy!(
-    #[doc(hidden)]
-    map smithy::api::NonEmptyStringMap {
-        key: NON_EMPTY_STRING
-        value: NON_EMPTY_STRING
-    }
-);
 
 smithy!(
     /// Schema for [`NoReplaceTrait`]
@@ -853,6 +949,32 @@ pub struct Reference {
     /// contain a link relation as defined in RFC 5988#section-4.
     pub rel: Option<String>,
 }
+
+smithy!(
+    /// Disambiguates shape name conflicts in a closure. Map keys are
+    /// shape ids contained in the closure, and map values are the
+    /// disambiguated shape names (without a namespace) to use in the
+    /// context of the closure. Each given map value MUST match the
+    /// `Identifier` production used for shape ids. Renaming a shape
+    /// does not give the shape a new shape id.
+    ///
+    /// - No renamed shape name can case-insensitively match any other
+    /// renamed shape name or the name of a non-renamed shape contained
+    /// in the closure.
+    /// - Member shapes MAY NOT be renamed.
+    /// - Service, resource, and operation shapes MAY NOT be renamed.
+    /// Renaming shapes is intended for incidental naming conflicts,
+    /// not for renaming the fundamental concepts of an API.
+    /// - Shapes from other namespaces marked as private MAY be renamed.
+    /// - A rename MUST use a name that is case-sensitively different
+    /// from the original shape id name.
+    #[doc(hidden)]
+    map smithy::api::Renames {
+        @DynamicTrait::from("smithy.api#idRef", doc_map!["failWhenMissing" => true, "selector" => ":not(:is(member, service, resource, operation))", "errorMessage" => "Renames must target shapes that are in the model and must not target services, resources, operations, or members."]);
+        key: STRING
+        value: IDENTIFIER
+    }
+);
 
 smithy!(
     /// Defines the priority-ordered list of compression algorithms supported by
@@ -1265,6 +1387,16 @@ pub struct XmlNamespaceTrait {
 }
 
 smithy!(
+    /// A string containing CommonMark-formatted text.
+    /// ## References
+    /// - [**CommonMark Specification**]("https://commonmark.org/")
+    ///
+    #[doc(hidden)]
+    @MediaTypeTrait::new("text/markdown; charset=UTF-8; variant=CommonMark");
+    string smithy::api::CommonMark
+);
+
+smithy!(
     /// Changes the serialized element or attribute name of a structure, union,
     /// or member.
     @PatternTrait::new("^[a-zA-Z_][a-zA-Z_0-9-]*(:[a-zA-Z_][a-zA-Z_0-9-]*)?$");
@@ -1431,6 +1563,13 @@ smithy!(
 );
 
 smithy!(
+    /// A string matching the `Identifier` ABNF production used for shape names.
+    #[doc(hidden)]
+    @PatternTrait::new("^(_+[a-zA-Z0-9]|[a-zA-Z])\\w*$");
+    string smithy::api::Identifier
+);
+
+smithy!(
     #[doc(hidden)]
     @DynamicTrait::from("smithy.api#idRef", doc_map!["selector" => "[trait|trait]", "failWhenMissing" => true, "errorMessage" => "Strings provided to the localTraits property of a mixin trait\nmust target a valid trait."]);
     string smithy::api::LocalMixinTrait
@@ -1558,3 +1697,10 @@ smithy!(
 #[schema(schema = HTTP_QUERY)]
 #[repr(transparent)]
 pub struct HttpQueryTrait(String);
+
+smithy!(
+    /// An identifier for a closure. This matches the shape id format.
+    #[doc(hidden)]
+    @DynamicTrait::from("smithy.api#idRef", doc_map!["failWhenMissing" => false]);
+    string smithy::api::ClosureId
+);

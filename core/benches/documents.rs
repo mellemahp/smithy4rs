@@ -1,11 +1,9 @@
-use std::hint::black_box;
-
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use smithy4rs_core::{
     IndexMap,
     derive::SmithyShape,
+    features::documents::{Document, TryFromDocument},
     prelude::{INTEGER, STRING},
-    schema::{Document, TryFromDocument},
     smithy,
 };
 
@@ -24,6 +22,7 @@ smithy!(
     structure com::example::Shape {
         memberA: STRING
         memberB: INTEGER
+        memberOptional: STRING
         memberList: LIST
         memberMap: MAP
     }
@@ -34,6 +33,7 @@ smithy!(
 pub struct SerializeMe {
     pub member_a: String,
     pub member_b: i32,
+    pub member_optional: Option<String>,
     pub member_list: Vec<String>,
     pub member_map: IndexMap<String, String>,
 }
@@ -41,17 +41,24 @@ pub struct SerializeMe {
 fn convert_into(c: &mut Criterion) {
     let mut map = IndexMap::new();
     map.insert(String::from("a"), String::from("b"));
+
     let struct_to_convert = SerializeMeBuilder::new()
         .member_a(String::from("a"))
         .member_b(1)
-        .member_list(vec!["a".to_string(), "b".to_string()])
+        .member_list(vec!["a".to_string(), "b".to_string(), "c".to_string()])
         .member_map(map)
         .build()
-        .expect("Should build document");
+        .expect("Should build shape");
+
     c.bench_function("Convert Shape into document", |b| {
-        b.iter(|| {
-            let _: Box<dyn Document> = black_box(struct_to_convert.clone().into());
-        });
+        b.iter_batched(
+            || struct_to_convert.clone(),
+            |shape| {
+                let doc: Box<dyn Document> = shape.into();
+                doc
+            },
+            BatchSize::SmallInput,
+        );
     });
 }
 
@@ -67,15 +74,18 @@ fn convert_from(c: &mut Criterion) {
         .expect("Should build document");
     let document: Box<dyn Document> = struct_to_convert.into();
 
+    // TODO: use .into()?
     c.bench_function("Document to shape", |b| {
-        b.iter(|| {
-            let _ = black_box(
-                <SerializeMeBuilder as TryFromDocument>::try_from(document.clone())
+        b.iter_batched(
+            || document.clone(),
+            |mut shape| {
+                <SerializeMeBuilder as TryFromDocument>::try_from(&mut *shape)
                     .expect("Should convert to document")
                     .build()
-                    .expect("Should build document"),
-            );
-        });
+                    .expect("Should build document")
+            },
+            BatchSize::SmallInput,
+        );
     });
 }
 

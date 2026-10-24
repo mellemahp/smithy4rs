@@ -96,3 +96,55 @@ const _: () = {
         }
     }
 };
+const _: () = {
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::schema::Schema as _Schema;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
+    impl _Document for TestEnum {
+        #[inline]
+        fn discriminant(&self) -> Option<&_ShapeId> {
+            Some(<TestEnum as _StaticSchemaShape>::schema().id())
+        }
+        #[inline]
+        fn document_type(&self) -> _DocumentType {
+            _DocumentType::String
+        }
+        #[inline]
+        fn as_string(&self) -> Option<&str> {
+            let out = match self {
+                TestEnum::A => "a",
+                TestEnum::B => "b",
+                TestEnum::C => "c",
+                TestEnum::Unknown(value) => value.as_str(),
+            };
+            Some(out)
+        }
+        #[inline]
+        fn take_string(&mut self, _schema: &_Schema) -> Result<String, _DocumentError> {
+            let out = match self {
+                TestEnum::A => "a".to_string(),
+                TestEnum::B => "b".to_string(),
+                TestEnum::C => "c".to_string(),
+                TestEnum::Unknown(value) => std::mem::take(value),
+            };
+            Ok(out)
+        }
+    }
+};
+#[automatically_derived]
+impl ::core::clone::Clone for TestEnum {
+    #[inline]
+    fn clone(&self) -> TestEnum {
+        match self {
+            TestEnum::A => TestEnum::A,
+            TestEnum::B => TestEnum::B,
+            TestEnum::C => TestEnum::C,
+            TestEnum::Unknown(__self_0) => {
+                TestEnum::Unknown(::core::clone::Clone::clone(__self_0))
+            }
+        }
+    }
+}

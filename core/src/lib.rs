@@ -28,6 +28,7 @@ pub mod features;
 #[doc(hidden)]
 pub mod macros;
 mod assert;
+
 pub use assert::assert_contains_all;
 
 /// Common cheaply-copyable reference type.
@@ -51,6 +52,8 @@ pub use indexmap::IndexMap;
 pub use num_bigint::BigInt;
 #[doc(hidden)]
 pub use temporal_rs::Instant;
+#[doc(hidden)]
+pub use std::borrow::Cow;
 
 // For public macros
 #[doc(hidden)]

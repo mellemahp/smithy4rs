@@ -73,7 +73,7 @@ use thiserror::Error;
 use crate::{
     BigDecimal, FxIndexSet, Instant,
     schema::{
-        Document, Schema, SchemaValue, ShapeType, TraitRef,
+        Schema, SchemaValue, ShapeType, TraitRef,
         prelude::{LengthTrait, PatternTrait, RangeTrait, UniqueItemsTrait},
     },
     serde::{
@@ -83,7 +83,6 @@ use crate::{
         utils::KeySerializer,
     },
 };
-
 // ============================================================================
 // Validator Trait
 // ============================================================================
@@ -500,22 +499,9 @@ impl<'a> Serializer for &'a mut DefaultValidator {
         Ok(())
     }
 
-    fn write_timestamp(self, schema: &Schema, _value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, schema: &Schema, _value: Instant) -> Result<Self::Ok, Self::Error> {
         shape_type!(self, schema, ShapeType::Timestamp);
         Ok(())
-    }
-
-    fn write_document(
-        self,
-        schema: &Schema,
-        value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
-        // If the schema is a document then it doesn't impose any constraints
-        if schema.shape_type() == &ShapeType::Document {
-            return Ok(());
-        }
-        // Otherwise delegate to document
-        value.serialize_with_schema(schema, self)
     }
 
     fn write_null(self, _schema: &Schema) -> Result<Self::Ok, Self::Error> {
@@ -550,7 +536,7 @@ impl ListWriter for DefaultListValidator<'_> {
 
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         self.root.push_path(PathElement::Index(self.index))?;
         if self.unique {
@@ -595,7 +581,7 @@ impl UniquenessTracker {
     /// Add an item to the set.
     ///
     /// Returns true if the item was already in the set.
-    fn add<T: SerializeWithSchema>(
+    fn add<T: SerializeWithSchema + ?Sized>(
         &mut self,
         schema: &Schema,
         value: &T,
@@ -725,7 +711,7 @@ impl<'a> Serializer for &'a mut HashingSerializer {
     }
 
     #[inline]
-    fn write_timestamp(self, _schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error> {
+    fn write_timestamp(self, _schema: &Schema, value: Instant) -> Result<Self::Ok, Self::Error> {
         self.hash(value.epoch_nanoseconds().0);
         Ok(())
     }
@@ -757,7 +743,7 @@ impl ListWriter for InnerHasher<'_> {
     #[inline]
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         value.serialize_with_schema(element_schema, &mut *self.root)?;
         Ok(())
@@ -781,8 +767,8 @@ impl MapWriter for InnerHasher<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         key.serialize_with_schema(key_schema, &mut *self.root)?;
         value.serialize_with_schema(value_schema, &mut *self.root)?;
@@ -800,26 +786,27 @@ impl StructWriter for InnerHasher<'_> {
 
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         let Some(member_name) = member_schema.id().member() else {
             return Err(ValidationFailure::ExpectedMember(
                 member_schema.id().name().into(),
             ));
         };
-        self.write_member_named(member_name, member_schema, value)?;
+        self.root.hash(member_name);
+        value.serialize_with_schema(member_schema, &mut *self.root)?;
         Ok(())
     }
 
     #[inline]
     fn write_member_named<T>(
         &mut self,
-        member_name: &str,
+        member_name: &'static str,
         member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         self.root.hash(member_name);
         value.serialize_with_schema(member_schema, &mut *self.root)?;
@@ -848,8 +835,8 @@ impl MapWriter for DefaultMapValidator<'_> {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema,
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized,
     {
         match key.serialize_with_schema(key_schema, &mut KeySerializer::<ValidationFailure>::new())
         {
@@ -879,7 +866,7 @@ impl StructWriter for DefaultStructValidator<'_> {
     #[inline]
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema,
+        T: SerializeWithSchema + ?Sized,
     {
         self.root.push_path(member_schema)?;
         value.serialize_with_schema(member_schema, &mut *self.root)?;
@@ -887,7 +874,7 @@ impl StructWriter for DefaultStructValidator<'_> {
     }
 
     // We use this method to identify missing Required values in documents
-    fn write_unknown(&mut self, schema: &Schema, _name: &String) -> Result<(), Self::Error> {
+    fn write_unknown(&mut self, schema: &Schema, _name: &str) -> Result<(), Self::Error> {
         self.root.push_path(schema)?;
         self.root.write_missing(schema)?;
         self.root.pop_path()
@@ -925,7 +912,7 @@ impl<T: Into<TraitRef>> TryInto<TraitRef> for Validated<T> {
 /// aggregate error type.
 #[derive(Error, Debug)]
 pub struct ValidationErrors {
-    errors: Vec<ValidationErrorField>,
+    pub(crate) errors: Vec<ValidationErrorField>,
 }
 
 impl ValidationErrors {
@@ -1013,7 +1000,7 @@ impl Display for ValidationErrors {
 #[allow(dead_code)]
 pub struct ValidationErrorField {
     path: Vec<PathElement>,
-    error: Box<dyn ValidationError>,
+    pub(crate) error: Box<dyn ValidationError>,
 }
 impl ValidationErrorField {
     /// Create a new validation error field from a validation error and a path
@@ -1224,7 +1211,7 @@ mod tests {
             fieldMap: VALIDATED_MAP
         }
     );
-    #[derive(SmithyShape)]
+    #[derive(SmithyShape, Clone)]
     #[schema(schema = BASIC_VALIDATION)]
     pub struct SimpleStruct {
         pub field_a: String,
@@ -1994,85 +1981,6 @@ mod tests {
         assert_eq!(
             error_enum.error.to_string(),
             "Enum value `4` invalid. Expected one of: {1, 2}.".to_string()
-        );
-    }
-
-    // ==== `@uniqueItem` Validations ====
-    smithy!(
-        @PatternTrait::new("^[a-z]*$");
-        string com::example::Lowercase
-    );
-
-    #[test]
-    fn string_document_checked() {
-        let string: Box<dyn Document> = "camelCased".into();
-        let mut validator = DefaultValidator::new();
-        let Err(err) = validator.validate(&LOWERCASE, &string) else {
-            panic!("Expected an error");
-        };
-        assert_eq!(err.errors.len(), 1);
-        let error_enum = err.errors.first().unwrap();
-        assert_eq!(
-            error_enum.error.to_string(),
-            "Value `camelCased` did not conform to expected pattern `^[a-z]*$`".to_string()
-        );
-    }
-
-    smithy!(
-        @RangeTrait::builder().min(2).max(5).build();
-        integer com::example::BetweenTwoAndFive
-    );
-
-    #[test]
-    fn number_document_checked() {
-        let int: Box<dyn Document> = 6.into();
-        let mut validator = DefaultValidator::new();
-        let Err(err) = validator.validate(&BETWEEN_TWO_AND_FIVE, &int) else {
-            panic!("Expected an error");
-        };
-        assert_eq!(err.errors.len(), 1);
-        let error_enum = err.errors.first().unwrap();
-        assert_eq!(
-            error_enum.error.to_string(),
-            "Size: 6 does not conform to @range constraint. Expected between 2 and 5.".to_string()
-        );
-    }
-
-    #[test]
-    fn structure_document_checked() {
-        let mut nested: IndexMap<String, Box<dyn Document>> = IndexMap::new();
-        nested.insert("c".into(), "dataWithCaps".into());
-        let mut root: IndexMap<String, Box<dyn Document>> = IndexMap::new();
-        root.insert("nested".to_string(), nested.into());
-        let document: Box<dyn Document> = root.into();
-        let mut validator = DefaultValidator::new();
-
-        let Err(err) = validator.validate(&STRUCT_WITH_NESTED, &document) else {
-            panic!("Expected an error");
-        };
-        assert_eq!(err.errors.len(), 2);
-        let error_required = err.errors.first().unwrap();
-        assert_eq!(
-            error_required.path,
-            vec![PathElement::Schema(
-                _STRUCT_WITH_NESTED_MEMBER_REQUIRED.clone()
-            )]
-        );
-        assert_eq!(
-            error_required.error.to_string(),
-            "Field is Required.".to_string()
-        );
-        let error_pattern = err.errors.get(1).unwrap();
-        assert_eq!(
-            error_pattern.path,
-            vec![
-                PathElement::Schema(_STRUCT_WITH_NESTED_MEMBER_NESTED.clone()),
-                PathElement::Schema(_NESTED_MEMBER_C.clone())
-            ]
-        );
-        assert_eq!(
-            error_pattern.error.to_string(),
-            "Value `dataWithCaps` did not conform to expected pattern `^[a-z]*$`".to_string()
         );
     }
 

@@ -139,3 +139,106 @@ const _: () = {
         }
     }
 };
+const _: () = {
+    use ::smithy4rs_core::features::documents::MapAccessor as _MapAccessor;
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::schema::ShapeId as _ShapeId;
+    use ::smithy4rs_core::features::documents::DocumentType as _DocumentType;
+    use ::smithy4rs_core::schema::StaticSchemaShape as _StaticSchemaShape;
+    impl _Document for TestEnum {
+        #[inline]
+        fn discriminant(&self) -> Option<&_ShapeId> {
+            Some(<Self as _StaticSchemaShape>::schema().id())
+        }
+        #[inline]
+        fn document_type(&self) -> _DocumentType {
+            _DocumentType::Map
+        }
+        #[inline]
+        fn as_map(&self) -> Option<&dyn _MapAccessor> {
+            Some(self)
+        }
+        #[inline]
+        fn take_map(&mut self) -> Result<&mut dyn _MapAccessor, _DocumentError> {
+            Ok(self)
+        }
+    }
+};
+const _: () = {
+    use ::smithy4rs_core::features::documents::MapAccessor as _MapAccessor;
+    use ::smithy4rs_core::features::documents::Document as _Document;
+    use ::smithy4rs_core::features::documents::DocumentError as _DocumentError;
+    use ::smithy4rs_core::Cow as _Cow;
+    impl _MapAccessor for TestEnum {
+        #[inline]
+        #[allow(trivial_casts)]
+        fn get(&self, key: &str) -> Option<&dyn _Document> {
+            match self {
+                TestEnum::A(value) if key == "a" => Some(value),
+                TestEnum::B(value) if key == "b" => Some(value),
+                TestEnum::C if key == "c" => Some(&::smithy4rs_core::schema::STATIC_UNIT),
+                _ => None,
+            }
+        }
+        #[inline]
+        fn get_entry(&self, idx: usize) -> Option<(&str, &dyn _Document)> {
+            match self {
+                TestEnum::A(value) if idx == 0usize => Some(("a", value)),
+                TestEnum::B(value) if idx == 1usize => Some(("b", value)),
+                TestEnum::C if idx == 2usize => {
+                    Some(("c", &::smithy4rs_core::schema::STATIC_UNIT))
+                }
+                _ => None,
+            }
+        }
+        #[inline]
+        fn get_entry_mut(
+            &mut self,
+            index: usize,
+        ) -> Result<(&str, &mut dyn _Document), _DocumentError> {
+            match self {
+                TestEnum::A(value) if index == 0usize => Ok(("a", value)),
+                TestEnum::B(value) if index == 1usize => Ok(("b", value)),
+                TestEnum::C if index == 2usize => {
+                    Ok(("c", Box::leak(Box::new(::smithy4rs_core::schema::Unit))))
+                }
+                _ => Err(_DocumentError::CustomError("Invalid index".to_string())),
+            }
+        }
+        #[inline]
+        #[allow(trivial_casts)]
+        fn get_key_mut(&mut self, index: usize) -> Option<_Cow<'_, str>> {
+            match self {
+                TestEnum::A(_) if index == 0usize => {
+                    Some(::smithy4rs_core::Cow::Borrowed("a"))
+                }
+                TestEnum::B(_) if index == 1usize => {
+                    Some(::smithy4rs_core::Cow::Borrowed("b"))
+                }
+                TestEnum::C if index == 2usize => {
+                    Some(::smithy4rs_core::Cow::Borrowed("c"))
+                }
+                _ => None,
+            }
+        }
+        #[inline]
+        fn len(&self) -> usize {
+            3usize
+        }
+    }
+};
+#[automatically_derived]
+impl ::core::clone::Clone for TestEnum {
+    #[inline]
+    fn clone(&self) -> TestEnum {
+        match self {
+            TestEnum::A(__self_0) => TestEnum::A(::core::clone::Clone::clone(__self_0)),
+            TestEnum::B(__self_0) => TestEnum::B(::core::clone::Clone::clone(__self_0)),
+            TestEnum::C => TestEnum::C,
+            TestEnum::Unknown(__self_0) => {
+                TestEnum::Unknown(::core::clone::Clone::clone(__self_0))
+            }
+        }
+    }
+}

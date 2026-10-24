@@ -14,11 +14,11 @@
 //!
 //! This design (inspired by `serde`) separates iteration from value reading,
 //! allowing callers to control the serialization flow.
-use std::{error::Error as StdError, fmt::Display};
+use std::{borrow::Cow, convert::Infallible, error::Error as StdError, fmt::Display};
 
 use crate::{
     BigDecimal, BigInt, ByteBuffer, IndexMap, Instant,
-    schema::{Document, Schema, SchemaShape, ShapeId},
+    schema::{Schema, SchemaShape, ShapeId},
 };
 
 // ============================================================================
@@ -76,6 +76,13 @@ pub trait Error: Sized + StdError {
     fn custom<T: Display>(msg: T) -> Self;
 }
 
+// TODO: Is this wise?
+impl Error for Infallible {
+    fn custom<T: Display>(_msg: T) -> Self {
+        unreachable!()
+    }
+}
+
 // ============================================================================
 // Core Serialize Traits
 // ============================================================================
@@ -115,7 +122,7 @@ pub trait ListWriter {
     /// the element could not be serialized.
     fn write_element<T>(&mut self, element_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema;
+        T: SerializeWithSchema + ?Sized;
 
     /// Finish serializing a sequence.
     ///
@@ -163,8 +170,8 @@ pub trait MapWriter {
         value: &V,
     ) -> Result<(), Self::Error>
     where
-        K: SerializeWithSchema,
-        V: SerializeWithSchema;
+        K: SerializeWithSchema + ?Sized,
+        V: SerializeWithSchema + ?Sized;
 
     /// Finish serializing a map.
     ///
@@ -219,7 +226,7 @@ pub trait StructWriter {
     /// the member could not be serialized.
     fn write_member<T>(&mut self, member_schema: &Schema, value: &T) -> Result<(), Self::Error>
     where
-        T: SerializeWithSchema;
+        T: SerializeWithSchema + ?Sized;
 
     /// Serialize a member on the struct with a pre-known field name.
     /// This is an optimization to avoid extracting the name from the schema.
@@ -230,7 +237,7 @@ pub trait StructWriter {
     #[inline]
     fn write_member_named<T>(
         &mut self,
-        _member_name: &str,
+        _member_name: &'static str,
         member_schema: &Schema,
         value: &T,
     ) -> Result<(), Self::Error>
@@ -270,7 +277,7 @@ pub trait StructWriter {
     #[inline]
     fn write_optional_member_named<T: SerializeWithSchema>(
         &mut self,
-        member_name: &str,
+        member_name: &'static str,
         member_schema: &Schema,
         value: &Option<T>,
     ) -> Result<(), Self::Error> {
@@ -298,7 +305,7 @@ pub trait StructWriter {
     /// Returns an [`Error`] matching the parent serializer if
     /// the unknown member could not be serialized.
     #[cold]
-    fn write_unknown(&mut self, _schema: &Schema, name: &String) -> Result<(), Self::Error> {
+    fn write_unknown(&mut self, _schema: &Schema, name: &str) -> Result<(), Self::Error> {
         // Error out on unknown by default
         Err(Self::Error::custom(format!(
             "Attempted to serialize unknown value: {name:?}"
@@ -449,21 +456,7 @@ pub trait Serializer: Sized {
     ///
     /// # Errors
     /// `Self::Error` if the value could not be serialized as a `timestamp`.
-    fn write_timestamp(self, schema: &Schema, value: &Instant) -> Result<Self::Ok, Self::Error>;
-
-    /// Serialize an untyped [`Document`]
-    ///
-    /// # Errors
-    /// `Self::Error` if the value could not be serialized as a `document`.
-    #[allow(clippy::borrowed_box)]
-    fn write_document(
-        self,
-        schema: &Schema,
-        value: &Box<dyn Document>,
-    ) -> Result<Self::Ok, Self::Error> {
-        // Delegate to the document itself for serialization
-        value.serialize_with_schema(schema, self)
-    }
+    fn write_timestamp(self, schema: &Schema, value: Instant) -> Result<Self::Ok, Self::Error>;
 
     /// Serialize a `null` value
     ///
@@ -658,11 +651,22 @@ impl SerializeWithSchema for Instant {
         schema: &Schema,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.write_timestamp(schema, self)
+        serializer.write_timestamp(schema, *self)
     }
 }
 
 impl SerializeWithSchema for String {
+    #[inline]
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.write_string(schema, self)
+    }
+}
+
+impl SerializeWithSchema for str {
     #[inline]
     fn serialize_with_schema<S: Serializer>(
         &self,
@@ -698,5 +702,15 @@ impl<T: SerializeWithSchema> SerializeWithSchema for Box<T> {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         (**self).serialize_with_schema(schema, serializer)
+    }
+}
+
+impl SerializeWithSchema for Cow<'_, str> {
+    fn serialize_with_schema<S: Serializer>(
+        &self,
+        schema: &Schema,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.write_string(schema, self)
     }
 }

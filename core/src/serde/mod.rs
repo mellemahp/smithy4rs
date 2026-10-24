@@ -4,8 +4,7 @@ pub use builders::*;
 pub mod correction;
 pub mod debug;
 pub mod deserializers;
-mod documents;
-pub use documents::*;
+
 pub mod serializers;
 mod unit;
 

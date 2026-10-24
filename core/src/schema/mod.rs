@@ -1,12 +1,10 @@
 mod traits;
-
 use std::ops::Deref;
 
 use regex::Regex;
+#[cfg(feature = "documents")]
+pub use traits::dynamic::*;
 pub use traits::*;
-
-mod documents;
-pub use documents::*;
 
 mod shapes;
 pub use shapes::*;
@@ -17,7 +15,7 @@ pub use schemas::*;
 mod unit;
 
 // Do not include the unit trait as it can remain private.
-pub use unit::{UNIT, Unit};
+pub use unit::{STATIC_UNIT, UNIT, Unit};
 
 use crate::serde::{
     de::{DeserializeWithSchema, Deserializer, Error},

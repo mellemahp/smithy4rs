@@ -8,6 +8,7 @@ use smithy4rs_core::{
         SmithyShape,
         smithy_enum,
     },
+    features::documents::Document,
     prelude::{
         BIG_DECIMAL,
         BIG_INTEGER,
@@ -23,7 +24,6 @@ use smithy4rs_core::{
         STRING,
         TIMESTAMP,
     },
-    schema::Document,
     smithy,
 };
 
