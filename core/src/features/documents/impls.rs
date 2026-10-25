@@ -653,7 +653,7 @@ impl<T: Document + Clone + 'static> Document for Option<T> {
 // `list A { member: Document }`, and `map B { key: String, value: Document }`
 //
 // Note: In practice collections of documents are pretty rarely seen
-// (can usually just be treated as single document), but suppporting here
+// (can usually just be treated as single document), but supporting here
 // for completeness
 // ============================================================================
 
