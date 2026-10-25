@@ -67,7 +67,9 @@ impl SerializeWithSchema for dyn Document + '_ {
             ShapeType::String | ShapeType::Enum => {
                 serializer.write_string(schema, try_as!(self, as_string, "string"))
             }
-            // TODO: Add back in timestamp
+            ShapeType::Timestamp => {
+                serializer.write_timestamp(schema, try_as!(self, as_timestamp, "timestamp"))
+            }
             ShapeType::Byte => serializer.write_byte(schema, try_as!(self, as_byte, "byte")),
             ShapeType::Short => serializer.write_short(schema, try_as!(self, as_short, "short")),
             ShapeType::Integer | ShapeType::IntEnum => {
@@ -134,6 +136,9 @@ fn serialize_document<S: Serializer>(
         DocumentType::Null => serializer.write_null(schema),
         DocumentType::Boolean => {
             serializer.write_boolean(schema, try_as!(value, as_boolean, "boolean"))
+        }
+        DocumentType::Timestamp => {
+            serializer.write_timestamp(schema, try_as!(value, as_timestamp, "timestamp"))
         }
         DocumentType::Number(number) => match number {
             Number::Byte => serializer.write_byte(schema, try_as!(value, as_byte, "byte")),

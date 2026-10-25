@@ -22,7 +22,7 @@ mod equality {
     #[case(1i8, 1i16)]
     #[case(1i16, 1i32)]
     #[case(1i32, BigInt::from(1i32))]
-    // TODO: fix this case #[case(BigInt::from(5i64), 5i64)]
+    #[case(BigInt::from(5i64), 5i64)]
     #[case(vec!["a", "b"], vec!["a", "b"])]
     fn equality_check(
         #[case] a_in: impl Into<Box<dyn Document>>,

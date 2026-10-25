@@ -120,7 +120,7 @@ pub fn smithy_shape_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
             tokens.push(expand_builder(struct_shape, &crate_ident));
         }
         Shape::Union(_) | Shape::Enum(_) => {
-            // TODO: Any enum specific?
+            // No enum-specific at this time.
         }
     }
 

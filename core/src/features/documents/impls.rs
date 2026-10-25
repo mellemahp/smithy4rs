@@ -19,7 +19,7 @@
 //! of protocol smoothing. For example, i8 documents can be treated a i32
 //! automatically.
 
-use std::{borrow::Cow, mem};
+use std::{borrow::Cow, convert::AsRef, mem};
 
 use bigdecimal::{FromPrimitive, num_traits};
 use indexmap::map::MutableKeys;
@@ -30,7 +30,7 @@ use crate::{
     features::documents::{
         Document, DocumentError, DocumentType, ListAccessor, MapAccessor, Number,
     },
-    schema::{RegexWrapper, Schema, Unit},
+    schema::{RegexWrapper, Schema, ShapeId, Unit},
 };
 
 impl Document for bool {
@@ -84,11 +84,25 @@ impl Document for String {
     }
 }
 
-// TODO: How to handle timestamps? They can be both?
+// Note: While timestamps can be written as string or int based
+// on timestampFormat trait, we do not need to consider that
+// here. Timestamp formats are handled by serializer, not this
+// implementation. Same with deserialization. An Instant is ALWAYS
+// a Timestamp document in this conversion.
 impl Document for Instant {
     #[inline]
     fn document_type(&self) -> DocumentType {
-        todo!()
+        DocumentType::Timestamp
+    }
+
+    #[inline]
+    fn as_timestamp(&self) -> Option<Instant> {
+        Some(*self)
+    }
+
+    #[inline]
+    fn take_timestamp(&mut self, _schema: &Schema) -> Result<Instant, DocumentError> {
+        Ok(*self)
     }
 }
 
@@ -165,7 +179,14 @@ integer_doc!(i16, Short);
 integer_doc!(i32, Integer);
 integer_doc!(i64, Long);
 
-// TODO: Should we allow integer conversions between float/int?
+// IMPL NOTE: We do _not_ support conversion from
+// float into integers here because that is likely lossy.
+// That is OK here because this is representing something we know
+// to be a float-type value.
+//
+// Protocol deserialization SHOULD support conversion between floats/ints
+// in their Document implementation however as there is often a "fuzzyiness"
+// to deserializing numeric values.
 impl Document for f32 {
     #[inline]
     fn document_type(&self) -> DocumentType {
@@ -259,6 +280,11 @@ impl Document for BigDecimal {
     }
 
     #[inline]
+    fn as_big_decimal(&self) -> Option<Cow<'_, BigDecimal>> {
+        Some(Cow::Borrowed(self))
+    }
+
+    #[inline]
     fn take_float(&mut self, _schema: &Schema) -> Result<f32, DocumentError> {
         self.to_f32()
             .ok_or_else(|| DocumentError::ConversionFailed("f32".to_string()))
@@ -299,6 +325,11 @@ impl Document for BigInt {
     #[inline]
     fn as_long(&self) -> Option<i64> {
         self.to_i64()
+    }
+
+    #[inline]
+    fn as_big_integer(&self) -> Option<Cow<'_, BigInt>> {
+        Some(Cow::Borrowed(self))
     }
 
     #[inline]
@@ -522,8 +553,6 @@ impl<T: Document + Clone + 'static> Document for Option<T> {
 
     // ==== Delegation of takers to inner document type ====
 
-    // TODO: Errors could be clearer I think?
-
     #[inline]
     fn take_bool(&mut self, schema: &Schema) -> Result<bool, DocumentError> {
         self.as_mut()
@@ -618,33 +647,96 @@ impl<T: Document + Clone + 'static> Document for Option<T> {
 
 // ============================================================================
 // Boxed (owned) variant support
+//
+// These represent Smithy types like:
+// `structure X { member_a: Document }`,
+// `list A { member: Document }`, and `map B { key: String, value: Document }`
+//
+// Note: In practice collections of documents are pretty rarely seen
+// (can usually just be treated as single document), but suppporting here
+// for completeness
 // ============================================================================
 
 impl Document for Vec<Box<dyn Document>> {
+    #[inline]
     fn document_type(&self) -> DocumentType {
         DocumentType::List
     }
 
+    #[inline]
     fn as_list(&self) -> Option<&dyn ListAccessor> {
-        todo!()
+        Some(self)
     }
 
+    #[inline]
     fn take_list(&mut self) -> Result<&mut dyn ListAccessor, DocumentError> {
-        todo!()
+        Ok(self)
+    }
+}
+impl ListAccessor for Vec<Box<dyn Document>> {
+    #[inline]
+    fn get_index(&self, idx: usize) -> Option<&(dyn Document + '_)> {
+        self.get(idx).map(AsRef::as_ref)
+    }
+
+    #[inline]
+    #[allow(trivial_casts, clippy::unnecessary_cast)]
+    fn get_element_mut(&mut self, index: usize) -> Option<&mut dyn Document> {
+        self.get_mut(index)
+            .map(|elm| &mut **elm as &mut dyn Document)
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
     }
 }
 
 impl Document for IndexMap<String, Box<dyn Document>> {
+    #[inline]
     fn document_type(&self) -> DocumentType {
         DocumentType::Map
     }
 
+    #[inline]
     fn as_map(&self) -> Option<&dyn MapAccessor> {
-        todo!()
+        Some(self)
     }
 
+    #[inline]
     fn take_map(&mut self) -> Result<&mut dyn MapAccessor, DocumentError> {
-        todo!()
+        Ok(self)
+    }
+}
+
+impl MapAccessor for IndexMap<String, Box<dyn Document>> {
+    #[inline]
+    fn get(&self, key: &str) -> Option<&(dyn Document + '_)> {
+        self.get(key).map(AsRef::as_ref)
+    }
+
+    #[inline]
+    fn get_entry(&self, idx: usize) -> Option<(&str, &dyn Document)> {
+        self.get_index(idx).map(|(k, v)| (k.as_str(), v.as_ref()))
+    }
+
+    #[inline]
+    fn get_entry_mut(&mut self, index: usize) -> Result<(&str, &mut dyn Document), DocumentError> {
+        match self.get_index_mut(index) {
+            Some((k, v)) => Ok((k.as_str(), &mut **v)),
+            None => Err(DocumentError::InvalidIndex(index)),
+        }
+    }
+
+    #[inline]
+    fn get_key_mut(&mut self, index: usize) -> Option<Cow<'_, str>> {
+        self.get_index_mut(index)
+            .map(|(k, _)| Cow::Borrowed(k.as_str()))
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
     }
 }
 
@@ -665,9 +757,156 @@ impl Document for RegexWrapper {
     }
 }
 
+// Delegation to inner
 impl<T: Document + Clone + 'static> Document for Box<T> {
+    #[inline]
+    fn discriminant(&self) -> Option<&ShapeId> {
+        self.as_ref().discriminant()
+    }
+
+    #[inline]
     fn document_type(&self) -> DocumentType {
-        todo!()
+        self.as_ref().document_type()
+    }
+
+    #[inline]
+    fn as_boolean(&self) -> Option<bool> {
+        self.as_ref().as_boolean()
+    }
+
+    #[inline]
+    fn as_blob(&self) -> Option<&ByteBuffer> {
+        self.as_ref().as_blob()
+    }
+
+    #[inline]
+    fn as_string(&self) -> Option<&str> {
+        self.as_ref().as_string()
+    }
+
+    #[inline]
+    fn as_timestamp(&self) -> Option<Instant> {
+        self.as_ref().as_timestamp()
+    }
+
+    #[inline]
+    fn as_byte(&self) -> Option<i8> {
+        self.as_ref().as_byte()
+    }
+
+    #[inline]
+    fn as_short(&self) -> Option<i16> {
+        self.as_ref().as_short()
+    }
+
+    #[inline]
+    fn as_integer(&self) -> Option<i32> {
+        self.as_ref().as_integer()
+    }
+
+    #[inline]
+    fn as_long(&self) -> Option<i64> {
+        self.as_ref().as_long()
+    }
+
+    #[inline]
+    fn as_big_integer(&self) -> Option<Cow<'_, BigInt>> {
+        self.as_ref().as_big_integer()
+    }
+
+    #[inline]
+    fn as_float(&self) -> Option<f32> {
+        self.as_ref().as_float()
+    }
+
+    #[inline]
+    fn as_double(&self) -> Option<f64> {
+        self.as_ref().as_double()
+    }
+
+    #[inline]
+    fn as_big_decimal(&self) -> Option<Cow<'_, BigDecimal>> {
+        self.as_ref().as_big_decimal()
+    }
+
+    #[inline]
+    fn as_list(&self) -> Option<&dyn ListAccessor> {
+        self.as_ref().as_list()
+    }
+
+    #[inline]
+    fn as_map(&self) -> Option<&dyn MapAccessor> {
+        self.as_ref().as_map()
+    }
+
+    #[inline]
+    fn null(&self) -> bool {
+        self.as_ref().null()
+    }
+
+    #[inline]
+    fn take_bool(&mut self, schema: &Schema) -> Result<bool, DocumentError> {
+        self.as_mut().take_bool(schema)
+    }
+
+    #[inline]
+    fn take_blob(&mut self, schema: &Schema) -> Result<ByteBuffer, DocumentError> {
+        self.as_mut().take_blob(schema)
+    }
+
+    #[inline]
+    fn take_string(&mut self, schema: &Schema) -> Result<String, DocumentError> {
+        self.as_mut().take_string(schema)
+    }
+
+    #[inline]
+    fn take_byte(&mut self, schema: &Schema) -> Result<i8, DocumentError> {
+        self.as_mut().take_byte(schema)
+    }
+
+    #[inline]
+    fn take_short(&mut self, schema: &Schema) -> Result<i16, DocumentError> {
+        self.as_mut().take_short(schema)
+    }
+
+    #[inline]
+    fn take_integer(&mut self, schema: &Schema) -> Result<i32, DocumentError> {
+        self.as_mut().take_integer(schema)
+    }
+
+    #[inline]
+    fn take_long(&mut self, schema: &Schema) -> Result<i64, DocumentError> {
+        self.as_mut().take_long(schema)
+    }
+
+    #[inline]
+    fn take_big_integer(&mut self, schema: &Schema) -> Result<BigInt, DocumentError> {
+        self.as_mut().take_big_integer(schema)
+    }
+
+    #[inline]
+    fn take_float(&mut self, schema: &Schema) -> Result<f32, DocumentError> {
+        self.as_mut().take_float(schema)
+    }
+
+    #[inline]
+    fn take_double(&mut self, schema: &Schema) -> Result<f64, DocumentError> {
+        self.as_mut().take_double(schema)
+    }
+
+    #[inline]
+    fn take_big_decimal(&mut self, schema: &Schema) -> Result<BigDecimal, DocumentError> {
+        self.as_mut().take_big_decimal(schema)
+    }
+
+    #[inline]
+    fn take_list(&mut self) -> Result<&mut dyn ListAccessor, DocumentError> {
+        self.as_mut().take_list()
+    }
+
+    #[inline]
+    fn take_map(&mut self) -> Result<&mut dyn MapAccessor, DocumentError> {
+        self.as_mut().take_map()
     }
 }
 
@@ -756,11 +995,11 @@ mod tests {
         assert_eq!(map_out["a"], "b");
     }
 
-    // TODO(numeric comparisons): Add comparison checks
-
     #[test]
     fn integer_document_values() {
-        // TODO: Update
+        let integer: Box<dyn Document> = 1i32.into();
+        let int_value: i32 = integer.try_into().expect("Failed to convert float");
+        assert_eq!(int_value, 1i32);
     }
 
     #[test]

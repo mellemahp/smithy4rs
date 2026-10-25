@@ -56,7 +56,6 @@ pub struct DocumentObjectReader<'b> {
 impl<'de> MapReader<'de> for DocumentObjectReader<'_> {
     type Error = DocumentError;
 
-    // TODO: How to handle numeric keys?
     #[inline]
     fn read_key(&mut self) -> Result<Option<String>, Self::Error> {
         let Some(key) = self.inner.get_key_mut(self.idx) else {
@@ -70,14 +69,14 @@ impl<'de> MapReader<'de> for DocumentObjectReader<'_> {
         &mut self,
         schema: &Schema,
     ) -> Result<V, Self::Error> {
-        // Todo: Seems a bit off to read key if we dont use.
         let (_k, elem) = self.inner.get_entry_mut(self.idx)?;
         self.idx += 1;
         V::deserialize_with_schema(schema, elem)
     }
 
     fn skip_value(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        self.idx += 1;
+        Ok(())
     }
 }
 
@@ -117,7 +116,10 @@ impl<'de> StructReader<'de> for DocumentObjectReader<'_> {
 
     #[inline]
     fn size_hint(&self) -> Option<usize> {
-        // TODO: This might be overly large for unions?
+        if self.is_union {
+            // Union maps can only ever have a single member
+            return Some(1);
+        }
         Some(self.inner.len())
     }
 }
