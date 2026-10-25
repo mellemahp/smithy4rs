@@ -317,6 +317,16 @@ pub trait Document: Send + Sync + BoxClone {
         Err(take_error("boolean"))
     }
 
+    /// Read the document as a `timestamp` if possible
+    ///
+    /// Default implementation errors
+    ///
+    /// # Errors
+    /// Raises `DocumentError` if the Document could not be read as a `timestamp`
+    fn take_timestamp(&mut self, _schema: &Schema) -> Result<Instant, DocumentError> {
+        Err(take_error("timestamp"))
+    }
+
     /// Read the document as a `blob` if possible
     ///
     /// Default implementation errors
@@ -476,7 +486,6 @@ pub trait MapAccessor {
 
     /// Get a map document entry
     ///
-    /// TODO: Should we update to split from key?
     /// Note: Should only really be used by deserializers.
     /// # Errors
     /// Returns a document error if no entry is available for the index
@@ -521,6 +530,8 @@ pub enum DocumentType {
     Number(Number),
     /// A `string` document
     String,
+    /// A `timestamp` document
+    Timestamp,
     /// A `blob` document
     Blob,
     /// A `list` document
@@ -622,9 +633,10 @@ impl PartialEq for dyn Document + '_ {
         match self.document_type() {
             DocumentType::Null => other.null(),
             DocumentType::Boolean => self.as_boolean() == other.as_boolean(),
+            DocumentType::Timestamp => self.as_timestamp() == other.as_timestamp(),
             DocumentType::Number(number) => match number {
-                // TODO: Still not sure these comparisons are quite correct, but they
-                // are workable for now.
+                // TODO(feat: numeric-comparisons): Still not sure these comparisons are quite correct,
+                // but they are workable for now.
                 Number::Byte => self.as_byte() == other.as_byte(),
                 Number::Short => self.as_short() == other.as_short(),
                 Number::Integer => self.as_integer() == other.as_integer(),

@@ -74,7 +74,6 @@ fn convert_from(c: &mut Criterion) {
         .expect("Should build document");
     let document: Box<dyn Document> = struct_to_convert.into();
 
-    // TODO: use .into()?
     c.bench_function("Document to shape", |b| {
         b.iter_batched(
             || document.clone(),
