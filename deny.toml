@@ -112,3 +112,9 @@ unknown-git = "deny"
 # if not specified. If it is specified but empty, no registries are allowed.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 
+[bans]
+multiple-versions = "deny"
+
+[[bans.skip]]
+name = "syn"
+version = "2.0"
