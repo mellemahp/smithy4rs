@@ -62,11 +62,19 @@ cast_sign_loss = "allow"
 doc_link_with_quotes = { level = "deny" }
 doc_markdown = { level = "deny" }
 
+[profile.dev]
+debug = 'line-tables-only'
+
+[profile.dev.package."*"]
+debug = "none" # disable debug info on deps
+opt-level = "z" # optimize deps in dev builds (helps with cache size)
+
 [profile.release]
 opt-level = 3
 lto = "fat"
 codegen-units = 1
 panic = "abort"
+debug = "none"
 
 [profile.bench]
 opt-level = 3
